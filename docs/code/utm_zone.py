@@ -2,8 +2,8 @@ import math
 from qgis.core import *
 from qgis.gui import *
 
-@qgsfunction(args=0, group='Custom', usesgeometry=True)
-def GetUtmZone(value1, feature, parent):
+@qgsfunction(args='auto', group='Custom', usesgeometry=True)
+def GetUtmZone(feature, parent):
     """Return the UTM Zone of the feature's geometry as a String"""
     centroid = feature.geometry()
     longitude = centroid.asPoint().x()
