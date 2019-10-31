@@ -435,6 +435,10 @@ $(document).ready(function () {
 <li><a href="#processing-scripts">Processing Scripts</a><ul>
 <li><a href="#writing-a-python-class">Writing a Python Class</a></li>
 <li><a href="#writing-a-processing-script">Writing a Processing Script</a></li>
+<li><a href="#simplifying-processing-scripts">Simplifying Processing Scripts</a><ul>
+<li><a href="#understanding-python-decorators">Understanding Python Decorators</a></li>
+<li><a href="#writing-a-processing-script-with-decorators">Writing a Processing Script with Decorators</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#writing-plugins">Writing Plugins</a><ul>
 <li><a href="#a-minimal-plugin">A Minimal Plugin</a></li>
@@ -442,7 +446,6 @@ $(document).ready(function () {
 <li><a href="#gui-plugin">GUI Plugin</a></li>
 </ul></li>
 <li><a href="#writing-python-expression-functions">Writing Python Expression Functions</a><ul>
-<li><a href="#understanding-python-decorators">Understanding Python Decorators</a></li>
 <li><a href="#custom-function-to-find-utm-zone-of-a-feature">Custom function to find UTM Zone of a feature</a></li>
 <li><a href="#exercise-1">Exercise</a></li>
 </ul></li>
@@ -1152,7 +1155,7 @@ t.hello()</code></pre></div>
 <p>To create a new processing script, go to <strong>Processing → Processing Toolbox</strong>. Click the <em>Scripts</em> button and select <em>Create New Script..</em>.</p>
 <p><img src="images/pyqgis/processingscriptnew.png" style="display: block; margin: auto;" /></p>
 <p>Copy/paste the following code into the <em>Processing Script Editor</em>.</p>
-<p><code>save_attributes_algorithm.py</code></p>
+<p><code>save_attributes_processing.py</code></p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">from</span> PyQt5.QtCore <span class="im">import</span> QCoreApplication
 <span class="im">from</span> qgis.core <span class="im">import</span> (QgsProcessing,
                        QgsProcessingAlgorithm,
@@ -1161,6 +1164,7 @@ t.hello()</code></pre></div>
 
 
 <span class="kw">class</span> SaveAttributesAlgorithm(QgsProcessingAlgorithm):
+    <span class="co">&quot;&quot;&quot;Saves the attributes of a vector layer to a CSV file.&quot;&quot;&quot;</span>
     OUTPUT <span class="op">=</span> <span class="st">&#39;OUTPUT&#39;</span>
     INPUT <span class="op">=</span> <span class="st">&#39;INPUT&#39;</span>
 
@@ -1233,6 +1237,76 @@ t.hello()</code></pre></div>
 <p>Click the <em>Save Script</em> button and save the script as <code>save_attributes_algorithm.py</code>. This script must be saved inside the <code>{profile foler}/processing/scripts/</code> directory so it can be loaded when QGIS starts.</p>
 <p>Once saved, the algorithm will appear in the <em>Processing Toolbox</em> under <strong>Scripts → Save Attributes As CSV</strong>. Double-click to launch it. You will see the standard processing algorithm dialog where the user can select inputs and outputs easily. Progress bar is shown correctly and the execution also stops if the user presses the <em>Cancel</em> button. If the large is large and the algorithm would take time to process it, the user can also close the window and the algorithm will continue to run in the background.</p>
 <p><img src="images/pyqgis/processingscriptrun.png" style="display: block; margin: auto;" /></p>
+</div>
+<div id="simplifying-processing-scripts" class="section level2">
+<h2>Simplifying Processing Scripts</h2>
+<p>The Processing Framework providers a simpler way to write processing scripts by using the <code>@alg</code> decorator. Using this approach, you are able to remove a lot of <em>boilerplate</em> code and focus on just writing the main algorithm function. There are some limitations of this approach - the main one being that scripts written using the <code>@alg</code> decorator cannot be used in plugins. But if your goal is to create a processing scripts, this is a much simpler and recommended style. But before we see how to write such scripts, you need to understand <em>Python Decorators</em>.</p>
+<blockquote>
+<p>Note: the <code>@alg</code> decorator is available only from QGIS 3.6 onwards.</p>
+</blockquote>
+<div id="understanding-python-decorators" class="section level3">
+<h3>Understanding Python Decorators</h3>
+<p>Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the <code>@decorator</code> syntax above the function definition. Once decorated, the original function gets modified with the decorator function.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> fancify(normal_function):
+    
+    <span class="kw">def</span> fancy(<span class="op">*</span>args, <span class="op">**</span>kwargs):
+        val <span class="op">=</span> normal_function(<span class="op">*</span>args, <span class="op">**</span>kwargs)
+        <span class="cf">return</span> <span class="st">&#39;*****&#39;</span> <span class="op">+</span> val <span class="op">+</span> <span class="st">&#39;*****&#39;</span>
+        
+    <span class="cf">return</span> fancy
+    
+<span class="kw">def</span> hello(name):
+    <span class="cf">return</span> <span class="st">&#39;Hello &#39;</span> <span class="op">+</span> name
+    
+<span class="bu">print</span>(hello(<span class="st">&#39;World&#39;</span>))
+
+<span class="at">@fancify</span>
+<span class="kw">def</span> hello(name):
+    <span class="cf">return</span> <span class="st">&#39;Hello &#39;</span> <span class="op">+</span> name
+    
+<span class="bu">print</span>(hello(<span class="st">&#39;World&#39;</span>))</code></pre></div>
+</div>
+<div id="writing-a-processing-script-with-decorators" class="section level3">
+<h3>Writing a Processing Script with Decorators</h3>
+<p>Let’s modify the <code>save_attributes_algorithm.py</code> script to use the built-in <code>@alg</code> decorator. Locate the script in <em>Processing Toolbox</em> under <strong>Scripts → Save Attributes As CSV</strong>. Right-click on it and select <em>Edit Script…</em>. Replace all the code in the <em>Processing Script Editor</em> with the following and click the <em>Save Script</em> button</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">from</span> qgis.processing <span class="im">import</span> alg
+
+<span class="at">@alg</span>(name<span class="op">=</span><span class="st">&#39;save_attributes&#39;</span>, label<span class="op">=</span><span class="st">&#39;Save Attributes As CSV&#39;</span>,
+    group<span class="op">=</span><span class="st">&#39;&#39;</span>, group_label<span class="op">=</span><span class="st">&#39;&#39;</span>)
+<span class="at">@alg.input</span>(<span class="bu">type</span><span class="op">=</span>alg.SOURCE, name<span class="op">=</span><span class="st">&#39;INPUT&#39;</span>, label<span class="op">=</span><span class="st">&#39;Input Layer&#39;</span>)
+<span class="at">@alg.input</span>(<span class="bu">type</span><span class="op">=</span>alg.FILE_DEST, name<span class="op">=</span><span class="st">&#39;OUTPUT&#39;</span>, label<span class="op">=</span><span class="st">&#39;Output File&#39;</span>)
+<span class="kw">def</span> processAlgorithm(instance, parameters, context, feedback, inputs):
+    <span class="co">&quot;&quot;&quot;Saves the attributes of a vector layer to a CSV file.&quot;&quot;&quot;</span>
+    source <span class="op">=</span> instance.parameterAsSource(parameters, <span class="st">&#39;INPUT&#39;</span>, context)
+    csv <span class="op">=</span> instance.parameterAsFileOutput(parameters, <span class="st">&#39;OUTPUT&#39;</span>, context)
+
+    fieldnames <span class="op">=</span> [field.name() <span class="cf">for</span> field <span class="kw">in</span> source.fields()]
+
+    <span class="co"># Compute the number of steps to display within the progress bar and</span>
+    <span class="co"># get features from source</span>
+    total <span class="op">=</span> <span class="fl">100.0</span> <span class="op">/</span> source.featureCount() <span class="cf">if</span> source.featureCount() <span class="cf">else</span> <span class="dv">0</span>
+    features <span class="op">=</span> source.getFeatures()
+
+    <span class="cf">with</span> <span class="bu">open</span>(csv, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> output_file:
+      <span class="co"># write header</span>
+      line <span class="op">=</span> <span class="st">&#39;,&#39;</span>.join(name <span class="cf">for</span> name <span class="kw">in</span> fieldnames) <span class="op">+</span> <span class="st">&#39;</span><span class="ch">\n</span><span class="st">&#39;</span>
+      output_file.write(line)
+      <span class="cf">for</span> current, f <span class="kw">in</span> <span class="bu">enumerate</span>(features):
+          <span class="co"># Stop the algorithm if cancel button has been clicked</span>
+          <span class="cf">if</span> feedback.isCanceled():
+              <span class="cf">break</span>
+
+          <span class="co"># Add a feature in the sink</span>
+          line <span class="op">=</span> <span class="st">&#39;,&#39;</span>.join(<span class="bu">str</span>(f[name]) <span class="cf">for</span> name <span class="kw">in</span> fieldnames) <span class="op">+</span> <span class="st">&#39;</span><span class="ch">\n</span><span class="st">&#39;</span>
+          output_file.write(line)
+
+          <span class="co"># Update the progress bar</span>
+          feedback.setProgress(<span class="bu">int</span>(current <span class="op">*</span> total))
+
+    <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: csv}</code></pre></div>
+<p>You can run the script and see that the behavior is almost identical but the code is much simpler. The code uses the <code>@alg</code> decorator for defining algorithm name, group, inputs and outputs in a more concise way.</p>
+<p>Another important thing to note is that to create a processing algorithm, one must create a class that inherits from <code>QgsProcessingAlgorithm</code>. When you write a class, you refer to the current instance of the class with the keyword <code>self</code>. Here you are just writing a function, and the decorator will create a class for you. So we are using a parameter named <code>instance</code>. When the decorator will create a class, the referene to the instance will be passed on to our function as this parameter.</p>
+</div>
 </div>
 </div>
 <div id="writing-plugins" class="section level1">
@@ -1508,29 +1582,7 @@ cmd_folder <span class="op">=</span> os.path.split(inspect.getfile(inspect.curre
 <div id="writing-python-expression-functions" class="section level1">
 <h1>Writing Python Expression Functions</h1>
 <p>Expressions in QGIS have a lot of power and are used in many core features: selection, calculating field values, styling, labeling etc. QGIS also has support for user-defined expressions. With a little bit of python programming, you can define your own functions that can be used within the expression engine.</p>
-<p>Custom python functions in QGIS use <strong>decorators</strong> to make the function available across the system. Let’s understand how decorators work.</p>
-<div id="understanding-python-decorators" class="section level2">
-<h2>Understanding Python Decorators</h2>
-<p>Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the <code>@decorator</code> syntax above the function definition. Once decorated, the original function gets modified with the decorator function.</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> fancify(normal_function):
-    
-    <span class="kw">def</span> fancy(<span class="op">*</span>args, <span class="op">**</span>kwargs):
-        val <span class="op">=</span> normal_function(<span class="op">*</span>args, <span class="op">**</span>kwargs)
-        <span class="cf">return</span> <span class="st">&#39;*****&#39;</span> <span class="op">+</span> val <span class="op">+</span> <span class="st">&#39;*****&#39;</span>
-        
-    <span class="cf">return</span> fancy
-    
-<span class="kw">def</span> hello(name):
-    <span class="cf">return</span> <span class="st">&#39;Hello &#39;</span> <span class="op">+</span> name
-    
-<span class="bu">print</span>(hello(<span class="st">&#39;World&#39;</span>))
-
-<span class="at">@fancify</span>
-<span class="kw">def</span> hello(name):
-    <span class="cf">return</span> <span class="st">&#39;Hello &#39;</span> <span class="op">+</span> name
-    
-<span class="bu">print</span>(hello(<span class="st">&#39;World&#39;</span>))</code></pre></div>
-</div>
+<p>Custom python functions in QGIS use <code>@qgsfunction</code> decorator to make the function available across the system.</p>
 <div id="custom-function-to-find-utm-zone-of-a-feature" class="section level2">
 <h2>Custom function to find UTM Zone of a feature</h2>
 <p>We will define a custom function that finds the UTM zone number of a map feature. Open the project <code>places.qgz</code> from the data directory.</p>

@@ -915,7 +915,7 @@ knitr::include_graphics('images/pyqgis/processingscriptnew.png')
 
 Copy/paste the following code into the *Processing Script Editor*.
 
-`save_attributes_algorithm.py`
+`save_attributes_processing.py`
 ```{python eval=FALSE, code=readLines('code/pyqgis/save_attributes_processing.py')}
 ```
 
@@ -932,6 +932,48 @@ Once saved, the algorithm will appear in the *Processing Toolbox* under **Script
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/pyqgis/processingscriptrun.png')
 ```
+
+## Simplifying Processing Scripts
+
+The Processing Framework providers a simpler way to write processing scripts by using the ``@alg`` decorator. Using this approach, you are able to remove a lot of *boilerplate* code and focus on just writing the main algorithm function. There are some limitations of this approach - the main one being that scripts written using the ``@alg`` decorator cannot be used in plugins. But if your goal is to create a processing scripts, this is a much simpler and recommended style. But before we see how to write such scripts, you need to understand *Python Decorators*.
+
+> Note: the ``@alg`` decorator is available only from QGIS 3.6 onwards.
+
+### Understanding Python Decorators
+
+Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the `@decorator` syntax above the function definition. Once decorated, the original function gets modified with the decorator function.
+
+```{python eval=FALSE}
+def fancify(normal_function):
+    
+    def fancy(*args, **kwargs):
+        val = normal_function(*args, **kwargs)
+        return '*****' + val + '*****'
+        
+    return fancy
+    
+def hello(name):
+    return 'Hello ' + name
+    
+print(hello('World'))
+
+@fancify
+def hello(name):
+    return 'Hello ' + name
+    
+print(hello('World'))
+```
+
+### Writing a Processing Script with Decorators
+
+Let's modify the `save_attributes_algorithm.py` script to use the built-in ``@alg`` decorator. Locate the script in *Processing Toolbox* under **Scripts  &rarr; Save Attributes As CSV**. Right-click on it and select *Edit Script...*. Replace all the code in the *Processing Script Editor* with the following and click the *Save Script* button
+
+```{python eval=FALSE, code=readLines('code/pyqgis/save_attributes_decorator.py')}
+```
+
+You can run the script and see that the behavior is almost identical but the code is much simpler. The code uses the ``@alg`` decorator for defining algorithm name, group, inputs and outputs in a more concise way. 
+
+Another important thing to note is that to create a processing algorithm, one must create a class that inherits from ``QgsProcessingAlgorithm``. When you write a class, you refer to the current instance of the class with the keyword ``self``. Here you are just writing a function, and the decorator will create a class for you. So we are using a parameter named ``instance``. When the decorator will create a class, the referene to the instance will be passed on to our function as this parameter.
 
 # Writing Plugins
 
@@ -1106,32 +1148,7 @@ knitr::include_graphics('images/pyqgis/dialogcomplete.png')
 
 Expressions in QGIS have a lot of power and are used in many core features: selection, calculating field values, styling, labeling etc. QGIS also has support for user-defined expressions. With a little bit of python programming, you can define your own functions that can be used within the expression engine.
 
-Custom python functions in QGIS use **decorators** to make the function available across the system. Let's understand how decorators work.
-
-## Understanding Python Decorators
-
-Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the `@decorator` syntax above the function definition. Once decorated, the original function gets modified with the decorator function.
-
-```{python eval=FALSE}
-def fancify(normal_function):
-    
-    def fancy(*args, **kwargs):
-        val = normal_function(*args, **kwargs)
-        return '*****' + val + '*****'
-        
-    return fancy
-    
-def hello(name):
-    return 'Hello ' + name
-    
-print(hello('World'))
-
-@fancify
-def hello(name):
-    return 'Hello ' + name
-    
-print(hello('World'))
-```
+Custom python functions in QGIS use ``@qgsfunction`` decorator to make the function available across the system. 
 
 ## Custom function to find UTM Zone of a feature
 

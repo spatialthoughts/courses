@@ -6,6 +6,7 @@ from qgis.core import (QgsProcessing,
 
 
 class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
+    """Saves the attributes of a vector layer to a CSV file."""
     OUTPUT = 'OUTPUT'
     INPUT = 'INPUT'
 
