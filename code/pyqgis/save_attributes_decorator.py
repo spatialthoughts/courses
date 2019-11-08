@@ -34,3 +34,4 @@ def processAlgorithm(instance, parameters, context, feedback, inputs):
           feedback.setProgress(int(current * total))
 
     return {'OUTPUT': csv}
+    
