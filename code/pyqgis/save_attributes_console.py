@@ -13,7 +13,7 @@ if layer.type() != QgsMapLayer.VectorLayer:
     iface.messageBar().pushMessage('Please select a vector layer',  level=Qgis.Critical)
     
 # Using*with* statement which takes care of closing the files and handling errors
-with open(output, 'w') as output_file:
+with open(output_path, 'w') as output_file:
     fieldnames = [field.name() for field in layer.fields()]
     ## write header
     line = ','.join(name for name in fieldnames) + '\n'
@@ -23,4 +23,4 @@ with open(output, 'w') as output_file:
         line = ','.join(str(f[name]) for name in fieldnames) + '\n'
         output_file.write(line)
 iface.messageBar().pushMessage(
-    'Success:', 'Output file written at ' + output, level=Qgis.Success)
+    'Success:', 'Output file written at ' + output_path, level=Qgis.Success)
