@@ -30,7 +30,7 @@ class SaveAttributesPlugin:
     def unload(self):
       QgsApplication.processingRegistry().removeProvider(self.provider)
       self.iface.removeToolBarIcon(self.action)
-      self.iface.removePluginMenu('&SaveAttributes', self.action)  
+      self.iface.removePluginMenu('&Save Attributes', self.action)  
       del self.action
 
     def run(self):
