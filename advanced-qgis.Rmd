@@ -1,0 +1,232 @@
+---
+title: "Advanced QGIS (Course Material)"
+subtitle: "Learn techniques for automating GIS workflows and advanced Visualizations"
+author: "Ujaval Gandhi"
+fontsize: 12pt
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 2
+    highlight: pygments
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \renewcommand{\footrulewidth}{0.4pt}
+- \fancyhead[LE,RO]{\thepage}
+- \geometry{left=1in,top=0.75in,bottom=0.75in}
+- \fancyfoot[CE,CO]{{\includegraphics[width=0.4cm]{images/pyqgis/cc.png}} {\includegraphics[width=0.4cm]{images/pyqgis/by.png}} Ujaval Gandhi http://www.spatialthoughts.com}
+classoption: a4paper
+---
+
+
+\newpage
+
+This course is also offered as a in-person class. Please sign up for [my mailing list](https://mailchi.mp/1d44f6c0c955/spatialthoughts) to know when new sessions are scheduled.
+
+\newpage
+
+# Introduction 
+
+This class focuses on techniques for automation of GIS workflows. You will learn techniques that will help you be more productive, create beautiful visualizations and solve complex spatial analysis problems. This class is ideal for participants who already use QGIS and want to take their skills to the next level.
+
+Below are the topics covered in this class
+
+- Processing Framework - Algorithms, Batch processing and Modeler 
+- Atlas for batch map creation
+- Animating time-series data
+- Creating 3D fly-through from aerial imagery
+- Advanced Expressions for enabling faster data editing, fuzzy matching and more.
+- Must-have plugins
+
+# Get the Data Package
+The code examples in this class use a variety of datasets. All the required layers, project files, icons etc. are available in the [advanced_qgis.zip](https://drive.google.com/uc?export=download&id=1VvQwNZK6yc3Bnw0GWc6gftIHmNyNPoDK) [~70MB]. Download and unzip this file to the `Downloads` directory.
+# Where can you use Python in QGIS?
+
+# Processing Framework
+
+QGIS 2.0 introduced a new concept called Processing Framework. Previously known as Sextante, the Processing Framework provides an environment within QGIS to run native and third-party algorithms for processing data. It is now the recommended way to run any type of data processing and analysis within QGIS - including tasks such as selecting features, altering attributes, saving layers etc. - that can be accomplished by other means. But leveraging the processing framework allows you to be more productive, fast, and less error prone. 
+
+The Processing Framework consists of the following distict elements that work together.
+
+- **Processing Toolbox**: Contains individual tools (i.e. algorithms) grouped by providers and functionality
+- **Batch Processing Interface**: Allows any processing tool to be executed on multiple layers together.
+- **Graphical Modeler**: Allows the user to define the workflow and chain multiple processing steps together using a drag-and-drop mechanism. 
+- **History Manager**: Records and stores all executions of algorithms to allow users to reproduce past analysis.
+- **Results Viewer**: An interface to view non-spatial outputs from algorithms - such as tables and charts.
+
+We will learn about each of these through hands-on exercises in the following sections.
+
+## Processing Toolbox
+
+Processing Toolbox is available from the top-level menu **Processing &rarr; Toolbox**. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers is available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
+
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/toolbox_algorithms.png')
+```
+
+You can control what providers are available in settings. The Processing Options menu also provides a way to fine-tune the configuration of the framework.
+
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/processing_settings1.png')
+```
+
+I strongly recommend, changing the default settings and enable the option *Prefer output filename for layer names*. This option ensures that when you use batch processing, the resulting layers are unique.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/processing_settings2.png')
+```
+
+### Exercise: Find the length of national highways in a state
+
+The aim of this exercise is to show how a multi-step spatial analysis problem can be solved using a purely processing-based workflow. This exerise also shows the richness of available algorithms in QGIS that are able to do sophisticated operations that previously needed plugins or were more complex.
+
+We will work with roads extracted from OpenStreetMap for the state of Karnataka in India. The admin boundary for the  state and the districts come from DataMeet.
+
+Browse to the data dorectory and expand ``karnataka.gpkg``. Drag and drop the ``karnataka``, ``karnataka_districts`` and ``karnataka_major_roads`` layers to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka1.png')
+```
+
+The layer ``karnataka_major_roads`` contain all major roads, including national highways, state highways, major arterial roads etc. Select the layer and use the keyboard shortcut **F6** to open the attribute table.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka2.png')
+```
+You will notice that the ``ref`` column has information about road designation. As we are interested in only national highways, we can use the information in this column to extract relevant road segments.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka3.png')
+```
+You can use tools such as *Select by expression*, export the selected features as a new layer and continue to work. But the processing toolbox providers a much seamless workflow. Search for the algorithm **Extract by expression**.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka4.png')
+```
+
+Enter the following expression to extract the features where the value of the ``ref`` field starts with the letters ``NH``.
+
+```{eval=FALSE}
+regexp_match("ref", '^NH')
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka5.png')
+```
+
+You will get a new layer ``Matching Features`` in the Layers Panel. Next, we want to calculate the length of each segment. You can use the built-in algorithm **Add geometry attributes**
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka6.png')
+```
+
+The source layer is in the Geographic CRS EPSG:4326. But for the analysis, we want the lengths to be measured in meters/kilometers. The algorithm provides us with a handy option to calculate the distances in **Elliposidal** math - which is ideal for layers in the geographic CRS.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka7.png')
+```
+
+A new layer with an additional field called ``length`` will be added to the Layers panel. The distances in this field are in meters. Let's convert them to kilometers. You may reach out for the trusty QGIS field calculator to add a new field. That's a perfectly valid way - but as mentioned earlier, there is a *processing* way to do things which is the preferred way. Search and open the **Field Calculator** processing algorithm instead and enter the following expression.
+
+```{eval=FALSE}
+"length"/1000
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka8.png')
+```
+
+A new layer with the field ``length_km`` will be added to the Layers panel. Now we are ready to find out the answer. We just need to sum of the values in the ``length_km`` field. Use the **Basic Statictics for Fields** algorithm.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka9.png')
+```
+
+The result is a table of different statictics on the column. As the result is not a layer, it will be displayed in the *Results Viewer*. The panel will contain the link to a HTML file containing the statistics. The **Sum** contains the total length of national highways in the state. 
+
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka10.png')
+```
+
+> *What do you think of the results?* The resulting number may not be perfect because the OpenStreetMap database may have missing roads or are classified differently. But it is close to the number provided in the [official statistics](https://morth.nic.in/sites/default/files/PragatiKiNayiGati/pdf/karnataka.pdf).
+
+The final layer is called ``Calculated`` and is a temporary memory layer. Let's save it to the disk so we can use it later. The layer contains many fields which are not relevant to us, so let's delete some columns before saving. The *classic* way to do this is to toggle editing and use the *Delete Column* button from the Attribute Table. If you wanted to rename/reorder certain fields, that needed a plugin. But now, we have a really easy processing algorithm called **Refactor Fields** that can add, delete, rename, re-order and change the field types all at once. Delete fields that are not required and save the result as the layer ``national_highways`` in the source ``karnataka.gpkg``.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka11.png')
+```
+
+The layer ``national_highways`` will be added to the Layers panel. We achieved the goal of the exercise, but
+we can explore the results a bit better if we can brak down the results by a smaller administrative unit. Let's try to calculate the length of national highways for each district in the state.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka12.png')
+```
+
+We have the district information in the ``karnataka_districts`` layer, but not in the ``national_highways`` layer. To add the name of the district to the roads layer, we need to perform a spatial-join. This is done using the **Join attributes by Location** algorithm.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka13.png')
+```
+
+Select the ``national_highways`` as the input layer and do a one-to-one join with the ``karnataka_districts`` layer. Select only the **DISTRICT** field to be added to the output.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka14.png')
+```
+
+The new layer ``Joined layer`` now has the intersecting district name in the **DISTRICT** field. We can now sum the road lengths and group them for each district. You may recall that in earlier versions of QGIS ,you needed a plugin called Group Stats to do this. But now we can do this via the built-in **Statistic by Categories** algorithm.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka15.png')
+```
+
+The output of the algorithm is a table containing various statistics on the ``length_km`` column for each district. The values in the **Sum** column is the total length of national highways in the district.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/karnataka16.png')
+```
+
+Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, re-producible and inuitive workflow.
+
+### The Locator Bar
+
+To take your processing experience to the next-level, you can use the built-in **Locator Bar**. At the bottom-left of QGIS main window, there is a universal search bar that can do keyword-search across layers, settings, processing algorithms and more. You can open the locator bar using the keyboard shortcut **Ctrl+K**. 
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/locator1.png')
+```
+
+I find that rather than clicking-around the processing toolsbox, you can just use locator bar to search and open the algorithms. Type **Ctrl+K**, followed by **a** (to restrict search to algorithms), followed by a **space** and **a few characters**. Use the arrow keys to select and press **Enter** to open the algorithm. 
+
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/locator.gif')
+```
+
+# Resources for Further Learning
+* Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/)
+* [PyQGIS 101: Introduction to QGIS Python programming for non-programmers](https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/) by Anita Graser
+* [PyQGIS Samples](https://webgeodatavore.github.io/pyqgis-samples/) by Thomas Gratier
+
+# Data Credits
+
+* `blocks`, `parcels`, `streets`, `zoning`, `trees`, `seasmic_zones`. Downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
+* `srtm` NASA Shuttle Radar Topography Mission Global 1 arc second provided by The Land Processes Distributed Active Archive Center (LP DAAC). Downloaded using [30-Meter SRTM Tile Downloader](https://dwtkns.com/srtm30m/)
+* `aoi`: CA Places Boundaries from 2016 TIGER/Line Shapefiles. Downloaded from [California Open Data Portal](https://data.ca.gov/dataset/ca-geographic-boundaries)
+* `populated_places`: Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)
+
+# License
+
+This course is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/deed.en_US). You are free to use the material in any form as you wish. Kindly give appropriate credit to the original author.
+
+&copy; 2020 Ujaval Gandhi [www.spatialthoughts.com](https://spatialthoughts.com)
