@@ -309,10 +309,188 @@ Choose all the clipped layers and save the output as ``clipped.gpkg``.
 knitr::include_graphics('images/advanced_qgis/batch10.png')
 ```
 
+## Graphical Modeler
 
+GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
+
+### Exercise: Find the hotspots of piracy indidents
+
+National Geospatial-Intelligence Agency’s Maritime Safety Information portal provides a shapefile of all incidencts of maritine piracy in the form on Anti-shipping Activity Messages. We can create a density map by aggregating the indcident pints over a global hexagonal grid.
+
+The steps needed to create a hex-bin layer suitable for visualization is as follows
+
+- Reproject the input to an equal-area projection
+- Create a global hexagonal grid layer
+- Select all grids that intersect with at least 1 point
+- Count points within each grid
+
+We will now learn how to build a model that runs the above processing steps in a single workflow.
+
+Open the **maritime_piracy** project.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler1.png')
+```
+
+Launch the modeler from **Processing &rarr; Graphical Modeler**
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler2.png')
+```
+
+In the Processing Modeler dialog, locate the *Model Properties* panel. Enter ``piracy_hexbin`` as the Name of the model and ``projects`` as the Groups. Click the Save button.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler3.png')
+```
+
+Save the model as ``piracy_hexbin``.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler4.png')
+```
+
+Now we can start building a graphical model of our processing pipeline. The Processing modeler dialog contains a left-hand panel and a main canvas. On he left-hand panel, locate the Inputs panel listing various types of input data types. Scroll down and select the **+ Vector Layer** input. Drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler5.png')
+```
+
+Enter **Input Points** as the Parameter name and **Point** as the Geometry type. This input represents the piracy incidents point layer.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler6.png')
+```
+
+Next, drag another **+ Vector Layer** input to the canvas. Enter **Base Layer** as the Parameter name and *Polygon* as the Geometry type. This input represents the natural earth global land layer which we will use as the extent of the grid layer.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler7.png')
+```
+
+As we are generating a global hexagonal grid, we can ask the user to supply us the grid size as an input instead of hard-coding it as part of our model. This way, the user can quickly experiment with different grid sizes without changing the model at all. select a **+ Number** input and drag it to the canvas. Enter **Grid Size** as the Parameter name and click OK.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler8.png')
+```
+
+Now that we have our user inputs defined, we are ready to add processing steps. All of the processing algorithms are available to you under the *Algorithms* tab. The first step in our pipeline will be to reproject the base layer to the Project CRS. Search for **Reproject layer** algorithm and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler9.png')
+```
+
+In the Reproject layer dialog, select **Base Layer** as the Input layer. Check the Use **project CRS** as the Target CRS. Click OK.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler10.png')
+```
+
+In the Processing Modeler canvas, you will notice a connection appear between the + Base Layer input and the Reproject layer algorithm. This connection indicates the flow of our processing pipeline. Next step is to create a hexagonal grid. Search for the **Create grid** algorithm and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler11.png')
+```
+
+In the Generate grid dialog, choose **Hexagon (polygon)** as the Grid type. Select Extent of **'Reprojected' from algorithm 'Reproject Layer'** as the Grid extent. Click the 123 button under the Horizonal spacing label and choose **Model input**.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler12.png')
+```
+
+Select **Grid Size** input for Using model input. Repeat the same process for Vertical Spacing. Click OK.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler13.png')
+```
+
+At this point, we have a global hexagonal grid. The grid spans the full extent of the base layer, including land areas and places where there are no points. Let’s filter out those grid polygons where there are no input points. Search for **Extract by location** algorithm and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler14.png')
+```
+
+For Extract features from, select **'Grid' from algorithm 'Generate Grid'**, Where the features (geometric predicate) as **Intersect** and By comparing to the features from as **Input points**. Click OK.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler15.png')
+```
+
+Now we have only those grid polygons that contain some input points. To aggregate these points, we will use **Count points in polygon** algorithm. Search and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler16.png')
+```
+
+Select **'Extracted (location)' from algorithm 'Extract by location'** as the value for Polygons. The Points layer would be **Input Points**. At the bottom, name the Count output layer as **counts**. Click OK.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler17.png')
+```
+
+The model is now complete. Click the Save button.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler18.png')
+```
+
+Switch to the main QGIS window. You can find your newly created model in the Processing Toolbox under ** Models &rarr; projects &rarr; piracy_hexbin**. Double-click to run the model. 
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler19.png')
+```
+Our Base Layer is the ``ne_10m_land`` and the Input Points layer is ``ASAM_event``s. The Grid Size needs to be specified in the units of the selected CRS. Enter ``100000`` (100 Kms) as the Grid Size. Click Run to start the processing pipeline. Once the process finishes, click Close.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler20.png')
+```
+
+You will see a new layer **Counts** loaded as the result of the model. As you explore, you will notice the layer contains an attribute called NUMPOINTS containing the number of piracy incidents points contained within that grid feature. Let’s style this layer to display this information better. Click the **Open Layer Styling Panel** button from the Layers panel. Select Graduated symbology and NUMPOINTS as the Column. Click the dropdown next to Color ramp and select the Viridis ramp. Click the dropdown again and select Invert Color Ramp to reverse the order of color. The Graduated symbology will divide the values in the selected column into distinct classes and assign a different color to each of the classes. Select Natural Breaks (Jenks) as the Mode and click Classify.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler21.png')
+```
+
+We will use a clever trick to make the visualization better. We can use QGIS variables to set the edges of the hexagon a slightly darker shade of the fill color. Click on the **Symbol**. Click **Simple Fill**. Click the **Data defined override** button next to **Stroke color** and select **Edit**>
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler22.png')
+```
+
+Enter the following expression to set the stroke color to 30% darker than the fill color and click OK. The map rendering will change to a much smoother visualization.
+
+```{eval=FALSE}
+darker( @symbol_color , 130)
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler23.png')
+```
+
+### Challenge: Improve the model
+
+Can you change the model so that instead of entering the grid size in meters, the user can enter the size in kilometers? 
+
+> Hint: The **Create Grid** algorithm expects the size in meters, so you will have to convert the input to meters.
+
+### Enabling Reproducible Workflows
+
+To ensure that you are always able to reproduce your results, it is recommended to bundle the model in your project. The modeler interface has a button **save model in project** that will embed the model in your QGIS project file.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler24.png')
+```
+
+Once the model is embeded, Whenever you open the project, the model will be available to the user under the **Project models** in the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/modeler25.png')
+```
+
+## 3D Data Visualization
 
 # Data Credits
-
+* DEM Imagery for Hawaii. Provided by [Costal Ecology Group, University of Hawaii](http://www.soest.hawaii.edu/coasts/data/hawaii/dem.html). National Oceanic & Atmospheric Administration and USGS.
 
 # License
 
