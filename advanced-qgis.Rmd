@@ -7,7 +7,7 @@ output:
   html_document:
     df_print: paged
     toc: yes
-    toc_depth: 2
+    toc_depth: 3
     highlight: pygments
   word_document:
     toc: yes
@@ -67,10 +67,22 @@ We will learn about each of these through hands-on exercises in the following se
 
 Processing Toolbox is available from the top-level menu **Processing &rarr; Toolbox**. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers is available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
 
-
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/advanced_qgis/toolbox_algorithms.png')
 ```
+
+### Why should you use Processing Algorithms
+
+- Well tested and rigourous implementations
+- Majority are written in C++ and are faster than alternatives
+- Long processes can run the the background while you continue to use QGIS
+- Many multi-threaded agorithms can take advantge of multi-core CPU on your machines and give you better perofrmance
+- Robust handling of invalid geometry
+- Ability to see progress of the operation and cancel it
+- Easily run on all or just selected features
+
+
+### Review default settings
 
 You can control what providers are available in settings. The Processing Options menu also provides a way to fine-tune the configuration of the framework.
 
@@ -193,10 +205,6 @@ knitr::include_graphics('images/advanced_qgis/karnataka15.png')
 
 The output of the algorithm is a table containing various statistics on the ``length_km`` column for each district. The values in the **Sum** column is the total length of national highways in the district.
 
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/advanced_qgis/karnataka16.png')
-```
-
 Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, re-producible and inuitive workflow.
 
 ### The Locator Bar
@@ -213,17 +221,98 @@ I find that rather than clicking-around the processing toolsbox, you can just us
 knitr::include_graphics('images/advanced_qgis/locator.gif')
 ```
 
-# Resources for Further Learning
-* Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/)
-* [PyQGIS 101: Introduction to QGIS Python programming for non-programmers](https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/) by Anita Graser
-* [PyQGIS Samples](https://webgeodatavore.github.io/pyqgis-samples/) by Thomas Gratier
+### In-place Editing
+
+Processing algorithms are designed to take inputs and produce outputs. The default behavior is to create a new layer after each operation. This is useful for many workflows, especially in an enterprise setting, where you may not have the ability to edit the source data. If your algorithms are altering the source data, that also means that the workflows cannot be reproduced easily. So you would want a setup where the algorithms read from a source data and create modified outputs.
+
+An exception to this workflow is when you are doing data editing. When your workflow involves creating new features or editing them - creating a new layer for every edit is undesirable. A recent [QGIS crowd-funding campaign](https://north-road.com/edit-features-in-place-using-qgis-spatial-operations-campaign/) added the ability for processing algorithms to modify the features in-place and this functionality is available out-of-the-box in QGIS now.
+
+Load the **basic_network_analysis** project from the data package. This project contains a street network for Washington DC from DCGISopendata where the arrows display the digitizing direction of the line segments. You can click the **Edit Features In-Place** button in the processing toolbox to use algorithms that support this functionality. Once this mode is activated, processing algorithms will modify the selected features in the chosen layer instead of creating a new layer.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/inplace1.png')
+```
+
+Select a line segment and run the **Reverse line direction** algorithm. The algorithm will enable editing on the layer, perform the operation and overwrite the existing feature with a segment in the reverse direction. You will see that the arrow rendering is now in the opposite direction.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/inplace2.gif')
+```
+
+## Batch Processing
+
+So far we have run the algorithm on 1 layer at a time. But each processing algorithm can also be run in a **Batch** mode on multiple inputs. This provides an easy way to process large amounts of data and automate repetitive tasks.
+
+The batch processing interface can be invoked by right-clicking any processing algorithm and choosing **Execute as Batch Process**.
+
+### Exercise: Clip multiple layers to a polygon
+
+We will take multiple country-level data layers and use the batch processing operation to clip them to a state polygon in a single operation.
+
+Open the **batch_processing** project from the data package.Select the ``India-States`` layer and use the **Select Features** tool to select a state by clicking it.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch1.png')
+```
+
+Next, use the **Extract selected features** processing algorithm to create a new layer from the selected feature. This will create a new layer called ``Selected features``
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch2.png')
+```
+
+Search for the **Vector Overlay &rarr; Clip** algorithm and right-click on it. Select **Execute as Batch Process**.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch3.png')
+```
+
+In the batch processing dialog, click the *...* button on the first row of the *Input layer* column and choose *Select from Open Layers..*. Select all data layers that you want to clip.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch4.png')
+```
+
+Similarly, select the ``Selected features`` layer as the *Overlay layer*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch5.png')
+```
+
+As all input layers need to be clipped with the same overlay layer, you can click *Autofill..* and select *Fill Down* to autofill all the remaining rows with the same value.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch6.png')
+```
+
+In the last *Clipped* column, click the *...* button and name the output ``clipped_``. When prompted, choose *Fill with parameter values* as the *autofill mode*, and *Input layer* as the *Parameter to use*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch7.png')
+```
+
+Make sure the *Load layers on completion* box is checked and click *Run*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch8.png')
+```
+
+Resulting clipped layers will be added to the Layers panel. We can combine all the clipped layers into a single geopackage file for ease of sharing. Run the **Package Layers** processing algorithms.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch9.png')
+```
+
+Choose all the clipped layers and save the output as ``clipped.gpkg``.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/batch10.png')
+```
+
+
 
 # Data Credits
 
-* `blocks`, `parcels`, `streets`, `zoning`, `trees`, `seasmic_zones`. Downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
-* `srtm` NASA Shuttle Radar Topography Mission Global 1 arc second provided by The Land Processes Distributed Active Archive Center (LP DAAC). Downloaded using [30-Meter SRTM Tile Downloader](https://dwtkns.com/srtm30m/)
-* `aoi`: CA Places Boundaries from 2016 TIGER/Line Shapefiles. Downloaded from [California Open Data Portal](https://data.ca.gov/dataset/ca-geographic-boundaries)
-* `populated_places`: Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)
 
 # License
 
