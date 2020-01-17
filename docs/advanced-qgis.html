@@ -7,6 +7,7 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Ujaval Gandhi" />
@@ -69,7 +70,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -230,18 +230,6 @@ $(document).ready(function () {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
@@ -328,25 +316,26 @@ $(document).ready(function () {
 <li><a href="#d-animations-1">3D Animations</a><ul>
 <li><a href="#exercise-create-a-3d-flythrough">Exercise: Create a 3D Flythrough</a></li>
 </ul></li>
+<li><a href="#advanced-expressions">Advanced Expressions</a><ul>
+<li><a href="#exercise-count-features-from-another-layer">Exercise: Count features from another layer</a></li>
+</ul></li>
 <li><a href="#data-credits">Data Credits</a></li>
 <li><a href="#license">License</a></li>
 </ul>
 </div>
 
-
+<div style="page-break-after: always;"></div>
 <p>This course is also offered as a in-person class. Please sign up for <a href="https://mailchi.mp/1d44f6c0c955/spatialthoughts">my mailing list</a> to know when new sessions are scheduled.</p>
-
+<div style="page-break-after: always;"></div>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>This class focuses on techniques for automation of GIS workflows. You will learn techniques that will help you be more productive, create beautiful visualizations and solve complex spatial analysis problems. This class is ideal for participants who already use QGIS and want to take their skills to the next level.</p>
 <p>Below are the topics covered in this class</p>
 <ul>
 <li>Processing Framework - Algorithms, Batch processing and Modeler</li>
-<li>Atlas for batch map creation</li>
 <li>Animating time-series data</li>
 <li>Creating 3D fly-through from aerial imagery</li>
 <li>Advanced Expressions for enabling faster data editing, fuzzy matching and more.</li>
-<li>Must-have plugins</li>
 </ul>
 </div>
 <div id="get-the-data-package" class="section level1">
@@ -611,10 +600,64 @@ $(document).ready(function () {
 <p><img src="images/advanced_qgis/3d.gif" style="display: block; margin: auto;" /></p>
 </div>
 </div>
+<div id="advanced-expressions" class="section level1">
+<h1>Advanced Expressions</h1>
+<p>QGIS expression engine has a powerful function called ‘summary aggregates’ that allows evaluating a feature’s geometry and attributes with those of another layer. Expressions can be used for static calculations as well as on-the-fly computations, such as labels, virtual fields, symbology etc. This enables some powerful use cases.</p>
+<p>The summary aggregate function operates on all the values from a different layer, returning a single summary value. The syntax of the aggregate function is as follows</p>
+<pre><code>aggregate(
+  layer:=&#39;layer name or id&#39;,
+  aggregate:=&#39;aggegate type&#39;,
+  expression:=&#39;expression to aggregate&#39;,
+  filter:=&#39;optional filter expression,
+  concatenator:=&#39;optional string to use to join values&#39;,
+  order_by:=&#39;optional expression to order the features&#39;
+  )</code></pre>
+<div id="exercise-count-features-from-another-layer" class="section level2">
+<h2>Exercise: Count features from another layer</h2>
+<p>We will work with a land parcels data layer provided by the City of San Francico. The goal of this exercise is to demonstrate the use of aggregate expression for on-the-fly computation when digitizing new features.</p>
+<p>Open the <strong>parcels</strong> project from the data package. Select the <code>boundary</code> layer and click the <strong>Open Field Calculator</strong> button.</p>
+<p><img src="images/advanced_qgis/aggregate1.png" style="display: block; margin: auto;" /></p>
+<p>Add a new field named <code>count</code> with the following expression. The expression is reading the features from the <code>parcels</code> layer and giving an aggregate count of the features. You will notice that the the result will be displayed at the bottom of the window.</p>
+<pre><code>aggregate(
+ layer:= &#39;parcels&#39;,
+ aggregate:=&#39;count&#39;,
+ expression:=fid
+ )</code></pre>
+<p><img src="images/advanced_qgis/aggregate2.png" style="display: block; margin: auto;" /></p>
+<p>Now we can apply the same concept in a dynamic calculation. Back in the main QGIS window, select the <code>polygons</code> layer and right-click it. Select <strong>Properties</strong>.</p>
+<p><img src="images/advanced_qgis/aggregate3.png" style="display: block; margin: auto;" /></p>
+<p>Switch to the <strong>Attributes Form</strong> tab. Select the field <code>count</code> and choose <strong>Text Edit</strong> as the <em>Widget Type</em>. At the <strong>Default Value</strong> field at the bottom, enter the following expression. Note that additional filter value. Here the <code>$geometry</code> refers to the geometry of the <code>parcels</code> layer and <code>geometry(@parent)</code> refers to the geometry of feature from the <code>polygons</code> layer. Click OK.</p>
+<pre><code>aggregate(
+ layer:= &#39;parcels&#39;,
+ aggregate:=&#39;count&#39;,
+ expression:=fid,
+ filter:=intersects($geometry, geometry(@parent))
+ )</code></pre>
+<p><img src="images/advanced_qgis/aggregate4.png" style="display: block; margin: auto;" /></p>
+<p>Back in QGIS, click the <strong>Toggle Editing</strong> button and draw a polygon using the <strong>Add Polygon Feature</strong> button. Right-click to finish the drawing. As soon as you finish, the count of intersecting features will be calculated by the aggregate expression and displayed in the <code>count</code> field.</p>
+<p><img src="images/advanced_qgis/aggregate5.gif" style="display: block; margin: auto;" /></p>
+<p>There are many differnt types of aggregates available. We can use an aggregate called <strong>concatanate</strong> to compute a comma-separated text of all feature ids. Go to the <strong>Attribute Form</strong> properties again and select <code>parcels</code> field. Enter the following expression as the <strong>Default Value</strong>.</p>
+<pre><code>aggregate(
+ layer:= &#39;parcels&#39;,
+ aggregate:=&#39;concatenate&#39;,
+ concatenator:=&#39;,&#39;,
+ expression:=to_string(fid),
+ filter:=intersects($geometry, geometry(@parent))
+ )</code></pre>
+<p><img src="images/advanced_qgis/aggregate6.png" style="display: block; margin: auto;" /></p>
+<p>Now when to add a new feature, all the intersecting feature ids will be displayed along with the count.</p>
+<p><img src="images/advanced_qgis/aggregate7.gif" style="display: block; margin: auto;" /></p>
+</div>
+</div>
 <div id="data-credits" class="section level1">
 <h1>Data Credits</h1>
 <ul>
+<li>OpenStreetMap (osm) data layers: Data/Maps Copyright 2019 Geofabrik GmbH and OpenStreetMap Contributors. <a href="https://download.geofabrik.de/asia/india.html">OSM India free extract</a> downloaded from Geofabrik.</li>
+<li>India State boundary: Downloaded from <a href="https://github.com/datameet/maps/tree/master/States">Datameet Spatial Data repository</a>.</li>
+<li>Anti-shipping Activity Messages: <a href="https://msi.nga.mil/NGAPortal/MSI.porta">Maritime Safety Information portal</a> , National Geospatial-Intelligence Agency</li>
+<li>Land boundaries: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.</li>
 <li><a href="https://www.usgs.gov/centers/eros/science/usgs-eros-archive-digital-elevation-interferometric-synthetic-aperture-radar">Alaska IFSAR DTM</a> distributed by USGS Earth Resources Observation and Science (EROS), Downloaded from USGS Earth Explorer</li>
+<li>Parcels and Neighborhood boundaries downloaded from <a href="https://datasf.org/opendata/">DataSF Open Data Portal</a></li>
 </ul>
 </div>
 <div id="license" class="section level1">
@@ -640,6 +683,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

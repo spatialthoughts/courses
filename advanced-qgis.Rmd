@@ -36,11 +36,9 @@ This class focuses on techniques for automation of GIS workflows. You will learn
 Below are the topics covered in this class
 
 - Processing Framework - Algorithms, Batch processing and Modeler 
-- Atlas for batch map creation
 - Animating time-series data
 - Creating 3D fly-through from aerial imagery
 - Advanced Expressions for enabling faster data editing, fuzzy matching and more.
-- Must-have plugins
 
 # Get the Data Package
 The code examples in this class use a variety of datasets. All the required layers, project files, icons etc. are available in the [advanced_qgis.zip](https://drive.google.com/uc?export=download&id=1VvQwNZK6yc3Bnw0GWc6gftIHmNyNPoDK) [~70MB]. Download and unzip this file to the `Downloads` directory.
@@ -624,8 +622,106 @@ As we did in the previous section, you can use a service such as **[ezgif.com](h
 knitr::include_graphics('images/advanced_qgis/3d.gif')
 ```
 
+# Advanced Expressions
+
+QGIS expression engine has a powerful function called 'summary aggregates' that allows evaluating a feature's geometry and attributes with those of another layer. Expressions can be used for static calculations as well as on-the-fly computations, such as labels, virtual fields, symbology etc. This enables some powerful use cases.
+
+
+The summary aggregate function operates on all the values from a different layer, returning a single summary value. The syntax of the aggregate function is as follows
+
+```
+aggregate(
+  layer:='layer name or id',
+  aggregate:='aggegate type',
+  expression:='expression to aggregate',
+  filter:='optional filter expression,
+  concatenator:='optional string to use to join values',
+  order_by:='optional expression to order the features'
+  )
+```  
+
+## Exercise: Count features from another layer
+
+We will work with a land parcels data layer provided by the City of San Francico. The goal of this exercise is to demonstrate the use of aggregate expression for on-the-fly computation when digitizing new features.
+
+Open the **parcels** project from the data package. Select the ``boundary`` layer and click the **Open Field Calculator** button.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate1.png')
+```
+
+Add a new field named ``count`` with the following expression. The expression is reading the features from the ``parcels`` layer and giving an aggregate count of the features. You will notice that the the result will be displayed at the bottom of the window.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='count',
+ expression:=fid
+ )
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate2.png')
+```
+
+Now we can apply the same concept in a dynamic calculation. Back in the main QGIS window, select the ``polygons`` layer and right-click it. Select **Properties**.
+
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate3.png')
+```
+
+Switch to the **Attributes Form** tab. Select the field ``count`` and choose **Text Edit** as the *Widget Type*. At the **Default Value** field at the bottom, enter the following expression. Note that additional filter value. Here the ``$geometry`` refers to the geometry of the ``parcels`` layer and ``geometry(@parent)`` refers to the geometry of feature from the ``polygons`` layer. Click OK.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='count',
+ expression:=fid,
+ filter:=intersects($geometry, geometry(@parent))
+ )
+ ```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate4.png')
+```
+
+Back in QGIS, click the **Toggle Editing** button and draw a polygon using the **Add Polygon Feature** button. Right-click to finish the drawing. As soon as you finish, the count of intersecting features will be calculated by the aggregate expression and displayed in the ``count`` field.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate5.gif')
+```
+
+There are many differnt types of aggregates available. We can use an aggregate called **concatanate** to compute a comma-separated text of all feature ids. Go to the **Attribute Form** properties again and select ``parcels`` field. Enter the following expression as the **Default Value**.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='concatenate',
+ concatenator:=',',
+ expression:=to_string(fid),
+ filter:=intersects($geometry, geometry(@parent))
+ )
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate6.png')
+```
+ 
+Now when to add a new feature, all the intersecting feature ids will be displayed along with the count.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/aggregate7.gif')
+```
+
 # Data Credits
+* OpenStreetMap (osm) data layers: Data/Maps Copyright 2019 Geofabrik GmbH and OpenStreetMap Contributors. [OSM India free extract](https://download.geofabrik.de/asia/india.html) downloaded from Geofabrik.
+* India State boundary: Downloaded from [Datameet Spatial Data repository](https://github.com/datameet/maps/tree/master/States).
+* Anti-shipping Activity Messages: [Maritime Safety Information portal](https://msi.nga.mil/NGAPortal/MSI.porta) , National Geospatial-Intelligence Agency
+* Land boundaries: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+* Road Network: District of Columbia [Open Data Catalog](https://opendata.dc.gov/). 
 * [Alaska IFSAR DTM](https://www.usgs.gov/centers/eros/science/usgs-eros-archive-digital-elevation-interferometric-synthetic-aperture-radar) distributed by USGS Earth Resources Observation and Science (EROS), Downloaded from USGS Earth Explorer
+* Parcels and Neighborhood boundaries downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
 
 # License
 
