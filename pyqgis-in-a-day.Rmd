@@ -107,6 +107,131 @@ While console is useful for typing 1-2 lines of code or printing information con
 knitr::include_graphics('images/pyqgis/editor.png')
 ```
 
+# Getting familiar with Python
+
+If you are new to Python, you can get started with basics of the language at LearnPython.org's [interactive Python tutorial](https://www.learnpython.org/). For a slightly more advanced introduction, I recommend [Elements of Data Science](https://allendowney.github.io/ElementsOfDataScience/) by Allen Downey which introduces Python with a Data Science focus. Both of these are free resources that are suited for beginners with no programming experience.
+
+For this course, we will learn basics of Python by by building a script to calculate distance between 2 points.
+
+## Calculate distance using Haversine formula
+
+Given 2 points with their Latitude and Longitude coordinates, the [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula) calculates the distance in meters, assuming that Earth is a sphere.
+
+The formula is simple enough to be implemented in a spreadsheet too. If you are curious, see [my post](https://spatialthoughts.com/2013/07/06/calculate-distance-spreadsheet/) about using this formula for calculating distances in a spreadsheet.
+
+First, let's define out origin and destination. You can store a pair of values in a variable using a *tuple* as below.
+
+```{python eval=FALSE}
+origin = 12.98, 77.58 # Bangalore
+destination = 12.30, 76.64 # Mysore
+print(origin)
+print(destination)
+```
+
+You can check the data type using the ``type`` function. You can access the values from tuples using their index, starting from 0.
+
+```{python eval=FALSE}
+print(type(origin))
+print(origin[0])
+print(origin[1])
+```
+
+You can print multiple values using the ``print`` functions as well.
+```{python eval=FALSE}
+print('Origin coordinates are: ', origin[0], ',', origin[1])
+```
+
+There is a handy ``format`` function that allows creating strings easily.
+```{python eval=FALSE}
+output = 'Origin coordinates are: {},{}'.format(origin[0], origin[1])
+print(output)
+```
+
+Python supports doing basic math operations such as addition, multiplication, division etc. by default. Advance mathematical operations are also supported and comes with the the Python Standard Library. We can use the built-in ``math`` module to do trigonometric calculations in the haversine formula.
+
+Here's how we can implement the haversine formula in Python. [^2]
+
+[^2]: Code reference: https://gist.github.com/rochacbruno/2883505
+
+```{python eval=FALSE}
+import math
+
+lat1, lon1 = origin
+lat2, lon2 = destination
+radius = 6371 # km
+dlat = math.radians(lat2-lat1)
+dlon = math.radians(lon2-lon1)
+a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
+    * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+distance = radius * c
+print(distance)
+```
+
+This code works, but if we had to compute distance for another pair of coordinates, we will have to write the same block of code again. For computations that need to be called multiple times, it is better to capture then in a function. It takes some inputs, processes the inputs and returns the results. It is defined using the ``def`` keyword. We define a new function called ``haversine_distance`` which takes 2 arguments, *origin* and *destination* and returns the distance.
+
+```{python eval=FALSE}
+def haversine_distance(origin, destination):
+  ...
+  ...
+  return distance
+```
+
+We can compelte the function using the code we used previously
+
+```{python eval=FALSE}
+def haversine_distance(origin, destination):
+  lat1, lon1 = origin
+  lat2, lon2 = destination
+  radius = 6371 # km
+  dlat = math.radians(lat2-lat1)
+  dlon = math.radians(lon2-lon1)
+  a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
+    * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+  distance = radius * c
+  return distance
+```      
+
+Now we can call this function with any pair of origin and destination coordinates and get the distance
+```{python eval=FALSE}
+origin =  12.98, 77.58 # Bangalore
+destination = 13.08, 80.27 # Chennai
+distance = haversine_distance(origin, destination)
+print(distance)
+```
+
+## Calculate distance using PyQGIS
+
+The orevious example used the Haversine formula for calculating distances, which assumes the Earth is a sphere. But since the actual shape of Earth is more complex, and is closer to an ellipsoid - a spherical calculation is not accurate - especially where the distance is large. QGIS has built-in methods for doing accurate ellipsoid-based distance calculations using [Vincenty's formulae](https://en.wikipedia.org/wiki/Vincenty%27s_formulae). We can use the PyQGIS API to call these methods and calculate distances. [^3]
+
+[^3]: Code reference: https://gis.stackexchange.com/questions/266360/pyqgis-when-we-search-based-on-the-distance-between-two-points-is-the-measurem
+
+```{python eval=FALSE}
+def ellipsoid_distance(origin, destination):
+  lat1, lon1 = origin
+  lat2, lon2 = destination
+  # Remember the order is X,Y
+  point1 = QgsPointXY(lon1, lat1)
+  point2 = QgsPointXY(lon2, lat2)
+
+  d = QgsDistanceArea()
+  d.setEllipsoid('WGS84')
+
+  #Measure the distance
+  distance = d.measureLine([point1, point2])
+  return distance/1000
+```
+
+Putting it all together, we can compare the distances using both Haversine and Ellipsoid methods
+
+```{python eval=FALSE, code=readLines('code/pyqgis/distance.py')}
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/pyqgis/distance.png')
+```
+
 # Understanding Classes
 
 Before we dive it to PyQGIS, it is important to understand certain concepts related to C++ and Python Classes. Qt as well as QGIS is written in C++ language. Functionality of each Qt/QGIS Widget is implemented as a class - having certain properties and functions. When we use PyQt or PyQGIS classes, it is executing the code in the C++ classes via the python bindings.
@@ -271,9 +396,9 @@ GUI programming requires responding to user’s actions. All objects in Qt have 
 object.signal.connect(function)
 ```
 
-A new button or menu item is created using `QAction()`. Here we create an action and then connect the *click* signal to a method that opens a website. [^2]
+A new button or menu item is created using `QAction()`. Here we create an action and then connect the *click* signal to a method that opens a website. [^4]
 
-[^2]: Code reference https://gis.stackexchange.com/questions/318816/add-help-menu-entry-in-qgis-3-from-startup-py
+[^4]: Code reference https://gis.stackexchange.com/questions/318816/add-help-menu-entry-in-qgis-3-from-startup-py
 
 ```{python eval=FALSE}
 import webbrowser
@@ -392,9 +517,9 @@ knitr::include_graphics('images/pyqgis/sf.png')
 
 ### Save Map Rendering as an Image
 
-`saveAsImage()` method is quick and easy, but you do not have much control over the resulting image. You can't control the resolution, size or how each layer will be rendered. There is another way to achieve this. You can look at the code for exporting map as an image in QGIS and you will discover 2 classes `QgsMapRendererParallelJob` and `QgsMapRendererSequentialJob` that lets you achieve a better result. The code snippet below exports a hi-resolution image of the project. [^3]
+`saveAsImage()` method is quick and easy, but you do not have much control over the resulting image. You can't control the resolution, size or how each layer will be rendered. There is another way to achieve this. You can look at the code for exporting map as an image in QGIS and you will discover 2 classes `QgsMapRendererParallelJob` and `QgsMapRendererSequentialJob` that lets you achieve a better result. The code snippet below exports a hi-resolution image of the project. [^5]
 
-[^3]: Code reference https://github.com/qgis/QGIS/blob/8a3c7b14c367771d096b4a6d006aa3c4b1017dd5/tests/src/python/utilities.py
+[^5]: Code reference https://github.com/qgis/QGIS/blob/8a3c7b14c367771d096b4a6d006aa3c4b1017dd5/tests/src/python/utilities.py
 
 ```{python eval=FALSE}
 import os
@@ -575,9 +700,9 @@ QgsProject.instance().layerTreeRoot().findLayer(blocks.id()).setItemVisibilityCh
 
 ### Create a New Vector Layer
 
-A simple example showing how to create a point layer with 1 feature and 1 attribute. [^5]
+A simple example showing how to create a point layer with 1 feature and 1 attribute. [^7]
 
-[^5]: Code reference https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/pyqgis101-creating-editing-a-new-vector-layer/
+[^7]: Code reference https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/pyqgis101-creating-editing-a-new-vector-layer/
 
 ```{python eval=FALSE}
 vlayer = QgsVectorLayer('Point?crs=EPSG:4326', 'point', 'memory')
@@ -595,9 +720,9 @@ QgsProject.instance().addMapLayer(vlayer)
 
 ### Saving Layers to Disk
 
-Use the `QgsRasterFileWriter` or `QgsVectorFileWriter` classes for writing layers to disk. [^4]
+Use the `QgsRasterFileWriter` or `QgsVectorFileWriter` classes for writing layers to disk. [^6]
 
-[^4]: Code reference https://gis.stackexchange.com/questions/285346/add-layers-to-geopackage-using-pyqgis-qgis-3
+[^6]: Code reference https://gis.stackexchange.com/questions/285346/add-layers-to-geopackage-using-pyqgis-qgis-3
 
 ```{python eval=FALSE}
 import os
@@ -621,9 +746,9 @@ knitr::include_graphics('images/pyqgis/styling.png')
 
 ### Displaying a label with a background color
 
-This is a vast topic, but you can get a taste of the flexibility offered by the API to control all aspects of labeling. Notice the class name `QgsPalLayerSettings` - this is because QGIS uses a labeling library called [PAL](http://pal.heig-vd.ch/index.php?page=about-pal) for labels. The code snippet below shows how to create a label for a point layer with a background color. [^6]
+This is a vast topic, but you can get a taste of the flexibility offered by the API to control all aspects of labeling. Notice the class name `QgsPalLayerSettings` - this is because QGIS uses a labeling library called [PAL](http://pal.heig-vd.ch/index.php?page=about-pal) for labels. The code snippet below shows how to create a label for a point layer with a background color. [^8]
 
-[^6]: Code reference https://gis.stackexchange.com/questions/292136/qgspallayersettings-error/294019
+[^8]: Code reference https://gis.stackexchange.com/questions/292136/qgspallayersettings-error/294019
 
 ```{python eval=FALSE}
 vlayer = QgsProject.instance().mapLayersByName('point')[0]
@@ -827,9 +952,9 @@ Actions provide an easy way to add custom behavior to QGIS without having to wri
 
 Actions are defined at the layer level. We will define an action for the `parcels` layer so when a user clicks on a parcel, all parcels that belong to the same block will be selected. The parcel layer has an attribute **block_num** that refers to the block that parcel belongs to. 
 
-Right-click the `parcels` layer and switch to *Actions* tab. Click *Add a new action* button. Select **Python** as the *Type*. Name the action as **Select all parcels from the same block**. This action is meant to be used for selecting features on the map canvas, so check the **Canvas** as the *Action Scope*. Enter the following code snippet in the *Action Text* and click *OK*. [^7]
+Right-click the `parcels` layer and switch to *Actions* tab. Click *Add a new action* button. Select **Python** as the *Type*. Name the action as **Select all parcels from the same block**. This action is meant to be used for selecting features on the map canvas, so check the **Canvas** as the *Action Scope*. Enter the following code snippet in the *Action Text* and click *OK*. [^9]
 
-[^7]: Code reference: https://gis.stackexchange.com/a/340615/5160
+[^9]: Code reference: https://gis.stackexchange.com/a/340615/5160
 
 
 ```{r echo=FALSE, fig.align='center'}
@@ -1049,6 +1174,10 @@ Restart QGIS. Go to  **Plugins &rarr; Manage and Install plugins... &rarr; Insta
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/pyqgis/pluginminimalshow.png')
 ```
+
+### Exercise
+
+Take the minimal plugin template from above and build a new plugin called 'Show Time'. This plugin will add a button to the Plugin Toolbar which will display the current time when clicked. The code to add such a button is already covered in the **Add a button to a toolbar** section.
 
 ## Processing Plugin
 
