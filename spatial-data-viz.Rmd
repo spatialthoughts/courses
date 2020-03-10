@@ -1,6 +1,6 @@
 ---
 title: "Spatial Data Visualization and Analytics"
-subtitle: "Learn techniques for working with all types of spatial datasets."
+subtitle: "A modern introduction to working with spatial datasets"
 author: "Ujaval Gandhi"
 fontsize: 12pt
 output:
@@ -269,6 +269,30 @@ If you open the resulting PDF in a compatible reader such as [Adobe Acrobat](htt
 
 ![](images/spatial_data_viz/aq34.png)
 
+# Lines
+
+Many of our transportation infrastructure such as roads, bridges, railways etc. as well as natural features such as rivers, streams etc. can be modeled as lines. Other abstract concepts, such as contours and trajectories are also modeled using linear features. Shapefiles, GeoJSON, GPX are commonly used file formats for storing line datasets.
+
+## Exercise: Visualize GPS Tracks
+
+GPS tracks have become ubiquitous in modern life. With GPS built-into most phones, many of us capture the tracks while running or biking outdoors. Cab companies use GPS tracks collected during the trip to determin fares. Delivery and logistics companies store and analyze millions of GPS tracks from their assets to derive location intelligence. 
+
+We will use a GPS track I collected using the open-source [GPS Logger app](https://www.basicairdata.eu/projects/android/android-gps-logger/) while cycling to work. The default format for storing GPS tracks is [GPS Exchange Format (GPX)](https://en.wikipedia.org/wiki/GPS_Exchange_Format). It is a XML-based text format that allows storing points, tracks and routes in a single file. We will use the data in ``sample_gps_track.gpx`` file and create an animated GIF showing the trip.
+
+1. Locate the``sample_gps_track.gpx`` file and drag it to the canvas. As the file contains multiple data types, a pop-up will ask us to select the layers to add. Hold the *Shift* key and select both ``track_points`` and ``tracks`` layers. Click *OK*.
+
+2. To add some context to the map, we should add a basemap. A dark background map works best for the visualization we want to create. Go to **Web &rarr; QuickMapServices &rarr; CartoDB &rarr; Dark Matter** layer.
+
+3. Select the ``sample_gps_track tracks`` layer and click *Open the Layer Styling Panel*. You can change the line *Color* to ``Blue`` and *Width* to ``0.5``.
+
+4. Before styling the points, we will first export the layer to a different format. Animating the points require applying filters on the data layer which doesn't work well with the GPX format, so we will export it to a GeoPackage. Right-click the ``sample_gps_tracks track_points`` layer and go to **Export &rarr; Save Feature As**.
+
+5. Select the output *File name* as ``gps_points.gpkg``. Make sure the *Add saved file to map* button is checked and click *OK*.
+
+6. A new layer ``gps_points`` will be added to the *Layers* panel. In the *Layer Styling Panel*, select *Simple marker* symbol. Change the point *Size* to ``1`` . Choose a lighter shade of Blue as the *Fill color* and a ``Transparent Stroke`` as *Stroke color*.
+
+7. We want to give a glow effect to the points as it is animating. Right-click the ``gps_points`` layer and choose *Duplicate Layer*. 
+
 # Polygons
 
 Regions are modeled as polygons. Polygons are most commonly used to model administrative areas, buildings, land parcels etc. Polygon geometry is represented as a series of coordinates. Since the shapes can be complex, polygons have a more verbose geometry descriptions and seldom come in a CSV files. GeoJSON and shapefile are the most commonly used file formats for storing polygon datasets.
@@ -444,16 +468,116 @@ https://data.gov.uk/dataset/6a117171-5c59-4c7d-8e8b-8e7aefe8ee2e/lidar-composite
 
 ## Exercise: Uber Movement Analysis
 
-193 JP Nagar
+[Uber](https://movement.uber.com/) provides anonymized data aggregated from over ten billion taxi trips to help urban planning around the world. The data is freely available in open-format for download. The dataset includes info such as travel times and speeds along each road segment.
+
+We will take the [Travel Times data](https://movement.uber.com/explore/bangalore/travel-times/query?lang=hi-IN) for the city of Bangalore to analyze the traffic patterns and find out the areas that are accessible within 30 minutes of driving. This type of map is known as an [Isochrone Map](https://en.wikipedia.org/wiki/Isochrone_map) and is useful in urban planning.
+
+The data comes in 2 parts. A GeoJSON file ``bangalore_wards.json`` depcting the boundaries of wards in the city and a CSV file ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate.csv`` that contains travel times aggregated at the ward level and hour of the day for the time period Q3 (July-Sep) of 2019. [A whitepaper](https://d3i4yxtzktqr9n.cloudfront.net/web-movement/76002ded222a46a02ae89f207e91e335.pdf) documents the merthodology used for creating this dataset.
+
+The structure of the CSV file is as follows
+
+
+|**sourceid** |**dstid**|**hod**|**mean_travel_time**|...|
+|:------------|:--------|:------|:-------------------|:--|
+|55           |111      |8      |2026.76             |...|
+|22           |25       |13     |770.07              |...|
+
+- **sourceid** and **dstid**: the pair of origin-destination ward ids
+- **hod**: hour-of-day. Ranges from 0-23
+- **mean_travel_time**: average travel time in seconds aggregated from all the trips
+
+There are 198 wards in Bangalore. The file contains pair-wise travel time between each of them for all hours of the day. The total records of travel times between them would be 198 x 198 x 24 = 940896. But since not all wards have enough trips between them at certain hours, they are not provided. Thus our file contains a total of 818263 rows. This is still a lot of data and  we need to do some analytics to extract the right set from it.
+
+1. Let's first load a base layer from OpenStreetMap. Go to **Web &rarr; QuickMapServices &rarr; OSM &rarr; OSM Standard**. Next locate the ``bangalore_wards.json`` file in the *Browser* panel and drag it to the canvas. Once loaded, click *Open Data Source Manager* button.
+
+![](images/spatial_data_viz/uber1.png)
+
+2. Switch to the *Delimited Text* tab. Browse to the ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate.csv`` file and select it. Since this CSV file is just tabular data, select *No geometry (attribute only table)* option and click *Add*.
+
+![](images/spatial_data_viz/uber2.png)
+
+3. Once the ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate`` layer is added to the *Layers* panel, right-click on it and select *Show Feature Count*. The total rows from the table will be displayed next to it.
+
+![](images/spatial_data_viz/uber3.png)
+
+4. For the purpose of this exercise, we will calculate all areas that are accessible within 30 minutes from [Spatial Thoughts office](https://g.page/spatialthoughts?share). When you find the area on the basemap, you can select the *Identify* button and select ``bangalore_wards`` layer and click on it. The results will confirm that the office is located in the *JP Nagar* ward with the *MOVEMENT_ID* **193**.
+
+![](images/spatial_data_viz/uber4.png)
+
+5. We can filter the travel time records to just those which have this ward as the destination. We can also restrict our analysis to the peak morning commute hours of 9am-10am. Right-click the ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate`` layer and select *Filter*.
+
+![](images/spatial_data_viz/uber5.png)
+
+6. Enter the following filter expression and click *OK*.
+
+```
+"dstid" = 193 AND "hod" = 9
+```
+
+![](images/spatial_data_viz/uber6.png)
+
+7. Back in the main QGIS window, you will see that the number of records in the filtered table are now down to just *197*. Since there are a total of 198 wards in the city, we have records of travel times between the 1 destination ward and 197 source wards. Open the attribute table of both the layers using the  *Open Attribute Table* button in the *Attributes* toolbar.
+
+![](images/spatial_data_viz/uber7.png)
+
+8. Now we have the shapes of the ward in the layer ``bangalore_wards`` and tabular inofrmation in the layer ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate``. We can join the attribute information to the shapes using a common attribute. Here the **MOVEMENT_ID** column from the ``bangalore_wards`` layer and **sourceid** column from the ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate`` are unique ward identifiers that can be joined. This operation is called a *Table Join*. 
+
+![](images/spatial_data_viz/uber8.png)
+
+9. Before we can join these two layers, we must ensure that the values in both columns match exactly. Thought they appear the same, they are of different type. Since GeoJSON format has no way of specifying property types, all values are assumed to be of the type *String* - i.e. Text. But when we import a CSV to QGIS, QGIS intelligently determines the types of the columns based on the values and hence has assigned the type *Integer* to the column **sourceid**. So we need to convert the column from the GeoJSON to an integer type as well.  Go to **Processing &rarr; Toolbox**. Search for the *Field Calculator* algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/uber9.png)
+
+10. Choose ``bangalore_wards`` as the *Input Layer*. Click the *...* button next to the *Output file* and name the output as ``bangalore_wards_fixed.gpkg``. Name the new field as ``joinfield`` and select the *Output field type* as ``Integer``. Enter ``"MOVEMENT_ID"`` as the expression and click *OK*. Close the field calculator.
+
+![](images/spatial_data_viz/uber10.png)
+
+11. A new layer ``bangalore_wards_fixed`` will be added to the *Layers* panel. Now we are ready to perform the join. Search for and locate the *Join attributes by field value* algorithm from the Processing Toolbox.
+
+![](images/spatial_data_viz/uber11.png)
+
+12. Select ``bangalore_wards_fixed`` as the *Input layer* and ``joinfield`` as the *Table field*. Select ``bangalore-wards-2019-3-OnlyWeekdays-HourlyAggregate`` as the *Input layer 2* and ``sourceid`` as the *Table field 2*. Name the *Joined layer* as ``uber_travel_times.gpkg`` and click *Run*.
+
+![](images/spatial_data_viz/uber12.png)
+
+13. A new layer ``uber_travel_times`` will be added to the *Layers* panel. Let's style it to visualize the result of the join. Click *Open the Layer Styling Panel*. Select the ``Graduated`` renderer and ``mean_travel_time`` as the *Value*. Select a color ramp and click *Classify*. You will see the map showing increasing travel times further you go from the destination.
+
+![](images/spatial_data_viz/uber13.png)
+
+14. But we are looking to analyze and extract areas that are within 30 minutes of travel time, so we need to do some more processing. Switch the styling back to the *Single symbol* renderer. Right-click the ``uber_travel_times`` layer and select *Filter*.
+
+![](images/spatial_data_viz/uber14.png)
+
+15. Enter the following expression to select all wards within 1800 seconds (30 minutes) of mean travel time. We also need to include our destination ward which will have 0 travel time.
+
+```
+"mean_travel_time" <= 1800 OR "MOVEMENT_ID" = 193
+```
+
+![](images/spatial_data_viz/uber15.png)
+
+16. The layer will now show the cluster of polygons that constitute the area of interest. We will merge all of them to a single polygon now. Search and locate the *Dissolve* algorithm from the Processing Toolbox.
+
+![](images/spatial_data_viz/uber16.png)
+
+17. Select ``uber_travel_times`` as the *Input layer*. Name the *Dissolved* layer as ``30min_isochrone.gpkg``. Click *Run*.
+
+![](images/spatial_data_viz/uber17.png)
+
+18. A new layer ``30min_isochrone`` will be added to the *Layers* panel showing the result of our analysis.
+
+![](images/spatial_data_viz/uber18.png)
 
 # Data Credits
 
 * Delhi PM2.5 concentrations. Downloaded from [OpenAQ](https://openaq.org/) [data download](https://openaq.org/#/countries?_k=dmlk2k) service. Source data from Central Pollution Control Board (CPCB) India and EPAAirNow DOC.
+* OSM Tile Layer: (c) OpenStreetMap contributors
 * India Village-Level Geospatial Socio-Economic Data Set. Meiyappan, P., P. S. Roy, A. Soliman, T. Li, P. Mondal, S. Wang, and A. K. Jain. 2018. India Village-Level Geospatial Socio-Economic Data Set: 1991, 2001. Palisades, NY: NASA Socioeconomic Data and Applications Center (SEDAC). https://doi.org/10.7927/H4CN71ZJ. Accessed 15 February 2020.
 * Census 2001 Districts: Downloaded from [Datameet Spatial Data repository](https://github.com/datameet/maps/tree/master/States).
 * Oxford Point Cloud. DTM, and DSM. Downloaded from [Defra Data Services Platform](https://environment.data.gov.uk/DefraDataDownload/). Crown Copyright 2019
 * Kathmandu University Ground Drone Imagery. Downloaded from [OpenAerialMap](https://map.openaerialmap.org/#/85.53695037961006,27.61776421799196,20/user/59f0ecea31eff4000c3804fd/5a00c096bac48e5b1cf75232?_k=tkjpjw). Captured by [WeRobotics](https://werobotics.org/)
 * Bangalore Sentinel-2 Imagery. Downloaded from [Copernicus Open Access Hub](https://scihub.copernicus.eu/). Copyright European Space Agency - ESA.
+* Travel Times for Bangalore. Data retrieved from Uber Movement, (c) 2020 Uber Technologies, Inc., https://movement.uber.com.
 
 # License
 
