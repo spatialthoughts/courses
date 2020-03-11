@@ -1,5 +1,5 @@
 ---
-title: "Spatial Data Visualization and Analytics"
+title: "Spatial Data Visualization and Analytics (Course Material)"
 subtitle: "A modern introduction to working with spatial datasets"
 author: "Ujaval Gandhi"
 fontsize: 12pt
@@ -86,12 +86,12 @@ A GeoJSON representation
 
 ## Spatial Data Formats
 
-|   **Type**     |**Non-Spatial Data**  | **Spatial Data**     |
-|:---------------|:---------------------|:---------------------|
-| Text           | csv, json, xml       | csv, geojson, gml, kml |
-| Binary/Compressed         | xlsx, zip             | shapefile, geopackage |
-| Images         | tiff, jpg, png       | geotiff, jpeg2000    | 
-| Databases      | SQLite, PostgreSQL, Oracle | Spatialite, PostGIS, Oracle Spatial |
+|   **Type**       |**Non-Spatial Data**        | **Spatial Data**     |
+|:-----------------|:---------------------------|:---------------------|
+| Text             | csv, json, xml             | csv, geojson, gml, kml |
+| Binary/Compressed| pdf, xls, zip              | shapefile, geopdf, geopackage |
+| Images           | tiff, jpg, png             | geotiff, jpeg2000    | 
+| Databases        | SQLite, PostgreSQL, Oracle | Spatialite, PostGIS, Oracle Spatial |
 
 ## Spatial Data Types
 
@@ -123,6 +123,10 @@ https://giscourses.cfans.umn.edu/sites/giscourses.cfans.umn.edu/files/5480chapte
 * QuickMapServices
 * TimeManager
 * QuickOSM
+
+# Get the Data Package
+
+The exercises in this class use a variety of datasets. All the required layers, project files etc. are supplied to you in the ``spatial_data_viz.zip`` file. Unzip this file to the `Downloads` directory.
 
 # Visualization
 
@@ -577,7 +581,7 @@ There are 198 wards in Bangalore. The file contains pair-wise travel time betwee
 
 ![](images/spatial_data_viz/uber8.png)
 
-9. Before we can join these two layers, we must ensure that the values in both columns match exactly. Thought they appear the same, they are of different type. Since GeoJSON format has no way of specifying property types, all values are assumed to be of the type *String* - i.e. Text. But when we import a CSV to QGIS, QGIS intelligently determines the types of the columns based on the values and hence has assigned the type *Integer* to the column **sourceid**. So we need to convert the column from the GeoJSON to an integer type as well.  Go to **Processing &rarr; Toolbox**. Search for the *Field Calculator* algorithm. Double-click to launch it.
+9. Before we can join these two layers, we must ensure that the values in both columns match exactly. Thought they appear the same, they are of different type. Since GeoJSON format has no way of specifying property types, all values are assumed to be of the type *String* - i.e. Text. But when we import a CSV to QGIS, QGIS intelligently determines the types of the columns based on the values and hence has assigned the type *Integer* to the column **sourceid**. So we need to convert the column from the GeoJSON to an integer type as well.  Go to **Processing &rarr; Toolbox**. Search for the *Vector Table &rarr; Field Calculator* algorithm. Double-click to launch it.
 
 ![](images/spatial_data_viz/uber9.png)
 
@@ -742,6 +746,73 @@ In this exercise, we will take a List of Parks published by Bruhat Bengaluru Mah
 8. The resulting layer ``bangalore_wards_park_area`` will be added to the *Layers* panel. Explore the attribute table to know the total park area for each ward.
 
 ![](images/spatial_data_viz/park8.png)
+
+## Exercise: Determine the Best Area for a Home
+
+Finding optimal locations is a widely used spatial analytic technique. Using a suitability models, we can combine multiple criteria and detemine rank sites. Here we will take a realistic scenario of determining the best place to live in a city using multiple criteria.
+
+The criteria for this exercise is to rank the wards according to the following criteria
+
+* Must be within 30-minute driving distance from work. We will consider [Spatial Thoughts office](https://g.page/spatialthoughts?share) as the work location.
+* Must be within 1km of a metro station.
+* Accessiblity to parks. Wards with more parks are preferred.
+
+We already have the data prepped from the previous exercises. 
+
+* ``30min_isochrone.gpkg`` layer representing areas within 30-minute driving distance from work.
+* ``metro_station_buffer_reprojected.gpkg`` layer representing all areas within 1km of a metro station.
+* ``bangalore_wards_park_area.gpkg`` layer with total park area for each ward.
+
+We can now use overlay techniques to carry out the suitability analysis using the above layers.
+
+1. Locate ``30min_isochrone.gpkg``, ``metro_station_buffer_reprojected.gpkg`` and ``bangalore_wards_park_area.gpkg`` layers and add them to QGIS. Search and locate the **Vector overlay &rarr; Intersection** algorithm. Double-click to launch it. 
+
+![](images/spatial_data_viz/overlay1.png)
+
+2. Select ``30min_isochrone`` as the *Input layer* and ``metro_station_buffer_reprojected`` as the *Overlay layer*. Name the *Intersection* output as ``intersection.gpkg``. Click *Run*.
+
+![](images/spatial_data_viz/overlay2.png)
+
+3. The resulting ``intersection`` layer represents the area that meets 2 of our criteria. Now time to apply the 3rd criteria. Search and locate the **Vector analysis &rarr; Overlap analysis** algorithm. Double-click to launch it. 
+
+![](images/spatial_data_viz/overlay3.png)
+
+4. Select ``bangalore_wards_park_area.gpkg`` as the *Input layer*. Select ``intersection`` as the *Overlay layer*. Name the *Output layer* as ``park_intersection_overlap.gpkg`` and click *Run*.
+
+![](images/spatial_data_viz/overlay4.png)
+
+5. The resulting layer ``park_intersection_overlap`` adds 2 new columns to the original park layer: ``intersection_area`` and ``intersection_pc``. For each ward polygon - we now know what percentage of the polygon intersects with our region of interest. If we assume the parks are evenly distributed throughout the ward, we can calculate the park area in the area of interest using the ``intersection_pc`` attribute.  Search for the *Vector Table &rarr; Field Calculator* algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/overlay5.png)
+
+6. Select the *Output file* as ``park_intersection_percentage_area.gpkg``. Name the *Output field name* as ``perc_area``. Enter the following expression and click *OK*.
+
+```
+("intersection_pc" * "PARK_AREA")/100
+```
+
+![](images/spatial_data_viz/overlay6.png)
+
+7. We are almost done. We now know what is the total area of parks in the intersection region for each ward. We can now assign a rank to them. Search for the *Vector Table &rarr; Add autoincremental field* algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/overlay7.png)
+
+8. Select ``park_intersection_percentage_area`` as the *Input layer*. Enter ``RANK`` as the *Field name* and ``1`` as the *Start values at*. Expand the *Advanced parameter* section and select ``perc_area`` as the *Sort expression*. Un-check the *Sort ascending* box. Name the *Incremented* output layer as ``bangalore_ward_rank.gpkg`` and click *Run*.
+
+![](images/spatial_data_viz/overlay8.png)
+
+9. Right-click the resulting ``bangalore_ward_rank`` layer and select *Filter*. Enter the following expression to select the Top 10 wards.
+
+```
+"RANK" <= 10
+```
+
+![](images/spatial_data_viz/overlay9.png)
+
+10. You will see the top 10 wards on the map. Click *Open the Layer Styling Panel* and switch to the *Labels* tab. Choose *Single labels* and ``RANK`` as the *Value*. A label with the rank of the ward will be displayed on the map.
+
+![](images/spatial_data_viz/overlay10.png)
+
 
 # Data Credits
 
