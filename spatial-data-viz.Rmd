@@ -519,10 +519,6 @@ https://data.gov.uk/dataset/6a117171-5c59-4c7d-8e8b-8e7aefe8ee2e/lidar-composite
 
 # Analysis
 
-## Exercise: Analyze Metro Rail Accesiblity
-
-"operator" = 'BMRCL'    AND "disused" != 'yes'  AND "railway" = 'station' AND "disused:railway" != 'station'
-
 ## Exercise: Uber Movement Analysis
 
 [Uber](https://movement.uber.com/) provides anonymized data aggregated from over ten billion taxi trips to help urban planning around the world. The data is freely available in open-format for download. The dataset includes info such as travel times and speeds along each road segment.
@@ -625,16 +621,141 @@ There are 198 wards in Bangalore. The file contains pair-wise travel time betwee
 
 ![](images/spatial_data_viz/uber18.png)
 
+## Exercise: Analyze Metro Rail Accesiblity
+
+When planning urban infrastructure, a useful criteria is accessiblity to public transport. This excellent article by [LiveMint](https://www.livemint.com/news/india/india-s-public-transport-challenge-1568355574941.html) analyzes the metro rail accessibility for cities across India. We will try to do a similar analysis.
+
+In this analysis, we will determine what percentage of population in Bangalore live within 1km of a metro station. The power of GIS lies in combining information from multiple disparate sources to answer questions. To carry out this analysis, we will first query OpenStreetMap database to get the location of functioning metro stations in Bangalore. Then we calculate a 1km buffer and combine it with a population grid from WorldPop to determine the population statistics.
+
+1. Locate the ``bangalore.geojson`` file and drag it to the canvas. This polygon layer represents the city boundary.
+
+![](images/spatial_data_viz/pop1.png)
+
+2. Now we will query OpenStreetMap to get a vector layer of railway stations in the city. Go to **Vector &rarr; QuickOSM &rarr; QuickOSM**. OpenStreetMap uses a tagging system to record properties of physical features. The tags and the key/value pairs are described in [OpenStreetMap wiki](https://wiki.openstreetmap.org/wiki/Map_Features). To railway stations are tagged with ``railway=station``. Enter ``railway`` as the *Key*, ``station`` as the *Value* and *Bangalore* as the geographic filter *In*. Expand the *Advanced* section and check only the *Node* and *Points* boxes. Click *Run Query*.
+
+![](images/spatial_data_viz/pop2.png)
+
+3. Once the query finishes, you will see a new layer ``railway_station_Bangalore`` loaded in the canvas. This includes all railway stations - including the ones operator by Indian Railways and stations under constructions. We can apply a filter to select only the operation metro stations. Right-click the layer and select *Filter*.
+
+![](images/spatial_data_viz/pop3.png)
+
+4. In the *Query Builder* enter the following expression and click *OK*.
+
+```
+"operator" = 'BMRCL' AND "disused" != 'yes' AND "disused:railway" != 'station'
+```
+
+![](images/spatial_data_viz/pop4.png)
+
+5. Now the map will update to show only the operation metro stations in the city. Next, we need to apply a *Buffer* to these stations to find areas within 1km. But our data comes in the EPSG:4326 WGS84 Gepgraphic Projection - which has degrees as units. To do geoprocessing operations on this layer in projected units such as kilometers, we must first reproject the layer in a suitable projected coordinate reference system (CRS). Go to **Processing &rarr; Toolbox**. Search for and locate the **Vector general &rarr; Reproject layer** algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/pop5.png)
+
+6. Choose  ``railway_station_Bangalore`` as the *Input layer*. Select ``EPSG:32643 - WGS 84 UTM Zone 43N`` as the *Target CRS*. Name the *Reprojected* layer as ``metro_stations_reprojected.gpkg``.
+
+![](images/spatial_data_viz/pop6.png)
+
+7. Once the reprojected layer ``metro_stations_reprojected`` is created, search for the **Vector geometry &rarr; Buffer** algorithm and double-click to launch the algorithm.
+
+![](images/spatial_data_viz/pop7.png)
+
+8. Select ``metro_stations_reprojected`` as the *Input layer*. Enter ``1 kilometers`` as the *Distance*. Check the *Dissolve result* option and name the *Buffered* output layer as ``metro_stations_buffer.gpkg``. click *Run*.
+
+![](images/spatial_data_viz/pop8.png)
+
+9. The layer now has a polygon representing areas within 1km of a metro station. Now that we are done with the geoprocessing operation, let's convert the result back to the original projection so we can use it along with other layers. Search for **Vector general &rarr; Reproject layer** algorithm and launch it.
+
+![](images/spatial_data_viz/pop9.png)
+
+10. Select ``metro_stations_buffer`` as the *Input layer* and ``EPSG:4326 -WGS 84`` as the *Target CRS*. Name the output as ``metro_station_buffer_reprojected.gpkg``. Click *Run*.
+
+![](images/spatial_data_viz/pop10.png)
+
+11. A new layer ``metro_station_buffer_reprojected`` will be added to the canvas tha represents the area within 1 km of a metro station. We already have the ``bangalore`` layer representing the extent of the city. Now we are ready to extract the population data for both these layers.
+
+![](images/spatial_data_viz/pop11.png)
+
+12. Locate the ``ind_ppp_2000_KA.tif`` in the *Browser* panel. Drag it to the canvas.
+
+![](images/spatial_data_viz/pop12.png)
+
+13. Select the ``ind_ppp_2000_KA`` layer and use the *Identify* tool to explore the pixel values. The resolution of the raster is roughly 100m x 100m. The raster layer has only 1 band and the pixel value is the estimated number of people within the 100 sq. m. area.
+
+![](images/spatial_data_viz/pop13.png)
+
+14. We can determine the total population by summing up the values from the pixels that fall within a polygon. This operation is known as *Zonal Statistics*. Search for and locate the **Raster analysis &rarr; Zonal statistics** algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/pop14.png)
+
+15. Select ``ind_ppp_2000_KA`` as the *Raster layer* and ``bangalore`` as the *Vector layer containing zones*. Enter ``population_`` as the *Output column prefix*. We are interested only in the ``Sum`` so uncheck other *Statistics to calculate*. Click *Run*.
+
+![](images/spatial_data_viz/pop15.png)
+
+16. Once the algorithm finishes, repeat the same process for the ``metro_station_buffer_reprojected`` layer.
+
+![](images/spatial_data_viz/pop16.png)
+
+17. This algorithm would add a new attribute to each of these layers with the total population contained within the polygons. Use the *Identify* tool and click on the polygons. The **population_sum** field will contain the population. You can right-click on it and select *Copy Attribute Value*
+
+![](images/spatial_data_viz/pop17.png)
+
+18. QGIS has a built-in calculator. Click on the *Locator* box at the bottom-left of the window and type ``= ``. Paste the population totals from the metro station buffer and the city polygon. The result is the percentage of population that lives within 1km of a metro station.
+
+![](images/spatial_data_viz/pop18.png)
+
+## Exercise: Distribution of Green Spaces
+
+Open spaces like parks are a critical necessity in dense urban areas. Notonly they help the environment and providing recreational facilities, but as [this study](https://www.google.com/earth/outreach/success-stories/public-health-foundation-of-india/) by Public Health Foundation of India (PHFI) found - proximity to a park can also have a positive impact on one's mental health.
+
+In this exercise, we will take a List of Parks published by Bruhat Bengaluru Mahanagara Palike (BBMP), calculate the total area of parks for each ward of the city and map the results. This data is made available by [OpenCity - Urban Data Portal](http://opencity.in) as a PDF file. I converted this PDF to an Excel file using [Zamzar Online file conversion](https://www.zamzar.com/convert/pdf-to-xls/) tool. The resulting file was cleaned up and is available as ``BBMP_Parks.xlsx``. 
+
+>> This exercise tackles only the total area of park per ward. But quality also matters. Do take a look at the [Parks and Playgrounds Score of Bengaluru Report](https://www.ichangemycity.com/pdf/parks-playgrounds-survey-report.pdf) by ichangemycity that did a comprehensive analysis of open spaces in the city.
+
+1. locate the ``bangalore_wards.json`` file in the *Browser* panel and drag it to the canvas. Next find the ``BBMP_Parks.xlsx`` file. QGIS can read Excel files directly too. Drag it to the canvas. You will have 2 layers ``bangalore_wards`` and ``BBMP_Parks_Area`` loaded in the *Layers* panel.
+
+![](images/spatial_data_viz/park1.png)
+
+2. Select the ``BBMP_Parks_Area`` layer and click *Open Attribute Table*. The table contains 900+ rows with each row describing a park and its area in sq. meters. We don't have the exact location of the park, but we know which ward it belongs to.
+
+![](images/spatial_data_viz/park2.png)
+
+3. We can group all the parks by ward and calculate total park area by each ward. Open the *Processing Toolbox* and seach for the **Vector analysis &rarr; Statistics by categories** algorithm. Double-click to launch it.
+
+![](images/spatial_data_viz/park3.png)
+
+4. Select ``BBMP_Parks_Area`` as the *Input vector layer*. Select ``Area`` as the *Field to calculate statistics on*. As we want to group by wards, select ``Ward`` as the *Field(s) with categories*. Name the resulting *Statistics by category* layer as ``park_area_by_ward.gpkg``. Click *Run*.
+
+![](images/spatial_data_viz/park4.png)
+
+5. Now we have a table with the *sum* of area for each ward allowing us to join it with a spatial layer. Search for and locate the *Join attributes by field value* algorithm from the Processing Toolbox. Select ``bangalore_wards`` as the *Input layer* and ``WARD_NO`` as the *Table field*. Select ``park_area_by_ward`` as the *Input layer 2* and ``Ward`` as the *Table field 2*. The ``park_area_by_ward`` contains many columns with different statistics but we are only interested in *sum*. So select ``sum`` as the *Layer 2 fields to copy*. Name the output layer as ``bangalore_wards_park_area_joined.gpkg`` and click *Run*.
+
+![](images/spatial_data_viz/park5.png)
+
+6. A new layer ``bangalore_wards_park_area_joined`` will be added to the *Layers* panel. Before we finalize the results, we can rename the columns to be more descriptive. Search for and locate the **Vector table &rarr; Refactor fields** algorithm.
+
+![](images/spatial_data_viz/park6.png)
+
+7. Select un-wanted columns and use the *Delete field* to remove them. For the *sum* column, enter ``PARK_AREA`` as the *Field  name*. Name the *Refactored* output as ``bangalore_wards_park_area.gpkg`` and click *Run*.
+
+![](images/spatial_data_viz/park7.png)
+
+8. The resulting layer ``bangalore_wards_park_area`` will be added to the *Layers* panel. Explore the attribute table to know the total park area for each ward.
+
+![](images/spatial_data_viz/park8.png)
+
 # Data Credits
 
 * Delhi PM2.5 concentrations. Downloaded from [OpenAQ](https://openaq.org/) [data download](https://openaq.org/#/countries?_k=dmlk2k) service. Source data from Central Pollution Control Board (CPCB) India and EPAAirNow DOC.
-* OSM Tile Layer: (c) OpenStreetMap contributors
+* OSM Tile Layer, Bangalore Metro Stations : (c) OpenStreetMap contributors
 * India Village-Level Geospatial Socio-Economic Data Set. Meiyappan, P., P. S. Roy, A. Soliman, T. Li, P. Mondal, S. Wang, and A. K. Jain. 2018. India Village-Level Geospatial Socio-Economic Data Set: 1991, 2001. Palisades, NY: NASA Socioeconomic Data and Applications Center (SEDAC). https://doi.org/10.7927/H4CN71ZJ. Accessed 15 February 2020.
 * Census 2001 Districts: Downloaded from [Datameet Spatial Data repository](https://github.com/datameet/maps/tree/master/States).
 * Oxford Point Cloud. DTM, and DSM. Downloaded from [Defra Data Services Platform](https://environment.data.gov.uk/DefraDataDownload/). Crown Copyright 2019
 * Kathmandu University Ground Drone Imagery. Downloaded from [OpenAerialMap](https://map.openaerialmap.org/#/85.53695037961006,27.61776421799196,20/user/59f0ecea31eff4000c3804fd/5a00c096bac48e5b1cf75232?_k=tkjpjw). Captured by [WeRobotics](https://werobotics.org/)
 * Bangalore Sentinel-2 Imagery. Downloaded from [Copernicus Open Access Hub](https://scihub.copernicus.eu/). Copyright European Space Agency - ESA.
 * Travel Times for Bangalore. Data retrieved from Uber Movement, (c) 2020 Uber Technologies, Inc., https://movement.uber.com.
+* Bangalore Ward Maps Provided by [Spatial Data of Municipalities (Maps) Project](http://projects.datameet.org/Municipal_Spatial_Data/) by Data{Meet}.
+* Karnataka Population Grid 2020: Downloaded from [WorldPop](https://www.worldpop.org/geodata/summary?id=6527) - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00645
+* [BBMP: List of Parks - wardwise](http://opencity.in/documents/bbmp-list-of-parks-wardwise): Downloaded from OpenCity Urban Data Portal by Oorvani Foundation and DataMeet.
 
 # License
 
