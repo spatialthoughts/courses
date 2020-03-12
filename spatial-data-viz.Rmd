@@ -59,17 +59,14 @@ IoT (Internet-Of-Things) devices are collecting location data continuously along
 Governments are also increasing collecting and sharing location based data. Data relating to urban infrastructure, census, LIDAR and aerial imagery etc. are being collected at massive scale. Many governments have implemented open data sharing policies - making this data available to individuals and businesses to use.
 
 
-
 ## Spatial Data Model
 
-geometry + properties
+The spatial data model consists of 2 parts: **geometry** + **properties**
 
-shape + table
+*Geometry* (Shape) is defined with coordinates and a coordiate reference system
+*Properties* (Attributes) is defined with data and data types
 
-geometry = coordinates + reference 
-properties = type + data
-
-A GeoJSON representation
+Consider the following reprsentation of a city as a point.
 
 ```
  {
@@ -79,12 +76,17 @@ A GeoJSON representation
         "coordinates": [ 77.58270263671875, 12.963074139604124]
       },
       "properties": {
+        "id": 1,
         "name": "Bengaluru"
       }
   }
 ```
 
+This representation is in [GeoJson](https://geojson.org/) format. The point geometry is defined with X (Longitude) and Y (Latitude) coordinates. The point is assigned 2 properties - *id* with a value of ``1``, and *name* with the value of ``Bengaluru``. The GeoJson format supports only 1 type of Coordinate Reference System (WGS84), so we do not need to specify it explcitely.
+
 ## Spatial Data Formats
+
+We saw a basic way to represent the spatial data. But there is a variety of data formats to represent the data to suit different applications. In most cases, spatial data formats are an extension of existing data formats.
 
 |   **Type**       |**Non-Spatial Data**        | **Spatial Data**     |
 |:-----------------|:---------------------------|:---------------------|
@@ -95,26 +97,47 @@ A GeoJSON representation
 
 ## Spatial Data Types
 
-|   **Type**     |**Sub Types**   |   **Examples**    |
-|:---------------|:---------------|-------|
-| Vector         | Point        | 
-|                | Line         |
-|                | Polygons     |
-|                | Point Cloud  | LIDAR surveys
-| Raster         | Photos       | Aerial and Drone Photos 
-|                | Grids        | Satellite Imagery, Elevation Data, Thematic Data
-| Mesh           | Mesh         | 
-| Tiles          | Raster Tile Layers | TMS / WMS
-|                | Vector Tile Layers | 
+Spatial Data can be broadly categorized into 2 types - Vector and Raster. For serving these data on the web, they are usually cut into smaller chunks (tiles), so they can be categorized as the 3rd type.
 
-## Map Projections
 
-https://bl.ocks.org/syntagmatic/ba569633d51ebec6ec6e
+|   **Type**     |**Sub Types**       |**Examples**                            |
+|:---------------|:-------------------|:---------------------------------------|
+| Vector         | Point              | *Sensor Observations, Places*          |
+|                | Line               | *GPS Tracks, Roads, Rivers, Contours*  |
+|                | Polygons           | *Administrative Boundaries, Buildings* |
+|                | Point Cloud        | *LIDAR surveys*                        |
+| Raster         | Photos             | *Aerial and Drone Photos*              | 
+|                | Grids              | *Satellite Imagery, Elevation Data*    |
+|                | Mesh               | *Weather Data, Climate Data*           | 
+| Tiles          | Raster Tile Layers | *Web Maps*                             | 
+|                | Vector Tile Layers | *Web Maps*                             |
 
-EPSG: 7755 WGS 84 / India NSF LCC
-NATIONAL SPATIAL FRAMEWORK
+## Map Projections and Coordinate Reference Systems
 
-https://giscourses.cfans.umn.edu/sites/giscourses.cfans.umn.edu/files/5480chapter3_projections_excerpt.pdf
+If there was one thing that makes spatial data 'special' - it would have to be Coordinate Reference System (CRS) or Spatial Reference System (SRS).
+
+A *Map Projection* transforms the earth from its spherical shape (3D) to a planar shape (2D).
+
+A *Coordinate Reference System (CRS)* then defines how the 2D map relates to real places on the earth.
+
+The [QGIS Documentation](https://docs.qgis.org/testing/en/docs/gentle_gis_introduction/coordinate_reference_systems.html) provides a comprehensive introduction to the topic.
+
+There are hundreds of different map projection and CRS - each with different properties and uses. The most important thing to remember is that every projection distorts the map in some way. This [mashup of map projections distortions](https://bl.ocks.org/syntagmatic/ba569633d51ebec6ec6e) provide a useful visual reference to population projection.
+
+So what projection should you use for your project? Often, the answer is - it depends. This being a vast and complex topic, often, the answer is - it depends. But following are guidelines that will help you.
+
+* **Global Maps**: If you are producing global maps, the preferred and modern choice is the [Equal Earth](http://equal-earth.com/) projection. Added advantage of this projection is that it preserves areas, so it is also a good choice for global scale analysis that require equal-area grids.
+
+![The [Equal Earth](http://equal-earth.com/) Projection](images/spatial_data_viz/equal-earth.jpg)
+
+* **Country Maps**: Most countries have adopted a spcific CRS designed to minimize distortions over the region. You should consult the country's national mapping agency (USGS, Ordanance Survey, Survey of India etc.) for guidance. For India, the National Spatial Framework (NSF) recommends using the CRS EPSG: 7755 for country-level mapping - which is based on Lambert Conformal Conic (LCC) projection.
+
+![India Political Map by [Survey of India](http://www.surveyofindia.gov.in/pages/display/235-political-map-of-india) in LCC Projection](images/spatial_data_viz/india_map.jpg)
+
+* **Local and Regional Maps**: Similar to country-level CRSs, most countries have a state/province level CRSs. In absense of them, the Universal Transverse Mercator (UTM) provides a good overall system that can be used in any part of the world. The distortions within each zone is minimized, and if the area of interest is contained within the zone - it is a good choice for analysis as well as mapping. For India, UTM Zones 42N, 43N, 44N, 45N, 46N and 47N are used depending on the where your area of interest is located.
+
+![UTM Zones of the world.](images/spatial_data_viz/utm_zones.png)
+
 
 # Introduction to QGIS
 
