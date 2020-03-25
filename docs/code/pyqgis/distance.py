@@ -11,7 +11,7 @@ def ellipsoid_distance(origin, destination):
   d.setEllipsoid('WGS84')
 
   #Measure the distance
-  distance = d.measureLine(point1, point2)
+  distance = d.measureLine([point1, point2])
   return distance/1000
   
 def haversine_distance(origin, destination):
