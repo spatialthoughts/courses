@@ -55,7 +55,7 @@ This class focuses on techniques for automation of GIS workflows. The class cove
 # Get the Data Package
 The code examples in this class use a variety of datasets. All the required layers, project files etc. are supplied to you in the ``automating_gis_workflows.zip`` file with your purchase. Unzip this file to the `Downloads` directory.
 
-# Processing Framework
+# The Processing Framework
 
 QGIS 2.0 introduced a new concept called Processing Framework. Previously known as Sextante, the Processing Framework provides an environment within QGIS to run native and third-party algorithms for processing data. It is now the recommended way to run any type of data processing and analysis within QGIS - including tasks such as selecting features, altering attributes, saving layers etc. - that can be accomplished by other means. But leveraging the processing framework allows you to be more productive, fast, and less error prone. 
 
@@ -67,15 +67,14 @@ The Processing Framework consists of the following distinct elements that work t
 - **History Manager**: Records and stores all executions of algorithms to allow users to reproduce past analysis.
 - **Results Viewer**: An interface to view non-spatial outputs from algorithms - such as tables and charts.
 
-We will learn about each of these through hands-on exercises in the following sections.
 
-## Processing Toolbox
+# Processing Toolbox
 
 Processing Toolbox is available from the top-level menu **Processing &rarr; Toolbox**. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers is available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
 
 ![](images/automating_gis_workflows/toolbox_algorithms.png)
 
-### Why should you use Processing Algorithms
+## Why should you use Processing Algorithms
 
 - Well tested and rigorous implementations
 - Majority are written in C++ and are faster than alternatives
@@ -85,20 +84,7 @@ Processing Toolbox is available from the top-level menu **Processing &rarr; Tool
 - Ability to see progress of the operation and cancel it
 - Easily run on all or just selected features
 
-
-### Review default settings
-
-You can control what providers are available in settings. The Processing Options menu also provides a way to fine-tune the configuration of the framework.
-
-
-![](images/automating_gis_workflows/processing_settings1.png)
-
-
-I strongly recommend, changing the default settings and enable the option *Prefer output filename for layer names*. This option ensures that when you use batch processing, the resulting layers are unique.
-
-![](images/automating_gis_workflows/processing_settings2.png)
-
-### Exercise: Find the length of interstate highways
+## Exercise: Find the length of interstate highways
 
 The aim of this exercise is to show how a multi-step spatial analysis problem can be solved using a purely processing-based workflow. This exercise also shows the richness of available algorithms in QGIS that are able to do sophisticated operations that previously needed plugins or were more complex.
 
@@ -109,6 +95,8 @@ We will work with shapefiles provided by US Census Bureau. The ``tl_2019_us_prim
 ![](images/automating_gis_workflows/1.png)
 
 2. The layer ``tl_2019_us_primaryroads`` contain all major roads, including interstate highways, state highways, US highways etc. Select the layer and use the keyboard shortcut **F6** to open the attribute table. You will notice that the ``RTTYP`` column has information about road designation. As we are interested in only interstate highways, we can use the information in this column to extract relevant road segments.
+
+> Note: The raods layer has 2 line segments per road, representing the route in both directions.
 
 ![](images/automating_gis_workflows/2.png)
 
@@ -201,14 +189,22 @@ round(sum*0.000621371)
 
 Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, re-producible and intuitive workflow.
 
+## Lesser Known Algorithms
 
-## Batch Processing
+The Processing Toolbox contain hundred of algorithms - with new ones being added everyday. Many plugins also add processing algorithms that support new functionality. While you may think that processing algorithms are meant for **analysis** - there are plenty of algorithms that offer functionality that is beyond geoprocessing. Here are a few algorithms that I find very useful to automate my workflows that you may not be aware of.
 
-So far we have run the algorithm on 1 layer at a time. But each processing algorithm can also be run in a **Batch** mode on multiple inputs. This provides an easy way to process large amounts of data and automate repetitive tasks.
+* ``Download file``: Download file from a URL or FTP site. Allows you to automate tasks where you need to download new data regularly and process it.
+* ``Import geotagged photos``: Extracts latitude, longitude and azimuth information from a directory of photos and creates a point layer.
+* ``Add autoincremental field``: Simple but very useful algorithm to add a unique integer field. Many databases (even geopackage) requires that each layer has a unique integer field. This algorithm helps creating this field if your source layer is missing it. CAD or CSV layers frequently have this problem,.
+* ``Create spatial index``: Spatial indexes speed up your geoprocessing operation a lot. This algorithm can create spatial indices on many types of layers, including those loaded from a database.
+* ``ORS Tools Algorithms``: OpenRouteService (ORS) provides a QGIS plugin which installs a slew of network analysis algorithms to the Processing Toolbox. They allow rich network analysis functionality using OpenStreetMap data and it works without having to download any data.
 
-The batch processing interface can be invoked by right-clicking any processing algorithm and choosing **Execute as Batch Process**.
+> A fun and interesting algorithm is called ``Topological coloring``. This algorithm implements helps with cartography by allowing you assign a color_id to your polygon layers such that no adjacent polygons have the same color.
 
-## Graphical Modeler
+![](images/automating_gis_workflows/color3.png)
+
+
+# Graphical Modeler
 
 As we saw in the previous example, GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
 
@@ -318,6 +314,104 @@ We will take the workflow from the previous section and build a model that can p
 25. You will see a new input in the model dialog. Enter ``U`` and select the other vector layer inputs. Click *Run*. The result will be a table with lengths of US Highways for each state.
 
 ![](images/automating_gis_workflows/model25.png)
+
+
+# Batch Processing
+
+So far we have run the algorithm on 1 layer at a time. But each processing algorithm can also be run in a **Batch** mode on multiple inputs. This provides an easy way to process large amounts of data and automate repetitive tasks.
+
+The batch processing interface can be invoked by right-clicking any processing algorithm and choosing **Execute as Batch Process**.
+
+## Exercise: Clip multiple layers to a polygon
+
+We will take multiple country-level data layers and use the batch processing operation to clip them to a state polygon in a single operation.
+
+Open the **batch_processing** project from the data package. The project contains 5 layers in total. The ``tl_2019_us_state`` represents individual states. The other layers ``tl_2019_us_places``, ``tl_2019_us_mil``, ``tl_2019_us_rails`` and ``tl_2019_us_primaryroads`` are line and polygon layers which need to be clipped.
+
+1. Select the ``tl_2019_us_state`` layer and use the **Select Features** tool to select a state by clicking it.
+
+![](images/automating_gis_workflows/batch1.png)
+
+2. Next, run the **Extract selected features** processing algorithm. Select ``tl_2019_us_state`` as the *Input layer* and click *Run*. This will create a new layer with the selected state polygon called ``Selected features``
+
+![](images/automating_gis_workflows/batch2.png)
+
+3. Search for the **Vector Overlay &rarr; Clip** algorithm and right-click on it. Select **Execute as Batch Process**.
+
+![](images/automating_gis_workflows/batch3.png)
+
+4. In the batch processing dialog, click the *...* button on the first row of the *Input layer* column and choose *Select from Open Layers..*. Select ``tl_2019_us_places``, ``tl_2019_us_mil``, ``tl_2019_us_rails`` and ``tl_2019_us_primaryroads`` layers and click *OK*. 3 new rows will be automatically added to accommodate all 4 inputs.
+
+![](images/automating_gis_workflows/batch4.png)
+
+5. Click the *...* button on the first row of the *Overlay layer* column. Select the ``Selected features`` layer as the *Overlay layer*.
+
+![](images/automating_gis_workflows/batch5.png)
+
+6. As all input layers need to be clipped with the same overlay layer, you can click *Autofill..* and select *Fill Down* to autofill all the remaining rows with the same value.
+
+![](images/automating_gis_workflows/batch6.png)
+
+7. In the last *Clipped* column, click the *...* button and name the output ``clipped_``. When prompted, choose *Fill with parameter values* as the *autofill mode*, and *Input layer* as the *Parameter to use*.
+
+![](images/automating_gis_workflows/batch7.png)
+
+8. Make sure the *Load layers on completion* box is checked and click *Run*.
+
+![](images/automating_gis_workflows/batch8.png)
+
+9. Resulting clipped layers will be added to the Layers panel. We can combine all the clipped layers into a single geopackage file for ease of sharing. Run the **Package Layers** processing algorithm.
+
+![](images/automating_gis_workflows/batch9.png)
+
+10. Choose all the clipped layers and save the output as ``clipped.gpkg``.
+
+![](images/automating_gis_workflows/batch10.png)
+# Packaging Your Work
+
+We saw how we can save multiple layers to a single geopackage file. This makes data sharing easy between computers and users. Your spatial analysis project contains a lot more information than the dataset. There are layer styles, settings, variables, processing models etc. that are saved in different places. Modern versions of QGIS have the ability to store all relevant information into a single geopackage. This means you can document your entire project in a single geopackage.
+
+## Exercise: Package source layers, results and model in a GeoPackage
+
+We will take the source layers and result of the spatial analysis exercise of finding length of interstate roads and package them up in a GeoPackage.
+
+1. Load the ``tl_2019_us_primaryroads``, ``tl_2019_us_state`` and ``road_lengths_by_state`` layers in QGIS. Run the **Package Layers** processing algorithm.
+
+![](images/automating_gis_workflows/package1.png)
+
+2. Choose all the layers as the *Input layers*. Make sure the *Save layer stles into GeoPackage* option is checked. Name the *Destination GeoPackage* as ``results.gpkg``. Click *Run*.
+
+![](images/automating_gis_workflows/package2.png)
+
+3. Now the layers and their respective layer styles are all contained in a single geopackage file. Click *New Project* button. You can click *Don't Save* when prompted to save the current project.
+
+![](images/automating_gis_workflows/package3.png)
+
+4. In the fresh project, drag all the layers from the ``results.gpkg`` back in QGIS. Now that all loaded layers are from a single geopackage, we can save the project. Go to **Project &rarr; Save To &rarr; GeoPackage**.
+
+![](images/automating_gis_workflows/package4.png)
+
+5. Click the *...* button next to *Connection* and browse to the ``results.gpkg`` file. Click *OK*. Enter ``results`` as the *Project* name. Click *OK*.
+
+![](images/automating_gis_workflows/package5.png)
+
+6. Now the current project - with its layers, settings, variables etc. is also saved inside the ``results.gpkg`` file. Click the *Refresh* button in the *Browser* panel and expand the ``results.gpkg`` file. You will see the ``results`` project.
+
+![](images/automating_gis_workflows/package6.png)
+7. We can also package our processing model that created the results inside the package. This is a good practice since anyone who has the geopackage can reproduce the results using the included model. Open Processing Toolbox and locate the ``calculate_road_lenghts`` model under *Models*. Right-click and select *Edit Model*.
+
+![](images/automating_gis_workflows/package7.png)
+
+8. In the Processing Modeler toolbar, click the *Save model in project* button. You will get a success message confirming that the model was saved inside the current project.
+
+![](images/automating_gis_workflows/package8.png)
+
+9. Back in the main QGIS window, you will see a new section in the Processing Toolbox called *Project Models*. This folder contains the models that are saved inside the current project. Anyone who opens this project will have this folder and all the models within it.
+
+![](images/automating_gis_workflows/package9.png)
+
+GeoPackage is a flexible and versatile format that is adopted across QGIS. You saw how you can package all relevant information about your project inside a single file. Following these practices of saving your models along with source data ensures no information is lost. It also ensures you have well documented workflows that are reproducible by you in the future or by anyone with whom you have shared your data.
+
 
 # Data Credits
 * [TIGER/Line Shapefiles 2019[(https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)], US Census Bureau.
