@@ -1,0 +1,225 @@
+---
+title: "Automating GIS Workflows with QGIS (Course Material)"
+subtitle: "A deep dive into the Processing Toolbox for building fast, automated and reproducible workflows."
+author: "Ujaval Gandhi"
+fontsize: 12pt
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 3
+    highlight: pygments
+  # pdf_document:
+  #   toc: yes
+  #   toc_depth: 3
+  #   fig_caption: false
+  # word_document:
+  #   toc: yes
+  #   toc_depth: '3'
+  #   fig_caption: false
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \renewcommand{\footrulewidth}{0.4pt}
+- \fancyhead[LE,RO]{\thepage}
+- \geometry{left=1in,top=0.75in,bottom=0.75in}
+- \fancyfoot[CE,CO]{{\includegraphics[height=0.5cm]{images/cc-by-nc.png}} Ujaval Gandhi http://www.spatialthoughts.com}
+classoption: a4paper
+---
+
+\newpage
+
+***
+
+```{r echo=FALSE, fig.align='center', out.width='250pt'}
+knitr::include_graphics('images/spatial_thoughts_logo.png')
+```
+
+
+**This course is also offered as an online class. Visit  [www.spatialthoughts.com/events](https://spatialthoughts.com/events/) to know details of upcoming sessions. You may also sign up for [my mailing list](https://mailchi.mp/1d44f6c0c955/spatialthoughts) to know when new sessions are scheduled.**
+
+
+***
+
+\newpage
+
+# Introduction 
+
+This class focuses on techniques for automation of GIS workflows. The class covers the Processing Toolbox in detail.Below are the topics covered in this class
+
+- Processing Providers
+- Processing Algorithms, 
+- Processing Modeler
+- Batch processing
+
+# Get the Data Package
+The code examples in this class use a variety of datasets. All the required layers, project files etc. are supplied to you in the ``automating_gis_workflows.zip`` file with your purchase. Unzip this file to the `Downloads` directory.
+
+# Processing Framework
+
+QGIS 2.0 introduced a new concept called Processing Framework. Previously known as Sextante, the Processing Framework provides an environment within QGIS to run native and third-party algorithms for processing data. It is now the recommended way to run any type of data processing and analysis within QGIS - including tasks such as selecting features, altering attributes, saving layers etc. - that can be accomplished by other means. But leveraging the processing framework allows you to be more productive, fast, and less error prone. 
+
+The Processing Framework consists of the following distinct elements that work together.
+
+- **Processing Toolbox**: Contains individual tools (i.e. algorithms) grouped by providers and functionality
+- **Batch Processing Interface**: Allows any processing tool to be executed on multiple layers together.
+- **Graphical Modeler**: Allows the user to define the workflow and chain multiple processing steps together using a drag-and-drop mechanism. 
+- **History Manager**: Records and stores all executions of algorithms to allow users to reproduce past analysis.
+- **Results Viewer**: An interface to view non-spatial outputs from algorithms - such as tables and charts.
+
+We will learn about each of these through hands-on exercises in the following sections.
+
+## Processing Toolbox
+
+Processing Toolbox is available from the top-level menu **Processing &rarr; Toolbox**. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers is available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
+
+![](images/automating_gis_workflows/toolbox_algorithms.png)
+
+### Why should you use Processing Algorithms
+
+- Well tested and rigorous implementations
+- Majority are written in C++ and are faster than alternatives
+- Long processes can run the the background while you continue to use QGIS
+- Many multi-threaded algorithms can take advantage of multi-core CPU on your machines and give you better performance
+- Robust handling of invalid geometry
+- Ability to see progress of the operation and cancel it
+- Easily run on all or just selected features
+
+
+### Review default settings
+
+You can control what providers are available in settings. The Processing Options menu also provides a way to fine-tune the configuration of the framework.
+
+
+![](images/automating_gis_workflows/processing_settings1.png)
+
+
+I strongly recommend, changing the default settings and enable the option *Prefer output filename for layer names*. This option ensures that when you use batch processing, the resulting layers are unique.
+
+![](images/automating_gis_workflows/processing_settings2.png)
+
+### Exercise: Find the length of interstate highways
+
+The aim of this exercise is to show how a multi-step spatial analysis problem can be solved using a purely processing-based workflow. This exercise also shows the richness of available algorithms in QGIS that are able to do sophisticated operations that previously needed plugins or were more complex.
+
+We will work with shapefiles provided by US Census Bureau. The ``tl_2019_us_primaryroads.zip`` file comes TIGER/Line roads database and contains all the major roads in the US - including Interstate highways. The ``tl_2019_us_state.zip`` file comes from the Cartographic Boundary Files and contains the state boundaries. 
+
+1. Browse to the data directory and expand ``tl_2019_us_primaryroads.zip`` and ``tl_2019_us_state.zip`` files. Drag and drop the ``tl_2019_us_primaryroads.shp`` and ``tl_2019_us_state.shp`` layers to the canvas.
+
+![](images/automating_gis_workflows/1.png)
+
+2. The layer ``tl_2019_us_primaryroads`` contain all major roads, including interstate highways, state highways, US highways etc. Select the layer and use the keyboard shortcut **F6** to open the attribute table. You will notice that the ``RTTYP`` column has information about road designation. As we are interested in only interstate highways, we can use the information in this column to extract relevant road segments.
+
+![](images/automating_gis_workflows/2.png)
+
+3. Open the Processing Toolbox by going to **Processing &rarr; Toolbox**
+
+![](images/automating_gis_workflows/3.png)
+
+4. You can use tools such as *Select by expression*, export the selected features as a new layer and continue to work. But the processing toolbox providers a better and seamless workflow. Search for the algorithm **Extract by attribute**.
+
+
+![](images/automating_gis_workflows/4.png)
+
+5. Select ``tl_2019_us_primaryroads`` as the *Input layer*. Select ``RTTYP`` as the *Selection attribute* and ``I`` as the *Value*. This will extract all feature where RTTYP value is I (Interstate). Click *Run*.
+
+![](images/automating_gis_workflows/5.png)
+
+
+6. You will get a new layer ``Extracted (attribute)`` in the Layers Panel. Next, we want to calculate the length of each segment. You can use the built-in algorithm **Add geometry attributes**
+
+![](images/automating_gis_workflows/6.png)
+
+
+7. The source layer is in the Geographic CRS EPSG:4269 (NAD83) with degrees as units. But for the analysis, we want the lengths to be measured in linear units - such as miles. The algorithm provides us with a handy option to calculate the distances in **Elliposidal** math - which is ideal for layers in the geographic CRS. Select ``Extracted (attribute)`` as the *Input layer*, select ``Ellipsoidal`` as *Calculate using* and click *Run*.
+
+![](images/automating_gis_workflows/7.png)
+
+8. A new layer with an additional field called ``length`` will be added to the Layers panel. The distances in this field are in meters. 
+
+![](images/automating_gis_workflows/8.png)
+
+9. We have the state information in the ``tl_2019_us_state`` layer, but not in the roads layer. To add the name of the state to the roads layer, we need to perform a spatial-join. This is done using the **Join attributes by Location** algorithm.
+
+![](images/automating_gis_workflows/9.png)
+
+10. Select the ``Added geom info`` as the *Input layer* and ``tl_2019_us_state`` as the *Join layer*. For the *Fields to add*, we need only the ``NAME`` of the state.
+
+![](images/automating_gis_workflows/10.png)
+
+11. Fortunately for us, each road segment is split at the state boundary. So we can select ``Take attribute of the first located feature only`` and click *Run* to perform a one-to-one join. 
+
+> If our input road layers had segments that crossed state lines, we would have to do an extra step of splitting them so when we count road lengths per state - we get accurate results. You may do this by converting the states layer to lines using *Polygons to lines* algorithm, followed by the *Split by Lines* to split the road segments at the boundary.
+
+![](images/automating_gis_workflows/11.png)
+
+12. The new layer ``Joined layer`` now has the state name for every road segment.
+
+![](images/automating_gis_workflows/12.png)
+
+13. We can now sum the road lengths and group them for each state You may recall that in earlier versions of QGIS, you needed a plugin called Group Stats to do this. But now we can do this via the built-in **Statistic by Categories** algorithm.
+
+![](images/automating_gis_workflows/13.png)
+
+14. Select ``Joined layer`` as the *Input vector layer*. We want to calculate lengths, but group them by states. So select ``length`` as the *Field to calculate statistics on* and ``NAME`` as the *Field(s) with categories*. Click *Run*.
+
+![](images/automating_gis_workflows/14.png)
+
+15. The output of the algorithm is a table containing various statistics on the ``length`` column for each state. The values in the **sum** column is the total length of national highways in the district.
+
+![](images/automating_gis_workflows/15.png)
+16. The layer contains many fields which are not relevant to us, so let's delete some columns before saving. The *classic* way to do this is to toggle editing and use the *Delete Column* button from the Attribute Table. If you wanted to rename/reorder certain fields, that needed a plugin. But now, we have a really easy processing algorithm called **Refactor Fields** that can add, delete, rename, re-order, re-calculate and change the field types all at once. 
+
+![](images/automating_gis_workflows/16.png)
+
+17. In the *Refactor fields* dialog, select rows containing fields that you want to delete and click the *Delete selected field* button. Delete all except the ``NAME`` and ``sum`` fields.
+
+![](images/automating_gis_workflows/17.png)
+
+18. The lengths containged in the ``sum`` field is in meters. We can convert it to miles here itself. Click the button next to ``sum`` in the *Source experssion* colummn and enter the following expression that converts meters to miles and rounds the value to the nearest integer. Click *OK*.
+
+```
+round(sum*0.000621371)
+```
+
+![](images/automating_gis_workflows/18.png)
+
+
+19. We can also rename the field to a better name. Change the *Field name* of ``NAME`` to ``State`` and ``sum`` to ``Length_Miles``. We are ready to apply the changes. So far we have created temporary output layers, but this is the final result of the analysis, so we can save it to the disk. Click the ``...`` button at the bottom and select ``Save to GeoPackage``.
+
+![](images/automating_gis_workflows/19.png)
+
+20. Enter the name of the file as ``roads.gpkg``. When prompted for a layer name, enter ``road_length_by_state``. Click *Run*.
+
+![](images/automating_gis_workflows/20.png)
+
+21. A new layer ``road_length_by_state`` will be added to the *Layers* panel. The table will have the fields renamed and re-claculated as we had specified.
+
+![](images/automating_gis_workflows/21.png)
+
+> Note: The refactor fields algorithm has a [bug](https://github.com/qgis/QGIS/issues/32492) for the Mac version that makes all fields as strings regardless of the user's choice. This is a known issue and will be fixed in the future version. Till then, if you are on Mac, a workaround is to use the *Field Calculator* algorithm to take the result and add fields with correct types and conversion expressions such as  to_int(), to_double() etc. 
+
+Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, re-producible and intuitive workflow.
+
+
+## Batch Processing
+
+So far we have run the algorithm on 1 layer at a time. But each processing algorithm can also be run in a **Batch** mode on multiple inputs. This provides an easy way to process large amounts of data and automate repetitive tasks.
+
+The batch processing interface can be invoked by right-clicking any processing algorithm and choosing **Execute as Batch Process**.
+
+## Graphical Modeler
+
+GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
+
+# Data Credits
+* [TIGER/Line Shapefiles 2019[(https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)], US Census Bureau.
+* [Cartographic Boundary Files](https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html) for US States, US Census Bureau.
+
+# License
+
+This course material is licensed under a [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/). You are free to use the material for any non-commercial purpose. Kindly give appropriate credit to the original author
+
+If you would like to use this material for commercial use or for teaching a course, kindly [contact me](https://spatialthoughts.com/contact/) for terms.
+
+&copy; 2020 Ujaval Gandhi [www.spatialthoughts.com](https://spatialthoughts.com)
