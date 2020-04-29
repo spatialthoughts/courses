@@ -176,7 +176,7 @@ We will work with shapefiles provided by US Census Bureau. The ``tl_2019_us_prim
 
 ![](images/automating_gis_workflows/17.png)
 
-18. The lengths containged in the ``sum`` field is in meters. We can convert it to miles here itself. Click the button next to ``sum`` in the *Source experssion* colummn and enter the following expression that converts meters to miles and rounds the value to the nearest integer. Click *OK*.
+18. The lengths contained in the ``sum`` field is in meters. We can convert it to miles here itself. Click the button next to ``sum`` in the *Source experssion* column and enter the following expression that converts meters to miles and rounds the value to the nearest integer. Click *OK*.
 
 ```
 round(sum*0.000621371)
@@ -193,7 +193,7 @@ round(sum*0.000621371)
 
 ![](images/automating_gis_workflows/20.png)
 
-21. A new layer ``road_length_by_state`` will be added to the *Layers* panel. The table will have the fields renamed and re-claculated as we had specified.
+21. A new layer ``road_length_by_state`` will be added to the *Layers* panel. The table will have the fields renamed and re-calculated as we had specified.
 
 ![](images/automating_gis_workflows/21.png)
 
@@ -210,7 +210,114 @@ The batch processing interface can be invoked by right-clicking any processing a
 
 ## Graphical Modeler
 
-GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
+As we saw in the previous example, GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
+
+### Exercise: Build a model to calculate road lengths
+
+We will take the workflow from the previous section and build a model that can precisely reproduce all the intermediate steps and give us the result. The model will allow us to specify the input layers and parameters and perform all intermediate steps without any user input. This will greatly speed up our analysis and ensure we do not make manual errors when running the same calculations again.
+
+1. Open the modeler tool from **Processing &rarr; Graphical Modeler**.
+
+![](images/automating_gis_workflows/model1.png)
+
+2. Enter the name of the model as ``calculate_road_lengths`` and click the *Save* button. Save the model as ``calculate_road_lengths.model3`` file at the default location.
+
+![](images/automating_gis_workflows/model2.png)
+
+3. The modeler interface contains the left-hand panel with 2 tabs - *Inputs* and *Algorithms*. Our first step is to define the inputs to the model. In our case, the inputs are the 2 vector layers - primary roads and states. Find the ``Vector Layer`` input and drag it to the canvas. 
+
+![](images/automating_gis_workflows/model3.png)
+
+
+4. In the *Vector Layer Parameter Definition* dialog, enter ``Roads`` as the *Parameter name* and set ``Line`` as the *Geometry Type*. Click *OK*.
+
+![](images/automating_gis_workflows/model4.png)
+
+5. Similarly, drag another ``Vector Layer`` input. ``States`` as the *Parameter name* and set ``Polygon`` as the *Geometry Type*. Click *OK*.
+
+![](images/automating_gis_workflows/model5.png)
+
+6. You should have 2 boxes representing the input layers. Now switch to the *Algorithms* tab and search for the ``Extract by attribute`` algorithm. Drag it to the canvas.
+
+![](images/automating_gis_workflows/model6.png)
+
+7. Fill in the parameters the same way we did in the previous exercise. ``Roads`` as the *Input layer*, ``RTTYP`` as the *Selection attribute* and ``I`` as the *Value*. Click *OK*.
+
+![](images/automating_gis_workflows/model7.png)
+
+8. In the modeler canvas, you will see a new box with the *Extract by attribute* algorithm and an arrow connecting it with one of the inputs. This indicates that the algorithm is using that input for processing. Next search for and add the ``Add geometry attributes`` algorithm.
+
+![](images/automating_gis_workflows/model8.png)
+
+9. Set the ``'Extracted (attribute)' from algorithm 'Extract by Attribute'`` as the *Input layer*. Select ``Ellipsoidal`` as the method for *Calculate using*. Click *OK*.
+
+![](images/automating_gis_workflows/model9.png)
+
+10. Referring back to the previous example, the next step in the processing is doing a spatial join. Search for and add the ``Join attribute by location`` algorithm.
+
+![](images/automating_gis_workflows/model10.png)
+
+11. Set the ``'Added geom info' from algorithm 'Add geometry attributes'`` as the *Input layer*. The *Joim layer* will be the ``States`` layer. In the *Fields to add*, enter ``NAME``. Click *OK*.
+
+![](images/automating_gis_workflows/model11.png)
+
+12. In the canvas, you will see another arrow now connecting the ``States`` input to the ``Join attributes by location`` box. Next, add the ``Statistics by category`` algorithm.
+
+![](images/automating_gis_workflows/model12.png)
+
+13. Set the ``'Join layer' from algorithm 'Join attribues by location'`` as the *Input vector layer*. Enter ``length`` as the *Field to calculate statistics on* and ``NAME`` as the *Field(s) with categories*. Click *OK*.
+
+![](images/automating_gis_workflows/model13.png)
+
+14. We are at the last step now. Add the ``Refactor fields`` algorithm.
+
+![](images/automating_gis_workflows/model14.png)
+
+15. Set ``'Statistics by category' from algorithm 'Statistics by categories'`` as the *Input layer*. The *Field mapping* table is empty. We need to add rows for the fields that we want in the output. Click *Add new field* twice to add 2 rows. Configure the rows to match our input in Step 19 from the previous exercise. As this is the final result, we should specify the name of the output layer. Enter ``road_length_by_states`` as *Refactored*. Click *OK*.
+
+![](images/automating_gis_workflows/model15.png)
+
+16. The model is ready to run. Click the *Run* button.
+
+![](images/automating_gis_workflows/model16.png)
+
+17. Set ``tl_2019_us_primaryroads`` as *Roads* and ``tl_2019_us_states`` as *States*. Click *Run*.
+
+![](images/automating_gis_workflows/model17.png)
+
+18. As the model runs, you will each step of the process being run and intermediate results generated. 
+
+![](images/automating_gis_workflows/model18.png)
+
+19. Once the process finishes, you will see only 1 new layer - our final result, loaded to the *Layers* panel. You can verify that the result is exactly the same as our manual processing in the previous example. But this time, we only had to specify the inputs and the model did all the hard work.
+
+![](images/automating_gis_workflows/model19.png)
+
+20. Let's learn how to improve this model. We can generalize this model a little to calculate lengths of not only interstate highways, but other types of roads as well. Go back to the modeler window. Switch to the *Inputs* tab and drag a new *String* input. Enter ``Road Category`` as the *Parameter name*.
+
+> If you closed the modeler window, you can open it again by going to Processing &rarr; Toolbox &rarr; Models. Locate the ``calculate_road_lengths`` model, right-click and select *Edit*.
+
+![](images/automating_gis_workflows/model20.png)
+
+21. Now instead of hard-coding the value ``I`` for the road category, we will make it user configurable. Right-click the ``Extract by attribute`` box and select *Edit*. 
+
+![](images/automating_gis_workflows/model21.png)
+
+22. Select the *123* button for *Value* and select ``Model Input``. 
+
+![](images/automating_gis_workflows/model22.png)
+
+23. The parameter ``Road Category`` will be auto-selected for the value. This update to our model will allow the user to enter any value as the *Road Category* which will be used by this algorithm.
+
+![](images/automating_gis_workflows/model23.png)
+
+24. Let's test the updated algorithm. Click *Run*.
+
+![](images/automating_gis_workflows/model24.png)
+
+25. You will see a new input in the model dialog. Enter ``U`` and select the other vector layer inputs. Click *Run*. The result will be a table with lengths of US Highways for each state.
+
+![](images/automating_gis_workflows/model25.png)
 
 # Data Credits
 * [TIGER/Line Shapefiles 2019[(https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html)], US Census Bureau.
