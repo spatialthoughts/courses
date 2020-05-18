@@ -46,7 +46,7 @@ Certain characters are special since they are by Python language itself. For exa
 
 In Python strings, the backslash **\\** is a special character, also called the **escape** character. Prefixing any character with a backslash makes it an ordinary character. (Hint: Prefixing a backslash with a backshalsh makes it ordinary too!)
 
-It is also used for representing certain whitespace characters, \n is a newline, \t is a tab etc.
+It is also used for representing certain whitespace characters, \\n is a newline, \\t is a tab etc.
 
 Remove the # from the cell below and run it.
 
@@ -60,6 +60,7 @@ We can fix the error by espacing the single quote within the string.
 
 ```python
 my_string = 'It\'s a beautiful day!'
+print(my_string)
 ```
 
 Alternatively, you can also use double-quotes if your string contains a single-quote.
