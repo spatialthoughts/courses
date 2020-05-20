@@ -71,8 +71,8 @@ print(count)
     15494
 
 
+## Exercise
 
-```python
-# Exercise: Print first 5 lines of the file
-# Hint: Use break statement
-```
+Print first 5 lines of the file. 
+
+- Hint: Use break statement

@@ -31,7 +31,7 @@ print(csv_reader)
 f.close()
 ```
 
-    <csv.DictReader object at 0x10de0f350>
+    <csv.DictReader object at 0x10dfcee90>
 
 
 ## Using `enumerate()` function
@@ -149,7 +149,8 @@ with open(path, 'r') as f:
     for row in csv_reader:
         if row['country'] == home_country and row['city_ascii'] != home_city:
             city_coordinates = (row['lat'], row['lng'])
-            city_distance = distance.geodesic(city_coordinates, home_city_coordinates).km
+            city_distance = distance.geodesic(
+                city_coordinates, home_city_coordinates).km
             print(row['city_ascii'], city_distance)
             counter += 1
             
@@ -180,14 +181,20 @@ with open(output_path, mode='w') as output_file:
     csv_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
     csv_writer.writeheader()
     
-    # Now we read the input file, calculate distance and write a row to the output 
+    # Now we read the input file, calculate distance and
+    # write a row to the output 
     with open(path, 'r') as f:
         csv_reader = csv.DictReader(f)
         for row in csv_reader:
-            if row['country'] == home_country and row['city_ascii'] != home_city:
+            if (row['country'] == home_country and
+                row['city_ascii'] != home_city):
                 city_coordinates = (row['lat'], row['lng'])
-                city_distance = distance.geodesic(city_coordinates, home_city_coordinates).km
-                csv_writer.writerow({'city': row['city_ascii'], 'distance_from_home': city_distance})
+                city_distance = distance.geodesic(
+                    city_coordinates, home_city_coordinates).km
+                csv_writer.writerow(
+                    {'city': row['city_ascii'],
+                     'distance_from_home': city_distance}
+                )
 ```
 
 Below is the complete code for our task of reading a file, filtering it, calculating distance and writing the results to a file.
@@ -225,10 +232,15 @@ with open(output_path, mode='w') as output_file:
     with open(input_path, 'r') as input_file:
         csv_reader = csv.DictReader(input_file)
         for row in csv_reader:
-            if row['country'] == home_country and row['city_ascii'] != home_city:
+            if (row['country'] == home_country and
+                row['city_ascii'] != home_city):
                 city_coordinates = (row['lat'], row['lng'])
-                city_distance = distance.geodesic(city_coordinates, home_city_coordinates).km
-                csv_writer.writerow({'city': row['city_ascii'], 'distance_from_home': city_distance})
+                city_distance = distance.geodesic(
+                    city_coordinates, home_city_coordinates).km
+                csv_writer.writerow(
+                    {'city': row['city_ascii'],
+                     'distance_from_home': city_distance}
+                )
 
 print('Successfully written output file at {}'.format(output_path))
 ```
