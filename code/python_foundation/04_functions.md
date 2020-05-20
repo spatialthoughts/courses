@@ -1,11 +1,17 @@
 # Functions
 
+A function is a block of code that takes one or more *inputs*, does some processing on them and returns one or more *outputs*. The code within the function runs only when it is called.
+
+A funtion is defined using the `def` keyword
+
 ```
 def my_function():
     ....
     ....
     return something
 ```
+
+Functions are useful because they allow us to capture the logic of our code and we can run it with differnt inputs without having to write the same code again and again.
 
 
 ```python
@@ -16,6 +22,34 @@ print(greet('World'))
 ```
 
     Hello World
+
+
+Functions can also take arguments with a default value. This helps make calling the functions simpler for the default behavior while giving an option to pass on extra arguments.
+
+
+```python
+lat = 37.7739
+lng = -121.5687
+
+def format_coordinates(latitude, longitude, separator=','):
+        return '{}{}{}'.format(latitude, separator, longitude)
+
+print(format_coordinates(lat, lng))
+print(format_coordinates(lat, lng, '|'))
+```
+
+    37.7739,-121.5687
+    37.7739|-121.5687
+
+
+The default behavior of Python functions is to take *positional arguments*. You pass the arguments in the *order* that is defined by the function. Python allows functions to be called using *keyword arguments*. When we call functions in this way, the order (position) of the arguments can be changed. The main advantage of using keyword arguments is to make the code more readable and explicit.
+
+
+```python
+print(format_coordinates(latitude=lat, longitude=lng, separator=';'))
+```
+
+    37.7739;-121.5687
 
 
 ## Exercise

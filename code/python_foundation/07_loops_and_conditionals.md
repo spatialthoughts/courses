@@ -169,6 +169,17 @@ for city in cities:
     Atlanta
 
 
+A `pass` statement doesn't do anything. It is useful when some code is required to complete the syntax, but you do not want any code to execute. It is typically used as a placeholder when a function is not complete.
+
+
+```python
+for city in cities:
+    if city == 'Los Angeles':
+        pass
+    else:
+        print(city)
+```
+
 ## Exercise
 
 The Fizz Buzz challenge.
