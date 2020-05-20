@@ -147,7 +147,8 @@ counter = 0
 with open(path, 'r') as f:
     csv_reader = csv.DictReader(f)
     for row in csv_reader:
-        if row['country'] == home_country and row['city_ascii'] != home_city:
+        if (row['country'] == home_country and
+            row['city_ascii'] != home_city):
             city_coordinates = (row['lat'], row['lng'])
             city_distance = distance.geodesic(
                 city_coordinates, home_city_coordinates).km
@@ -248,6 +249,8 @@ print('Successfully written output file at {}'.format(output_path))
     Successfully written output file at /Users/ujaval/Downloads/cities_distance.csv
 
 
+----
+
 ## Exercise
 
 Let's say we want to repeat the same process for another city. Or maybe all the cities in a country. The code above would require us to change the `home_city`, `home_country` and `output_filename` variables for the new city and run the code again manually.
@@ -269,3 +272,5 @@ write_distance_file('New York', 'United States', 'nyc_distance.csv')
 ```
 
 Insert a new code cell below and create the `write_distance_file` function below. Then call it to create the output file as show.
+
+----
