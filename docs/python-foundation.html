@@ -408,6 +408,15 @@ $(document).ready(function () {
 <li><a href="#writing-files">Writing files</a></li>
 <li><a href="#exercise-8">Exercise</a></li>
 </ul></li>
+<li><a href="#using-web-apis">Using Web APIs</a><ul>
+<li><a href="#understanding-json-and-geojson">Understanding JSON and GeoJSON</a></li>
+<li><a href="#the-requests-module">The <code>requests</code> module</a></li>
+<li><a href="#using-openrouteservice-api">Using OpenRouteService API</a></li>
+<li><a href="#api-rate-limiting">API Rate Limiting</a><ul>
+<li><a href="#the-time-module">The <code>time</code> module</a></li>
+</ul></li>
+<li><a href="#exercise-9">Exercise</a></li>
+</ul></li>
 <li><a href="#license">License</a></li>
 </ul>
 </div>
@@ -1191,6 +1200,145 @@ home_country <span class="op">=</span> <span class="st">&#39;India&#39;</span>
 <pre><code>write_distance_file(&#39;Frankfurt&#39;, &#39;Germany&#39;, &#39;frankfurt_distance.csv&#39;)
 write_distance_file(&#39;New York&#39;, &#39;United States&#39;, &#39;nyc_distance.csv&#39;)</code></pre>
 <p>Insert a new code cell below and create the <code>write_distance_file</code> function below. Then call it to create the output file as show.</p>
+<hr />
+
+</div>
+</div>
+<div id="using-web-apis" class="section level1">
+<h1>Using Web APIs</h1>
+<p>An API, or Application Program Interface, allows one program to <em>talk</em> to another program. Many websites or services provide an API so you can query for information in an automated way.</p>
+<p>For mapping and spatial analysis, being able to use APIs is critical. For the longest time, Google Maps API was the most popular API on the web. APIs allow you to query web servers and get results without downloading data or running computation on your machine.</p>
+<p>Common use cases for using APIs for spatial analysis are</p>
+<ul>
+<li>Getting directions / routing</li>
+<li>Route optimization</li>
+<li>Geocoding</li>
+<li>Downloading data</li>
+<li>Getting real-time weather data</li>
+<li>…</li>
+</ul>
+<p>The provide of such APIs have many ways to implement an API. There are standards such as REST, SOAP, GraphQL etc. <em>REST</em> is the most populat standard for web APIs, and for geospatial APIs. REST APIs are used over HTTP and thus called web APIs.</p>
+<div id="understanding-json-and-geojson" class="section level2">
+<h2>Understanding JSON and GeoJSON</h2>
+<p>JSON stands for <strong>J</strong>ava<strong>S</strong>cript <strong>O</strong>bject <strong>N</strong>otation. It is a format for storing and transporting data, and is the de-facto standard for data exchanged by APIs. GeoJSON is an extension of the JSON format that is commonly used to represent spatial data.</p>
+<p>Python has a built-in <code>json</code> module that has methods for reading json data and converting it to Python objects, and vice-versa. In this example, we are using the <code>requests</code> module for querying the API which conveniently does the conversion for us. But it is useful to learn the basics of working with JSON in Python.</p>
+<p>The GeoJSON data contains <em>features</em>, where each feature has some <em>properties</em> and a <em>geometry</em>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">geojson_string <span class="op">=</span> <span class="st">&#39;&#39;&#39;</span>
+<span class="st">{</span>
+<span class="st">  &quot;type&quot;: &quot;FeatureCollection&quot;,</span>
+<span class="st">  &quot;features&quot;: [</span>
+<span class="st">    {&quot;type&quot;: &quot;Feature&quot;,</span>
+<span class="st">      &quot;properties&quot;: {&quot;name&quot;: &quot;San Francisco&quot;},</span>
+<span class="st">      &quot;geometry&quot;: {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [-121.5687, 37.7739]}</span>
+<span class="st">    }</span>
+<span class="st">  ]</span>
+<span class="st">}</span>
+<span class="st">&#39;&#39;&#39;</span>
+<span class="bu">print</span>(geojson_string)</code></pre></div>
+<pre><code>{
+  &quot;type&quot;: &quot;FeatureCollection&quot;,
+  &quot;features&quot;: [
+    {&quot;type&quot;: &quot;Feature&quot;,
+      &quot;properties&quot;: {&quot;name&quot;: &quot;San Francisco&quot;},
+      &quot;geometry&quot;: {&quot;type&quot;: &quot;Point&quot;, &quot;coordinates&quot;: [-121.5687, 37.7739]}
+    }
+  ]
+}</code></pre>
+<p>To convert a JSON string to a Python object (i.e. parsing JSON), we can use the <code>json.loads()</code> method.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> json
+
+data <span class="op">=</span> json.loads(geojson_string)
+<span class="bu">print</span>(<span class="bu">type</span>(data))
+<span class="bu">print</span>(data)</code></pre></div>
+<pre><code>&lt;class &#39;dict&#39;&gt;
+{&#39;type&#39;: &#39;FeatureCollection&#39;, &#39;features&#39;: [{&#39;type&#39;: &#39;Feature&#39;, &#39;properties&#39;: {&#39;name&#39;: &#39;San Francisco&#39;}, &#39;geometry&#39;: {&#39;type&#39;: &#39;Point&#39;, &#39;coordinates&#39;: [-121.5687, 37.7739]}}]}</code></pre>
+<p>Now that we have <em>parsed</em> the GeoJSON string and have a Python object, we can extract infromation from it. The data is stored in a <em>FeatureCollection</em> - which is a list of <em>features</em>. In our example, we have just 1 feature inside the feature collection, so we can access it by using index <strong>0</strong>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">city_data <span class="op">=</span> data[<span class="st">&#39;features&#39;</span>][<span class="dv">0</span>]
+<span class="bu">print</span>(city_data)</code></pre></div>
+<pre><code>{&#39;type&#39;: &#39;Feature&#39;, &#39;properties&#39;: {&#39;name&#39;: &#39;San Francisco&#39;}, &#39;geometry&#39;: {&#39;type&#39;: &#39;Point&#39;, &#39;coordinates&#39;: [-121.5687, 37.7739]}}</code></pre>
+<p>The feature representation is a dictionary, and individual items can be accesses using the <em>keys</em></p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">city_name <span class="op">=</span> city_data[<span class="st">&#39;properties&#39;</span>][<span class="st">&#39;name&#39;</span>]
+city_coordinates <span class="op">=</span> city_data[<span class="st">&#39;geometry&#39;</span>][<span class="st">&#39;coordinates&#39;</span>]
+<span class="bu">print</span>(city_name, city_coordinates)</code></pre></div>
+<pre><code>San Francisco [-121.5687, 37.7739]</code></pre>
+</div>
+<div id="the-requests-module" class="section level2">
+<h2>The <code>requests</code> module</h2>
+<p>To query a server, we send a <strong>GET</strong> request with some parameters and the server sends a response back. The <code>requests</code> module allows you to send HTTP requests and parse the responses using Python.</p>
+<p>The response contains the data received from the server. It contains the HTTP <em>status_code</em> which tells us if the request was successful. HTTP code 200 stands for <em>Sucess OK</em>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> requests
+
+response <span class="op">=</span> requests.get(<span class="st">&#39;https://www.spatialthoughts.com&#39;</span>)
+
+<span class="bu">print</span>(response.status_code)</code></pre></div>
+<pre><code>200</code></pre>
+</div>
+<div id="using-openrouteservice-api" class="section level2">
+<h2>Using OpenRouteService API</h2>
+<p><a href="https://openrouteservice.org/">OpenRouteService (ORS)</a> provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.</p>
+<p>Almost all APIs require you to sign-up and obtain a <em>key</em>. The <em>key</em> is used to identify you and enforce usage limits so that you do not overwhelm the servers. We will obtain a key from OpenRouteServie so we can use their API</p>
+<p>Visit <a href="https://openrouteservice.org/dev/#/signup">OpenRouteService Sign-up page</a> and create an account. Once your account is activated, visit your Dashboard and request a token. Select <em>Free</em> as the Token type and enter <code>python_foundation</code> as the Token name. Click <em>CREATE TOKEN</em>. Once created, copy the long string displayed under Key and enter below.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">ORS_API_KEY <span class="op">=</span> <span class="st">&#39;&lt;replace this with your key&gt;&#39;</span></code></pre></div>
+<p>We will use the OpenRouteServices’s <a href="https://openrouteservice.org/dev/#/api-docs/v2/directions/%7Bprofile%7D/get">Directions Service</a>. This service returns the driving, biking or walking directions between the given origin and destination points.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="co"># pip install -U python-dotenv</span>
+
+<span class="op">%</span>load_ext dotenv
+<span class="op">%</span>dotenv
+<span class="im">import</span> os
+ORS_API_KEY <span class="op">=</span> os.getenv(<span class="st">&#39;ORS_API_KEY&#39;</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">san_francisco <span class="op">=</span> (<span class="fl">37.7749</span>, <span class="op">-</span><span class="fl">122.4194</span>)
+new_york <span class="op">=</span> (<span class="fl">40.661</span>, <span class="op">-</span><span class="fl">73.944</span>)
+
+parameters <span class="op">=</span> {
+    <span class="st">&#39;api_key&#39;</span>: ORS_API_KEY,
+    <span class="st">&#39;start&#39;</span> : <span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(san_francisco[<span class="dv">1</span>], san_francisco[<span class="dv">0</span>]),
+    <span class="st">&#39;end&#39;</span> : <span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(new_york[<span class="dv">1</span>], new_york[<span class="dv">0</span>])
+}
+
+response <span class="op">=</span> requests.get(<span class="st">&#39;https://api.openrouteservice.org/v2/directions/driving-car&#39;</span>, params<span class="op">=</span>parameters)
+
+<span class="cf">if</span> response.status_code <span class="op">==</span> <span class="dv">200</span>:
+    <span class="bu">print</span>(<span class="st">&#39;Request successful.&#39;</span>)
+    data <span class="op">=</span> response.json()
+<span class="cf">else</span>:
+    <span class="bu">print</span>(<span class="st">&#39;Request failed.&#39;</span>)</code></pre></div>
+<pre><code>Request successful.</code></pre>
+<p>The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index <strong>0</strong>. The feature’s property contains <code>summary</code> information which has the data we need.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">summary <span class="op">=</span> data[<span class="st">&#39;features&#39;</span>][<span class="dv">0</span>][<span class="st">&#39;properties&#39;</span>][<span class="st">&#39;summary&#39;</span>]
+<span class="bu">print</span>(summary)</code></pre></div>
+<pre><code>{&#39;distance&#39;: 4691608.1, &#39;duration&#39;: 166280.6}</code></pre>
+<p>We can extract the <code>distance</code> and convert it to kilometers.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">distance <span class="op">=</span> summary[<span class="st">&#39;distance&#39;</span>]
+<span class="bu">print</span>(distance<span class="op">/</span><span class="dv">1000</span>)</code></pre></div>
+<pre><code>4691.6080999999995</code></pre>
+</div>
+<div id="api-rate-limiting" class="section level2">
+<h2>API Rate Limiting</h2>
+<p>Many web APIs enforce <em>rate limiting</em> - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent.</p>
+<p>OpenRouteService lists several <a href="https://openrouteservice.org/plans/">API Restrictions</a>. The free plan allows for upto 40 direction requests/minute. Let’s see how we can write code to ensure we comply with this restriction.</p>
+<div id="the-time-module" class="section level3">
+<h3>The <code>time</code> module</h3>
+<p>Python Standard Library has a <code>time</code> module that allows for time related operation. It contains a method <code>time.sleep()</code> which delays the execution of the program for the specified number of seconds.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> time
+<span class="cf">for</span> x <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10</span>):
+    <span class="bu">print</span>(x)
+    time.sleep(<span class="dv">1</span>)</code></pre></div>
+<pre><code>0
+1
+2
+3
+4
+5
+6
+7
+8
+9</code></pre>
+</div>
+</div>
+<div id="exercise-9" class="section level2">
+<h2>Exercise</h2>
+<p>Repeat the exercise from the previous section, but this time, use the OpenRouteService API to get real driving distance between the cities and write the results to the file.</p>
+<p>Hint: To comply with the API restritions, you will need to add <code>time.sleep(2)</code> between successive API calls.</p>
 <hr />
 
 </div>
