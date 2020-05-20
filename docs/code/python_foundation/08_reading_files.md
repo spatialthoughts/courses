@@ -76,3 +76,5 @@ print(count)
 Print first 5 lines of the file. 
 
 - Hint: Use break statement
+
+----

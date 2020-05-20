@@ -173,7 +173,4 @@ print(coordinates)
     37.77,-122.42
 
 
-
-```python
-
-```
+----

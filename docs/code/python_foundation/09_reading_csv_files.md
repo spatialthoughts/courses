@@ -249,8 +249,6 @@ print('Successfully written output file at {}'.format(output_path))
     Successfully written output file at /Users/ujaval/Downloads/cities_distance.csv
 
 
-----
-
 ## Exercise
 
 Let's say we want to repeat the same process for another city. Or maybe all the cities in a country. The code above would require us to change the `home_city`, `home_country` and `output_filename` variables for the new city and run the code again manually.

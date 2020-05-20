@@ -92,12 +92,4 @@ We calculated the population density in number of people per square mile. Calcul
 
 Create a code cell below this one, type in the code and run the cell. The output should be 7258.8966
 
-
-```python
-
-```
-
-
-```python
-
-```
+----
