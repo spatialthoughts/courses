@@ -37,7 +37,13 @@ print(straight_line_distance, ellipsoid_distance)
     4135.3804590061345 km 4145.446977549562 km
 
 
+## Exercise
+
+Repeat the distance calculation exercise from the previous module but perform the calculation using the geopy library.
+
 
 ```python
-
+# city1 = (lat1, lng1)
+# city2 = (lat2, lng2)
+# call the geopy distance function and print the great circle and ellipsoid distance
 ```

@@ -129,7 +129,7 @@ print(cities)
 print(set(cities))
 ```
 
-    ['San Francisco', 'New York', 'Los Angeles', 'Boston', 'Atlanta', 'Sacramento', 'Boston', 'Austin', 'Atlanta', 'Sacramento', 'Boston', 'Austin', 'Atlanta']
+    ['San Francisco', 'New York', 'Los Angeles', 'Boston', 'Atlanta', 'Sacramento', 'Boston', 'Austin', 'Atlanta']
     {'Los Angeles', 'New York', 'Sacramento', 'San Francisco', 'Austin', 'Atlanta', 'Boston'}
 
 

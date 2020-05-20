@@ -61,3 +61,10 @@ print(distance/1000, 'km')
 ## Exercise
 
 Find the coordinates of 2 cities near you and calculate the distance between them
+
+
+```python
+# city1 = (lat1, lng1)
+# city2 = (lat2, lng2)
+# call the function and print the result
+```
