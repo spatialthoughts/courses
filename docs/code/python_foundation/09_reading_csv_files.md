@@ -31,9 +31,6 @@ print(csv_reader)
 f.close()
 ```
 
-    <csv.DictReader object at 0x10dfcee90>
-
-
 ## Using `enumerate()` function
 
 When iterating over an object, many times we need a counter. We saw in the previous example, how to use a variable like `count` and increase it with every iteration. There is an easy way to do this using the built-in `enumerate()` function.
@@ -44,12 +41,6 @@ cities = ['San Francisco', 'Los Angeles', 'New York', 'Atlanta']
 for x in enumerate(cities):
     print(x)
 ```
-
-    (0, 'San Francisco')
-    (1, 'Los Angeles')
-    (2, 'New York')
-    (3, 'Atlanta')
-
 
 We can use enumerate() on any iterable object and get a tuple with an index and the iterable value with each iteration. Let's use it to print the first 5 lines from the DictReader object.
 
@@ -63,13 +54,6 @@ for index, row in enumerate(csv_reader):
         break
 f.close()
 ```
-
-    OrderedDict([('city', 'Tokyo'), ('city_ascii', 'Tokyo'), ('lat', '35.6850'), ('lng', '139.7514'), ('country', 'Japan'), ('iso2', 'JP'), ('iso3', 'JPN'), ('admin_name', 'Tōkyō'), ('capital', 'primary'), ('population', '35676000'), ('id', '1392685764')])
-    OrderedDict([('city', 'New York'), ('city_ascii', 'New York'), ('lat', '40.6943'), ('lng', '-73.9249'), ('country', 'United States'), ('iso2', 'US'), ('iso3', 'USA'), ('admin_name', 'New York'), ('capital', ''), ('population', '19354922.0'), ('id', '1840034016')])
-    OrderedDict([('city', 'Mexico City'), ('city_ascii', 'Mexico City'), ('lat', '19.4424'), ('lng', '-99.1310'), ('country', 'Mexico'), ('iso2', 'MX'), ('iso3', 'MEX'), ('admin_name', 'Ciudad de México'), ('capital', 'primary'), ('population', '19028000'), ('id', '1484247881')])
-    OrderedDict([('city', 'Mumbai'), ('city_ascii', 'Mumbai'), ('lat', '19.0170'), ('lng', '72.8570'), ('country', 'India'), ('iso2', 'IN'), ('iso3', 'IND'), ('admin_name', 'Mahārāshtra'), ('capital', 'admin'), ('population', '18978000'), ('id', '1356226629')])
-    OrderedDict([('city', 'São Paulo'), ('city_ascii', 'Sao Paulo'), ('lat', '-23.5587'), ('lng', '-46.6250'), ('country', 'Brazil'), ('iso2', 'BR'), ('iso3', 'BRA'), ('admin_name', 'São Paulo'), ('capital', 'admin'), ('population', '18845000'), ('id', '1076532519')])
-
 
 ## Using `with` statement
 
@@ -107,9 +91,6 @@ with open(path, 'r') as f:
 print(num_cities)
 ```
 
-    212
-
-
 ## Calculating distance
 
 Let's apply the skills we have learnt so far to solve a complete problem. We want to read the `worldcities.csv` file, find all cities within a home country, calculate the distance to each cities from a home city and write the results to a new CSV file.
@@ -134,9 +115,6 @@ with open(path, 'r') as f:
 print(home_city_coordinates)
 ```
 
-    ('12.9700', '77.5600')
-
-
 Now we can loop through the file, find a city in the chosen home country and call the `geopy.distance.geodesic()` function to calculate the distance. In the code below, we are just computing first 5 matches.
 
 
@@ -160,13 +138,6 @@ with open(path, 'r') as f:
             
 ```
 
-    Mumbai 837.1857087990928
-    Delhi 1738.638855782645
-    Kolkata 1552.6378233436674
-    Chennai 295.3401073046679
-    Hyderabad 500.0477286304823
-
-
 ## Writing files
 
 Instead of printing the results, let's write the results to a new file. Similar to csv.DictReader(), there is a companion `csv.DictWriter()` method to write files. We create a `csv_writer` object and then write rows to it using the `writerow()` method.
@@ -175,6 +146,7 @@ Instead of printing the results, let's write the results to a new file. Similar 
 ```python
 output_filename = 'cities_distance.csv'
 output_dir = 'Downloads'
+
 output_path = os.path.join(home_dir, output_dir, output_filename)
 
 with open(output_path, mode='w') as output_file:
@@ -202,6 +174,7 @@ Below is the complete code for our task of reading a file, filtering it, calcula
 
 
 ```python
+import csv
 import os
 from geopy import distance
 
@@ -209,8 +182,8 @@ home_dir = os.path.expanduser('~')
 
 input_filename = 'worldcities.csv'
 input_dir = 'Downloads/python_foundation/'
-input_path = os.path.join(home_dir, data_pkg_path, filename)
-
+data_pkg_path = 'Downloads/python_foundation/'
+input_path = os.path.join(home_dir, data_pkg_path, input_filename)
 output_filename = 'cities_distance.csv'
 output_dir = 'Downloads'
 output_path = os.path.join(home_dir, output_dir, output_filename)
@@ -245,9 +218,6 @@ with open(output_path, mode='w') as output_file:
 
 print('Successfully written output file at {}'.format(output_path))
 ```
-
-    Successfully written output file at /Users/ujaval/Downloads/cities_distance.csv
-
 
 ## Exercise
 

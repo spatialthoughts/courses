@@ -184,9 +184,11 @@ print(distance/1000)
 
 ## API Rate Limiting
 
-Many web APIs enforce *rate limiting* - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent.
+Many web APIs enforce *rate limiting* - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent. 
 
-OpenRouteService lists several [API Restrictions](https://openrouteservice.org/plans/). The free plan allows for upto 40 direction requests/minute. Let's see how we can write code to ensure we comply with this restriction.
+OpenRouteService lists several [API Restrictions](https://openrouteservice.org/plans/). The free plan allows for upto 40 direction requests/minute. 
+
+There are many libraries available to implement various strategies for rate limiting. But we can use the built-in `time` module to implement a very simple rate limiting method.
 
 ### The `time` module
 
@@ -214,8 +216,38 @@ for x in range(10):
 
 ## Exercise
 
-Repeat the exercise from the previous section, but this time, use the OpenRouteService API to get real driving distance between the cities and write the results to the file.
+Repeat the exercise from the previous section, but this time, use the OpenRouteService API to get real driving distance between the cities and write the results to the file. To do this you will need to replace the distance function
+with `get_driving_distance()` function that we have defined below.
 
 Hint: To comply with the API restritions, you will need to add `time.sleep(2)` between successive API calls.
+
+
+```python
+import csv
+import os
+import requests
+import time
+ORS_API_KEY = os.getenv('ORS_API_KEY')
+
+def get_driving_distance(source_coordinates, dest_coordinates):
+    parameters = {
+    'api_key': ORS_API_KEY,
+    'start' : '{},{}'.format(source_coordinates[1], source_coordinates[0]),
+    'end' : '{},{}'.format(dest_coordinates[1], dest_coordinates[0])
+    }
+
+    response = requests.get('https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
+
+    if response.status_code == 200:
+        data = response.json()
+        summary = data['features'][0]['properties']['summary']
+        distance = summary['distance']
+        return distance/1000
+    else:
+        print('Request failed.')
+        return -9999
+ 
+
+```
 
 ----
