@@ -147,7 +147,8 @@ parameters = {
     'end' : '{},{}'.format(new_york[1], new_york[0])
 }
 
-response = requests.get('https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
+response = requests.get(
+    'https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
 
 if response.status_code == 200:
     print('Request successful.')
@@ -157,7 +158,7 @@ else:
 
 ```
 
-    Request successful.
+    Request failed.
 
 
 The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index **0**. The feature's property contains `summary` information which has the data we need. 
@@ -236,7 +237,8 @@ def get_driving_distance(source_coordinates, dest_coordinates):
     'end' : '{},{}'.format(dest_coordinates[1], dest_coordinates[0])
     }
 
-    response = requests.get('https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
+    response = requests.get(
+        'https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
 
     if response.status_code == 200:
         data = response.json()

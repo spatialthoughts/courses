@@ -1,4 +1,4 @@
-# Working with pandas
+# Working with Pandas
 
 ![](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Pandas_logo.svg/320px-Pandas_logo.svg.png)
 
@@ -14,6 +14,8 @@ By convention, `pandas` is commonly imported as `pd`
 ```python
 import pandas as pd
 ```
+
+## Reading Files
 
 
 ```python
@@ -82,6 +84,8 @@ print(df.info())
     memory usage: 1.3+ MB
     None
 
+
+## Filtering Data
 
 Pandas have many ways of selecting and filtered data from a dataframe. We will now see how to use the [Boolean Filtering](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#boolean-indexing) to filter the dataframe to rows that match a condition.
 
@@ -161,6 +165,8 @@ print(home_city_coordinates)
 
     (12.97, 77.56)
 
+
+## Performing calculations
 
 Let's learn how to do calculations on a dataframe. We can iterate over each row and perform some calculations. But pandas provide a much more efficient way. You can use the `apply()` method to run a function on each row. This is fast and makes it easy to complex computations on large datasets.
 

@@ -1,6 +1,6 @@
-# Working with pandas
+# Working with Pandas
 
-![pandas logo](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Pandas_logo.svg/320px-Pandas_logo.svg.png)
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Pandas_logo.svg/320px-Pandas_logo.svg.png)
 
 Pandas is a powerful library for working with data. Pandas provides fast and easy functions for reading data from files, and analyzing it.
 
@@ -14,6 +14,8 @@ By convention, `pandas` is commonly imported as `pd`
 ```python
 import pandas as pd
 ```
+
+## Reading Files
 
 
 ```python
@@ -33,7 +35,7 @@ Pandas provide easy methods to directly read files into a DataFrame. You can use
 df = pd.read_csv(path)
 ```
 
-Once the file is read and a DataFrame object is created, we can inspect it using the `head()` method. You can see that we are not using `print()` here. Jupyter notebooks call the `display()` method on objects implicitely and gives us a nicely formatted output. This is very useful when dealing with DataFrames.
+Once the file is read and a DataFrame object is created, we can inspect it using the `head()` method. 
 
 
 ```python
@@ -82,6 +84,8 @@ print(df.info())
     memory usage: 1.3+ MB
     None
 
+
+## Filtering Data
 
 Pandas have many ways of selecting and filtered data from a dataframe. We will now see how to use the [Boolean Filtering](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#boolean-indexing) to filter the dataframe to rows that match a condition.
 
@@ -161,6 +165,8 @@ print(home_city_coordinates)
 
     (12.97, 77.56)
 
+
+## Performing calculations
 
 Let's learn how to do calculations on a dataframe. We can iterate over each row and perform some calculations. But pandas provide a much more efficient way. You can use the `apply()` method to run a function on each row. This is fast and makes it easy to complex computations on large datasets.
 
