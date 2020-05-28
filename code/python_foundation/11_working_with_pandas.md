@@ -33,7 +33,7 @@ Pandas provide easy methods to directly read files into a DataFrame. You can use
 df = pd.read_csv(path)
 ```
 
-Once the file is read and a DataFrame object is created, we can inspect it using the `head()` method. You can see that we are not using `print()` here. Jupyter notebooks call the `display()` method on objects implicitely and gives us a nicely formatted output. This is very useful when dealing with DataFrames.
+Once the file is read and a DataFrame object is created, we can inspect it using the `head()` method. 
 
 
 ```python
