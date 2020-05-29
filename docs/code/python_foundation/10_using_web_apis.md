@@ -158,7 +158,7 @@ else:
 
 ```
 
-    Request failed.
+    Request successful.
 
 
 The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index **0**. The feature's property contains `summary` information which has the data we need. 
@@ -182,6 +182,10 @@ print(distance/1000)
 
     4691.6080999999995
 
+
+You can compare this distance to the straight-line distance and see the difference.
+
+![](https://courses.spatialthoughts.com/images/python_foundation/ors_directions.png)
 
 ## API Rate Limiting
 
