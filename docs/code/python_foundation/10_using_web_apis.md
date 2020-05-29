@@ -185,7 +185,7 @@ print(distance/1000)
 
 You can compare this distance to the straight-line distance and see the difference.
 
-![](https://courses.spatialthoughts.com/images/python_foundation/ors_directions.png)
+![](https://courses.spatialthoughts.com/images/python_foundation/ors_direction.png)
 
 ## API Rate Limiting
 
