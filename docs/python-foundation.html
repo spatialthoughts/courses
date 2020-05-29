@@ -418,6 +418,13 @@ $(document).ready(function () {
 <li><a href="#performing-spatial-joins">Performing Spatial joins</a></li>
 <li><a href="#group-statistics">Group Statistics</a></li>
 </ul></li>
+<li><a href="#creating-spatial-data">Creating Spatial Data</a><ul>
+<li><a href="#reading-tab-delimited-files">Reading Tab-Delimited Files</a></li>
+<li><a href="#filtering-data-2">Filtering Data</a></li>
+<li><a href="#creating-geometries">Creating Geometries</a></li>
+<li><a href="#writing-files-1">Writing Files</a></li>
+<li><a href="#exercise-11">Exercise</a></li>
+</ul></li>
 <li><a href="#license">License</a></li>
 </ul>
 </div>
@@ -1582,6 +1589,10 @@ filtered.to_csv(output_path, index<span class="op">=</span><span class="va">Fals
 <li><a href="https://pypi.org/project/Fiona/">Fiona</a> for file input and output, which itself is based on the widely used <a href="https://gdal.org/">GDAL/OGR</a> library</li>
 </ul>
 <p>We will carry out a geoprocessing task that shows various features of this library and show how to do geo data processing in Python. The task is to take a roads data layer from OpenStreetMap and compute the total length of National Highways for each district in a state. The problem is described in detail in my <a href="https://courses.spatialthoughts.com/advanced-qgis.html#exercise-find-the-length-of-national-highways-in-a-state">Advanced QGIS</a> course and show the steps needed to perform this analysis in QGIS. We will replicate this example in Python.</p>
+<div class="figure">
+<img src="https://courses.spatialthoughts.com/images/python_foundation/karnataka.png" />
+
+</div>
 <p>By convention, <code>geopandas</code> is commonly imported as <code>gpd</code></p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> geopandas <span class="im">as</span> gpd</code></pre></div>
 <div id="reading-spatial-data" class="section level2">
@@ -1763,6 +1774,135 @@ Name: length, dtype: float64</code></pre>
 output_dir <span class="op">=</span> <span class="st">&#39;Downloads&#39;</span>
 output_path <span class="op">=</span> os.path.join(home_dir, output_dir, output_filename)
 results.to_csv(output_path)</code></pre></div>
+<hr />
+
+</div>
+</div>
+<div id="creating-spatial-data" class="section level1">
+<h1>Creating Spatial Data</h1>
+<p>A common operation in spatial analysis is to take non-spatial data, such as CSV files, and creating a spatial dataset from it using coordinate information contained in the file. GeoPandas provides a convenient way to take data from a delimited-text file, create geometry and write the results as a spatial dataset.</p>
+<p>We will read a tab-delimited file of places, filter it to a feature class, create a GeoDataFrame and export it as a GeoPackage file.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> os
+<span class="im">import</span> pandas <span class="im">as</span> pd
+<span class="im">import</span> geopandas <span class="im">as</span> gpd</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">home_dir <span class="op">=</span> os.path.expanduser(<span class="st">&#39;~&#39;</span>)
+data_pkg_path <span class="op">=</span> <span class="st">&#39;Downloads/python_foundation/geonames/&#39;</span>
+filename <span class="op">=</span> <span class="st">&#39;US.txt&#39;</span>
+path <span class="op">=</span> os.path.join(home_dir, data_pkg_path, filename)</code></pre></div>
+<div id="reading-tab-delimited-files" class="section level2">
+<h2>Reading Tab-Delimited Files</h2>
+<p>The source data comes from <a href="https://en.wikipedia.org/wiki/GeoNames">GeoNames</a> - a free and open database of geographic names of the world. It is a huge database containing millions of records per country. The data is distributed as country-level text files in a tab-delimited format. The files do not contain a header row with column names, so we need to specify them when reading the data. The data format is described in detail on the <a href="https://www.geonames.org/export/">Data Export</a> page.</p>
+<p>We specify the separator as <strong>\t</strong> (tab) as an argument to the <code>read_csv()</code> method. Note that the file for USA has more than 2M records.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">column_names <span class="op">=</span> [
+    <span class="st">&#39;geonameid&#39;</span>, <span class="st">&#39;name&#39;</span>, <span class="st">&#39;asciiname&#39;</span>, <span class="st">&#39;alternatenames&#39;</span>, 
+    <span class="st">&#39;latitude&#39;</span>, <span class="st">&#39;longitude&#39;</span>, <span class="st">&#39;feature class&#39;</span>, <span class="st">&#39;feature code&#39;</span>,
+    <span class="st">&#39;country code&#39;</span>, <span class="st">&#39;cc2&#39;</span>, <span class="st">&#39;admin1 code&#39;</span>, <span class="st">&#39;admin2 code&#39;</span>,
+    <span class="st">&#39;admin3 code&#39;</span>, <span class="st">&#39;admin4 code&#39;</span>, <span class="st">&#39;population&#39;</span>, <span class="st">&#39;elevation&#39;</span>,
+    <span class="st">&#39;dem&#39;</span>, <span class="st">&#39;timezone&#39;</span>, <span class="st">&#39;modification date&#39;</span>
+]
+
+df <span class="op">=</span> pd.read_csv(path, sep<span class="op">=</span><span class="st">&#39;</span><span class="ch">\t</span><span class="st">&#39;</span>, names<span class="op">=</span>column_names)
+<span class="bu">print</span>(df.info())</code></pre></div>
+<pre><code>/Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/IPython/core/interactiveshell.py:3063: DtypeWarning: Columns (9,11) have mixed types.Specify dtype option on import or set low_memory=False.
+  interactivity=interactivity, compiler=compiler, result=result)
+
+
+&lt;class &#39;pandas.core.frame.DataFrame&#39;&gt;
+RangeIndex: 2237861 entries, 0 to 2237860
+Data columns (total 19 columns):
+ #   Column             Dtype  
+---  ------             -----  
+ 0   geonameid          int64  
+ 1   name               object 
+ 2   asciiname          object 
+ 3   alternatenames     object 
+ 4   latitude           float64
+ 5   longitude          float64
+ 6   feature class      object 
+ 7   feature code       object 
+ 8   country code       object 
+ 9   cc2                object 
+ 10  admin1 code        object 
+ 11  admin2 code        object 
+ 12  admin3 code        float64
+ 13  admin4 code        float64
+ 14  population         int64  
+ 15  elevation          float64
+ 16  dem                int64  
+ 17  timezone           object 
+ 18  modification date  object 
+dtypes: float64(5), int64(3), object(11)
+memory usage: 324.4+ MB
+None</code></pre>
+</div>
+<div id="filtering-data-2" class="section level2">
+<h2>Filtering Data</h2>
+<p>The input data as a column <code>feature_class</code> categorizing the place into <a href="https://www.geonames.org/export/codes.html">9 feature classes</a>. We can select all rows with the value <code>T</code> with the category <em>mountain,hill,rock…</em></p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">mountains <span class="op">=</span> df[df[<span class="st">&#39;feature class&#39;</span>]<span class="op">==</span><span class="st">&#39;T&#39;</span>]
+<span class="bu">print</span>(mountains.head()[[<span class="st">&#39;name&#39;</span>, <span class="st">&#39;latitude&#39;</span>, <span class="st">&#39;longitude&#39;</span>, <span class="st">&#39;dem&#39;</span>,<span class="st">&#39;feature class&#39;</span>]])</code></pre></div>
+<pre><code>                 name  latitude  longitude   dem feature class
+15       Vulcan Point  52.10222  177.53889 -9999             T
+16     Tropical Ridge  51.99167  177.50833   267             T
+17  Thirty-Seven Hill  52.84528  173.15278   193             T
+20       Square Point  52.86120  173.33679    30             T
+21       Square Bluff  51.65000  178.70000 -9999             T</code></pre>
+</div>
+<div id="creating-geometries" class="section level2">
+<h2>Creating Geometries</h2>
+<p>GeoPandas has a conveinent function <code>points_from_xy()</code> that creates a Geometry column from X and Y coordinates. We can then take a Pandas dataframe and create a GeoDataFrame by specifying a CRS and the geometry column.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">geometry <span class="op">=</span> gpd.points_from_xy(mountains.longitude, mountains.latitude)
+gdf <span class="op">=</span> gpd.GeoDataFrame(mountains, crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span>, geometry<span class="op">=</span>geometry)
+<span class="bu">print</span>(gdf.info())</code></pre></div>
+<pre><code>&lt;class &#39;geopandas.geodataframe.GeoDataFrame&#39;&gt;
+Int64Index: 225328 entries, 15 to 2237836
+Data columns (total 20 columns):
+ #   Column             Non-Null Count   Dtype   
+---  ------             --------------   -----   
+ 0   geonameid          225328 non-null  int64   
+ 1   name               225328 non-null  object  
+ 2   asciiname          225328 non-null  object  
+ 3   alternatenames     30933 non-null   object  
+ 4   latitude           225328 non-null  float64 
+ 5   longitude          225328 non-null  float64 
+ 6   feature class      225328 non-null  object  
+ 7   feature code       225328 non-null  object  
+ 8   country code       225328 non-null  object  
+ 9   cc2                5 non-null       object  
+ 10  admin1 code        225327 non-null  object  
+ 11  admin2 code        225170 non-null  object  
+ 12  admin3 code        21646 non-null   float64 
+ 13  admin4 code        0 non-null       float64 
+ 14  population         225328 non-null  int64   
+ 15  elevation          224417 non-null  float64 
+ 16  dem                225328 non-null  int64   
+ 17  timezone           225273 non-null  object  
+ 18  modification date  225328 non-null  object  
+ 19  geometry           225328 non-null  geometry
+dtypes: float64(5), geometry(1), int64(3), object(11)
+memory usage: 36.1+ MB
+None</code></pre>
+</div>
+<div id="writing-files-1" class="section level2">
+<h2>Writing Files</h2>
+<p>We can write the resulting GeoDataFrame to any of the supported vector data format. Here we are writing it as a new GeoPackage file.</p>
+<p>You can open the resulting geopackage in a GIS and view the data.</p>
+<div class="figure">
+<img src="https://courses.spatialthoughts.com/images/python_foundation/geonames_mountains.png" />
+
+</div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">output_dir <span class="op">=</span> <span class="st">&#39;Downloads&#39;</span>
+output_filename <span class="op">=</span> <span class="st">&#39;mountains.gpkg&#39;</span>
+output_path <span class="op">=</span> os.path.join(home_dir, output_dir, output_filename)
+
+gdf.to_file(driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>, filename<span class="op">=</span>output_path, encoding<span class="op">=</span><span class="st">&#39;utf-8&#39;</span>)</code></pre></div>
+</div>
+<div id="exercise-11" class="section level2">
+<h2>Exercise</h2>
+<p>The data package contains multiple geonames text files from different countries in the <code>geonames/</code> folder. Write code to read all the files, merge them and extract the mountain features to a single geopackage.</p>
+<ul>
+<li>Hint1: Use the <code>os.listdir()</code> method to get all files in a directory.</li>
+<li>Hint2: Use the Pandas method <code>concat()</code> to merge multiple dataframes.</li>
+</ul>
 <hr />
 </div>
 </div>
