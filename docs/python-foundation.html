@@ -436,6 +436,11 @@ $(document).ready(function () {
 <li><a href="#writing-raster-data">Writing Raster Data</a></li>
 <li><a href="#exercise-13">Exercise</a></li>
 </ul></li>
+<li><a href="#raster-computation">Raster Computation</a><ul>
+<li><a href="#combining-bands-into-a-composite">Combining Bands into a Composite</a></li>
+<li><a href="#calculating-ndvi">Calculating NDVI</a></li>
+<li><a href="#exercise-14">Exercise</a></li>
+</ul></li>
 <li><a href="#license">License</a></li>
 </ul>
 </div>
@@ -2037,7 +2042,6 @@ path <span class="op">=</span> os.path.join(home_dir, data_pkg_path, srtm_dir, f
 <h2>Reading Raster Data</h2>
 <p>RasterIO can read any raster format supported by the GDAL library. We can call the <code>open()</code> method with the file path of the raster. The resulting dataset behaves much like Python’s File object.</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">dataset <span class="op">=</span> rasterio.<span class="bu">open</span>(path)</code></pre></div>
-<pre><code>&lt;open DatasetReader name=&#39;/Users/ujaval/Downloads/python_foundation/srtm/N27E086.hgt&#39; mode=&#39;r&#39;&gt;</code></pre>
 <p>You can check information about the raster using the <code>meta</code> attribute.</p>
 <p>An important property is the dataset <em>transform</em>. The transform contains the pixel resolution of the dataset and the row and column coordinates of the upper left corner of the dataset.</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">metadata <span class="op">=</span> dataset.meta
@@ -2049,18 +2053,18 @@ metadata</code></pre></div>
  &#39;height&#39;: 3601,
  &#39;count&#39;: 1,
  &#39;crs&#39;: CRS.from_epsg(4326),
- &#39;transform&#39;: Affine(0.0002777777777777778, 0.0, 85.99986111111112,
-        0.0, -0.0002777777777777778, 28.000138888888888)}</code></pre>
+ &#39;transform&#39;: Affine(0.0002777777777777778, 0.0, 86.99986111111112,
+        0.0, -0.0002777777777777778, 29.000138888888888)}</code></pre>
 <p>To read the pixel values, we need to call the <code>read()</code> method by passing it a band’s index number. Following the GDAL convention, bands are indexed from 1. Since our dataset contain just 1-band, we can read it as follows.</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">band1 <span class="op">=</span> dataset.read(<span class="dv">1</span>)
 <span class="bu">print</span>(band1)</code></pre></div>
-<pre><code>[[3186 3200 3220 ... 5338 5334 5332]
- [3171 3178 3200 ... 5335 5332 5329]
- [3145 3155 3173 ... 5332 5330 5327]
+<pre><code>[[5217 5211 5208 ... 5097 5098 5089]
+ [5206 5201 5200 ... 5080 5075 5069]
+ [5199 5194 5191 ... 5063 5055 5048]
  ...
- [ 368  368  366 ... 1885 1889 1891]
- [ 364  364  362 ... 1881 1884 1878]
- [ 360  359  357 ... 1872 1870 1863]]</code></pre>
+ [5347 5345 5343 ... 5747 5750 5757]
+ [5338 5338 5336 ... 5737 5740 5747]
+ [5332 5331 5332 ... 5734 5736 5744]]</code></pre>
 <p>Finally, when we are done with the dataset, we must close it. It is especially important when writing a dataset.</p>
 <div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">dataset.close()</code></pre></div>
 </div>
@@ -2123,6 +2127,157 @@ new_dataset.close()</code></pre></div>
 <div id="exercise-13" class="section level2">
 <h2>Exercise</h2>
 <p>The merged array represents elevation values. The extent of the tiles cover Mt. Everest. Read the resulting raster and find the maximum elevation value contained in it.</p>
+<hr />
+
+</div>
+</div>
+<div id="raster-computation" class="section level1">
+<h1>Raster Computation</h1>
+<p>In the previous section we saw how RasterIO can help us read and write geospatial rasters and use built-in modules to do some geoprocessing. In this section we will see how we can do computation on the rasters. As RasterIO reads raster bands as NumPy arrays, we can apply any operation on the data that is supported by NumPy.</p>
+<p>In this example, we will take a satellite image from the Sentinel-2 satellite and see how we can create various composites and calculate NDVI (Normalized Differential Vegetation Index).</p>
+<div class="figure">
+<img src="https://courses.spatialthoughts.com/images/python_foundation/ndvi.png" />
+
+</div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> os
+home_dir <span class="op">=</span> os.path.expanduser(<span class="st">&#39;~&#39;</span>)
+data_pkg_path <span class="op">=</span> <span class="st">&#39;Downloads/python_foundation&#39;</span>
+sentinel2_dir <span class="op">=</span> <span class="st">&#39;sentinel2&#39;</span></code></pre></div>
+<p>The directory contains 4 JPEG2000 files with the <code>.jp2</code> extension. It also contains other metadata files. We saw how the <code>os.listdir()</code> function can help find all files in the directory, but if we wanted to find a subset of files that match a pattern, Python has another helpful module called <code>glob</code>. It allows us the to use unix-style <a href="https://tldp.org/LDP/GNU-Linux-Tools-Summary/html/x11655.htm">wildcards</a> such as <code>*</code>, <code>?</code> etc. in Python to match filenames.</p>
+<p>Below code finds all files that end with <code>.jp2</code>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> glob
+
+pattern <span class="op">=</span> <span class="st">&#39;*.jp2&#39;</span>
+
+path <span class="op">=</span> os.path.join(home_dir, data_pkg_path, sentinel2_dir, pattern)
+files <span class="op">=</span> glob.glob(path)
+<span class="bu">print</span>(files)</code></pre></div>
+<pre><code>[&#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B08.jp2&#39;, &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B04.jp2&#39;, &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B03.jp2&#39;, &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B02.jp2&#39;]</code></pre>
+<p>Each file is a separate band from the same scene. The band names are part of the file name, so we can use the <code>in</code> operator to check which the file corresponding to each band name.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">bands <span class="op">=</span> {
+    <span class="st">&#39;red&#39;</span>: <span class="st">&#39;B04&#39;</span>,
+    <span class="st">&#39;green&#39;</span>: <span class="st">&#39;B03&#39;</span>,
+    <span class="st">&#39;blue&#39;</span>: <span class="st">&#39;B02&#39;</span>,
+    <span class="st">&#39;nir&#39;</span>: <span class="st">&#39;B08&#39;</span>
+}
+band_files <span class="op">=</span> {}
+
+<span class="cf">for</span> band_name, band_number <span class="kw">in</span> bands.items():
+    <span class="cf">for</span> filename <span class="kw">in</span> files:
+        <span class="cf">if</span> band_number <span class="kw">in</span> filename:
+            band_files[band_name] <span class="op">=</span> filename
+<span class="bu">print</span>(band_files)</code></pre></div>
+<pre><code>{&#39;red&#39;: &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B04.jp2&#39;, &#39;green&#39;: &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B03.jp2&#39;, &#39;blue&#39;: &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B02.jp2&#39;, &#39;nir&#39;: &#39;/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B08.jp2&#39;}</code></pre>
+<p>All the files come from the same scene and have the same metadata. Let’s open any one of the file and read the metadata.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> rasterio
+
+red_dataset <span class="op">=</span> rasterio.<span class="bu">open</span>(band_files[<span class="st">&#39;red&#39;</span>])
+metadata <span class="op">=</span> red_dataset.meta
+<span class="bu">print</span>(metadata)</code></pre></div>
+<pre><code>{&#39;driver&#39;: &#39;JP2OpenJPEG&#39;, &#39;dtype&#39;: &#39;uint16&#39;, &#39;nodata&#39;: None, &#39;width&#39;: 10980, &#39;height&#39;: 10980, &#39;count&#39;: 1, &#39;crs&#39;: CRS.from_epsg(32643), &#39;transform&#39;: Affine(10.0, 0.0, 699960.0,
+       0.0, -10.0, 1500000.0)}</code></pre>
+<p>We can now loop through all bands and read the data.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">band_datasets <span class="op">=</span> {}
+<span class="cf">for</span> band_name, band_file <span class="kw">in</span> band_files.items():
+    dataset <span class="op">=</span> rasterio.<span class="bu">open</span>(band_file)
+    band_dataset <span class="op">=</span> dataset.read(<span class="dv">1</span>)
+    band_datasets[band_name] <span class="op">=</span> band_dataset
+    dataset.close()
+<span class="bu">print</span>(band_datasets)</code></pre></div>
+<pre><code>{&#39;red&#39;: array([[   0,    0,    0, ..., 1683, 1678, 1624],
+       [   0,    0,    0, ..., 1571, 1737, 1636],
+       [   0,    0,    0, ..., 1307, 1537, 1332],
+       ...,
+       [1167, 1161, 1055, ..., 1499, 1457, 1453],
+       [1235, 1183, 1085, ..., 1479, 1484, 1479],
+       [1275, 1261, 1168, ..., 1541, 1539, 1473]], dtype=uint16), &#39;green&#39;: array([[   0,    0,    0, ..., 1189, 1161, 1144],
+       [   0,    0,    0, ..., 1169, 1196, 1129],
+       [   0,    0,    0, ..., 1087, 1169, 1097],
+       ...,
+       [1077, 1075,  972, ..., 1198, 1193, 1210],
+       [1087, 1089,  985, ..., 1209, 1211, 1213],
+       [1134, 1105, 1031, ..., 1238, 1232, 1221]], dtype=uint16), &#39;blue&#39;: array([[   0,    0,    0, ..., 1132, 1121, 1088],
+       [   0,    0,    0, ..., 1121, 1146, 1108],
+       [   0,    0,    0, ..., 1100, 1158, 1066],
+       ...,
+       [1167, 1164, 1094, ..., 1187, 1184, 1175],
+       [1174, 1163, 1132, ..., 1190, 1204, 1198],
+       [1205, 1173, 1170, ..., 1229, 1215, 1191]], dtype=uint16), &#39;nir&#39;: array([[   0,    0,    0, ..., 2348, 2342, 2279],
+       [   0,    0,    0, ..., 2571, 2482, 2273],
+       [   0,    0,    0, ..., 2436, 2390, 2289],
+       ...,
+       [2148, 2047, 2001, ..., 2451, 2474, 2587],
+       [2211, 2097, 2006, ..., 2441, 2445, 2533],
+       [2219, 2100, 1995, ..., 2457, 2449, 2566]], dtype=uint16)}</code></pre>
+<div id="combining-bands-into-a-composite" class="section level2">
+<h2>Combining Bands into a Composite</h2>
+<p>Let’s see how we can combine the individual bands into a single raster with 3 bands. This was we can create a true-color or false-color composite.</p>
+<p>We can combine the ‘red’, ‘green’ and ‘blue’ bands to form a RGB (true-color) composite image.</p>
+<p>We can use the same metadata parameters as the input image, with one little change. We can update the band count to 3. Since <code>metadata</code> is a dictionary, we can use the <code>update()</code> method to change set a key to a new value.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">metadata.update({<span class="st">&#39;count&#39;</span>:<span class="dv">3</span>})</code></pre></div>
+<p>We have a dictionary that contains all the metadata parameters that we can pass to the <code>rasterio.open()</code> method. But a function accepts arguments in the form of keywords, such as <code>count=3, dtype=uint16, ....</code>. Python provides a special operator <code>**</code> which converts a dictionary into keyword arguments suitable to be passed to functions.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">output_filename <span class="op">=</span> <span class="st">&#39;rgb.jp2&#39;</span>
+output_dir <span class="op">=</span> <span class="st">&#39;Downloads&#39;</span>
+output_path <span class="op">=</span> os.path.join(home_dir, output_dir, output_filename)
+
+rgb_dataset <span class="op">=</span> rasterio.<span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>metadata)</code></pre></div>
+<p>Now the dataset is created, we can write data from each band.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">rgb_dataset.write(band_datasets[<span class="st">&#39;red&#39;</span>], <span class="dv">1</span>)
+rgb_dataset.write(band_datasets[<span class="st">&#39;green&#39;</span>], <span class="dv">2</span>)
+rgb_dataset.write(band_datasets[<span class="st">&#39;blue&#39;</span>], <span class="dv">3</span>)
+rgb_dataset.close()</code></pre></div>
+</div>
+<div id="calculating-ndvi" class="section level2">
+<h2>Calculating NDVI</h2>
+<p>We can perform band-math on the datasets using NumPy functions. We will use the Red and NIR bands on the input image to calculate NDVI.</p>
+<p>The forumla for computing NDVI is as follows</p>
+<p><code>NDVI = (NIR - RED) / ( NIR + RED)</code></p>
+<p>Before we do so, we need to set the correct data type for the input data. The input bands contains integer values and are stored as the <code>uint16</code> (unsigned integer 16-bits). When we do some operation on 2 numbers that are unsigned (meaning they can’t store negative values), but output is a negative number, it results an <a href="https://en.wikipedia.org/wiki/Integer_overflow">integer overflow</a> error. See below example.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
+a <span class="op">=</span> np.array([<span class="dv">10</span>], dtype<span class="op">=</span>np.uint16)
+b <span class="op">=</span> np.array([<span class="dv">20</span>], dtype<span class="op">=</span>np.uint16)
+
+<span class="bu">print</span>(a<span class="op">-</span>b)</code></pre></div>
+<pre><code>[65526]</code></pre>
+<p>If we expect the results maybe negative, we can change the datatype to one that supports negative numbers.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">a <span class="op">=</span> a.astype(np.int16)
+b <span class="op">=</span> b.astype(np.int16)
+<span class="bu">print</span>(a<span class="op">-</span>b)</code></pre></div>
+<pre><code>[-10]</code></pre>
+<p>Since NDVI values can be negative and also any real number, we should change the type to a floating point type.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">red <span class="op">=</span> band_datasets[<span class="st">&#39;red&#39;</span>].astype(np.float32)
+nir <span class="op">=</span> band_datasets[<span class="st">&#39;nir&#39;</span>].astype(np.float32)</code></pre></div>
+<p>Before we do the calculation, we need to deal with one more potential issue. Since the NDVI formula requires us to divide numbers, we may end up accidentely dividing a number with 0. Let’s see what happens if we divide a number by 0.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="bu">print</span>(a<span class="op">/</span><span class="dv">0</span>)</code></pre></div>
+<pre><code>[inf]</code></pre>
+<p>To avoice this warning of division by zero, we can set NumPy to ignore such cases</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">np.seterr(divide<span class="op">=</span><span class="st">&#39;ignore&#39;</span>, invalid<span class="op">=</span><span class="st">&#39;ignore&#39;</span>)</code></pre></div>
+<pre><code>{&#39;divide&#39;: &#39;ignore&#39;, &#39;over&#39;: &#39;warn&#39;, &#39;under&#39;: &#39;ignore&#39;, &#39;invalid&#39;: &#39;warn&#39;}</code></pre>
+<p>Now we can do the calculations using regular Python syntax.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">ndvi <span class="op">=</span> (nir <span class="op">-</span> red) <span class="op">/</span> (nir <span class="op">+</span> red)</code></pre></div>
+<pre><code>/Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/ipykernel_launcher.py:1: RuntimeWarning: invalid value encountered in true_divide
+  &quot;&quot;&quot;Entry point for launching an IPython kernel.</code></pre>
+<p>We can now write the resulting rastre to disk. Since the JP2 driver supports writing only integer data, we can choose to write it as a GeoTIFF file.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">metadata.update({<span class="st">&#39;count&#39;</span>: <span class="dv">1</span>, <span class="st">&#39;dtype&#39;</span>: <span class="st">&#39;float32&#39;</span>, <span class="st">&#39;driver&#39;</span>: <span class="st">&#39;GTiff&#39;</span>})
+<span class="bu">print</span>(metadata)</code></pre></div>
+<pre><code>{&#39;driver&#39;: &#39;GTiff&#39;, &#39;dtype&#39;: &#39;float32&#39;, &#39;nodata&#39;: None, &#39;width&#39;: 10980, &#39;height&#39;: 10980, &#39;count&#39;: 1, &#39;crs&#39;: CRS.from_epsg(32643), &#39;transform&#39;: Affine(10.0, 0.0, 699960.0,
+       0.0, -10.0, 1500000.0)}</code></pre>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">output_filename <span class="op">=</span> <span class="st">&#39;ndvi.tif&#39;</span>
+output_dir <span class="op">=</span> <span class="st">&#39;Downloads&#39;</span>
+output_path <span class="op">=</span> os.path.join(home_dir, output_dir, output_filename)
+
+ndvi_dataset <span class="op">=</span> rasterio.<span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>metadata)
+ndvi_dataset.write(ndvi, <span class="dv">1</span>)
+ndvi_dataset.close()</code></pre></div>
+</div>
+<div id="exercise-14" class="section level2">
+<h2>Exercise</h2>
+<p>Take the Sentinel-2 bands and create a False Color Composite (FCC). A <em>NRG Color Composite</em> is created with the following configuration.</p>
+<ul>
+<li>Band 1: NIR</li>
+<li>Band 2: Red</li>
+<li>Band 3: Green</li>
+</ul>
 <hr />
 </div>
 </div>

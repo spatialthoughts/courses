@@ -32,13 +32,6 @@ RasterIO can read any raster format supported by the GDAL library. We can call t
 dataset = rasterio.open(path)
 ```
 
-
-
-
-    <open DatasetReader name='/Users/ujaval/Downloads/python_foundation/srtm/N27E086.hgt' mode='r'>
-
-
-
 You can check information about the raster using the `meta` attribute.
 
 An important property is the dataset *transform*. The transform contains the pixel resolution of the dataset and the row and column coordinates of the upper left corner of the dataset.
@@ -59,8 +52,8 @@ metadata
      'height': 3601,
      'count': 1,
      'crs': CRS.from_epsg(4326),
-     'transform': Affine(0.0002777777777777778, 0.0, 85.99986111111112,
-            0.0, -0.0002777777777777778, 28.000138888888888)}
+     'transform': Affine(0.0002777777777777778, 0.0, 86.99986111111112,
+            0.0, -0.0002777777777777778, 29.000138888888888)}
 
 
 
@@ -72,13 +65,13 @@ band1 = dataset.read(1)
 print(band1)
 ```
 
-    [[3186 3200 3220 ... 5338 5334 5332]
-     [3171 3178 3200 ... 5335 5332 5329]
-     [3145 3155 3173 ... 5332 5330 5327]
+    [[5217 5211 5208 ... 5097 5098 5089]
+     [5206 5201 5200 ... 5080 5075 5069]
+     [5199 5194 5191 ... 5063 5055 5048]
      ...
-     [ 368  368  366 ... 1885 1889 1891]
-     [ 364  364  362 ... 1881 1884 1878]
-     [ 360  359  357 ... 1872 1870 1863]]
+     [5347 5345 5343 ... 5747 5750 5757]
+     [5338 5338 5336 ... 5737 5740 5747]
+     [5332 5331 5332 ... 5734 5736 5744]]
 
 
 Finally, when we are done with the dataset, we must close it. It is especially important when writing a dataset.
