@@ -110,7 +110,7 @@ print(response.status_code)
     200
 
 
-## Using OpenRouteService API
+## Calculating Distance using OpenRouteService API
 
 [OpenRouteService (ORS)](https://openrouteservice.org/) provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.
 

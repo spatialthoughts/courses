@@ -73,10 +73,6 @@ city[4:]
 
 
 
-## Exercise
-
-Use the string slicing to print the last 5 characters of a string. 
-
 ## Escaping characters
 
 Certain characters are special since they are by Python language itself. For example, the quote character **'** is used to define a string. What do you do if your string contains a quote character?
@@ -174,3 +170,12 @@ print(coordinates)
 
 
 ----
+
+## Exercise
+
+Use the string slicing to extract and print the degrees, minutes and second parts of the string below.
+
+
+```python
+latitude = '''37° 46' 26.2992 N'''
+```
