@@ -20,10 +20,9 @@ import pandas as pd
 
 ```python
 import os
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation/'
+data_pkg_path = 'data'
 filename = 'worldcities.csv'
-path = os.path.join(home_dir, data_pkg_path, filename)
+path = os.path.join(data_pkg_path, filename)
 ```
 
 A **DataFrame** is the most used Pandas object. You can think of a DataFrame being equivalent to a Spreadsheet or an Attribute Table of a GIS layer. 
@@ -290,8 +289,8 @@ Here we will use the `to_csv()` method to write a CSV file. Pandas assigns an in
 
 ```python
 output_filename = 'cities_distance_pandas.csv'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 filtered.to_csv(output_path, index=False)
 ```
 

@@ -25,10 +25,9 @@ import geopandas as gpd
 
 ```python
 import os
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation/'
+data_pkg_path = 'data'
 filename = 'karnataka.gpkg'
-path = os.path.join(home_dir, data_pkg_path, filename)
+path = os.path.join(data_pkg_path, filename)
 ```
 
 GeoPandas has a `read_file()` method that is able to open a wide variety of vector datasets, including zip files. Here we will open the GeoPackage `karnataka.gpkg` and read a layer called `karnataka_major_roads`. The result of the read method is a **GeoDataFrame**. 
@@ -275,8 +274,8 @@ The result of the `group_by()` method is a Pandas *Series*. It can be saved to a
 
 ```python
 output_filename = 'national_highways_by_districts.csv'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 results.to_csv(output_path)
 ```
 

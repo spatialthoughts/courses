@@ -17,10 +17,9 @@ The preferred way to read CSV files is using the `DictReader()` method. Which di
 
 ```python
 import os
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation/'
+data_pkg_path = 'data'
 filename = 'worldcities.csv'
-path = os.path.join(home_dir, data_pkg_path, filename)
+path = os.path.join(data_pkg_path, filename)
 ```
 
 
@@ -31,7 +30,7 @@ print(csv_reader)
 f.close()
 ```
 
-    <csv.DictReader object at 0x1102c2fd0>
+    <csv.DictReader object at 0x1087b6a90>
 
 
 ## Using `enumerate()` function
@@ -171,12 +170,19 @@ with open(path, 'r') as f:
 
 Instead of printing the results, let's write the results to a new file. Similar to csv.DictReader(), there is a companion `csv.DictWriter()` method to write files. We create a `csv_writer` object and then write rows to it using the `writerow()` method.
 
+First we create an `output` folder to save the results. We can first check if the folder exists and if it doesn't exist, we can create it.
+
+
+```python
+output_dir = 'output'
+if not os.path.exists(output_dir):
+    os.mkdir(output_dir)
+```
+
 
 ```python
 output_filename = 'cities_distance.csv'
-output_dir = 'Downloads'
-
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_path = os.path.join(output_dir, output_filename)
 
 with open(output_path, mode='w') as output_file:
     fieldnames = ['city', 'distance_from_home']
@@ -207,15 +213,12 @@ import csv
 import os
 from geopy import distance
 
-home_dir = os.path.expanduser('~')
-
+data_pkg_path = 'data'
 input_filename = 'worldcities.csv'
-input_dir = 'Downloads/python_foundation/'
-data_pkg_path = 'Downloads/python_foundation/'
-input_path = os.path.join(home_dir, data_pkg_path, input_filename)
+input_path = os.path.join(data_pkg_path, filename)
 output_filename = 'cities_distance.csv'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 
 home_city = 'Bengaluru'
 home_country = 'India'
@@ -248,7 +251,7 @@ with open(output_path, mode='w') as output_file:
 print('Successfully written output file at {}'.format(output_path))
 ```
 
-    Successfully written output file at /Users/ujaval/Downloads/cities_distance.csv
+    Successfully written output file at output/cities_distance.csv
 
 
 ## Exercise

@@ -9,8 +9,7 @@ In this example, we will take a satellite image from the Sentinel-2 satellite an
 
 ```python
 import os
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation'
+data_pkg_path = 'data'
 sentinel2_dir = 'sentinel2'
 ```
 
@@ -25,12 +24,12 @@ import glob
 
 pattern = '*.jp2'
 
-path = os.path.join(home_dir, data_pkg_path, sentinel2_dir, pattern)
+path = os.path.join(data_pkg_path, sentinel2_dir, pattern)
 files = glob.glob(path)
 print(files)
 ```
 
-    ['/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B08.jp2', '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B04.jp2', '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B03.jp2', '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B02.jp2']
+    ['data/sentinel2/T43PGQ_20200218T050851_B08.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B04.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B03.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B02.jp2']
 
 
 Each file is a separate band from the same scene. The band names are part of the file name, so we can use the `in` operator to check which the file corresponding to each band name.
@@ -52,7 +51,7 @@ for band_name, band_number in bands.items():
 print(band_files)
 ```
 
-    {'red': '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B04.jp2', 'green': '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B03.jp2', 'blue': '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B02.jp2', 'nir': '/Users/ujaval/Downloads/python_foundation/sentinel2/T43PGQ_20200218T050851_B08.jp2'}
+    {'red': 'data/sentinel2/T43PGQ_20200218T050851_B04.jp2', 'green': 'data/sentinel2/T43PGQ_20200218T050851_B03.jp2', 'blue': 'data/sentinel2/T43PGQ_20200218T050851_B02.jp2', 'nir': 'data/sentinel2/T43PGQ_20200218T050851_B08.jp2'}
 
 
 All the files come from the same scene and have the same metadata. Let's open any one of the file and read the metadata.
@@ -128,8 +127,8 @@ We have a dictionary that contains all the metadata parameters that we can pass 
 
 ```python
 output_filename = 'rgb.jp2'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 
 rgb_dataset = rasterio.open(output_path, 'w', **metadata)
 ```
@@ -196,6 +195,10 @@ print(a/0)
     [inf]
 
 
+    /Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/ipykernel_launcher.py:1: RuntimeWarning: divide by zero encountered in true_divide
+      """Entry point for launching an IPython kernel.
+
+
 To avoice this warning of division by zero, we can set NumPy to ignore such cases
 
 
@@ -206,7 +209,7 @@ np.seterr(divide='ignore', invalid='ignore')
 
 
 
-    {'divide': 'ignore', 'over': 'warn', 'under': 'ignore', 'invalid': 'warn'}
+    {'divide': 'warn', 'over': 'warn', 'under': 'ignore', 'invalid': 'warn'}
 
 
 
@@ -216,10 +219,6 @@ Now we can do the calculations using regular Python syntax.
 ```python
 ndvi = (nir - red) / (nir + red)
 ```
-
-    /Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/ipykernel_launcher.py:1: RuntimeWarning: invalid value encountered in true_divide
-      """Entry point for launching an IPython kernel.
-
 
 We can now write the resulting rastre to disk. Since the JP2 driver supports writing only integer data, we can choose to write it as a GeoTIFF file.
 
@@ -236,8 +235,8 @@ print(metadata)
 
 ```python
 output_filename = 'ndvi.tif'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 
 ndvi_dataset = rasterio.open(output_path, 'w', **metadata)
 ndvi_dataset.write(ndvi, 1)

@@ -16,11 +16,10 @@ import rasterio
 
 ```python
 import os
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation'
+data_pkg_path = 'data'
 srtm_dir = 'srtm'
 filename = 'N28E087.hgt'
-path = os.path.join(home_dir, data_pkg_path, srtm_dir, filename)
+path = os.path.join(data_pkg_path, srtm_dir, filename)
 ```
 
 ## Reading Raster Data
@@ -89,7 +88,7 @@ We first find all the individual files in the directory using the `os.listdir()`
 
 
 ```python
-srtm_path = os.path.join(home_dir, data_pkg_path, 'srtm')
+srtm_path = os.path.join(data_pkg_path, 'srtm')
 all_files = os.listdir(srtm_path)
 print(all_files)
 ```
@@ -108,7 +107,7 @@ for file in all_files:
 print(dataset_list)
 ```
 
-    [<open DatasetReader name='/Users/ujaval/Downloads/python_foundation/srtm/N28E086.hgt' mode='r'>, <open DatasetReader name='/Users/ujaval/Downloads/python_foundation/srtm/N28E087.hgt' mode='r'>, <open DatasetReader name='/Users/ujaval/Downloads/python_foundation/srtm/N27E087.hgt' mode='r'>, <open DatasetReader name='/Users/ujaval/Downloads/python_foundation/srtm/N27E086.hgt' mode='r'>]
+    [<open DatasetReader name='data/srtm/N28E086.hgt' mode='r'>, <open DatasetReader name='data/srtm/N28E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E086.hgt' mode='r'>]
 
 
 We can pass on the list of tile dataset to the merge method, which will return us the merged data and a new *transform* which contains the updated extent of the merged raster.
@@ -156,8 +155,8 @@ Similar to regular Python files, to create a new file, we can open the output fi
 
 ```python
 output_filename = 'merged.tif'
-output_dir = 'Downloads'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
 ```
 
 We need to specify many metadata parameters to initialize the output dataset. Some of these parameter values can be directly copied from the input files, such as `crs`, `dtype`, `nodata` etc. , while others can be obtained from the merged dataset, such as `height` and `width`.
@@ -166,7 +165,6 @@ Remember to call the `close()` method which will finalize the file and write the
 
 
 ```python
-
 new_dataset = rasterio.open(output_path, 'w', 
                             driver='GTiff',
                             height=merged_data.shape[1],

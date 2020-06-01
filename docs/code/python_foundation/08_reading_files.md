@@ -4,33 +4,22 @@ Python provides built-in functions for reading and writing files.
 
 To read a file, we must know the path of the file on the disk. Python has a module called `os` that has helper functions that helps dealing with the the operating system. Advantage of using the `os` module is that the code you write will work without change on any suppored operating systems.
 
-We can use the `os` module to find the path to your home folder using the `os.path.expanduser()` method. The symbol `~` refers to the home directory for the user.
-
 
 ```python
 import os
 ```
 
-
-```python
-home_dir = os.path.expanduser('~')
-print(home_dir)
-```
-
-    /Users/ujaval
-
-
-To open a file, we need to know the full path to the file. We will now open and read the file `worldcitites.csv` located in your data package. Assuming the data package is extracted to the `Downloads/` directory. We can construct the full path to the file using the `os.path.join()` method.
+To open a file, we need to know the path to the file. We will now open and read the file `worldcitites.csv` located in your data package. In your data package the data folder is in the `data/` directory. We can construct the relative path to the file using the `os.path.join()` method.
 
 
 ```python
-data_pkg_path = 'Downloads/python_foundation/'
+data_pkg_path = 'data'
 filename = 'worldcities.csv'
-path = os.path.join(home_dir, data_pkg_path, filename)
+path = os.path.join(data_pkg_path, filename)
 print(path)
 ```
 
-    /Users/ujaval/Downloads/python_foundation/worldcities.csv
+    data/worldcities.csv
 
 
 To open the file, use the built-in `open()` function. We specify the *mode* as `r` which means read-only. If we wanted to change the file contents or write a new file, we would open it with `w` mode.
