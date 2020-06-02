@@ -29,7 +29,7 @@ files = glob.glob(path)
 print(files)
 ```
 
-    ['data/sentinel2/T43PGQ_20200218T050851_B08.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B04.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B03.jp2', 'data/sentinel2/T43PGQ_20200218T050851_B02.jp2']
+    ['data\\sentinel2\\T43PGQ_20200218T050851_B02.jp2', 'data\\sentinel2\\T43PGQ_20200218T050851_B03.jp2', 'data\\sentinel2\\T43PGQ_20200218T050851_B04.jp2', 'data\\sentinel2\\T43PGQ_20200218T050851_B08.jp2']
 
 
 Each file is a separate band from the same scene. The band names are part of the file name, so we can use the `in` operator to check which the file corresponding to each band name.
@@ -51,7 +51,7 @@ for band_name, band_number in bands.items():
 print(band_files)
 ```
 
-    {'red': 'data/sentinel2/T43PGQ_20200218T050851_B04.jp2', 'green': 'data/sentinel2/T43PGQ_20200218T050851_B03.jp2', 'blue': 'data/sentinel2/T43PGQ_20200218T050851_B02.jp2', 'nir': 'data/sentinel2/T43PGQ_20200218T050851_B08.jp2'}
+    {'red': 'data\\sentinel2\\T43PGQ_20200218T050851_B04.jp2', 'green': 'data\\sentinel2\\T43PGQ_20200218T050851_B03.jp2', 'blue': 'data\\sentinel2\\T43PGQ_20200218T050851_B02.jp2', 'nir': 'data\\sentinel2\\T43PGQ_20200218T050851_B08.jp2'}
 
 
 All the files come from the same scene and have the same metadata. Let's open any one of the file and read the metadata.
@@ -195,7 +195,7 @@ print(a/0)
     [inf]
 
 
-    /Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/ipykernel_launcher.py:1: RuntimeWarning: divide by zero encountered in true_divide
+    C:\Users\ujaval\anaconda3\envs\python_foundation\lib\site-packages\ipykernel_launcher.py:1: RuntimeWarning: divide by zero encountered in true_divide
       """Entry point for launching an IPython kernel.
 
 

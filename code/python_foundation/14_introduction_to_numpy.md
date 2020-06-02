@@ -69,11 +69,7 @@ Mathematical operations on numpy arrays are easy and fast. NumPy as many built-i
 print(np.sum(b))
 ```
 
-
-
-
     19
-
 
 
 You can also use the functions operations on arrays. 
@@ -84,18 +80,11 @@ c = np.array([[2, 2, 2], [2, 2, 2]])
 print(np.divide(b, c))
 ```
 
+    [[0.5 1.  2. ]
+     [1.5 2.  2.5]]
 
 
-
-    array([[0.5, 1. , 2. ],
-           [1.5, 2. , 2.5]])
-
-
-
-
-```python
 If the objects are numpy objects, you can use the Python operators as well
-```
 
 
 ```python

@@ -19,7 +19,7 @@ path = os.path.join(data_pkg_path, filename)
 print(path)
 ```
 
-    data/worldcities.csv
+    data\worldcities.csv
 
 
 To open the file, use the built-in `open()` function. We specify the *mode* as `r` which means read-only. If we wanted to change the file contents or write a new file, we would open it with `w` mode.
@@ -30,7 +30,7 @@ It is a good practice to always close the file when you are done with it. To clo
 
 
 ```python
-f = open(path, 'r')
+f = open(path, 'r', encoding='utf-8')
 print(f.readline())
 print(f.readline())
 f.close()
@@ -48,7 +48,7 @@ We can loop through each line of the file and increase the `count` variable by 1
 
 
 ```python
-f = open(path, 'r')
+f = open(path, 'r', encoding='utf-8')
 
 count = 0
 for line in f:

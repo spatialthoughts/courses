@@ -30,7 +30,7 @@ print(csv_reader)
 f.close()
 ```
 
-    <csv.DictReader object at 0x1087b6a90>
+    <csv.DictReader object at 0x0000000005528548>
 
 
 ## Using `enumerate()` function
@@ -54,7 +54,7 @@ We can use enumerate() on any iterable object and get a tuple with an index and 
 
 
 ```python
-f = open(path, 'r')
+f = open(path, 'r', encoding='utf-8')
 csv_reader = csv.DictReader(f, delimiter=',', quotechar='"')
 for index, row in enumerate(csv_reader):
     print(row)
@@ -81,7 +81,7 @@ As you see below, we open the file and use the file object `f` in a `with` state
 
 
 ```python
-with open(path, 'r') as f:
+with open(path, 'r', encoding='utf-8') as f:
     csv_reader = csv.DictReader(f)
 ```
 
@@ -96,7 +96,7 @@ Replace the `home_country` variable with your home country below.
 home_country = 'India'
 num_cities = 0
 
-with open(path, 'r') as f:
+with open(path, 'r', encoding='utf-8') as f:
     csv_reader = csv.DictReader(f)
 
     for row in csv_reader:
@@ -121,7 +121,7 @@ home_city = 'Bengaluru'
 
 home_city_coordinates = ()
 
-with open(path, 'r') as f:
+with open(path, 'r', encoding='utf-8') as f:
     csv_reader = csv.DictReader(f)
     for row in csv_reader:
         if row['city_ascii'] == home_city:
@@ -143,7 +143,7 @@ Now we can loop through the file, find a city in the chosen home country and cal
 from geopy import distance
 
 counter = 0
-with open(path, 'r') as f:
+with open(path, 'r', encoding='utf-8') as f:
     csv_reader = csv.DictReader(f)
     for row in csv_reader:
         if (row['country'] == home_country and
@@ -184,14 +184,14 @@ if not os.path.exists(output_dir):
 output_filename = 'cities_distance.csv'
 output_path = os.path.join(output_dir, output_filename)
 
-with open(output_path, mode='w') as output_file:
+with open(output_path, mode='w', encoding='utf-8') as output_file:
     fieldnames = ['city', 'distance_from_home']
     csv_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
     csv_writer.writeheader()
     
     # Now we read the input file, calculate distance and
     # write a row to the output 
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         csv_reader = csv.DictReader(f)
         for row in csv_reader:
             if (row['country'] == home_country and
@@ -223,7 +223,7 @@ output_path = os.path.join(output_dir, output_filename)
 home_city = 'Bengaluru'
 home_country = 'India'
 
-with open(input_path, 'r') as input_file:
+with open(input_path, 'r', encoding='utf-8') as input_file:
     csv_reader = csv.DictReader(input_file)
     for row in csv_reader:
         if row['city_ascii'] == home_city:
@@ -235,7 +235,7 @@ with open(output_path, mode='w') as output_file:
     csv_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
     csv_writer.writeheader()
 
-    with open(input_path, 'r') as input_file:
+    with open(input_path, 'r', encoding='utf-8') as input_file:
         csv_reader = csv.DictReader(input_file)
         for row in csv_reader:
             if (row['country'] == home_country and
@@ -251,7 +251,7 @@ with open(output_path, mode='w') as output_file:
 print('Successfully written output file at {}'.format(output_path))
 ```
 
-    Successfully written output file at output/cities_distance.csv
+    Successfully written output file at output\cities_distance.csv
 
 
 ## Exercise

@@ -93,7 +93,7 @@ all_files = os.listdir(srtm_path)
 print(all_files)
 ```
 
-    ['N28E086.hgt', 'N28E087.hgt', 'N27E087.hgt', 'N27E086.hgt']
+    ['N27E086.hgt', 'N27E087.hgt', 'N28E086.hgt', 'N28E087.hgt']
 
 
 The rasterio.merge module has a `merge()` method that takes a list of *datasets* and returns the merged dataset. So we create an empty list, open each of the files and append it to the list.
@@ -107,7 +107,7 @@ for file in all_files:
 print(dataset_list)
 ```
 
-    [<open DatasetReader name='data/srtm/N28E086.hgt' mode='r'>, <open DatasetReader name='data/srtm/N28E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E086.hgt' mode='r'>]
+    [<open DatasetReader name='data\srtm\N27E086.hgt' mode='r'>, <open DatasetReader name='data\srtm\N27E087.hgt' mode='r'>, <open DatasetReader name='data\srtm\N28E086.hgt' mode='r'>, <open DatasetReader name='data\srtm\N28E087.hgt' mode='r'>]
 
 
 We can pass on the list of tile dataset to the merge method, which will return us the merged data and a new *transform* which contains the updated extent of the merged raster.

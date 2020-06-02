@@ -13,10 +13,9 @@ import geopandas as gpd
 
 
 ```python
-home_dir = os.path.expanduser('~')
-data_pkg_path = 'Downloads/python_foundation/geonames/'
+data_pkg_path = 'data/geonames/'
 filename = 'US.txt'
-path = os.path.join(home_dir, data_pkg_path, filename)
+path = os.path.join(data_pkg_path, filename)
 ```
 
 ## Reading Tab-Delimited Files
@@ -39,7 +38,7 @@ df = pd.read_csv(path, sep='\t', names=column_names)
 print(df.info())
 ```
 
-    /Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/IPython/core/interactiveshell.py:3063: DtypeWarning: Columns (9,11) have mixed types.Specify dtype option on import or set low_memory=False.
+    C:\Users\ujaval\anaconda3\envs\python_foundation\lib\site-packages\IPython\core\interactiveshell.py:3063: DtypeWarning: Columns (9,11) have mixed types.Specify dtype option on import or set low_memory=False.
       interactivity=interactivity, compiler=compiler, result=result)
 
 
@@ -141,9 +140,9 @@ You can open the resulting geopackage in a GIS and view the data.
 
 
 ```python
-output_dir = 'Downloads'
+output_dir = 'output'
 output_filename = 'mountains.gpkg'
-output_path = os.path.join(home_dir, output_dir, output_filename)
+output_path = os.path.join(output_dir, output_filename)
 
 gdf.to_file(driver='GPKG', filename=output_path, encoding='utf-8')
 ```
