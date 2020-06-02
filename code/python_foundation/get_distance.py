@@ -1,4 +1,3 @@
- #!/usr/bin/env python
 from geopy import distance
 
 san_francisco = (37.7749, -122.4194)
