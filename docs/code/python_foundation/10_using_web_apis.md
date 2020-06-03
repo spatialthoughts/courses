@@ -64,10 +64,6 @@ print(type(data))
 print(data)
 ```
 
-    <class 'dict'>
-    {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'properties': {'name': 'San Francisco'}, 'geometry': {'type': 'Point', 'coordinates': [-121.5687, 37.7739]}}]}
-
-
 Now that we have *parsed* the GeoJSON string and have a Python object, we can extract infromation from it. The data is stored in a *FeatureCollection* - which is a list of *features*. In our example, we have just 1 feature inside the feature collection, so we can access it by using index **0**.
 
 
@@ -75,9 +71,6 @@ Now that we have *parsed* the GeoJSON string and have a Python object, we can ex
 city_data = data['features'][0]
 print(city_data)
 ```
-
-    {'type': 'Feature', 'properties': {'name': 'San Francisco'}, 'geometry': {'type': 'Point', 'coordinates': [-121.5687, 37.7739]}}
-
 
 The feature representation is a dictionary, and individual items can be accesses using the *keys*
 
@@ -124,17 +117,6 @@ ORS_API_KEY = '<replace this with your key>'
 ```
 
 We will use the OpenRouteServices's [Directions Service](https://openrouteservice.org/dev/#/api-docs/v2/directions/{profile}/get). This service returns the driving, biking or walking directions between the given origin and destination points.
-
-
-```python
-# pip install -U python-dotenv
-
-%load_ext dotenv
-%dotenv
-import os
-ORS_API_KEY = os.getenv('ORS_API_KEY')
-
-```
 
 
 ```python
@@ -185,7 +167,8 @@ print(distance/1000)
 
 You can compare this distance to the straight-line distance and see the difference.
 
-![](https://courses.spatialthoughts.com/images/python_foundation/ors_direction.png)
+![](images/python_foundation/ors_direction.png)
+
 
 ## API Rate Limiting
 

@@ -2,7 +2,7 @@
 
 NumPy (Numerical Python) is an important Python library for scientific computation. Libraries such as Pandas and GeoPandas are built on top of NumPy. 
 
-![NumPy Logo](https://numpy.org/images/logos/numpy.svg)
+![NumPy Logo](images/python_foundation/numpy.png)
 
 It provides a fast and efficient ways to work with *Arrays*. In the domain of spatial data analysis, it plays a critical role in working with Raster data - such as satellite imagery, aerial photos, elevation data etc. Since the underlying structure of raster data is a 2D array for each band - learning NumPy is critical in processing raster data using Python.
 
@@ -113,8 +113,6 @@ print(b/2)
 
 
 An important concept in NumPy is the *Array Axes*. In a 2D array, Axis 0 is the direction of rows and Axis 1 is the direction of columns. [This article](https://www.sharpsightlabs.com/blog/numpy-axes-explained/) provides a very good explanation of the concept.
-
-![Image Courtesy Sharp Sight](https://vrzkj25a871bpq7t1ugcgmn9-wpengine.netdna-ssl.com/wp-content/uploads/2018/11/numpy-arrays-have-axes.png)
 
 Let's see how we can apply a function on a specific axis. Here when we apply `sum` function on axis-0 of a 2D array, it gives us a 1D-array with values summed across rows.
 

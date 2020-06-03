@@ -4,7 +4,7 @@ In the previous section we saw how RasterIO can help us read and write geospatia
 
 In this example, we will take a satellite image from the Sentinel-2 satellite and see how we can create various composites and calculate NDVI (Normalized Differential Vegetation Index).
 
-![](https://courses.spatialthoughts.com/images/python_foundation/ndvi.png)
+![](images/ndvi.png)
 
 
 ```python

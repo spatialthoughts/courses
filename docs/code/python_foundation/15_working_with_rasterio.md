@@ -6,7 +6,7 @@ RasterIO is built on top of the popular [GDAL (Geospatial Data Abstraction Libra
 
 In this section, we will take 4 individual SRTM tiles around the Mt. Everest region and merge them to a single GeoTiff using RasterIO.
 
-![](https://courses.spatialthoughts.com/images/python_foundation/srtm.png)
+![](images/srtm.png)
 
 
 ```python

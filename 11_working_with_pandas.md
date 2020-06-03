@@ -1,6 +1,6 @@
 # Working with Pandas
 
-![](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Pandas_logo.svg/320px-Pandas_logo.svg.png)
+![](images/python_foundation/pandas-logo.png)
 
 Pandas is a powerful library for working with data. Pandas provides fast and easy functions for reading data from files, and analyzing it.
 

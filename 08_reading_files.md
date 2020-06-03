@@ -24,6 +24,8 @@ print(path)
 
 To open the file, use the built-in `open()` function. We specify the *mode* as `r` which means read-only. If we wanted to change the file contents or write a new file, we would open it with `w` mode.
 
+Our input file also contains Unicode characters, so we specify `UTF-8` as the encoding.
+
 The open() function returns a file object. We can call the  `readline()` method for reading the content of the file, one line at a time.
 
 It is a good practice to always close the file when you are done with it. To close the file, we must call the `close()` method on the file object.

@@ -10,7 +10,7 @@ GeoPandas make use of many other widely used spatial libraries - but it provides
 
 We will carry out a geoprocessing task that shows various features of this library and show how to do geo data processing in Python. The task is to take a roads data layer from OpenStreetMap and compute the total length of National Highways for each district in a state. The problem is described in detail in my [Advanced QGIS](https://courses.spatialthoughts.com/advanced-qgis.html#exercise-find-the-length-of-national-highways-in-a-state) course and show the steps needed to perform this analysis in QGIS. We will replicate this example in Python.
 
-![](https://courses.spatialthoughts.com/images/python_foundation/karnataka.png)
+![](images/karnataka.png)
 
 
 By convention, `geopandas` is commonly imported as `gpd`

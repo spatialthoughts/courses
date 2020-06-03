@@ -136,7 +136,7 @@ We can write the resulting GeoDataFrame to any of the supported vector data form
 
 You can open the resulting geopackage in a GIS and view the data.
 
-![](https://courses.spatialthoughts.com/images/python_foundation/geonames_mountains.png)
+![](images/python_foundation/geonames_mountains.png)
 
 
 ```python
