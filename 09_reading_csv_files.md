@@ -208,7 +208,7 @@ from geopy import distance
 
 data_pkg_path = 'data'
 input_filename = 'worldcities.csv'
-input_path = os.path.join(data_pkg_path, filename)
+input_path = os.path.join(data_pkg_path, input_filename)
 output_filename = 'cities_distance.csv'
 output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
@@ -244,7 +244,7 @@ with open(output_path, mode='w') as output_file:
 print('Successfully written output file at {}'.format(output_path))
 ```
 
-    Successfully written output file at output\cities_distance.csv
+    Successfully written output file at output/cities_distance.csv
 
 
 ## Exercise

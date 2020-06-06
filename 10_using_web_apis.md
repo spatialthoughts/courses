@@ -151,7 +151,7 @@ summary = data['features'][0]['properties']['summary']
 print(summary)
 ```
 
-    {'distance': 4691608.1, 'duration': 166280.6}
+    {'distance': 4691607.4, 'duration': 166280.6}
 
 
 We can extract the `distance` and convert it to kilometers.
@@ -215,7 +215,7 @@ import csv
 import os
 import requests
 import time
-ORS_API_KEY = os.getenv('ORS_API_KEY')
+ORS_API_KEY = '<replace this with your key>'
 
 def get_driving_distance(source_coordinates, dest_coordinates):
     parameters = {
