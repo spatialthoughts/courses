@@ -62,12 +62,12 @@ Functions can take multiple arguments. Let's write a function to convert coordin
 To calculate decimal degrees, we can use the formula below:
 Decimal Degrees = degrees + (minutes/60) + (seconds/3600)
 
-Delete the `pass` statement and replace it with the code for the formula. If the code is correct, you should see the result 37.773972 -121.568703
+Delete the `pass` statement and replace it with the code for the formula. If the code is correct, you should see the result 37.773972 -122.431297
 
 
 ```python
 latitude = (37, 46, 26.2992)
-longitude = (-122, 25, 52.6692)
+longitude = (-121, 34, 7.32)
 
 def dms_to_decimal(degrees, minutes, seconds):
     pass

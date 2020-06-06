@@ -58,6 +58,42 @@ print(distance/1000, 'km')
     4135.374617164737 km
 
 
+## Discover Python Easter Eggs
+
+Programmers love to hide secret jokes in their programs for gun. These are known as *Easter Eggs*. Python has an easter egg that you can see when you try to import the module named `this`. Try writing the command `import this` below.
+
+
+```python
+import this
+```
+
+    The Zen of Python, by Tim Peters
+    
+    Beautiful is better than ugly.
+    Explicit is better than implicit.
+    Simple is better than complex.
+    Complex is better than complicated.
+    Flat is better than nested.
+    Sparse is better than dense.
+    Readability counts.
+    Special cases aren't special enough to break the rules.
+    Although practicality beats purity.
+    Errors should never pass silently.
+    Unless explicitly silenced.
+    In the face of ambiguity, refuse the temptation to guess.
+    There should be one-- and preferably only one --obvious way to do it.
+    Although that way may not be obvious at first unless you're Dutch.
+    Now is better than never.
+    Although never is often better than *right* now.
+    If the implementation is hard to explain, it's a bad idea.
+    If the implementation is easy to explain, it may be a good idea.
+    Namespaces are one honking great idea -- let's do more of those!
+
+
+Let's try one more. Try importing the `antigravity` module.
+
+Here's a complete list of [easter eggs in Python](https://towardsdatascience.com/7-easter-eggs-in-python-7765dc15a203).
+
 ## Exercise
 
 Find the coordinates of 2 cities near you and calculate the distance between them
