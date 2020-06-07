@@ -141,6 +141,7 @@ rgb_dataset.write(band_datasets['red'], 1)
 rgb_dataset.write(band_datasets['green'], 2)
 rgb_dataset.write(band_datasets['blue'], 3)
 rgb_dataset.close()
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Calculating NDVI
@@ -241,6 +242,7 @@ output_path = os.path.join(output_dir, output_filename)
 ndvi_dataset = rasterio.open(output_path, 'w', **metadata)
 ndvi_dataset.write(ndvi, 1)
 ndvi_dataset.close()
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Exercise

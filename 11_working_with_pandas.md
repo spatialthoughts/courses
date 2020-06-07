@@ -292,6 +292,7 @@ output_filename = 'cities_distance_pandas.csv'
 output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
 filtered.to_csv(output_path, index=False)
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Exercise

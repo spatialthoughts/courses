@@ -145,6 +145,7 @@ output_filename = 'mountains.gpkg'
 output_path = os.path.join(output_dir, output_filename)
 
 gdf.to_file(driver='GPKG', filename=output_path, encoding='utf-8')
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Exercise

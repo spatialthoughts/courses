@@ -143,6 +143,13 @@ else:
     Request successful.
 
 
+We can read the `response` in JSON format by calling `json()` method on it.
+
+
+```python
+data = response.json()
+```
+
 The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index **0**. The feature's property contains `summary` information which has the data we need. 
 
 

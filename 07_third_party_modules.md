@@ -31,9 +31,11 @@ new_york = (40.661, -73.944)
 straight_line_distance = distance.great_circle(san_francisco, new_york)
 ellipsoid_distance = distance.geodesic(san_francisco, new_york, ellipsoid='WGS-84')
 
+print(round(straight_line_distance.mi))
 print(straight_line_distance, ellipsoid_distance)
 ```
 
+    2570
     4135.3804590061345 km 4145.446977549562 km
 
 

@@ -14,20 +14,14 @@ for city in cities:
     print(city)
 ```
 
-    San Francisco
-    Los Angeles
-    New York
-    Atlanta
-
-
 To iterate over a dictionary, you can call the `items()` method on it which returns a tuple of key and value for each item.
 
 
 ```python
 data = {'city': 'San Francisco', 'population': 881549, 'coordinates': (-122.4194, 37.7749) }
 
-for key, value in data.items():
-    print(key, value)
+for x, y in data.items():
+    print(x, y)
 ```
 
     city San Francisco
@@ -54,18 +48,14 @@ The range function can also take a start and an end number
 
 
 ```python
-for x in range(1, 10):
+for x in range(1, 10, 2):
     print(x)
 ```
 
     1
-    2
     3
-    4
     5
-    6
     7
-    8
     9
 
 
@@ -118,20 +108,14 @@ cities_population = {
     'New York': 8175133,
     'Atlanta':498044
 }
-
-for city, population in cities_population.items():
-    if population < 1000000:
-        print('{} is a small city'.format(city))
-    elif population > 1000000 and population < 5000000:
-        print('{} is a big city'.format(city))
-    else:
-        print('{} is a mega city'.format(city))
+for x in cities_population.values():
+    print(x)
 ```
 
-    San Francisco is a small city
-    Los Angeles is a big city
-    New York is a mega city
-    Atlanta is a small city
+    881549
+    3792621
+    8175133
+    498044
 
 
 ## Control Statements
@@ -179,6 +163,32 @@ for city in cities:
     else:
         print(city)
 ```
+
+    San Francisco
+    New York
+    Atlanta
+
+
+
+```python
+for x in range(10):
+    if x%2:
+        print('yes')
+    else:
+        print('no')
+```
+
+    no
+    yes
+    no
+    yes
+    no
+    yes
+    no
+    yes
+    no
+    yes
+
 
 ## Exercise
 

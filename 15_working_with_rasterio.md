@@ -176,6 +176,7 @@ new_dataset = rasterio.open(output_path, 'w',
                             transform=merged_transform)
 new_dataset.write(merged_data)
 new_dataset.close()
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Exercise

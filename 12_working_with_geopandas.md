@@ -277,6 +277,7 @@ output_filename = 'national_highways_by_districts.csv'
 output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
 results.to_csv(output_path)
+print('Successfully written output file at {}'.format(output_path))
 ```
 
 ----

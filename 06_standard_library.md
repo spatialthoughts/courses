@@ -92,6 +92,11 @@ import this
 
 Let's try one more. Try importing the `antigravity` module.
 
+
+```python
+import antigravity
+```
+
 Here's a complete list of [easter eggs in Python](https://towardsdatascience.com/7-easter-eggs-in-python-7765dc15a203).
 
 ## Exercise

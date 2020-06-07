@@ -60,9 +60,16 @@ Functions can take multiple arguments. Let's write a function to convert coordin
 - 1 minute is equal to 60 seconds (3600 seconds)
 
 To calculate decimal degrees, we can use the formula below:
-Decimal Degrees = degrees + (minutes/60) + (seconds/3600)
 
-Delete the `pass` statement and replace it with the code for the formula. If the code is correct, you should see the result 37.773972 -122.431297
+If degrees are positive:
+
+`Decimal Degrees = degrees + (minutes/60) + (seconds/3600)`
+
+If degrees are negative
+
+`Decimal Degrees = degrees - (minutes/60) - (seconds/3600)`
+
+Delete the `pass` statement and replace it with the code for the formula. If the code is correct, you should see the result 37.773972 -121.56869
 
 
 ```python
