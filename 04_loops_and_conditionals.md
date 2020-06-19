@@ -108,14 +108,20 @@ cities_population = {
     'New York': 8175133,
     'Atlanta':498044
 }
-for x in cities_population.values():
-    print(x)
+
+for city, population in cities_population.items():
+    if population < 1000000:
+        print('{} is a small city'.format(city))
+    elif population > 1000000 and population < 5000000:
+        print('{} is a big city'.format(city))
+    else:
+        print('{} is a mega city'.format(city))
 ```
 
-    881549
-    3792621
-    8175133
-    498044
+    San Francisco is a small city
+    Los Angeles is a big city
+    New York is a mega city
+    Atlanta is a small city
 
 
 ## Control Statements
