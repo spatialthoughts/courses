@@ -132,4 +132,16 @@ print(row_sum)
 
 Sum the array `b` along Axis-1. What do you think will be the result?
 
+
+```python
+import numpy as np
+
+b = np.array([[1, 2, 4], [3, 4, 5]])
+print(b)
+```
+
+    [[1 2 4]
+     [3 4 5]]
+
+
 ----

@@ -175,27 +175,6 @@ for city in cities:
     Atlanta
 
 
-
-```python
-for x in range(10):
-    if x%2:
-        print('yes')
-    else:
-        print('no')
-```
-
-    no
-    yes
-    no
-    yes
-    no
-    yes
-    no
-    yes
-    no
-    yes
-
-
 ## Exercise
 
 The Fizz Buzz challenge.
@@ -213,7 +192,27 @@ Breaking down the problem further, we need to create for-loop with following con
 - If the number is multiple of 5, print Buzz
 - Otherwise print the number
 
-Hint: Use the modulus operator **%** to check if a number is divisible by another. `10 % 5` is 0, meaning it is divisible by 5.
+Hint: See the code cell below. Use the modulus operator **%** to check if a number is divisible by another. `10 % 5` equals 0, meaning it is divisible by 5.
+
+
+
+```python
+for x in range(1, 10):
+    if x%2 == 0:
+        print('{} is divisible by 2'.format(x))
+    else:
+        print('{} is not divisible by 2'.format(x))
+```
+
+    1 is not divisible by 2
+    2 is divisible by 2
+    3 is not divisible by 2
+    4 is divisible by 2
+    5 is not divisible by 2
+    6 is divisible by 2
+    7 is not divisible by 2
+    8 is divisible by 2
+    9 is not divisible by 2
 
 
 ----

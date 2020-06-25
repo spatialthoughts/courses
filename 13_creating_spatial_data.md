@@ -38,7 +38,7 @@ df = pd.read_csv(path, sep='\t', names=column_names)
 print(df.info())
 ```
 
-    C:\Users\ujaval\anaconda3\envs\python_foundation\lib\site-packages\IPython\core\interactiveshell.py:3063: DtypeWarning: Columns (9,11) have mixed types.Specify dtype option on import or set low_memory=False.
+    /Users/ujaval/opt/anaconda3/envs/python_foundation/lib/python3.7/site-packages/IPython/core/interactiveshell.py:3063: DtypeWarning: Columns (9,11) have mixed types.Specify dtype option on import or set low_memory=False.
       interactivity=interactivity, compiler=compiler, result=result)
 
 
@@ -148,11 +148,35 @@ gdf.to_file(driver='GPKG', filename=output_path, encoding='utf-8')
 print('Successfully written output file at {}'.format(output_path))
 ```
 
+    Successfully written output file at output/mountains.gpkg
+
+
 ## Exercise
 
 The data package contains multiple geonames text files from different countries in the `geonames/` folder. Write code to read all the files, merge them and extract the mountain features to a single geopackage.
 
 - Hint1: Use the `os.listdir()` method to get all files in a directory.
 - Hint2: Use the Pandas method `concat()` to merge multiple dataframes.
+
+
+```python
+import os
+import pandas as pd
+import geopandas as gpd
+
+data_pkg_path = 'data/geonames/'
+files = os.listdir(data_pkg_path)
+
+filepaths = []
+for file in files:
+    filepaths.append(os.path.join(data_pkg_path, file))
+print(filepaths)
+
+# Iterate over the files, read them using pandas and create a list of dataframes. 
+# You can then use pd.concat() function to merge them
+```
+
+    ['data/geonames/US.txt', 'data/geonames/MX.txt', 'data/geonames/CA.txt']
+
 
 ----

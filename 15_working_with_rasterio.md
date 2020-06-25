@@ -93,7 +93,7 @@ all_files = os.listdir(srtm_path)
 print(all_files)
 ```
 
-    ['N27E086.hgt', 'N27E087.hgt', 'N28E086.hgt', 'N28E087.hgt']
+    ['N28E086.hgt', 'N28E087.hgt', 'N27E087.hgt', 'N27E086.hgt']
 
 
 The rasterio.merge module has a `merge()` method that takes a list of *datasets* and returns the merged dataset. So we create an empty list, open each of the files and append it to the list.
@@ -107,7 +107,7 @@ for file in all_files:
 print(dataset_list)
 ```
 
-    [<open DatasetReader name='data\srtm\N27E086.hgt' mode='r'>, <open DatasetReader name='data\srtm\N27E087.hgt' mode='r'>, <open DatasetReader name='data\srtm\N28E086.hgt' mode='r'>, <open DatasetReader name='data\srtm\N28E087.hgt' mode='r'>]
+    [<open DatasetReader name='data/srtm/N28E086.hgt' mode='r'>, <open DatasetReader name='data/srtm/N28E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E086.hgt' mode='r'>]
 
 
 We can pass on the list of tile dataset to the merge method, which will return us the merged data and a new *transform* which contains the updated extent of the merged raster.
@@ -179,8 +179,24 @@ new_dataset.close()
 print('Successfully written output file at {}'.format(output_path))
 ```
 
+    Successfully written output file at output/merged.tif
+
+
 ## Exercise
 
 The merged array represents elevation values. The extent of the tiles cover Mt. Everest. Read the resulting raster and find the maximum elevation value contained in it.
+
+
+```python
+import rasterio
+import os
+import numpy as np
+
+output_filename = 'merged.tif'
+output_dir = 'output'
+output_path = os.path.join(output_dir, output_filename)
+
+# Read the output file as a NumPy array and find the maximum value
+```
 
 ----

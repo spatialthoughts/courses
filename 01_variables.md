@@ -90,6 +90,14 @@ We calculated the population density in number of people per square mile. Calcul
 - Hint1: 1 mile = 1.60934 kilometers
 - Hint2: To calculate exponential of a number in Python, you use the ** notation. x² is written as x**2
 
-Create a code cell below this one, type in the code and run the cell. The output should be 7258.8966
+Add the code in the cell below and run it. The output should be 7258.8966
+
+
+```python
+population = 881549
+area_sqmi = 46.89
+
+# Remove this line and add code here
+```
 
 ----

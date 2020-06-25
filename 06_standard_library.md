@@ -101,10 +101,22 @@ Here's a complete list of [easter eggs in Python](https://towardsdatascience.com
 
 ## Exercise
 
-Find the coordinates of 2 cities near you and calculate the distance between them
+Find the coordinates of 2 cities near you and calculate the distance between them by calling the `haversine_distance` function below.
 
 
 ```python
+def haversine_distance(origin, destination):
+  lat1, lon1 = origin
+  lat2, lon2 = destination
+  radius = 6371000
+  dlat = math.radians(lat2-lat1)
+  dlon = math.radians(lon2-lon1)
+  a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
+    * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+  distance = radius * c
+  return distance
+
 # city1 = (lat1, lng1)
 # city2 = (lat2, lng2)
 # call the function and print the result

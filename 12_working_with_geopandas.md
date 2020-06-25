@@ -145,7 +145,7 @@ total_length = roads_reprojected['length'].sum()
 print('Total length of national highways in the state is {} KM'.format(total_length/1000))
 ```
 
-    Total length of national highways in the state is 8616.16605840297 KM
+    Total length of national highways in the state is 8616.166058402967 KM
 
 
 ## Performing Spatial joins
@@ -239,12 +239,12 @@ print(results)
     Bagalkot            258.449475
     Bangalore           311.445505
     Bangalore Rural     320.036790
-    Belgaum             528.922531
+    Belgaum             528.922528
     Bellary             304.789522
     Bidar               247.348300
     Bijapur             424.197281
     Chamrajnagar        217.737255
-    Chikkaballapura     209.154534
+    Chikkaballapura     211.957819
     Chikmagalur         334.423573
     Chitradurga         531.932443
     Dakshina Kannada    316.339566
@@ -257,12 +257,12 @@ print(results)
     Kodagu               63.806864
     Kolar               221.598406
     Koppal              288.358711
-    Mandya              337.555904
-    Mysore              361.510005
+    Mandya              337.617829
+    Mysore              359.862216
     Raichur             167.746669
     Ramanagara          199.426362
     Shimoga             479.140995
-    Tumkur              630.247609
+    Tumkur              613.177564
     Udupi               277.331577
     Uttara Kannada      424.184040
     Yadgir              144.858328
@@ -279,5 +279,12 @@ output_path = os.path.join(output_dir, output_filename)
 results.to_csv(output_path)
 print('Successfully written output file at {}'.format(output_path))
 ```
+
+    Successfully written output file at output/national_highways_by_districts.csv
+
+
+## Exercise
+
+Before writing the output to the file, round the distance numbers to a whole number.
 
 ----

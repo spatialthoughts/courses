@@ -19,7 +19,7 @@ path = os.path.join(data_pkg_path, filename)
 print(path)
 ```
 
-    data\worldcities.csv
+    data/worldcities.csv
 
 
 To open the file, use the built-in `open()` function. We specify the *mode* as `r` which means read-only. If we wanted to change the file contents or write a new file, we would open it with `w` mode.
@@ -67,5 +67,15 @@ print(count)
 Print first 5 lines of the file. 
 
 - Hint: Use break statement
+
+
+```python
+import os
+data_pkg_path = 'data'
+filename = 'worldcities.csv'
+path = os.path.join(data_pkg_path, filename)
+
+# Add code to open the file and read first 5 lines
+```
 
 ----

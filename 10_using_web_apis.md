@@ -211,10 +211,7 @@ for x in range(10):
 
 ## Exercise
 
-Repeat the exercise from the previous section, but this time, use the OpenRouteService API to get real driving distance between the cities and write the results to the file. To do this you will need to replace the distance function
-with `get_driving_distance()` function that we have defined below.
-
-Hint: To comply with the API restritions, you will need to add `time.sleep(2)` between successive API calls.
+Below cell contains a dictionary with 3 destination cities and their coordinates. Write a `for` loop to iterate over the `destination_cities` disctionary and call `get_driving_distance()` function to print real driving distance between San Fransico and each city. Rate limit your queries by adding `time.sleep(2)` between successive function calls.
 
 
 ```python
@@ -242,8 +239,14 @@ def get_driving_distance(source_coordinates, dest_coordinates):
     else:
         print('Request failed.')
         return -9999
- 
 
+san_francisco = (37.7749, -122.4194)
+
+destination_cities = {
+    'Los Angeles': (34.0522, -118.2437),
+    'Boston': (42.3601, -71.0589),
+    'Atlanta': (33.7490, -84.3880)
+}
 ```
 
 ----
