@@ -121,6 +121,8 @@ We will work with roads extracted from OpenStreetMap for the state of Karnataka 
 
 5. Enter the following expression to extract the features where the value of the ``ref`` field starts with the letters ``NH``.
 
+> We are using *Regular Expression (or RegEx)* to match the field value to a specific pattern. Regular expressions are quite powerful and can be used for many complex data filtering operations. [Here's a good tutorial](https://medium.com/factory-mind/regex-tutorial-a-simple-cheatsheet-by-examples-649dc1c3f285) that explains the basics of regular expressions. 
+
 ```
 regexp_match("ref", '^NH')
 ```
@@ -343,7 +345,7 @@ We will now learn how to build a model that runs the above processing steps in a
 
 ![](images/advanced_qgis/modeler18.png)
 
-19. Switch to the main QGIS window. You can find your newly created model in the Processing Toolbox under ** Models &rarr; projects &rarr; piracy_hexbin**. Double-click to run the model. 
+19. Switch to the main QGIS window. You can find your newly created model in the Processing Toolbox under **Models &rarr; projects &rarr; piracy_hexbin**. Double-click to run the model. 
 
 ![](images/advanced_qgis/modeler19.png)
 
@@ -372,6 +374,107 @@ darker( @symbol_color , 130)
 Can you change the model so that instead of entering the grid size in meters, the user can enter the size in kilometers? 
 
 > Hint: The **Create Grid** algorithm expects the size in meters, so you will have to convert the input to meters.
+
+### Spatial Indexing
+
+When you ran your model, you may have noticed a warning message **No spatial index exists for input layer, performance will be severely degraded**. This is because certain spatial queries make use of a spatial index and QGIS warns you when having a spatial index can speed up your operations. PostGIS documentation has a good [overview of spatial indexes](https://postgis.net/workshops/postgis-intro/indexing.html) and why they are important.
+
+You can compare a *spatial index* to a book *index*. When you want to search for a particular term, rather than scanning each page sequentially, you can speed up your search by looking up the index and directly going to the pages where the word appears. Spatial indexes work in a similar way. You spent the effort once to create the index and all subsequent operations can make use of it. When you create a spatial index, each feature's bounding box is used to establish its relationship with other features. This is stored alongside the dataset and can be used by algorithms. When trying to determine spatial relationships, the algorithms speed-up the look-up using the following *two-pass* method:
+
+1. Use the spatial index to determine which target features' bounding boxes intersect with the source feature's bounding box. Since spatial index already has computed this - this is very fast.
+2. Now that there is a small subset of candidate features, use their full geometry to evaluate the intersections. 
+
+For large datasets, this approach helps reduce the processing time significantly. QGIS has built-in tools to create and use spatial indexes. Let's see how we can create spatial index for a layer and use it in our model.
+
+1. Right-click the **counts** layer and select *Properties*. 
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index1.png')
+```
+
+2. In the *Properties* dialog, switch to the *Source* tab. You will see the *Create Spatial Index* button. This button indicates that this layer does not current have a spatial index. You may click that button to create a spatial index. But we will use a better and more scalable way. Close the *Properties* dialog.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index2.png')
+```
+
+3. Go to **Processing &rarr; Toolbox**. Search for the algorithm **Vector general &rarr; Create spatial index** and double-click to launch it.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index3.png')
+```
+
+4. Select **counts** layer as the *Input layer* and click *Run*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index4.png')
+```
+
+5. Creating a spatial index is usually a fast operation. Once the algorithm finishes, right-click the **counts** layer and select *Properties*. Switch to the *Source* tab and you will see that the button has now changed to *Spatial Index Exists* - indicating that the layer now has a spatial index.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index5.png')
+```
+
+6. Now we will update the processing model created in the previous step to make use of a spatial index. Before that, let's benchmark the time taken by the model to run without a spatial index. Go to **Processing &rarr; Toolbox &rarr; projects &rarr; piracy_hexbin** and run it. Run it with a *Grid Size* of ``100000``. 
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index6.png')
+```
+
+7. Once the model finishes, switch to the *Log* tab and note the total time taken by the model.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index7.png')
+```
+
+8. Now, right-click the ``piracy_hexbin`` model and select *Edit Model...*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index8.png')
+```
+
+9. Search and locate the **Vector general &rarr; Create spatial index** algorithm and drag it to the model canvas.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index9.png')
+```
+
+10. The operation that can make effective use of a spatial index is **Extract by Location**. So we need to ensure that the layer that is used by this algorithm has a spatial index. Select **'Grid' from algorithm 'Create grid'** as the *Input layer* and click *OK*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index10.png')
+```
+
+11. You will see that the newly added **Create spatial index** algorithm is connected to the **Create grid** algorithm. But the model diagram clearly shows that it is not guaranteed that the spatial indexing will be performed *before* the **Extract by location** algorithm is executed. This defeats the purpose of create a spatial index. Let's fix that.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index11.png')
+```
+
+12. Right-click the **Extract by location** box and select *Edit*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index12.png')
+```
+
+13. At the bottom, click the *...* button next to *Parent algorithms* and select **Create spatial index**. Click *OK*.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index13.png')
+```
+
+14. Now you will see the model diagram update and a new connection is added between the **Create spatial index** and **Extract by location** algorithm. Save the model.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index14.png')
+```
+
+15. Run the updated model with the same parameters as before. Notice that the processing is much faster and the total time will be a fraction of the time taken without a spatial index.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/advanced_qgis/index15.png')
+```
 
 ### Enabling Reproducible Workflows
 
