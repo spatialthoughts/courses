@@ -2,7 +2,7 @@
 
 NumPy (Numerical Python) is an important Python library for scientific computation. Libraries such as Pandas and GeoPandas are built on top of NumPy. 
 
-![NumPy Logo](images/python_foundation/numpy.png)
+![NumPy Logo](images/python_foundation/numpy2.png)
 
 It provides a fast and efficient ways to work with *Arrays*. In the domain of spatial data analysis, it plays a critical role in working with Raster data - such as satellite imagery, aerial photos, elevation data etc. Since the underlying structure of raster data is a 2D array for each band - learning NumPy is critical in processing raster data using Python.
 
