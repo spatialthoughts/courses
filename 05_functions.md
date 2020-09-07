@@ -21,9 +21,6 @@ def greet(name):
 print(greet('World'))
 ```
 
-    Hello World
-
-
 Functions can also take arguments with a default value. This helps make calling the functions simpler for the default behavior while giving an option to pass on extra arguments.
 
 
@@ -38,19 +35,12 @@ print(format_coordinates(lat, lng))
 print(format_coordinates(lat, lng, '|'))
 ```
 
-    37.7739,-121.5687
-    37.7739|-121.5687
-
-
 The default behavior of Python functions is to take *positional arguments*. You pass the arguments in the *order* that is defined by the function. Python allows functions to be called using *keyword arguments*. When we call functions in this way, the order (position) of the arguments can be changed. The main advantage of using keyword arguments is to make the code more readable and explicit.
 
 
 ```python
 print(format_coordinates(latitude=lat, longitude=lng, separator=';'))
 ```
-
-    37.7739;-121.5687
-
 
 ## Exercise
 
@@ -87,8 +77,5 @@ lat_decimal = dms_to_decimal(lat_deg, lat_min, lat_sec)
 lon_decimal = dms_to_decimal(lon_deg, lon_min, lon_sec)
 print(lat_decimal, lon_decimal)
 ```
-
-    None None
-
 
 ----

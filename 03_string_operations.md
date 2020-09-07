@@ -6,24 +6,15 @@ city = 'San Francisco'
 print(len(city))
 ```
 
-    13
-
-
 
 ```python
 print(city.split())
 ```
 
-    ['San', 'Francisco']
-
-
 
 ```python
 print(city.upper())
 ```
-
-    SAN FRANCISCO
-
 
 
 ```python
@@ -31,23 +22,9 @@ city[0]
 ```
 
 
-
-
-    'S'
-
-
-
-
 ```python
 city[-1]
 ```
-
-
-
-
-    'o'
-
-
 
 
 ```python
@@ -55,23 +32,9 @@ city[0:3]
 ```
 
 
-
-
-    'San'
-
-
-
-
 ```python
 city[4:]
 ```
-
-
-
-
-    'Francisco'
-
-
 
 ## Escaping characters
 
@@ -96,9 +59,6 @@ my_string = 'It\'s a beautiful day!'
 print(my_string)
 ```
 
-    It's a beautiful day!
-
-
 Alternatively, you can also use double-quotes if your string contains a single-quote.
 
 
@@ -117,9 +77,6 @@ longitude = '''122° 25' 52.6692" W'''
 print(latitude, longitude)
 ```
 
-    37° 46' 26.2992 N 122° 25' 52.6692" W
-
-
 Backslashes pose another problem when dealing with Windows paths
 
 
@@ -137,9 +94,6 @@ path = r'C:\Users\ujaval'
 print(path)
 ```
 
-    C:\Users\ujaval
-
-
 ## Printing Strings
 
 Modern way of creating strings from variables is using the `format()` method
@@ -152,9 +106,6 @@ output = 'Population of {} is {}.'.format(city, population)
 print(output)
 ```
 
-    Population of San Fransico is 881549.
-
-
 You can also use the format method to control the precision of the numbers
 
 
@@ -165,9 +116,6 @@ longitude = -122.4194
 coordinates = '{:.2f},{:.2f}'.format(latitude, longitude)
 print(coordinates)
 ```
-
-    37.77,-122.42
-
 
 ----
 

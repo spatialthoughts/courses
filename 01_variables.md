@@ -13,24 +13,15 @@ state = 'California'
 print(city, state)
 ```
 
-    San Fransico California
-
-
 
 ```python
 print(city + state)
 ```
 
-    San FransicoCalifornia
-
-
 
 ```python
 print(city + ',' + state)
 ```
-
-    San Fransico,California
-
 
 ## Numbers
 
@@ -52,16 +43,10 @@ longitude = -121.5687
 print(type(population))
 ```
 
-    <class 'int'>
-
-
 
 ```python
 print(type(latitude))
 ```
-
-    <class 'float'>
-
 
 
 ```python
@@ -70,18 +55,12 @@ elevation_meters = elevation_feet * 0.3048
 print(elevation_meters)
 ```
 
-    284.6832
-
-
 
 ```python
 area_sqmi = 46.89
 density = population / area_sqmi
 print(density)
 ```
-
-    18800.362550650458
-
 
 ## Exercise
 

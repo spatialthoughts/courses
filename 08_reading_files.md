@@ -19,9 +19,6 @@ path = os.path.join(data_pkg_path, filename)
 print(path)
 ```
 
-    data/worldcities.csv
-
-
 To open the file, use the built-in `open()` function. We specify the *mode* as `r` which means read-only. If we wanted to change the file contents or write a new file, we would open it with `w` mode.
 
 Our input file also contains Unicode characters, so we specify `UTF-8` as the encoding.
@@ -38,12 +35,6 @@ print(f.readline())
 f.close()
 ```
 
-    "city","city_ascii","lat","lng","country","iso2","iso3","admin_name","capital","population","id"
-    
-    "Tokyo","Tokyo","35.6850","139.7514","Japan","JP","JPN","Tōkyō","primary","35676000","1392685764"
-    
-
-
 Calling `readline()` for each line of the file is tedious. Ideally, we want to loop through all the lines in file. You can iterate through the file object like below.
 
 We can loop through each line of the file and increase the `count` variable by 1 for each iteration of the loop. At the end, the count variable's value will be equal to the number of lines in the file.
@@ -58,9 +49,6 @@ for line in f:
 f.close()
 print(count)
 ```
-
-    15494
-
 
 ## Exercise
 

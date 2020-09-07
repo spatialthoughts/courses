@@ -41,21 +41,6 @@ metadata = dataset.meta
 metadata
 ```
 
-
-
-
-    {'driver': 'SRTMHGT',
-     'dtype': 'int16',
-     'nodata': -32768.0,
-     'width': 3601,
-     'height': 3601,
-     'count': 1,
-     'crs': CRS.from_epsg(4326),
-     'transform': Affine(0.0002777777777777778, 0.0, 86.99986111111112,
-            0.0, -0.0002777777777777778, 29.000138888888888)}
-
-
-
 To read the pixel values, we need to call the `read()` method by passing it a band’s index number. Following the GDAL convention, bands are indexed from 1. Since our dataset contain just 1-band, we can read it as follows.
 
 
@@ -63,15 +48,6 @@ To read the pixel values, we need to call the `read()` method by passing it a ba
 band1 = dataset.read(1)
 print(band1)
 ```
-
-    [[5217 5211 5208 ... 5097 5098 5089]
-     [5206 5201 5200 ... 5080 5075 5069]
-     [5199 5194 5191 ... 5063 5055 5048]
-     ...
-     [5347 5345 5343 ... 5747 5750 5757]
-     [5338 5338 5336 ... 5737 5740 5747]
-     [5332 5331 5332 ... 5734 5736 5744]]
-
 
 Finally, when we are done with the dataset, we must close it. It is especially important when writing a dataset.
 
@@ -93,9 +69,6 @@ all_files = os.listdir(srtm_path)
 print(all_files)
 ```
 
-    ['N28E086.hgt', 'N28E087.hgt', 'N27E087.hgt', 'N27E086.hgt']
-
-
 The rasterio.merge module has a `merge()` method that takes a list of *datasets* and returns the merged dataset. So we create an empty list, open each of the files and append it to the list.
 
 
@@ -107,9 +80,6 @@ for file in all_files:
 print(dataset_list)
 ```
 
-    [<open DatasetReader name='data/srtm/N28E086.hgt' mode='r'>, <open DatasetReader name='data/srtm/N28E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E087.hgt' mode='r'>, <open DatasetReader name='data/srtm/N27E086.hgt' mode='r'>]
-
-
 We can pass on the list of tile dataset to the merge method, which will return us the merged data and a new *transform* which contains the updated extent of the merged raster.
 
 
@@ -118,17 +88,6 @@ from rasterio import merge
 merged_result = merge.merge(dataset_list)
 print(merged_result)
 ```
-
-    (array([[[  4916,   4926,   4931, ...,   5098,   5089, -32768],
-            [  4919,   4932,   4928, ...,   5075,   5069, -32768],
-            [  4919,   4928,   4935, ...,   5055,   5048, -32768],
-            ...,
-            [   364,    364,    362, ...,   1930,   1944, -32768],
-            [   360,    359,    357, ...,   1930,   1942, -32768],
-            [-32768, -32768, -32768, ..., -32768, -32768, -32768]]],
-          dtype=int16), Affine(0.0002777777777777778, 0.0, 85.99986111111112,
-           0.0, -0.0002777777777777778, 29.000138888888888))
-
 
 We save the data and the transform to separate variables.
 
@@ -144,9 +103,6 @@ Verify that the resulting array shape the sum of individual rasters
 ```python
 print(merged_data.shape)
 ```
-
-    (1, 7202, 7202)
-
 
 ## Writing Raster Data
 
@@ -178,9 +134,6 @@ new_dataset.write(merged_data)
 new_dataset.close()
 print('Successfully written output file at {}'.format(output_path))
 ```
-
-    Successfully written output file at output/merged.tif
-
 
 ## Exercise
 

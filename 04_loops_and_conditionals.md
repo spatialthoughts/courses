@@ -24,11 +24,6 @@ for x, y in data.items():
     print(x, y)
 ```
 
-    city San Francisco
-    population 881549
-    coordinates (-122.4194, 37.7749)
-
-
 The built-in `range()` function allows you to create sequence of numbers that you can iterate over
 
 
@@ -37,13 +32,6 @@ for x in range(5):
     print(x)
 ```
 
-    0
-    1
-    2
-    3
-    4
-
-
 The range function can also take a start and an end number
 
 
@@ -51,13 +39,6 @@ The range function can also take a start and an end number
 for x in range(1, 10, 2):
     print(x)
 ```
-
-    1
-    3
-    5
-    7
-    9
-
 
 # Conditionals
 
@@ -74,9 +55,6 @@ for city in cities:
         print(city)
 ```
 
-    Atlanta
-
-
 You can use `else` keywords along with `if` to match elements that do not meet the condition
 
 
@@ -87,12 +65,6 @@ for city in cities:
     else:
         print('This is not Atlanta')
 ```
-
-    This is not Atlanta
-    This is not Atlanta
-    This is not Atlanta
-    Atlanta
-
 
 Python relies on indentation (whitespace at the beginning of a line) to define scope in the for loop and if statements. So make sure your code is properly indented. 
 
@@ -118,12 +90,6 @@ for city, population in cities_population.items():
         print('{} is a mega city'.format(city))
 ```
 
-    San Francisco is a small city
-    Los Angeles is a big city
-    New York is a mega city
-    Atlanta is a small city
-
-
 ## Control Statements
 
 A for-loop iterates over each item in the sequence. Sometimes is desirable to stop the execution, or skip certain parts of the for-loops. Python has special statements, `break`, `continue` and `pass`. 
@@ -139,11 +105,6 @@ for city in cities:
         break
 ```
 
-    San Francisco
-    Los Angeles
-    I found Los Angeles
-
-
 A `continue` statement will skip the remaining part of the loop and go to the next iteration
 
 
@@ -153,11 +114,6 @@ for city in cities:
         continue
     print(city)
 ```
-
-    San Francisco
-    New York
-    Atlanta
-
 
 A `pass` statement doesn't do anything. It is useful when some code is required to complete the syntax, but you do not want any code to execute. It is typically used as a placeholder when a function is not complete.
 
@@ -169,11 +125,6 @@ for city in cities:
     else:
         print(city)
 ```
-
-    San Francisco
-    New York
-    Atlanta
-
 
 ## Exercise
 
@@ -203,16 +154,5 @@ for x in range(1, 10):
     else:
         print('{} is not divisible by 2'.format(x))
 ```
-
-    1 is not divisible by 2
-    2 is divisible by 2
-    3 is not divisible by 2
-    4 is divisible by 2
-    5 is not divisible by 2
-    6 is divisible by 2
-    7 is not divisible by 2
-    8 is divisible by 2
-    9 is not divisible by 2
-
 
 ----

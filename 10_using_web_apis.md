@@ -40,19 +40,6 @@ geojson_string = '''
 print(geojson_string)
 ```
 
-    
-    {
-      "type": "FeatureCollection",
-      "features": [
-        {"type": "Feature",
-          "properties": {"name": "San Francisco"},
-          "geometry": {"type": "Point", "coordinates": [-121.5687, 37.7739]}
-        }
-      ]
-    }
-    
-
-
 To convert a JSON string to a Python object (i.e. parsing JSON), we can use the `json.loads()` method.
 
 
@@ -81,9 +68,6 @@ city_coordinates = city_data['geometry']['coordinates']
 print(city_name, city_coordinates)
 ```
 
-    San Francisco [-121.5687, 37.7739]
-
-
 ## The `requests` module
 
 To query a server, we send a **GET** request with some parameters and the server sends a response back. The `requests` module allows you to send HTTP requests and parse the responses using Python. 
@@ -100,10 +84,9 @@ response = requests.get('https://www.spatialthoughts.com')
 print(response.status_code)
 ```
 
-    200
-
-
 ## Calculating Distance using OpenRouteService API
+
+![](images/python_foundation/ors_direction.png)
 
 [OpenRouteService (ORS)](https://openrouteservice.org/) provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.
 
@@ -140,9 +123,6 @@ else:
 
 ```
 
-    Request successful.
-
-
 We can read the `response` in JSON format by calling `json()` method on it.
 
 
@@ -158,9 +138,6 @@ summary = data['features'][0]['properties']['summary']
 print(summary)
 ```
 
-    {'distance': 4691607.4, 'duration': 166280.6}
-
-
 We can extract the `distance` and convert it to kilometers.
 
 
@@ -169,13 +146,7 @@ distance = summary['distance']
 print(distance/1000)
 ```
 
-    4691.6080999999995
-
-
 You can compare this distance to the straight-line distance and see the difference.
-
-![](images/python_foundation/ors_direction.png)
-
 
 ## API Rate Limiting
 
@@ -196,18 +167,6 @@ for x in range(10):
     print(x)
     time.sleep(1)
 ```
-
-    0
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    8
-    9
-
 
 ## Exercise
 

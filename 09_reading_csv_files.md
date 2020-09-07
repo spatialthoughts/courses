@@ -30,9 +30,6 @@ print(csv_reader)
 f.close()
 ```
 
-    <csv.DictReader object at 0x0000000005528548>
-
-
 ## Using `enumerate()` function
 
 When iterating over an object, many times we need a counter. We saw in the previous example, how to use a variable like `count` and increase it with every iteration. There is an easy way to do this using the built-in `enumerate()` function.
@@ -43,12 +40,6 @@ cities = ['San Francisco', 'Los Angeles', 'New York', 'Atlanta']
 for x in enumerate(cities):
     print(x)
 ```
-
-    (0, 'San Francisco')
-    (1, 'Los Angeles')
-    (2, 'New York')
-    (3, 'Atlanta')
-
 
 We can use enumerate() on any iterable object and get a tuple with an index and the iterable value with each iteration. Let's use it to print the first 5 lines from the DictReader object.
 
@@ -99,9 +90,6 @@ with open(path, 'r', encoding='utf-8') as f:
 print(num_cities)
 ```
 
-    212
-
-
 ## Calculating distance
 
 Let's apply the skills we have learnt so far to solve a complete problem. We want to read the `worldcities.csv` file, find all cities within a home country, calculate the distance to each cities from a home city and write the results to a new CSV file.
@@ -126,9 +114,6 @@ with open(path, 'r', encoding='utf-8') as f:
 print(home_city_coordinates)
 ```
 
-    ('12.9700', '77.5600')
-
-
 Now we can loop through the file, find a city in the chosen home country and call the `geopy.distance.geodesic()` function to calculate the distance. In the code below, we are just computing first 5 matches.
 
 
@@ -151,13 +136,6 @@ with open(path, 'r', encoding='utf-8') as f:
             break
             
 ```
-
-    Mumbai 837.1857087990928
-    Delhi 1738.638855782645
-    Kolkata 1552.6378233436674
-    Chennai 295.3401073046679
-    Hyderabad 500.0477286304823
-
 
 ## Writing files
 
@@ -243,9 +221,6 @@ with open(output_path, mode='w') as output_file:
 
 print('Successfully written output file at {}'.format(output_path))
 ```
-
-    Successfully written output file at output/cities_distance.csv
-
 
 ## Exercise
 
