@@ -114,130 +114,6 @@ While console is useful for typing 1-2 lines of code or printing information con
 knitr::include_graphics('images/pyqgis/editor.png')
 ```
 
-# Getting familiar with Python
-
-If you are new to Python, you can get started with basics of the language at LearnPython.org's [interactive Python tutorial](https://www.learnpython.org/). For a slightly more advanced introduction, I recommend [Elements of Data Science](https://allendowney.github.io/ElementsOfDataScience/) by Allen Downey which introduces Python with a Data Science focus. Both of these are free resources that are suited for beginners with no programming experience.
-
-For this course, we will learn basics of Python by by building a script to calculate distance between 2 points.
-
-## Calculate distance using Haversine formula
-
-Given 2 points with their Latitude and Longitude coordinates, the [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula) calculates the distance in meters, assuming that Earth is a sphere.
-
-The formula is simple enough to be implemented in a spreadsheet too. If you are curious, see [my post](https://spatialthoughts.com/2013/07/06/calculate-distance-spreadsheet/) about using this formula for calculating distances in a spreadsheet.
-
-First, let's define out origin and destination. You can store a pair of values in a variable using a *tuple* as below.
-
-```{python eval=FALSE}
-origin = 12.98, 77.58 # Bangalore
-destination = 12.30, 76.64 # Mysore
-print(origin)
-print(destination)
-```
-
-You can check the data type using the ``type`` function. You can access the values from tuples using their index, starting from 0.
-
-```{python eval=FALSE}
-print(type(origin))
-print(origin[0])
-print(origin[1])
-```
-
-You can print multiple values using the ``print`` functions as well.
-```{python eval=FALSE}
-print('Origin coordinates are: ', origin[0], ',', origin[1])
-```
-
-There is a handy ``format`` function that allows creating strings easily.
-```{python eval=FALSE}
-output = 'Origin coordinates are: {},{}'.format(origin[0], origin[1])
-print(output)
-```
-
-Python supports doing basic math operations such as addition, multiplication, division etc. by default. Advance mathematical operations are also supported and comes with the the Python Standard Library. We can use the built-in ``math`` module to do trigonometric calculations in the haversine formula.
-
-Here's how we can implement the haversine formula in Python. [^2]
-
-[^2]: Code reference: https://gist.github.com/rochacbruno/2883505
-
-```{python eval=FALSE}
-import math
-
-lat1, lon1 = origin
-lat2, lon2 = destination
-radius = 6371 # km
-dlat = math.radians(lat2-lat1)
-dlon = math.radians(lon2-lon1)
-a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
-    * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
-c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-distance = radius * c
-print(distance)
-```
-
-This code works, but if we had to compute distance for another pair of coordinates, we will have to write the same block of code again. For computations that need to be called multiple times, it is better to capture then in a function. It takes some inputs, processes the inputs and returns the results. It is defined using the ``def`` keyword. We define a new function called ``haversine_distance`` which takes 2 arguments, *origin* and *destination* and returns the distance.
-
-```{python eval=FALSE}
-def haversine_distance(origin, destination):
-  ...
-  ...
-  return distance
-```
-
-We can complete the function using the code we used previously
-
-```{python eval=FALSE}
-def haversine_distance(origin, destination):
-  lat1, lon1 = origin
-  lat2, lon2 = destination
-  radius = 6371 # km
-  dlat = math.radians(lat2-lat1)
-  dlon = math.radians(lon2-lon1)
-  a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
-    * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
-  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-  distance = radius * c
-  return distance
-```      
-
-Now we can call this function with any pair of origin and destination coordinates and get the distance
-```{python eval=FALSE}
-origin =  12.98, 77.58 # Bangalore
-destination = 13.08, 80.27 # Chennai
-distance = haversine_distance(origin, destination)
-print(distance)
-```
-
-## Calculate distance using PyQGIS
-
-The previous example used the Haversine formula for calculating distances, which assumes the Earth is a sphere. But since the actual shape of Earth is more complex, and is closer to an ellipsoid - a spherical calculation is not accurate - especially where the distance is large. QGIS has built-in methods for doing accurate ellipsoid-based distance calculations using [Vincenty's formulae](https://en.wikipedia.org/wiki/Vincenty%27s_formulae). We can use the PyQGIS API to call these methods and calculate distances. [^3]
-
-[^3]: Code reference: https://gis.stackexchange.com/questions/266360/pyqgis-when-we-search-based-on-the-distance-between-two-points-is-the-measurem
-
-```{python eval=FALSE}
-def ellipsoid_distance(origin, destination):
-  lat1, lon1 = origin
-  lat2, lon2 = destination
-  # Remember the order is X,Y
-  point1 = QgsPointXY(lon1, lat1)
-  point2 = QgsPointXY(lon2, lat2)
-
-  d = QgsDistanceArea()
-  d.setEllipsoid('WGS84')
-
-  #Measure the distance
-  distance = d.measureLine([point1, point2])
-  return distance/1000
-```
-
-Putting it all together, we can compare the distances using both Haversine and Ellipsoid methods
-
-```{python eval=FALSE, code=readLines('code/pyqgis/distance.py')}
-```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/pyqgis/distance.png')
-```
 
 # Understanding Classes
 
@@ -322,9 +198,73 @@ elif return_value == QMessageBox.Cancel:
 knitr::include_graphics('images/pyqgis/messagebox.png')
 ```
 
+# Getting familiar with PyQGIS
+
+This course requires basic knowledge of Python. If you are not familiar with Python, it is strongly recommended you complete our [Python Foundation for Spatial Analysis](https://spatialthoughts.com/training/python-foundation-for-spatial-analysis/) course. We will build upon the exercises covered in that course.
+
+## Calculating distance using PyQGIS
+
+A basic but important operation in a GIS is the calculation of distance and areas. We will see how you can use PyQGIS APIs to compute distances.
+
+We will compute distance between the following 2 coordinates
+
+```{python eval=FALSE}
+san_francisco = (37.7749, -122.4194)
+new_york = (40.661, -73.944)
+```
+
+QGIS provides the class `QgsDistanceArea` that has methods to compute distances and areas.
+
+To use this class, we must create an object by instantiating it. Looking at the [class documentation](https://qgis.org/pyqgis/master/core/QgsDistanceArea.html), the class constructor doesn't take any arguments. We can use the default constructor to create an object and assign it to the `d` variable.
+
+```{python eval=FALSE}
+d = QgsDistanceArea()
+```
+
+The documentation mentions that if a valid ellipsoid has been set for the QgsDistanceArea, all calculations will be performed using ellipsoidal algorithms (e.g. using Vincenty's formulas). As we want to compute the distance between a pair of latitude/longitudes, we need to use the ellipsoidal algorithms. Let's set the ellipsoid `WGS84` for our calculation. We can use the method `setEllipsoid()`. Remember,  methods should be applied on objects, and not classes directly.
+
+```{python eval=FALSE}
+d.setEllipsoid('WGS84')
+```
+
+Now our object `d` is capable of performing ellipspodal distance computations. Browsing through the available methods in the `QgsDistanceArea` class, we can see a `measureLine()` method. This method takes a list [QgsPointXY](https://qgis.org/pyqgis/master/core/QgsPointXY.html) objects. We can create these objects from our coordinate pairs and pass them on to the `measureLine()` method to get the distane.
+
+
+```{python eval=FALSE}
+lat1, lon1 = san_francisco
+lat2, lon2 = new_york
+# Remember the order is X,Y
+point1 = QgsPointXY(lon1, lat1)
+point2 = QgsPointXY(lon2, lat2)
+
+distance = d.measureLine([point1, point2])
+print(distance/1000)
+```
+
+Putting it all together, below is the complete code to caluclate the distance between a pair of coordinates using PyQGIS. When you run the code in the Python Console of QGIS, all the PyQGIS classes are already imported. If you are running this code from a script or a plugin, you must explicitely import the `QgsDistanceArea` class.
+
+```{python eval=FALSE, code=readLines('code/pyqgis/distance.py')}
+```
+
+## Exercise
+
+Let's say you want to make a stop at Las Vegas on the way fromo San Francisco to New York. Calculate the total ellipsoidal distance considering a stop at las vegas.
+
+```{python eval=FALSE}
+san_francisco = (37.7749, -122.4194)
+new_york = (40.661, -73.944)
+las_vegas = (36.1699, -115.1398)
+```
+
+## Exercise
+
+Use the `QgsDistanceArea` class to convert the distance from meters to miles.
+
+Hint: The class has a method `convertLengthMeasurement()` that can help. The challenge is to figure out how would you specify the distance units.
+
 # Visual Tour of the PyQGIS API
 
-The `QgisInterface` class provides methods for interaction with the QGIS environment. When QGIS is running, a variable called `iface` is set up to provide an object of the class `QgisInterface` to interact with the running QGIS environment. This interface allows access to the map canvas, menus, toolbars and other parts of the QGIS application. Python Console and Plugins can use `iface` to access various parts of the QGIS interface.
+You are ready to dive into the API now. In this section, we will focus on the `QgisInterface` class - which provides methods for interaction with the QGIS environment. When QGIS is running, a variable called `iface` is set up to provide an object of the class `QgisInterface` to interact with the running QGIS environment. This interface allows access to the map canvas, menus, toolbars and other parts of the QGIS application. Python Console and Plugins can use `iface` to access various parts of the QGIS interface.
 
 ## QGIS Main Window
 
