@@ -4,8 +4,8 @@ def ellipsoid_distance(origin, destination):
   lat1, lon1 = origin
   lat2, lon2 = destination
   # Remember the order is X,Y
-  point1 = QgsPoint(lon1, lat1)
-  point2 = QgsPoint(lon2, lat2)
+  point1 = QgsPointXY(lon1, lat1)
+  point2 = QgsPointXY(lon2, lat2)
 
   d = QgsDistanceArea()
   d.setEllipsoid('WGS84')
@@ -32,5 +32,5 @@ destination = 12.30, 76.64 # Mysore
 d1 = haversine_distance(origin, destination)
 d2 = ellipsoid_distance(origin, destination)
 
-print('{Haversine distance: {} km'.format(d1))
-print('{Ellipsoid distance: {} km'.format(d2))
+print('Haversine distance: {} km'.format(d1))
+print('Ellipsoid distance: {} km'.format(d2))
