@@ -19,7 +19,7 @@ class SaveAttributesPlugin:
 
     def unload(self):
       self.iface.removeToolBarIcon(self.action)
-      self.iface.removePluginMenu('&SaveAttributes', self.action)  
+      self.iface.removePluginMenu('&Save Attributes', self.action)  
       del self.action
 
     def run(self):
