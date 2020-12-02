@@ -1,0 +1,33 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2"),
+    urban = ee.FeatureCollection("users/ujavalgandhi/e2e/ne_10m_urban_areas");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var filtered = urban.filter(ee.Filter.eq('system:index', '00000000000000002bf8'))
+var geometry = filtered.geometry()
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(geometry))
+
+var image = filtered.median(); 
+
+var clipped = image.clip(geometry)
+
+Map.addLayer(clipped, rgbVis, 'Clipped') 
+
+var exportImage = clipped.select('B.*')
+
+Export.image.toDrive({
+    image: exportImage,
+    description: 'Bangalore_Composite',
+    folder: 'earthengine',
+    fileNamePrefix: 'bangalore_composite',
+    region: geometry,
+    scale: 20,
+    maxPixels: 1e9
+})
