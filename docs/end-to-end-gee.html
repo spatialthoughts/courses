@@ -347,7 +347,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">(DRAFT) End-to-End Google Earth Engine (Full Course Material)</h1>
-<h3 class="subtitle">A practical hands-on introduction to applied remote sensing using Google Earth Engine.</h3>
+<h3 class="subtitle">A hands-on introduction to applied remote sensing using Google Earth Engine.</h3>
 <h4 class="author">Ujaval Gandhi</h4>
 
 </div>
@@ -379,6 +379,15 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#working-with-feature-collections">05. Working with Feature Collections</a><ul>
 <li><a href="#exercise-4">Exercise</a></li>
+</ul></li>
+<li><a href="#importing-data">06. Importing Data</a><ul>
+<li><a href="#exercise-5">Exercise</a></li>
+</ul></li>
+<li><a href="#clipping-images">07. Clipping Images</a><ul>
+<li><a href="#exercise-6">Exercise</a></li>
+</ul></li>
+<li><a href="#exporting-data">08. Exporting Data</a><ul>
+<li><a href="#exercise-7">Exercise</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#what-next">What next?</a><ul>
@@ -650,6 +659,145 @@ Code Editor After Adding the Class Repository
 <span class="co">// Display only the selected district</span>
 <span class="co">// Hint: The district names are in ADM2_NAME property</span>
 <span class="kw">var</span> visParams <span class="op">=</span> <span class="op">{</span><span class="st">&#39;color&#39;</span><span class="op">:</span> <span class="st">&#39;red&#39;</span><span class="op">}</span></code></pre></div>
+</div>
+</div>
+<div id="importing-data" class="section level2">
+<h2>06. Importing Data</h2>
+<p>You can import vector or raster data into Earth Engine. We will now import a shapefile of <a href="https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-urban-area/">Urban Areas</a> for Natural Earth. Unzip the <code>ne_10m_urban_areas.zip</code> into a folder on your computer. In the Code Editor, go to <em>Assets → New → Table Upload → Shape Files</em>. Select the <code>.shp</code>, <code>.shx</code>, <code>.dbf</code> and .<code>prj</code> files. Enter <code>ne_10m_urban_areas</code> as the <em>Asset Name</em> and click <em>Upload</em>. Once the upload and ingest finishes, you will have a new asset in the <em>Assets</em> tab. The shapefile is imported as a Feature Collection in Earth Engine. Select the <code>ne_10m_urban_areas</code> asset and click <em>Import</em>. You can then visualize the imported data.</p>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="co">// Let&#39;s import some data to Earth Engine</span>
+<span class="co">// Upload the ne_10m_urban_areas.shp shapefile</span>
+
+<span class="co">// Import the collection</span>
+<span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)<span class="op">;</span>
+
+<span class="co">// Visualize the collection</span>
+<span class="va">Map</span>.<span class="at">addLayer</span>(urban<span class="op">,</span> <span class="op">{</span><span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span><span class="op">},</span> <span class="st">&#39;Urban Areas&#39;</span>)</code></pre></div>
+<div id="exercise-5" class="section level3">
+<h3>Exercise</h3>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)<span class="op">;</span>
+
+<span class="co">// Apply a filter to select only large urban areas</span>
+<span class="co">// Use the property &#39;area_sqkm&#39; and select all features </span>
+<span class="co">// with area &gt; 400 sq.km</span></code></pre></div>
+</div>
+</div>
+<div id="clipping-images" class="section level2">
+<h2>07. Clipping Images</h2>
+<p>It is often desirable to clip the images to your area of interest. You can use the <code>clip()</code> function to mask out an image using a geometry.</p>
+<blockquote>
+<p>While in a Desktop software, clipping is desirable to remove unneccesary portion of a large image and save computation time, in Earth Engine clipping can actually increase the computation time. As described in the <a href="https://developers.google.com/earth-engine/guides/best_practices?hl=en#if-you-dont-need-to-clip,-dont-use-clip">Earth Engine Coding Best Practices</a> guide, avoid clipping the images or do it at the end of your script.</p>
+</blockquote>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="kw">var</span> s2 <span class="op">=</span> <span class="va">ee</span>.<span class="at">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)
+<span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)
+
+<span class="co">// Find the feature id by adding the layer to the map and using Inspector.</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">urban</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">eq</span>(<span class="st">&#39;system:index&#39;</span><span class="op">,</span> <span class="st">&#39;00000000000000002bf8&#39;</span>))
+
+<span class="kw">var</span> geometry <span class="op">=</span> <span class="va">filtered</span>.<span class="at">geometry</span>()
+
+<span class="kw">var</span> rgbVis <span class="op">=</span> <span class="op">{</span>
+  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span>
+  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span>
+  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span> 
+<span class="op">};</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">s2</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2020-01-01&#39;</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">bounds</span>(geometry))
+
+<span class="kw">var</span> image <span class="op">=</span> <span class="va">filtered</span>.<span class="at">median</span>()<span class="op">;</span> 
+
+<span class="kw">var</span> clipped <span class="op">=</span> <span class="va">image</span>.<span class="at">clip</span>(geometry)
+
+<span class="va">Map</span>.<span class="at">addLayer</span>(clipped<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Clipped&#39;</span>)</code></pre></div>
+<div id="exercise-6" class="section level3">
+<h3>Exercise</h3>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="kw">var</span> s2 <span class="op">=</span> <span class="va">ee</span>.<span class="at">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)
+<span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)
+
+<span class="co">// Change the filter to your home city or any urban area of your choice</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">urban</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">eq</span>(<span class="st">&#39;system:index&#39;</span><span class="op">,</span> <span class="st">&#39;00000000000000002bf8&#39;</span>))
+<span class="kw">var</span> geometry <span class="op">=</span> <span class="va">filtered</span>.<span class="at">geometry</span>()
+
+<span class="kw">var</span> rgbVis <span class="op">=</span> <span class="op">{</span>
+  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span>
+  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span>
+  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span> 
+<span class="op">};</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">s2</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">bounds</span>(geometry))
+
+<span class="kw">var</span> image <span class="op">=</span> <span class="va">filtered</span>.<span class="at">median</span>()<span class="op">;</span> 
+
+<span class="kw">var</span> clipped <span class="op">=</span> <span class="va">image</span>.<span class="at">clip</span>(geometry)
+
+<span class="va">Map</span>.<span class="at">addLayer</span>(clipped<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Clipped&#39;</span>)</code></pre></div>
+</div>
+</div>
+<div id="exporting-data" class="section level2">
+<h2>08. Exporting Data</h2>
+<p>Earth Engine allows for exporting both vector and raster data to be used in an external program. Vector data can be exported as a <code>CSV</code> or a <code>Shapefile</code>, while Rasters can be exported as <code>GeoTIFF</code> files. We will now export the Sentinel-2 Composite as a GeoTIFF file.</p>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="kw">var</span> s2 <span class="op">=</span> <span class="va">ee</span>.<span class="at">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)
+<span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)
+
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">urban</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">eq</span>(<span class="st">&#39;system:index&#39;</span><span class="op">,</span> <span class="st">&#39;00000000000000002bf8&#39;</span>))
+<span class="kw">var</span> geometry <span class="op">=</span> <span class="va">filtered</span>.<span class="at">geometry</span>()
+
+<span class="kw">var</span> rgbVis <span class="op">=</span> <span class="op">{</span>
+  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span>
+  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span>
+  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span> 
+<span class="op">};</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">s2</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2020-01-01&#39;</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">bounds</span>(geometry))
+
+<span class="kw">var</span> image <span class="op">=</span> <span class="va">filtered</span>.<span class="at">median</span>()<span class="op">;</span> 
+
+<span class="kw">var</span> clipped <span class="op">=</span> <span class="va">image</span>.<span class="at">clip</span>(geometry)
+
+<span class="va">Map</span>.<span class="at">addLayer</span>(clipped<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Clipped&#39;</span>) 
+
+<span class="kw">var</span> exportImage <span class="op">=</span> <span class="va">clipped</span>.<span class="at">select</span>(<span class="st">&#39;B.*&#39;</span>)
+
+<span class="va">Export</span>.<span class="va">image</span>.<span class="at">toDrive</span>(<span class="op">{</span>
+    <span class="dt">image</span><span class="op">:</span> exportImage<span class="op">,</span>
+    <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Bangalore_Composite&#39;</span><span class="op">,</span>
+    <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span>
+    <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;bangalore_composite&#39;</span><span class="op">,</span>
+    <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span>
+    <span class="dt">scale</span><span class="op">:</span> <span class="dv">20</span><span class="op">,</span>
+    <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e9</span>
+<span class="op">}</span>)</code></pre></div>
+<div id="exercise-7" class="section level3">
+<h3>Exercise</h3>
+<div class="sourceCode"><pre class="sourceCode js"><code class="sourceCode javascript"><span class="kw">var</span> s2 <span class="op">=</span> <span class="va">ee</span>.<span class="at">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)
+<span class="kw">var</span> urban <span class="op">=</span> <span class="va">ee</span>.<span class="at">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/ne_10m_urban_areas&quot;</span>)
+
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">urban</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">eq</span>(<span class="st">&#39;system:index&#39;</span><span class="op">,</span> <span class="st">&#39;00000000000000002bf8&#39;</span>))
+<span class="kw">var</span> geometry <span class="op">=</span> <span class="va">filtered</span>.<span class="at">geometry</span>()
+
+<span class="kw">var</span> rgbVis <span class="op">=</span> <span class="op">{</span>
+  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span>
+  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span>
+  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span> 
+<span class="op">};</span>
+<span class="kw">var</span> filtered <span class="op">=</span> <span class="va">s2</span>.<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2020-01-01&#39;</span>))
+  .<span class="at">filter</span>(<span class="va">ee</span>.<span class="va">Filter</span>.<span class="at">bounds</span>(geometry))
+
+<span class="kw">var</span> image <span class="op">=</span> <span class="va">filtered</span>.<span class="at">median</span>()<span class="op">;</span> 
+
+<span class="kw">var</span> clipped <span class="op">=</span> <span class="va">image</span>.<span class="at">clip</span>(geometry)
+
+<span class="va">Map</span>.<span class="at">addLayer</span>(clipped<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Clipped&#39;</span>) 
+
+<span class="co">// Rather than exporting raw bands, we can apply a rendered image</span>
+<span class="co">// visualize() function allows you to apply the same parameters </span>
+<span class="co">// that are used in earth engine which exports a 3-band RGB image</span>
+<span class="kw">var</span> visualized <span class="op">=</span> <span class="va">clipped</span>.<span class="at">visualize</span>(rgbVis)
+
+<span class="co">// Export the visualized image</span></code></pre></div>
 
 </div>
 </div>
