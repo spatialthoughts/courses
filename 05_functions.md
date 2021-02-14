@@ -54,7 +54,7 @@ print(output)
 
 ## Exercise
 
-Given a coordinate string with value in degree, minutes and seconds, convert it to decimal degrees
+Given a coordinate string with value in degree, minutes and seconds, convert it to decimal degrees by calling the `dms_to_decimal` function.
 
 
 ```python
