@@ -125,5 +125,10 @@ Use the string slicing to extract and print the degrees, minutes and second part
 
 
 ```python
-latitude = '''37° 46' 26.2992 N'''
+latitude = '''37° 46' 26.2992"'''
+```
+
+
+```python
+
 ```
