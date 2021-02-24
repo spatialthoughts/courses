@@ -121,9 +121,15 @@ print(coordinates)
 
 ## Exercise
 
-Use the string slicing to extract and print the degrees, minutes and second parts of the string below.
+Use the string slicing to extract and print the degrees, minutes and second parts of the string below. The output should be as follows
+
+```
+37
+46
+26.2992
+```
 
 
 ```python
-latitude = '''37° 46' 26.2992 N'''
+latitude = '''37° 46' 26.2992"'''
 ```

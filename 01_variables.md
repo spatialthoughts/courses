@@ -64,18 +64,15 @@ print(density)
 
 ## Exercise
 
-We calculated the population density in number of people per square mile. Calculate and print the density in number of people per square kilometers.
+We have a variable named `distance_km` below with the value `4135` - indicating the straight-line distance between San Francisco and New York in Kilometers. Create another variable called `distance_mi` and store the distance value in miles.
 
 - Hint1: 1 mile = 1.60934 kilometers
-- Hint2: To calculate exponential of a number in Python, you use the ** notation. x² is written as x**2
 
-Add the code in the cell below and run it. The output should be 7258.8966
+Add the code in the cell below and run it. The output should be 2569.37
 
 
 ```python
-population = 881549
-area_sqmi = 46.89
-
+distance_km = 4135
 # Remove this line and add code here
 ```
 

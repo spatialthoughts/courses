@@ -103,6 +103,8 @@ We will use the OpenRouteServices's [Directions Service](https://openrouteservic
 
 
 ```python
+import requests
+
 san_francisco = (37.7749, -122.4194)
 new_york = (40.661, -73.944)
 
