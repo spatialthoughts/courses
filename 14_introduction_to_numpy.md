@@ -78,7 +78,9 @@ print(b*2)
 print(b/2)
 ```
 
-An important concept in NumPy is the *Array Axes*. In a 2D array, Axis 0 is the direction of rows and Axis 1 is the direction of columns. [This article](https://www.sharpsightlabs.com/blog/numpy-axes-explained/) provides a very good explanation of the concept.
+An important concept in NumPy is the *Array Axes*. Similar to the `pandas` library, In a 2D array, Axis 0 is the direction of rows and Axis 1 is the direction of columns. The diagram below show the directions.
+
+![](images/python_foundation/pandas_axis.png)
 
 Let's see how we can apply a function on a specific axis. Here when we apply `sum` function on axis-0 of a 2D array, it gives us a 1D-array with values summed across rows.
 
