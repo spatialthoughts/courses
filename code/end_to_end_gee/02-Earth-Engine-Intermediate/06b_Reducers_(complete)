@@ -1,0 +1,42 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #d63000 */ee.Geometry.Point([77.60412933051538, 12.952912912328241]),
+    s2 = ee.ImageCollection("COPERNICUS/S2");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Computing stats on a list
+var myList = ee.List.sequence(1, 10);
+print(myList)
+
+// Use a reducer to compute min and max in the list
+var minMax = myList.reduce(ee.Reducer.minMax());
+print(minMax);
+
+
+// Apply a reducer on a image collection
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(geometry))
+
+print(filtered.size())
+var collMinMax = filtered.reduce(ee.Reducer.minMax());
+print(collMinMax);
+
+  // Apply a reducer on an image
+var image = ee.Image(filtered.first())
+var imageMinMax = image.reduce(ee.Reducer.minMax());
+print(imageMinMax)
+
+print(image)
+// If we want to compute min and max for each band, use reduceRegion instead
+var stats = image.reduceRegion({
+  reducer: ee.Reducer.minMax(),
+  geometry: image.geometry(),
+  scale: 100,
+  maxPixels: 1e10
+  })
+print(stats);
+
+// Result of reduceRegion is a dictionary. 
+// We can extract the values using .get() function
+print('Min value in B4', stats.get('B4_min'))
+print('Max value in B4', stats.get('B4_max'))
+ 

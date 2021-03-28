@@ -1,0 +1,32 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2"),
+    admin1 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level1");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var karnataka = admin1.filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+var geometry = karnataka.geometry()
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(geometry))
+
+   
+var composite = filtered.median().clip(karnataka)
+Map.addLayer(composite, rgbVis, 'Karnataka Composite')  
+
+// Write a function that computes NDVI for an image and adds it as a band
+function addIndices(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  var ndwi = image.normalizedDifference(['B3', 'B8']).rename('ndwi');
+  return image.addBands(ndvi).addBands(ndwi);
+}
+
+// Map the function over the collection
+var withIndices = filtered.map(addIndices);
+
+// Composite
+var composite = withIndices.median()
+print(composite)
+
+// Extract the 'ndwi' band and display a NDWI map
+// use the palette ['white', 'blue']
