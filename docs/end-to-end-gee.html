@@ -451,6 +451,14 @@ $(document).ready(function () {
 <ul>
 <li><a href="#exercise-9">Exercise</a></li>
 </ul></li>
+<li><a href="#computation-on-imagecollections">03. Computation on ImageCollections</a>
+<ul>
+<li><a href="#exercise-10">Exercise</a></li>
+</ul></li>
+<li><a href="#cloud-masking">04. Cloud Masking</a>
+<ul>
+<li><a href="#exercise-11">Exercise</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#guided-projects">Guided Projects</a>
 <ul>
@@ -1081,6 +1089,153 @@ print(now)</code></pre>
 <span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the Normalized Difference Built-Up Index (NDBI) for the image</span></span>
 <span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Hint: NDBI = (SWIR1 – NIR) / (SWIR1 + NIR)</span></span>
 <span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Visualize the built-up area using a &#39;red&#39; palette</span></span></code></pre></div>
+</div>
+</div>
+<div id="computation-on-imagecollections" class="section level2">
+<h2>03. Computation on ImageCollections</h2>
+<p>So far we have learnt how to run computation on single images. If you want to apply some computation - such as calculating an index - to many images, you need to use <code>map()</code>. You first define a function that takes 1 image and returns the result of the computation on that image. Then you can <code>map()</code> that function over the ImageCollection which results in a new ImageCollection with the results of the computation. This is similar to a <em>for-loop</em> that you maybe familiar with - but using <code>map()</code> allows the computation to run in parallel. Learn more at <a href="https://developers.google.com/earth-engine/guides/ic_mapping">Mapping over an ImageCollection</a></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)<span class="op">;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> admin1 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level1&quot;</span>)<span class="op">;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> karnataka <span class="op">=</span> admin1<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM1_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> karnataka<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(karnataka)</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Karnataka Composite&#39;</span>)  </span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addNDVI</span>(image) {</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">;</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> withNdvi<span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndviComposite <span class="op">=</span> composite<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">.</span><span class="fu">clip</span>(karnataka)</span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [</span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;FFFFFF&#39;</span><span class="op">,</span> <span class="st">&#39;CE7E45&#39;</span><span class="op">,</span> <span class="st">&#39;DF923D&#39;</span><span class="op">,</span> <span class="st">&#39;F1B555&#39;</span><span class="op">,</span> <span class="st">&#39;FCD163&#39;</span><span class="op">,</span> <span class="st">&#39;99B718&#39;</span><span class="op">,</span></span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;74A901&#39;</span><span class="op">,</span> <span class="st">&#39;66A000&#39;</span><span class="op">,</span> <span class="st">&#39;529400&#39;</span><span class="op">,</span> <span class="st">&#39;3E8601&#39;</span><span class="op">,</span> <span class="st">&#39;207401&#39;</span><span class="op">,</span> <span class="st">&#39;056201&#39;</span><span class="op">,</span></span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;004C00&#39;</span><span class="op">,</span> <span class="st">&#39;023B01&#39;</span><span class="op">,</span> <span class="st">&#39;012E01&#39;</span><span class="op">,</span> <span class="st">&#39;011D01&#39;</span><span class="op">,</span> <span class="st">&#39;011301&#39;</span>]<span class="op">;</span></span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndviVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="fl">0.5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette }</span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(ndviComposite<span class="op">,</span> ndviVis<span class="op">,</span> <span class="st">&#39;ndvi&#39;</span>)</span></code></pre></div>
+<div id="exercise-10" class="section level3">
+<h3>Exercise</h3>
+<div class="sourceCode" id="cb24"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)<span class="op">;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> admin1 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level1&quot;</span>)<span class="op">;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> karnataka <span class="op">=</span> admin1<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM1_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> karnataka<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>   </span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(karnataka)</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Karnataka Composite&#39;</span>)  </span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a><span class="co">// This function calculates both NDVI an d NDWI indices</span></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a><span class="co">// and returns an image with 2 new bands added to the original image.</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addIndices</span>(image) {</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> ndwi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B8&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndwi&#39;</span>)<span class="op">;</span></span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">.</span><span class="fu">addBands</span>(ndwi)<span class="op">;</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> withIndices <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addIndices)<span class="op">;</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Composite</span></span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> withIndices<span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(composite)</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract the &#39;ndwi&#39; band and display a NDWI map</span></span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a><span class="co">// use the palette [&#39;white&#39;, &#39;blue&#39;]</span></span></code></pre></div>
+</div>
+</div>
+<div id="cloud-masking" class="section level2">
+<h2>04. Cloud Masking</h2>
+<p>Masking pixels in an image makes those pixels transparent and excludes them from analysis and visualization. To mask an image, we can use the <code>updateMask()</code> function and pass it an image with 0 and 1 values. All pixels where the mask image is 1 will be retained.</p>
+<p>Most remote sensing datasets come with a QA or Cloud Mask band that contains the information on whether pixels is cloudy or not. Your <em>Code Editor</em> contains pre-defined funtions for masking clouds for popular datasets under <em>Scripts Tab → Examples → Cloud Masking</em>.</p>
+<p>The script below takes the Sentinel-2 masking function and shows how to apply it on an image.</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2/20190703T050701_20190703T052312_T43PGP&#39;</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(image)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(image<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Full Image&#39;</span>)</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)</span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> maskedImage <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="fu">maskS2clouds</span>(image))</span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(maskedImage<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Masked Image&#39;</span>)</span></code></pre></div>
+<div id="exercise-11" class="section level3">
+<h3>Exercise</h3>
+<div class="sourceCode" id="cb26"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Get the Level-2A Surface Reflectance image</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> imageSR <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2_SR/20190703T050701_20190703T052312_T43PGP&#39;</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(imageSR)</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(imageSR<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;SR Image&#39;</span>)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Function to remove cloud and snow pixels from Sentinel-2 SR image</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskCloudAndShadowsSR</span>(image) {</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> cloudProb <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;MSK_CLDPRB&#39;</span>)<span class="op">;</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> snowProb <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;MSK_SNWPRB&#39;</span>)<span class="op">;</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> cloud <span class="op">=</span> cloudProb<span class="op">.</span><span class="fu">lt</span>(<span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> snow <span class="op">=</span> snowProb<span class="op">.</span><span class="fu">lt</span>(<span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> scl <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;SCL&#39;</span>)<span class="op">;</span> </span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> shadow <span class="op">=</span> scl<span class="op">.</span><span class="fu">eq</span>(<span class="dv">3</span>)<span class="op">;</span> <span class="co">// 3 = cloud shadow</span></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> cirrus <span class="op">=</span> scl<span class="op">.</span><span class="fu">eq</span>(<span class="dv">10</span>)<span class="op">;</span> <span class="co">// 10 = cirrus</span></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Cloud probability less than 5% or cloud shadow classification</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> (cloud<span class="op">.</span><span class="fu">and</span>(snow))<span class="op">.</span><span class="fu">and</span>(cirrus<span class="op">.</span><span class="fu">neq</span>(<span class="dv">1</span>))<span class="op">.</span><span class="fu">and</span>(shadow<span class="op">.</span><span class="fu">neq</span>(<span class="dv">1</span>))<span class="op">;</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a><span class="co">// Exercise</span></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Apply the above cloud masking function to SR image</span></span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Add the masked image to the map</span></span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a><span class="co">// Hint: After adding the masked image to the map, turn-off</span></span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a><span class="co">// the original image layer to see the result of the masking function</span></span></code></pre></div>
+<blockquote>
+<p>If you are using Sentinel-2 data, do check out the an alternative cloud masking techninque using the <em>S2 Cloudless</em> dataset. <a href="https://medium.com/google-earth/more-accurate-and-flexible-cloud-masking-for-sentinel-2-images-766897a9ba5f">Learn more</a></p>
+<pre><code>var imageSR = ee.Image(&#39;COPERNICUS/S2_SR/20190703T050701_20190703T052312_T43PGP&#39;)
+var s2Cloudless = ee.Image(&#39;COPERNICUS/S2_CLOUD_PROBABILITY/20190703T050701_20190703T052312_T43PGP&#39;)
+var clouds = s2Cloudless.lt(50)
+var cloudlessMasked = imageSR.mask(clouds)
+var rgbVis = {min: 0.0, max: 3000, bands: [&#39;B4&#39;, &#39;B3&#39;, &#39;B2&#39;]};
+Map.addLayer(cloudlessMasked, rgbVis, &#39;S2 Cloudless Masked Image&#39;)</code></pre>
+</blockquote>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
