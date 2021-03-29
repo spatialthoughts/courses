@@ -1,0 +1,64 @@
+var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary")
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+// The following collections were created using the 
+// Drawing Tools in the code editor 
+var urban = ee.FeatureCollection("users/ujavalgandhi/e2e/urban_gcps")
+var bare = ee.FeatureCollection("users/ujavalgandhi/e2e/bare_gcps")
+var water = ee.FeatureCollection("users/ujavalgandhi/e2e/water_gcps")
+var vegetation = ee.FeatureCollection("users/ujavalgandhi/e2e/vegetation_gcps")
+
+ 
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(bangalore))
+  .select('B.*')
+
+var composite = filtered.median().clip(bangalore) 
+
+// Display the input composite.
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+Map.addLayer(composite, rgbVis, 'image');
+
+var gcps = urban.merge(bare).merge(water).merge(vegetation)
+
+// Overlay the point on the image to get training data.
+var training = composite.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: composite.bandNames()
+});
+// // Classify the image.
+var classified = composite.classify(classifier);
+Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019'); 
+
+// Display the GCPs
+// We use the style() function to style the GCPs
+var palette = ee.List(['gray','brown','blue','green'])
+var landcover = ee.List([0, 1, 2, 3])
+
+var gcpsStyled = ee.FeatureCollection(
+  landcover.map(function(lc){
+    var color = palette.get(landcover.indexOf(lc));
+    var markerStyle = { color: 'white', pointShape: 'diamond', 
+      pointSize: 4, width: 1, fillColor: color}
+    return gcps.filter(ee.Filter.eq('landcover', lc))
+                .map(function(point){
+                  return point.set('style', markerStyle)
+                })
+      })).flatten();
+      
+Map.addLayer(gcpsStyled.style({styleProperty:"style"}), {}, 'GCPs')
+
