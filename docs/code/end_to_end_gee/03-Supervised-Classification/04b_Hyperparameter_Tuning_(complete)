@@ -1,11 +1,10 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7"),
-    alos = ee.Image("JAXA/ALOS/AW3D30/V2_2"),
-    gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
+
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -35,13 +34,10 @@ var filtered = s2
 
 var composite = filtered.median().clip(boundary) 
 
-
-
-
 var addIndices = function(image) {
 var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
   var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
-var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+  var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
   var bsi = image.expression(
       '(( X + Y ) - (A + B)) /(( X + Y ) + (A + B)) ', {
         'X': image.select('B11'), //swir1
@@ -53,7 +49,6 @@ var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']);
 }
 
 var composite = addIndices(composite);
-
 
 var elev = alos.select('AVE_DSM').divide(2000).rename('elev');
 var slope = ee.Terrain.slope(alos.select('AVE_DSM')).divide(30).rename('slope');
@@ -88,6 +83,10 @@ var classifier = ee.Classifier.smileRandomForest(50)
   inputProperties: composite.bandNames()
 });
 
+//************************************************************************** 
+// Hyperparameter Tuning
+//************************************************************************** 
+
 // Run .explain() to see what the classifer looks like
 print(classifier.explain())
 
@@ -117,9 +116,14 @@ var accuracies = numTreesList.map(function(numTrees) {
     .accuracy();
 });
 
-print(ui.Chart.array.values({
+var chart = ui.Chart.array.values({
   array: ee.Array(accuracies),
   axis: 0,
   xLabels: numTreesList
-}));
+  }).setOptions({
+      title: 'Hyperparameter Tuning for the numberOfTrees Parameters',
+      vAxis: {title: 'Validation Accuracy'},
+      hAxis: {title: 'Number of Tress', gridlines: {count: 15}}
+  });
+print(chart)
 
