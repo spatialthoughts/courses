@@ -1,36 +1,38 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var classified = ee.Image("users/ujavalgandhi/e2e/bangalore_classified"),
-    bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary");
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var classified = ee.Image("users/ujavalgandhi/e2e/bangalore_classified");
+var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary");
+
 Map.addLayer(bangalore, {color: 'blue'}, 'Bangalore City')
 Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'Classified Image 2019');
 
-// Calling .geometry() on a feature collection gives the dissolved geometry of all features in the collection
+// Calling .geometry() on a feature collection gives the
+// dissolved geometry of all features in the collection
 
 // .area() function calculates the area in square meters
 var cityArea = bangalore.geometry().area()
 
-// We can cast the result to a ee.Number() and calculate the area in square kilometers
+// We can cast the result to a ee.Number() and calculate the
+// area in square kilometers
 var cityAreaSqKm = ee.Number(cityArea).divide(1e6).round()
 print(cityAreaSqKm)
 
 
 // Area Calculation for Images
 var vegetation = classified.eq(3)
-// If the image contains values 0 or 1, we can calculate the total area using reduceRegion() function
+// If the image contains values 0 or 1, we can calculate the
+// total area using reduceRegion() function
 
-// The result of .eq() operation is a binary image with pixels values of 1 where the condition matched and 0 where it didn't
+// The result of .eq() operation is a binary image with pixels
+// values of 1 where the condition matched and 0 where it didn't
 Map.addLayer(vegetation, {min:0, max:1, palette: ['white', 'green']}, 'Green Cover')
 
-// Area calculation for images is done using the ee.Image.pixelArea() function
-// This function creates an image where each pixel's value is the area of the pixel
-// We multiply this pixel area image with our image.
-// Since our image has only 0 and 1 pixel values, the urban pixels will have values equal to their area
+// Since our image has only 0 and 1 pixel values, the vegetation
+// pixels will have values equal to their area
 var areaImage = vegetation.multiply(ee.Image.pixelArea())
 
 
-// Now that each pixel for built-up class in the image has the value equal to its area,
-// we can sum up all the values in the state to get the total built-up area.
+// Now that each pixel for vegetation class in the image has the value
+// equal to its area, we can sum up all the values in the region
+// to get the total green cover.
 
 var area = areaImage.reduceRegion({
   reducer: ee.Reducer.sum(),
@@ -38,7 +40,8 @@ var area = areaImage.reduceRegion({
   scale: 10,
   maxPixels: 1e10
   })
-// The result of the reduceRegion() function is a dictionary with the key being the band name.
-// We can extract the area number and convert it to square kilometers
+// The result of the reduceRegion() function is a dictionary with the key
+// being the band name. We can extract the area number and convert it to
+// square kilometers
 var vegetationAreaSqKm = ee.Number(area.get('classification')).divide(1e6).round()
 print(vegetationAreaSqKm)
