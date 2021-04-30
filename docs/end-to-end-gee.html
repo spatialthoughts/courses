@@ -2730,90 +2730,89 @@ var points = wheatrice.selfMask().stratifiedSample(
 <span id="cb66-44"><a href="#cb66-44" aria-hidden="true" tabindex="-1"></a>ndviVis <span class="op">=</span> {<span class="st">&#39;min&#39;</span>:<span class="dv">0</span>, <span class="st">&#39;max&#39;</span>:<span class="fl">0.5</span>, <span class="st">&#39;palette&#39;</span>: palette }</span>
 <span id="cb66-45"><a href="#cb66-45" aria-hidden="true" tabindex="-1"></a>Map.addLayer(withNdvi.select(<span class="st">&#39;ndvi&#39;</span>), ndviVis, <span class="st">&#39;NDVI Composite&#39;</span>)</span>
 <span id="cb66-46"><a href="#cb66-46" aria-hidden="true" tabindex="-1"></a>Map</span></code></pre></div>
-<div class="sourceCode" id="cb67"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
 </div>
 </div>
 <div id="exporting-an-imagecollection" class="section level2">
 <h2>06. Exporting an ImageCollection</h2>
-<p>One of the most commonly asked questions by Earth Engine users is - <em>How do I download all images in a collection</em>? The Earth Engine API allows one to export a single image, but not collection of images. The recommended way to do batch exports like this is to use the Python API’s <code>ee.batch.Export</code> functions and use a Python for-loop to iterate and export each image. The <code>ee.batch</code> module also gives you ability to control <em>Tasks</em> - allowing you to automate exports.</p>
-<div class="sourceCode" id="cb68"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
-<div class="sourceCode" id="cb69"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
-<div class="sourceCode" id="cb70"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
+<p>One of the most commonly asked questions by Earth Engine users is - <em>How do I download all images in a collection</em>? The Earth Engine API allows you to export a single image, but not collection of images. The recommended way to do batch exports like this is to use the Python API’s <code>ee.batch.Export</code> functions and use a Python for-loop to iterate and export each image. The <code>ee.batch</code> module also gives you ability to control <em>Tasks</em> - allowing you to automate exports.</p>
+<div class="sourceCode" id="cb67"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
+<div class="sourceCode" id="cb68"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
+<div class="sourceCode" id="cb69"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
 <div id="create-a-collection" class="section level3">
 <h3>Create a Collection</h3>
-<div class="sourceCode" id="cb71"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
-<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
-<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
-<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
-<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
-<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
-<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function for Cloud masking</span></span>
-<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> maskS2clouds(image):</span>
-<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a>  qa <span class="op">=</span> image.select(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a>  cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span></span>
-<span id="cb71-13"><a href="#cb71-13" aria-hidden="true" tabindex="-1"></a>  cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span></span>
-<span id="cb71-14"><a href="#cb71-14" aria-hidden="true" tabindex="-1"></a>  mask <span class="op">=</span> qa.bitwiseAnd(cloudBitMask).eq(<span class="dv">0</span>).And(</span>
-<span id="cb71-15"><a href="#cb71-15" aria-hidden="true" tabindex="-1"></a>             qa.bitwiseAnd(cirrusBitMask).eq(<span class="dv">0</span>))</span>
-<span id="cb71-16"><a href="#cb71-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask) <span class="op">\</span></span>
-<span id="cb71-17"><a href="#cb71-17" aria-hidden="true" tabindex="-1"></a>      .select(<span class="st">&quot;B.*&quot;</span>) <span class="op">\</span></span>
-<span id="cb71-18"><a href="#cb71-18" aria-hidden="true" tabindex="-1"></a>      .copyProperties(image, [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb71-19"><a href="#cb71-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-20"><a href="#cb71-20" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
-<span id="cb71-21"><a href="#cb71-21" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb71-22"><a href="#cb71-22" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
-<span id="cb71-23"><a href="#cb71-23" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.intersects(<span class="st">&#39;.geo&#39;</span>, geometry)) <span class="op">\</span></span>
-<span id="cb71-24"><a href="#cb71-24" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">map</span>(maskS2clouds)</span>
-<span id="cb71-25"><a href="#cb71-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-26"><a href="#cb71-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb71-27"><a href="#cb71-27" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
-<span id="cb71-28"><a href="#cb71-28" aria-hidden="true" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
-<span id="cb71-29"><a href="#cb71-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
-<span id="cb71-30"><a href="#cb71-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-31"><a href="#cb71-31" aria-hidden="true" tabindex="-1"></a>withNdvi <span class="op">=</span> filtered.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
+<div class="sourceCode" id="cb70"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function for Cloud masking</span></span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> maskS2clouds(image):</span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>  qa <span class="op">=</span> image.select(<span class="st">&#39;QA60&#39;</span>)</span>
+<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>  cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span></span>
+<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>  cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span></span>
+<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>  mask <span class="op">=</span> qa.bitwiseAnd(cloudBitMask).eq(<span class="dv">0</span>).And(</span>
+<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a>             qa.bitwiseAnd(cirrusBitMask).eq(<span class="dv">0</span>))</span>
+<span id="cb70-16"><a href="#cb70-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask) <span class="op">\</span></span>
+<span id="cb70-17"><a href="#cb70-17" aria-hidden="true" tabindex="-1"></a>      .select(<span class="st">&quot;B.*&quot;</span>) <span class="op">\</span></span>
+<span id="cb70-18"><a href="#cb70-18" aria-hidden="true" tabindex="-1"></a>      .copyProperties(image, [<span class="st">&quot;system:time_start&quot;</span>])</span>
+<span id="cb70-19"><a href="#cb70-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-20"><a href="#cb70-20" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb70-21"><a href="#cb70-21" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb70-22"><a href="#cb70-22" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb70-23"><a href="#cb70-23" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.intersects(<span class="st">&#39;.geo&#39;</span>, geometry)) <span class="op">\</span></span>
+<span id="cb70-24"><a href="#cb70-24" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">map</span>(maskS2clouds)</span>
+<span id="cb70-25"><a href="#cb70-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-26"><a href="#cb70-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb70-27"><a href="#cb70-27" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb70-28"><a href="#cb70-28" aria-hidden="true" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb70-29"><a href="#cb70-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
+<span id="cb70-30"><a href="#cb70-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-31"><a href="#cb70-31" aria-hidden="true" tabindex="-1"></a>withNdvi <span class="op">=</span> filtered.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
 </div>
 <div id="export-all-images" class="section level3">
 <h3>Export All Images</h3>
 <p>Exports are done via the <code>ee.batch</code> module. A key difference between javascript and Python version is that the <code>region</code> parameter needs to be supplied with actual geometry coordinates.</p>
-<div class="sourceCode" id="cb72"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
-<div class="sourceCode" id="cb73"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>palette <span class="op">=</span> [</span>
-<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;FFFFFF&#39;</span>, <span class="st">&#39;CE7E45&#39;</span>, <span class="st">&#39;DF923D&#39;</span>, <span class="st">&#39;F1B555&#39;</span>, <span class="st">&#39;FCD163&#39;</span>, <span class="st">&#39;99B718&#39;</span>,</span>
-<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;74A901&#39;</span>, <span class="st">&#39;66A000&#39;</span>, <span class="st">&#39;529400&#39;</span>, <span class="st">&#39;3E8601&#39;</span>, <span class="st">&#39;207401&#39;</span>, <span class="st">&#39;056201&#39;</span>,</span>
-<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;004C00&#39;</span>, <span class="st">&#39;023B01&#39;</span>, <span class="st">&#39;012E01&#39;</span>, <span class="st">&#39;011D01&#39;</span>, <span class="st">&#39;011301&#39;</span>]<span class="op">;</span></span>
-<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>ndviVis <span class="op">=</span> {<span class="st">&#39;min&#39;</span>:<span class="dv">0</span>, <span class="st">&#39;max&#39;</span>:<span class="fl">0.5</span>, <span class="st">&#39;palette&#39;</span>: palette }</span>
-<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
-<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
-<span id="cb73-12"><a href="#cb73-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>).visualize(<span class="op">**</span>ndviVis),</span>
-<span id="cb73-13"><a href="#cb73-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
-<span id="cb73-14"><a href="#cb73-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image.<span class="bu">id</span>().getInfo(),</span>
-<span id="cb73-15"><a href="#cb73-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
-<span id="cb73-16"><a href="#cb73-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
-<span id="cb73-17"><a href="#cb73-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: image.geometry().getInfo()[<span class="st">&#39;coordinates&#39;</span>],</span>
-<span id="cb73-18"><a href="#cb73-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
-<span id="cb73-19"><a href="#cb73-19" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb73-20"><a href="#cb73-20" aria-hidden="true" tabindex="-1"></a>  task.start()</span>
-<span id="cb73-21"><a href="#cb73-21" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb71"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
+<div class="sourceCode" id="cb72"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>palette <span class="op">=</span> [</span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;FFFFFF&#39;</span>, <span class="st">&#39;CE7E45&#39;</span>, <span class="st">&#39;DF923D&#39;</span>, <span class="st">&#39;F1B555&#39;</span>, <span class="st">&#39;FCD163&#39;</span>, <span class="st">&#39;99B718&#39;</span>,</span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;74A901&#39;</span>, <span class="st">&#39;66A000&#39;</span>, <span class="st">&#39;529400&#39;</span>, <span class="st">&#39;3E8601&#39;</span>, <span class="st">&#39;207401&#39;</span>, <span class="st">&#39;056201&#39;</span>,</span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;004C00&#39;</span>, <span class="st">&#39;023B01&#39;</span>, <span class="st">&#39;012E01&#39;</span>, <span class="st">&#39;011D01&#39;</span>, <span class="st">&#39;011301&#39;</span>]<span class="op">;</span></span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>ndviVis <span class="op">=</span> {<span class="st">&#39;min&#39;</span>:<span class="dv">0</span>, <span class="st">&#39;max&#39;</span>:<span class="fl">0.5</span>, <span class="st">&#39;palette&#39;</span>: palette }</span>
+<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
+<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
+<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>).visualize(<span class="op">**</span>ndviVis),</span>
+<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
+<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image.<span class="bu">id</span>().getInfo(),</span>
+<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
+<span id="cb72-16"><a href="#cb72-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
+<span id="cb72-17"><a href="#cb72-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: image.geometry().getInfo()[<span class="st">&#39;coordinates&#39;</span>],</span>
+<span id="cb72-18"><a href="#cb72-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
+<span id="cb72-19"><a href="#cb72-19" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb72-20"><a href="#cb72-20" aria-hidden="true" tabindex="-1"></a>  task.start()</span>
+<span id="cb72-21"><a href="#cb72-21" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
 </div>
 <div id="manage-runningwaiting-tasks" class="section level3">
 <h3>Manage Running/Waiting Tasks</h3>
 <p>You can manage tasks as well. Get a list of tasks and get state information on them</p>
-<div class="sourceCode" id="cb74"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
-<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
-<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
-<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
-<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
+<div class="sourceCode" id="cb73"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
 <p>You can cancel tasks as well</p>
-<div class="sourceCode" id="cb75"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
-<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>    task.cancel()</span>
-<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
-<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
+<div class="sourceCode" id="cb74"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>    task.cancel()</span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
