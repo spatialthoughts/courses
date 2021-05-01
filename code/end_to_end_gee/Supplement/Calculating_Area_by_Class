@@ -1,0 +1,44 @@
+var classified = ee.Image("users/ujavalgandhi/e2e/bangalore_classified");
+var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary");
+
+Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
+
+// Create a 2 band image with the area image and the classified image
+// Divide the area image by 1e6 so area results are in Sq Km
+var areaImage = ee.Image.pixelArea().divide(1e6).addBands(classified);
+
+// Calculate Area by Class
+// Using a Grouped Reducer
+var areas = areaImage.reduceRegion({
+      reducer: ee.Reducer.sum().group({
+      groupField: 1,
+      groupName: 'classification',
+    }),
+    geometry: bangalore,
+    scale: 100,
+    tileScale: 4,
+    maxPixels: 1e10
+    }); 
+
+var classAreas = ee.List(areas.get('groups'))
+print(classAreas)
+
+var areaChart = ui.Chart.image.byClass({
+  image: areaImage,
+  classBand: 'classification', 
+  region: bangalore,
+  scale: 100,
+  reducer: ee.Reducer.sum(),
+  classLabels: ['urban', 'bare', 'water', 'vegetation'],
+}).setOptions({
+  hAxis: {title: 'Classes'},
+  vAxis: {title: 'Area Km^2'},
+  title: 'Area by class',
+  series: {
+    0: { color: 'gray' },
+    1: { color: 'brown' },
+    2: { color: 'blue' },
+    3: { color: 'green' }
+  }
+});
+print(areaChart); 

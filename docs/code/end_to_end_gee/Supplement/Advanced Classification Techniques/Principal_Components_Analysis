@@ -1,0 +1,134 @@
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7")
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
+var boundary = arkavathy.geometry()
+Map.centerObject(boundary)
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+// Function to remove cloud and snow pixels from Sentinel-2 SR image
+function maskCloudAndShadowsSR(image) {
+  var cloudProb = image.select('MSK_CLDPRB');
+  var snowProb = image.select('MSK_SNWPRB');
+  var cloud = cloudProb.lt(10);
+  var scl = image.select('SCL'); 
+  var shadow = scl.eq(3); // 3 = cloud shadow
+  var cirrus = scl.eq(10); // 10 = cirrus
+  // Cloud probability less than 10% or cloud shadow classification
+  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+  return image.updateMask(mask).divide(10000);
+}
+
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(boundary))
+  .map(maskCloudAndShadowsSR)
+    .select('B.*')
+
+var composite = filtered.median().clip(boundary) 
+
+var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
+Map.addLayer(composite, visParams, 'RGB');
+
+var pca = PCA(composite).select(['pc1', 'pc2', 'pc3'])
+// PCA computation is expensive and can time out
+// Export the results and import them back
+Export.image.toAsset({
+  image: pca,
+  description: 'Principal_Components_Image',
+  assetId: 'users/ujavalgandhi/e2e/arkavathy_pca',
+  region: boundary,
+  scale: 10,
+  maxPixels: 1e10})
+// Once the export finishes, import the asset and display
+var pcaImported = ee.Image('users/ujavalgandhi/e2e/arkavathy_pca')
+var pcaVisParams = {bands: ['pc1', 'pc2', 'pc3'], min: -2, max: 2};
+
+Map.addLayer(pcaImported, pcaVisParams, 'Principal Components');
+
+// Use this composite for sampling training points for supervised classification
+var composite = composite.addBands(pca)  
+
+
+//************************************************************************** 
+// Function to calculate Principal Components
+//************************************************************************** 
+function PCA(maskedImage){
+  var image = maskedImage.unmask()
+  var scale = 30;
+  var region = boundary;
+  var bandNames = image.bandNames();
+  // Mean center the data to enable a faster covariance reducer
+  // and an SD stretch of the principal components.
+  var meanDict = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: region,
+    scale: scale,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var means = ee.Image.constant(meanDict.values(bandNames));
+  var centered = image.subtract(means);
+  // This helper function returns a list of new band names.
+  var getNewBandNames = function(prefix) {
+    var seq = ee.List.sequence(1, bandNames.length());
+    return seq.map(function(b) {
+      return ee.String(prefix).cat(ee.Number(b).int());
+    });
+  };
+  // This function accepts mean centered imagery, a scale and
+  // a region in which to perform the analysis.  It returns the
+  // Principal Components (PC) in the region as a new image.
+  var getPrincipalComponents = function(centered, scale, region) {
+    // Collapse the bands of the image into a 1D array per pixel.
+    var arrays = centered.toArray();
+    
+    // Compute the covariance of the bands within the region.
+    var covar = arrays.reduceRegion({
+      reducer: ee.Reducer.centeredCovariance(),
+      geometry: region,
+      scale: scale,
+      maxPixels: 1e9,
+      bestEffort: true,
+      tileScale: 16
+    });
+
+    // Get the 'array' covariance result and cast to an array.
+    // This represents the band-to-band covariance within the region.
+    var covarArray = ee.Array(covar.get('array'));
+
+    // Perform an eigen analysis and slice apart the values and vectors.
+    var eigens = covarArray.eigen();
+
+    // This is a P-length vector of Eigenvalues.
+    var eigenValues = eigens.slice(1, 0, 1);
+      // This is a PxP matrix with eigenvectors in rows.
+    var eigenVectors = eigens.slice(1, 1);
+
+    // Convert the array image to 2D arrays for matrix computations.
+    var arrayImage = arrays.toArray(1);
+
+    // Left multiply the image array by the matrix of eigenvectors.
+    var principalComponents = ee.Image(eigenVectors).matrixMultiply(arrayImage);
+
+    // Turn the square roots of the Eigenvalues into a P-band image.
+    var sdImage = ee.Image(eigenValues.sqrt())
+      .arrayProject([0]).arrayFlatten([getNewBandNames('sd')]);
+
+    // Turn the PCs into a P-band image, normalized by SD.
+    return principalComponents
+      // Throw out an an unneeded dimension, [[]] -> [].
+      .arrayProject([0])
+      // Make the one band array image a multi-band image, [] -> image.
+      .arrayFlatten([getNewBandNames('pc')])
+      // Normalize the PCs by their SDs.
+      .divide(sdImage);
+  };
+  var pcImage = getPrincipalComponents(centered, scale, region);
+  return pcImage.mask(maskedImage.mask());
+}
