@@ -1,6 +1,12 @@
+### Python API Syntax
+
 Coming from the programming in Earth Engine through the Code Editor, you will need to slightly adapt your scripts to be able to run in Python. For the bulk of your code, you will be using Earth Engine API's server-side objects and functions - which will be exactly the same in Python. You only need to make a few syntactical changes.
 
 [Here's the full list](https://developers.google.com/earth-engine/python_install#syntax) of differences. Most important ones are elaborated below
+
+#### Initialization
+
+First of all, you need to run the following cells to initialize the API and authorize your account. You will be prompted to sign-in to the account and allow access to *View and Manage your Earth Engine data*. Once you approve, you will get an a verification code that needs to be entered at the prompt. This step needs to be done just once per session.
 
 
 ```python
@@ -17,7 +23,7 @@ ee.Authenticate()
 ee.Initialize()
 ```
 
-### Variables
+#### Variables
 
 Python code doesn't use the 'var' keyword
 
@@ -40,7 +46,7 @@ population = 881549
 print(population)
 ```
 
-### Line Continuation
+#### Line Continuation
 
 Python doesn't use semi-colon for line ending. To indicate line-continuation you need to use \\ character
 
@@ -58,7 +64,7 @@ filtered = s2 \
     .filter(ee.Filter.date('2019-01-01', '2019-12-31')) 
 ```
 
-### Functions
+#### Functions
 
 Instead of `function` keyword, Python uses `def` keyword. Also in-line functions are defined using `lambda` anonymous functions.
 
@@ -90,7 +96,7 @@ def maskS2clouds(image):
       .copyProperties(image, ["system:time_start"])
 ```
 
-### Function Arguments
+#### Function Arguments
 
 Named arguments to Earth Engine functions need to be in quotes. Also when passing the named arguments as a dictionary, it needs to be passed using the `**` keyword.
 
@@ -116,7 +122,7 @@ print(points.getInfo())
 
 ```
 
-### In-line functions
+#### In-line functions
 
 The syntax for defining in-line functions is also slightly different. You need to use the `lambda` keyword
 
@@ -131,7 +137,7 @@ var points = points.map(function(feature) {
 points = points.map(lambda feature: ee.Feature(feature.geometry(), {'id': feature.id()} ))
 ```
 
-### Printing Values
+#### Printing Values
 
 The `print()` function syntax is the same. But you must remember that in the Code Editor when you cann `print`, the value of the server object is fetched and then printed. You must do that explicitely by calling `getInfo()` on any server-side object.
 
@@ -144,7 +150,7 @@ print(points.first()
 print(points.first().getInfo())
 ```
 
-### Automatic Conversion of Scripts
+#### Automatic Conversion of Scripts
 
 [geemap](https://github.com/giswqs/geemap) is an open-source PYthon package that comes with many helpful features that help you use Earth Engine effectively in Python. 
 

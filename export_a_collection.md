@@ -1,3 +1,5 @@
+### Exporting ImageCollections
+
 One of the most commonly asked questions by Earth Engine users is - *How do I download all images in a collection*? The Earth Engine API allows you to export a single image, but not collection of images. The recommended way to do batch exports like this is to use the Python API's `ee.batch.Export` functions and use a Python for-loop to iterate and export each image. The `ee.batch` module also gives you ability to control *Tasks* - allowing you to automate exports.
 
 
@@ -15,7 +17,7 @@ ee.Authenticate()
 ee.Initialize()
 ```
 
-### Create a Collection
+#### Create a Collection
 
 
 ```python
@@ -52,7 +54,7 @@ def addNDVI(image):
 withNdvi = filtered.map(addNDVI)
 ```
 
-### Export All Images
+#### Export All Images
 
 Exports are done via the ``ee.batch`` module. A key difference between javascript and Python version is that the `region` parameter needs to be supplied with actual geometry coordinates.
 
@@ -87,7 +89,7 @@ for i, image_id in enumerate(image_ids):
   print('Started Task: ', i+1)
 ```
 
-### Manage Running/Waiting Tasks
+#### Manage Running/Waiting Tasks
 
 You can manage tasks as well. Get a list of tasks and get state information on them
 
