@@ -48,7 +48,7 @@ print(population)
 
 #### Line Continuation
 
-Python doesn't use semi-colon for line ending. To indicate line-continuation you need to use \\ character
+Python doesn't use a semi-colon for line ending. To indicate line-continuation you need to use the \\ character
 
 ```
 var s2 = ee.ImageCollection('COPERNICUS/S2');
@@ -66,7 +66,7 @@ filtered = s2 \
 
 #### Functions
 
-Instead of `function` keyword, Python uses `def` keyword. Also in-line functions are defined using `lambda` anonymous functions.
+Instead of the `function` keyword, Python uses the `def` keyword. Also the in-line functions are defined using `lambda` anonymous functions.
 
 In the example below, also now the `and` operator - which is capitalized as `And` in Python version to avoid conflict with the built-in `and` operator. The same applies to `Or` and `Not` operators. `true`, `false`, `null` in Python are also spelled as `True`, `False` and `None`.
 

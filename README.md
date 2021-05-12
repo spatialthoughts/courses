@@ -16,7 +16,7 @@ The content has the following course pages
 
 ## Updating the content
 
-Most courses are written using pure MarkDown in the corresponding `.md` file. You can update the content directly. A few courses use `.md` file generated from Jupyter Notebooks - which need to be generated before building the site.
+Most courses are written using pure MarkDown in the corresponding `.Rmd` file. You can update the content directly. A few courses embed other `.md` files generated from Jupyter Notebooks - which need to be generated before building the site.
 
 ### Python Foundation for Spatial Analysis
 
