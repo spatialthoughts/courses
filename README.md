@@ -2,7 +2,7 @@
 
 This repository powers the content at [courses.spatialthoughts.com](https://courses.spatialthoughts.com/)
 
-The html pages built using R Studio as a [R Markdown Website](https://rmarkdown.rstudio.com/lesson-13.html).
+The html pages are built using R Studio as a [R Markdown Website](https://rmarkdown.rstudio.com/lesson-13.html).
 
 The content has the following course pages
 
