@@ -420,12 +420,6 @@ iface.addVectorLayer(uri, 'seismic_zones', 'ogr')
 filename = 'sf.gpkg|layername=zoning'
 uri = os.path.join(data_dir, filename)
 iface.addVectorLayer(uri, 'zoning', 'ogr')
-
-filename = 'trees.csv'
-csvpath = 'file:///' + data_dir + filename
-uri = '{}?type=csv&xField={}&yField={}&crs={}'.format(
-  csvpath, 'Longitude', 'Latitude', 'EPSG:4326')
-iface.addVectorLayer(uri, 'trees', 'delimitedtext')
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='50%'}
@@ -632,44 +626,49 @@ While the PyQGIS API providers many functions to work with layers, features, att
 knitr::include_graphics('images/pyqgis/processing.png')
 ```
 
-## Get min/max value from a Raster Layer
-
-```{python eval=FALSE}
-import os
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
-
-filename = 'sf.gpkg:srtm'
-uri = 'GPKG:' + data_dir + filename
-rlayer = QgsRasterLayer(uri, 'srtm', 'gdal')
-
-results = processing.run("qgis:rasterlayerstatistics", 
-    {'INPUT': rlayer,'BAND':1})
-print('min:{},max:{}'.format(results['MIN'], results['MAX']))
-```
-
 ## Create a hillshade from a DEM
 
 ```{python eval=FALSE}
 import os
 data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
 
-filename = 'sf.gpkg:srtm'
-uri = 'GPKG:' + data_dir + filename
-rlayer = QgsRasterLayer(uri, 'srtm', 'gdal')
-output_name = 'hillshade.tif'
-output_path = os.path.join(data_dir, output_name)
+filename = 'srtm.tif'
+uri = os.path.join(data_dir, filename)
+iface.addRasterLayer(uri, 'srtm', 'gdal')
 
 results = processing.runAndLoadResults("qgis:hillshade", 
-    {'INPUT': rlayer, 
+    {'INPUT': uri, 
     'Z_FACTOR':2,
     'AZIMUTH':300,
     'V_ANGLE':40,
-    'OUTPUT': output_path})
-print(results)
+    'OUTPUT': 'TEMPORARY_OUTPUT'})
 ```
 
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/hillshade.png')
+## Running Multiple Processing Algorithms
+
+```{python eval=FALSE}
+import os
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
+
+filename = 'srtm.tif'
+srtm = os.path.join(data_dir, filename)
+
+results = processing.run("qgis:hillshade", 
+    {'INPUT': srtm, 
+    'Z_FACTOR':2,
+    'AZIMUTH':300,
+    'V_ANGLE':40,
+    'OUTPUT': 'TEMPORARY_OUTPUT'})
+
+hillshade = results['OUTPUT']
+
+filename = 'shoreline.shp'
+shoreline = os.path.join(data_dir, filename)
+
+processing.runAndLoadResults("gdal:cliprasterbymasklayer", 
+    {'INPUT':hillshade,
+    'MASK': shoreline,
+    'OUTPUT':'TEMPORARY_OUTPUT'})
 ```
 
 # Writing Python Console Scripts
@@ -1112,6 +1111,19 @@ for child in root.children():
 knitr::include_graphics('images/pyqgis/layergroup.png')
 ```
 
+## Adding CSV Layers
+
+```{python eval=FALSE}
+import os
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
+
+filename = 'trees.csv'
+csvpath = 'file:///' + data_dir + filename
+uri = '{}?type=csv&xField={}&yField={}&crs={}'.format(
+  csvpath, 'Longitude', 'Latitude', 'EPSG:4326')
+iface.addVectorLayer(uri, 'trees', 'delimitedtext')
+```
+
 ## Inserting Layers in the Layer Tree
 
 We can use the `QgsLayerTree` class to insert the layer at an appropriate place.
@@ -1299,6 +1311,21 @@ exporter.exportToPdf(
 knitr::include_graphics('images/pyqgis/layoutpdf.png')
 ```
 
+## Get min/max value from a Raster Layer
+
+```{python eval=FALSE}
+import os
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
+
+filename = 'sf.gpkg:srtm'
+uri = 'GPKG:' + data_dir + filename
+rlayer = QgsRasterLayer(uri, 'srtm', 'gdal')
+
+results = processing.run("qgis:rasterlayerstatistics", 
+    {'INPUT': rlayer,'BAND':1})
+print('min:{},max:{}'.format(results['MIN'], results['MAX']))
+```
+
 # Resources for Further Learning
 * Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/)
 * [PyQGIS 101: Introduction to QGIS Python programming for non-programmers](https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/) by Anita Graser
@@ -1306,7 +1333,7 @@ knitr::include_graphics('images/pyqgis/layoutpdf.png')
 
 # Data Credits
 
-* `blocks`, `parcels`, `streets`, `zoning`, `trees`, `seasmic_zones`. Downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
+* `blocks`, `parcels`, `streets`, `zoning`, `trees`, `seasmic_zones`, `shoreline`. Downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
 * `srtm` NASA Shuttle Radar Topography Mission Global 1 arc second provided by The Land Processes Distributed Active Archive Center (LP DAAC). Downloaded using [30-Meter SRTM Tile Downloader](https://dwtkns.com/srtm30m/)
 * `aoi`: CA Places Boundaries from 2016 TIGER/Line Shapefiles. Downloaded from [California Open Data Portal](https://data.ca.gov/dataset/ca-geographic-boundaries)
 * `populated_places`: Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)
