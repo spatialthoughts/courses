@@ -30,3 +30,19 @@ The code for the course comes from a Google Earth Engine repository `users/ujava
 1. Clone the `users/ujavalgandhi/End-to-End-GEE` repository to `~/projects` directory.
 2. Update the `.ipynb` files in the `code/end_to_end_gee/` directory.
 3. Run `end-to-end-gee-package.sh` to generate `.md` files from the updated code and notebooks.
+
+### Formatting Guide
+
+We prefer the following style while writing the tutorials.
+
+| Type                                        | rmd Formatting  |
+| ------------------------------------------- | --------------- |
+| Title                                       |``` # ```|
+| Heading 1                                   | ```##``` |
+| Heading 2                                   | ```###``` |
+| Window titles, Tabs, Dialogs and buttons    | ```*label*``` |
+| Menu items                                  | ``` ** menu &arr; submenu1 &rarr; submenu2 ** ``` |
+| Processing algorithms                       | ``` ** Processing Toolbox &arr; Vector Overlay &rarr; Clip** ``` |
+| Layer and file names                        | ``` **layer_name** ``` |
+| Text input by the user / keyboard shortcuts | ``` **value** ```| 
+| Hyper Link's                                | ``` [Spatial Thoughts](https:spatialthoughts.com) ```|
