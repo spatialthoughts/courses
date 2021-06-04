@@ -20,6 +20,10 @@ with open(output_path, 'w') as output_file:
 	for f in layer.getFeatures():
 		line = ','.join(str(f[name]) for name in fieldnames) + '\n'
 		output_file.write(line)
-
+        
 print('Success: ', 'Output file written at' + output_path)
+
+# Delete the layer object from memory
+# Without this you may get a Segmentation Fault on exit
+del(layer)
 qgs.exitQgis()
