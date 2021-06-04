@@ -1,6 +1,5 @@
 import os
-from qgis.core import QgsApplication, QgsVectorLayer
-
+from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
 qgs = QgsApplication([], False)
 qgs.initQgis()
 
@@ -25,5 +24,8 @@ print('Success: ', 'Output file written at' + output_path)
 
 # Delete the layer object from memory
 # Without this you may get a Segmentation Fault on exit
+# when the exitQgis() method will try clearning the layer registry
+# Alternatively, you can add the layer so it is present in the registry
+# QgsProject.instance().addMapLayer(layer, False)
 del(layer)
 qgs.exitQgis()

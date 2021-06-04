@@ -650,16 +650,46 @@ knitr::include_graphics('images/pyqgis/processing.png')
 
 ## Create a hillshade from a DEM
 
+To use any Processing Algorithm via Python, you need to know how to specify all the required parameters. This is easiest to obtain by running the algorithm via the GUI first. 
+
+In this section we will learn how to create a hillshade raster from a DEM. We will first carry out the task using QGIS.
+
+1. Browse to the data directory and load the `srtm.tif` layer. Search and locate the **Processing Toolbox &rarr; Raster terrain analysis &rarr; Hillshade**  algorithm from the *Processing Toolbox*. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/processing1.png')
+```
+
+2. Select `srtm` as the *Elevation layer* and keep all the other parameters to their default value. Click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/processing2.png')
+```
+
+3. A new `Hillshade` layer will be added to the *Layers* panel. Now we will locate the Python command for this operation from the *Processing History*. Go to **Processing &rarr; History*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/processing3.png')
+```
+
+4. The first entry in the top panel will show the last algorithm that was ran from the toolbox. Click on it to select it. The full Python command will be shown at the bottom. Copy it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/processing4.png')
+```
+
+You can now use the parameters in your Python code and replace the path of the input. Below is the code snippet that runs the same algorithm from a Python script. Note that we are using the `processing.runAndLoadResults()` method that adds the resulting layer to the canvas.    
+
 ```{python eval=FALSE}
 import os
 data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
 
 filename = 'srtm.tif'
-uri = os.path.join(data_dir, filename)
-iface.addRasterLayer(uri, 'srtm', 'gdal')
+srtm = os.path.join(data_dir, filename)
+iface.addRasterLayer(srtm, 'srtm', 'gdal')
 
-results = processing.runAndLoadResults("qgis:hillshade", 
-    {'INPUT': uri, 
+results = processing.runAndLoadResults("native:hillshade", 
+    {'INPUT': srtm, 
     'Z_FACTOR':2,
     'AZIMUTH':300,
     'V_ANGLE':40,
@@ -668,6 +698,44 @@ results = processing.runAndLoadResults("qgis:hillshade",
 
 ## Running Multiple Processing Algorithms
 
+We can also *chain* multiple processing tools to build a script to build a data processing pipeline. In the example below, we will do 2 steps
+
+1. Clip  `srtm.tif` raster using the `shoreline.shp` layer.
+2. Calculate the hillshade on the clipped raster and load it in QGIS.
+
+Note that we are using the `processing.run()` method for the first step. This method calculates the output, but does not load the result to QGIS. This allows us to carry out multiple processing steps and not load intermediate layers.
+
+```{python eval=FALSE}
+import os
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
+
+filename = 'srtm.tif'
+srtm = os.path.join(data_dir, filename)
+filename = 'shoreline.shp'
+shoreline = os.path.join(data_dir, filename) 
+
+results = processing.run("gdal:cliprasterbymasklayer", 
+    {'INPUT':srtm,
+    'MASK': shoreline,
+    'OUTPUT':'TEMPORARY_OUTPUT'})
+
+clipped_dem = results['OUTPUT']
+   
+results = processing.runAndLoadResults("native:hillshade", 
+    {'INPUT': clipped_dem, 
+    'Z_FACTOR':2,
+    'AZIMUTH':300,
+    'V_ANGLE':40,
+    'OUTPUT': 'TEMPORARY_OUTPUT'})
+```
+
+
+## Exercise 6
+
+Let's say we want to find the elevation of the highest point in San Francisco. We can use the DEM and QGIS Processing Algorithms to get the answer. Use the `qgis:rasterlayerstatistics` algorithm to calculate statistics on the clipped DEM and print the answer.
+
+Hint: The result of the `qgis:rasterlayerstatistics` algorithm is a dictionary. Printthe result to see iit and extract relevant value.
+
 ```{python eval=FALSE}
 import os
 data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
@@ -675,24 +743,18 @@ data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
 filename = 'srtm.tif'
 srtm = os.path.join(data_dir, filename)
 
-results = processing.run("qgis:hillshade", 
-    {'INPUT': srtm, 
-    'Z_FACTOR':2,
-    'AZIMUTH':300,
-    'V_ANGLE':40,
-    'OUTPUT': 'TEMPORARY_OUTPUT'})
-
-hillshade = results['OUTPUT']
-
 filename = 'shoreline.shp'
 shoreline = os.path.join(data_dir, filename)
 
-processing.runAndLoadResults("gdal:cliprasterbymasklayer", 
-    {'INPUT':hillshade,
+results = processing.run("gdal:cliprasterbymasklayer", 
+    {'INPUT':dem,
     'MASK': shoreline,
     'OUTPUT':'TEMPORARY_OUTPUT'})
-```
+clipped_dem = results['OUTPUT']
 
+# Use the qgis:rasterlayerstatistics algorithm on clipped_dem
+
+```
 # Writing Python Console Scripts
 
 We will now see how can we write python scripts, save them and run them within QGIS. We will also see examples of best practices - such as validating inputs, writing files safely and communicating the status to the user.
@@ -1333,20 +1395,6 @@ exporter.exportToPdf(
 knitr::include_graphics('images/pyqgis/layoutpdf.png')
 ```
 
-## Get min/max value from a Raster Layer
-
-```{python eval=FALSE}
-import os
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
-
-filename = 'sf.gpkg:srtm'
-uri = 'GPKG:' + data_dir + filename
-rlayer = QgsRasterLayer(uri, 'srtm', 'gdal')
-
-results = processing.run("qgis:rasterlayerstatistics", 
-    {'INPUT': rlayer,'BAND':1})
-print('min:{},max:{}'.format(results['MIN'], results['MAX']))
-```
 
 # Resources for Further Learning
 * Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/)
