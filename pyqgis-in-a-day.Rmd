@@ -566,7 +566,33 @@ Expressions in QGIS have a lot of power and are used in many core features: sele
 
 Custom python functions in QGIS use ``@qgsfunction`` decorator to make the function available across the system. 
 
-## 9.1 Custom function to find UTM Zone of a feature
+## 9.1 Understanding Python Decorators
+
+Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the `@decorator` syntax above the function definition. Once decorated, the original function gets modified with the decorator function.
+
+```{python eval=FALSE}
+def fancify(normal_function):
+    
+    def fancy(*args, **kwargs):
+        val = normal_function(*args, **kwargs)
+        return '*****' + val + '*****'
+        
+    return fancy
+    
+def hello(name):
+    return 'Hello ' + name
+    
+print(hello('World'))
+
+@fancify
+def hello(name):
+    return 'Hello ' + name
+    
+print(hello('World'))
+```
+
+
+## 9.2 Custom function to find UTM Zone of a feature
 
 We will define a custom function that finds the UTM zone number of a map feature. Open the project ``places.qgz`` from the data directory.
 
@@ -648,7 +674,7 @@ While the PyQGIS API providers many functions to work with layers, features, att
 knitr::include_graphics('images/pyqgis/processing.png')
 ```
 
-## 10.1 Create a hillshade from a DEM
+## 10.1 Creating Hillshade from a DEM
 
 To use any Processing Algorithm via Python, you need to know how to specify all the required parameters. This is easiest to obtain by running the algorithm via the GUI first. 
 
@@ -919,36 +945,9 @@ knitr::include_graphics('images/pyqgis/processingscriptrun.png')
 
 ## 14.3 Simplifying Processing Scripts
 
-The Processing Framework providers a simpler way to write processing scripts by using the ``@alg`` decorator. Using this approach, you are able to remove a lot of *boilerplate* code and focus on just writing the main algorithm function. There are some limitations of this approach - the main one being that scripts written using the ``@alg`` decorator cannot be used in plugins. But if your goal is to create a processing scripts, this is a much simpler and recommended style. But before we see how to write such scripts, you need to understand *Python Decorators*.
+The Processing Framework providers a simpler way to write processing scripts by using the ``@alg`` decorator. Using this approach, you are able to remove a lot of *boilerplate* code and focus on just writing the main algorithm function. There are some limitations of this approach - the main one being that scripts written using the ``@alg`` decorator cannot be used in plugins. But if your goal is to create a processing scripts, this is a much simpler style.
 
-> Note: the ``@alg`` decorator is available only from QGIS 3.6 onward.
-
-### 14.3.1 Understanding Python Decorators
-
-Decorators are functions that take a function as an input and returns a modified function. Decorators are an easy way to inject additional functionality into existing functions without a lot of repeated code. To decorate a function, you use the `@decorator` syntax above the function definition. Once decorated, the original function gets modified with the decorator function.
-
-```{python eval=FALSE}
-def fancify(normal_function):
-    
-    def fancy(*args, **kwargs):
-        val = normal_function(*args, **kwargs)
-        return '*****' + val + '*****'
-        
-    return fancy
-    
-def hello(name):
-    return 'Hello ' + name
-    
-print(hello('World'))
-
-@fancify
-def hello(name):
-    return 'Hello ' + name
-    
-print(hello('World'))
-```
-
-### 14.3.2 Writing a Processing Script with Decorators
+> Note: the ``@alg`` decorator cannot be used in plugins. If you are writing processing algorithms for a plugin, use the full script template shown in the previous section.
 
 Let's modify the `save_attributes_algorithm.py` script to use the built-in ``@alg`` decorator. Locate the script in *Processing Toolbox* under **Scripts  &rarr; Save Attributes As CSV**. Right-click on it and select *Edit Script...*. Replace all the code in the *Processing Script Editor* with the following and click the *Save Script* button
 
@@ -1137,6 +1136,17 @@ knitr::include_graphics('images/pyqgis/dialogcomplete.png')
 
 Code snippets for common PyQGIS operations.
 
+All code snipets assume you have loaded the `sf.qgz` project.
+
+```{python eval=FALSE}
+import os
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
+project = QgsProject.instance()
+project_name = 'sf.qgz'
+project_path = os.path.join(data_dir, project_name)
+project.read(project_path)
+```
+
 ## Save Map Rendering as an Image
 
 `saveAsImage()` method is quick and easy, but you do not have much control over the resulting image. You can't control the resolution, size or how each layer will be rendered. There is another way to achieve this. You can look at the code for exporting map as an image in QGIS and you will discover 2 classes `QgsMapRendererParallelJob` and `QgsMapRendererSequentialJob` that lets you achieve a better result. The code snippet below exports a hi-resolution image of the project. [^5]
@@ -1245,10 +1255,9 @@ We can use the `QgsLayerTree` class to insert the layer at an appropriate place.
 import os
 data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
 
-filename = 'sf.gpkg:srtm'
-uri = 'GPKG:' + data_dir + filename
+filename = 'srtm.tif'
+uri = os.path.join(data_dir, filename)
 rlayer = QgsRasterLayer(uri, 'srtm', 'gdal')
-QgsProject.instance().addMapLayer(rlayer, False)
 
 rastergroup = QgsLayerTreeGroup('raster layers')
 treelayer = QgsLayerTreeLayer(rlayer)
