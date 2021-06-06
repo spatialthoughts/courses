@@ -1261,6 +1261,62 @@ deselection.setEnabled(False)
 selectionToolbar.removeAction(deselection)
 ```
 
+## Add a Drop-down Menu to Toolbar
+
+This example shows how to add a `QCombobox` widget to a toolbar and populate it with attribute values from a layer. On click of the button, the selection is read from the combo box and used to apply a filter to the layer
+
+```{python eval=FALSE}
+toolBar = iface.addToolBar("My Toolbar")
+toolBar.setObjectName("My Toolbar")
+
+countryCombo = QComboBox(toolbar)
+toolBar.addWidget(countryCombo)
+countryCombo.setToolTip("Select a country")
+
+
+filterButton = QPushButton('Filter')
+filterButton.setToolTip('Filter')
+toolBar.addWidget(filterButton)
+
+resetButton = QPushButton('Reset')
+resetButton.setToolTip('Reset')
+toolBar.addWidget(resetButton)
+
+# We want to sort the layer by country names
+# configure QgsFeatureRequest and use it with getFeatures()
+request = QgsFeatureRequest()
+clause = QgsFeatureRequest.OrderByClause('NAME')
+orderby = QgsFeatureRequest.OrderBy([clause])
+request.setOrderBy(orderby)
+layer = iface.activeLayer()
+
+# Read the country names and save in a list
+countries = []
+for f in layer.getFeatures(request):
+  countries.append(f['NAME'])
+
+# Add items to the combobox
+for country in countries:
+    countryCombo.addItem(country)
+
+# Define functions to apply and reset filters
+def filter_layer():
+    layer = iface.activeLayer()
+    country = countryCombo.currentText()
+    expression = '\"NAME\" = \'{}\''.format(country)
+    layer.setSubsetString(expression)
+
+def reset_layer():
+    layer = iface.activeLayer()
+    layer.setSubsetString('')
+    countryCombo.clear()
+    for country in countries:
+      countryCombo.addItem(country)
+      
+filterButton.clicked.connect(filter_layer)
+resetButton.clicked.connect(reset_layer)
+```
+
 ## Adding CSV Layers
 
 ```{python eval=FALSE}
