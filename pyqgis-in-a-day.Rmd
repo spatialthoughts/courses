@@ -774,7 +774,7 @@ filename = 'shoreline.shp'
 shoreline = os.path.join(data_dir, filename)
 
 results = processing.run("gdal:cliprasterbymasklayer", 
-    {'INPUT':dem,
+    {'INPUT':srtm,
     'MASK': shoreline,
     'OUTPUT':'TEMPORARY_OUTPUT'})
 clipped_dem = results['OUTPUT']
@@ -898,23 +898,6 @@ hola.hello()
 
 As we saw, all PyQGIS and PyQt inherit from other classes. When using them, sometimes you will see the use of a function `super()`. Here `super` refers to the parent class and when you are using the child class, you need to initialize the parent class using this keyword. Let's see this in action.
 
-```{python eval=FALSE}
-class Talk(Hello):
-  def __init__(self, language):
-    if language == 'English':
-      super().__init__('Hi')
-    elif language == 'Spanish':
-      super().__init__('Hola')
-    else:
-      raise ValueError('Unsupported Language')
-
-t = Talk('English')
-t.hello()
-t = Talk('Spanish')
-t.hello()
-
-```
-
 ## 14.2 Writing a Processing Script
 
 To create a new processing script, go to **Processing &rarr; Processing Toolbox**. Click the *Scripts* button and select *Create New Script..*.
@@ -939,9 +922,13 @@ Click the *Save Script* button and save the script as `save_attributes_algorithm
 
 Once saved, the algorithm will appear in the *Processing Toolbox* under **Scripts  &rarr; Save Attributes As CSV**. Double-click to launch it. You will see the standard processing algorithm dialog where the user can select inputs and outputs easily. Progress bar is shown correctly and the execution also stops if the user presses the *Cancel* button. If the large is large and the algorithm would take time to process it, the user can also close the window and the algorithm will continue to run in the background.
 
+You can review additional information and tips in the [Writing new Processing algorithms as Python scripts](https://docs.qgis.org/3.16/en/docs/user_manual/processing/scripts.html) section of the QGIS User Guide.
+
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/pyqgis/processingscriptrun.png')
 ```
+
+
 
 ## 14.3 Simplifying Processing Scripts
 
@@ -1043,100 +1030,11 @@ Once reloaded, you can click on the toolbar button or **Plugin  &rarr; Save Attr
 knitr::include_graphics('images/pyqgis/pluginprocessingrun.png')
 ```
 
-## 15.3 GUI Plugin
-
-There are times when the plugin needs to modify the QGIS GUI or add complex widgets. In such cases, you will have to build and program the widgets using PyQt and PyQGIS APIs. We will now see how can we design and program a dialog box to the *Minimal plugin* and convert it to a GUI plugin.
-
-Open **Qt Designer** from `C:\OSGeo4W64\bin\qgis-designer.bat`
-
-Select the *Dialog with Buttons Bottom* and click *Create*.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/designercreate.png')
-```
-
-This is a basic dialog box that we will modify later. Let's save it for now. Name the file as `save_attributes_dialog.ui` and save it in the plugin directory `{profile_folder}\python\plugins\save_attributes\`
-
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/designersave.png')
-```
-
-We need to create a new file that reads this `.ui` file and creates a PyQt QDialog() object from it. Create a new `save_attributes_dialog.py` in the plugin folder with the following content.
-
-`save_attributes_dialog.py`
-```{python eval=FALSE, code=readLines('code/pyqgis/gui/save_attributes_dialog.py')}
-```
-
-Now we can import this into the main plugin file `save_attributes.py` and initialize the dialog. Replace the content of the file with the following.
-
-`save_attributes.py`
-```{python eval=FALSE}
-import os
-import sys
-import inspect
-from PyQt5.QtWidgets import QAction
-from PyQt5.QtGui import QIcon
-from .save_attributes_dialog import SaveAttributesDialog
-
-cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
-
-class SaveAttributesPlugin:
-    def __init__(self, iface):
-        self.iface = iface
-
-    def initGui(self):
-      icon = os.path.join(os.path.join(cmd_folder, 'logo.png'))
-      self.action = QAction(QIcon(icon), 'Save Attributes as CSV', self.iface.mainWindow())
-      self.action.triggered.connect(self.run)
-      self.iface.addPluginToMenu('&Save Attributes', self.action)
-      self.iface.addToolBarIcon(self.action)
-      self.first_start = True
-
-
-    def unload(self):
-      self.iface.removeToolBarIcon(self.action)
-      self.iface.removePluginMenu('&Save Attributes', self.action)  
-      del self.action
-
-    def run(self):
-      if self.first_start == True:
-        self.first_start = False
-        self.dlg = SaveAttributesDialog()
-        
-      self.dlg.show()
-```
-
-Back in QGIS, reload the plugin. Click the *Save Attributes As CSV* toolbar button. You will see the UI dialog appear.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/dialogfirstload.png')
-```
-
-Now we can go back to Qt Designer and complete the UI design. You can drag various elements like *label*, *Combo Box*, *Line Edit* and *Push Button* as shown below. Once complete, save the dialog. Note the name of the object names of various widgets. We will use these names to program these elements.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/designercomplete.png')
-```
-
-The main file `save_attributes.py` needs to be changed. Most importantly we need to add a new `select_output_file()` method and connect it to the *...* button. Rest of the code should be familiar from the previous sections.
-
-`save_attributes.py`
-```{python eval=FALSE, code=readLines('code/pyqgis/gui/save_attributes.py')}
-```
-
-Reload and you will see the fully functioning plugin.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/dialogcomplete.png')
-```
-
-
 # 16. Supplement
 
-Code snippets for common PyQGIS operations.
+This section contains code snippets for common PyQGIS operations.
 
-All code snipets assume you have loaded the `sf.qgz` project.
+All code snipets assume you have loaded the `sf.qgz` project. You can load the project using the code below.
 
 ```{python eval=FALSE}
 import os
