@@ -528,6 +528,7 @@ $(document).ready(function () {
 <li><a href="#principal-component-analysis-pca">Principal Component Analysis (PCA)</a></li>
 <li><a href="#multi-temporal-composites-for-crop-classification">Multi-temporal Composites for Crop Classification</a></li>
 <li><a href="#calculating-area-by-class">Calculating Area by Class</a></li>
+<li><a href="#spectral-signature-plots">Spectral Signature Plots</a></li>
 </ul></li>
 <li><a href="#user-interface-templates">User Interface Templates</a>
 <ul>
@@ -3311,51 +3312,198 @@ Capturing Crop Phenology through Seasonal Composites
 <span id="cb85-44"><a href="#cb85-44" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(areaChart)<span class="op">;</span> </span></code></pre></div>
 <p><img src="images/end_to_end_gee/area_by_class.png" width="100%" style="display: block; margin: auto;" /></p>
 </div>
+<div id="spectral-signature-plots" class="section level3">
+<h3>Spectral Signature Plots</h3>
+<p>For supervised classification, it is useful to visualize average spectral responses for each band for each class. Such charts are called <em>Spectral Response Curves</em> or <em>Spectral Signatures</em>. Such charts helps determine separability of classes. If classes have very different signatures, a classifier will be able to separate them well.</p>
+<p>We can also plot spectral signatures of all training samples for a class and check the quality of the training dataset. If all training samples show similar signatures - it indicates that you have done a good job of collecting appropriate samples. You can also catch potential outliers from these plots.</p>
+<p>These charts provide a qualitative and visual methods for checking separability of classes. For quantitative methods, one can apply measures such as Spectral Distance, Mahalanobis distance, Bhattacharyya distance , Jeffreys-Matusita (JM) distance etc. You can find the code for these in <a href="https://gis.stackexchange.com/a/323778/5160">this post</a></p>
+<div class="sourceCode" id="cb86"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="co">/**** Start of imports. If edited, may not auto-convert in the playground. ****/</span></span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;users/ujavalgandhi/e2e/bangalore_composite&quot;</span>)<span class="op">;</span></span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a><span class="co">/***** End of imports. If edited, may not auto-convert in the playground. *****/</span></span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gcps <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/bangalore_gcps&quot;</span>)<span class="op">;</span></span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;users/ujavalgandhi/e2e/bangalore_composite&#39;</span>)<span class="op">;</span></span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Overlay the point on the image to get bands data.</span></span>
+<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> training <span class="op">=</span> composite<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
+<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> gcps<span class="op">,</span> </span>
+<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;landcover&#39;</span>]<span class="op">,</span> </span>
+<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span></span>
+<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a><span class="co">// We will create a chart of spectral signature for all classes</span></span>
+<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a><span class="co">// We have multiple GCPs for each class</span></span>
+<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Use a grouped reducer to calculate the average reflectance</span></span>
+<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a><span class="co">// for each band for each class</span></span>
+<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a><span class="co">// We have 12 bands so need to repeat the reducer 12 times</span></span>
+<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a><span class="co">// We also need to group the results by class</span></span>
+<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a><span class="co">// So we find the index of the landcover property and use it</span></span>
+<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a><span class="co">// to group the results</span></span>
+<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bands <span class="op">=</span> composite<span class="op">.</span><span class="fu">bandNames</span>()</span>
+<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> numBands <span class="op">=</span> bands<span class="op">.</span><span class="fu">length</span>()</span>
+<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bandsWithClass <span class="op">=</span> bands<span class="op">.</span><span class="fu">add</span>(<span class="st">&#39;landcover&#39;</span>)</span>
+<span id="cb86-29"><a href="#cb86-29" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classIndex <span class="op">=</span> bandsWithClass<span class="op">.</span><span class="fu">indexOf</span>(<span class="st">&#39;landcover&#39;</span>)</span>
+<span id="cb86-30"><a href="#cb86-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-31"><a href="#cb86-31" aria-hidden="true" tabindex="-1"></a><span class="co">// Use .combine() to get a reducer capable of </span></span>
+<span id="cb86-32"><a href="#cb86-32" aria-hidden="true" tabindex="-1"></a><span class="co">// computing multiple stats on the input</span></span>
+<span id="cb86-33"><a href="#cb86-33" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> combinedReducer <span class="op">=</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">combine</span>({</span>
+<span id="cb86-34"><a href="#cb86-34" aria-hidden="true" tabindex="-1"></a>  <span class="dt">reducer2</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">stdDev</span>()<span class="op">,</span></span>
+<span id="cb86-35"><a href="#cb86-35" aria-hidden="true" tabindex="-1"></a>  <span class="dt">sharedInputs</span><span class="op">:</span> <span class="kw">true</span>})</span>
+<span id="cb86-36"><a href="#cb86-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-37"><a href="#cb86-37" aria-hidden="true" tabindex="-1"></a><span class="co">// Use .repeat() to get a reducer for each band</span></span>
+<span id="cb86-38"><a href="#cb86-38" aria-hidden="true" tabindex="-1"></a><span class="co">// We then use .group() to get stats by class</span></span>
+<span id="cb86-39"><a href="#cb86-39" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> repeatedReducer <span class="op">=</span> combinedReducer<span class="op">.</span><span class="fu">repeat</span>(numBands)<span class="op">.</span><span class="fu">group</span>(classIndex)</span>
+<span id="cb86-40"><a href="#cb86-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-41"><a href="#cb86-41" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gcpMean <span class="op">=</span> training<span class="op">.</span><span class="fu">reduceColumns</span>({</span>
+<span id="cb86-42"><a href="#cb86-42" aria-hidden="true" tabindex="-1"></a>    <span class="dt">selectors</span><span class="op">:</span> bands<span class="op">.</span><span class="fu">add</span>(<span class="st">&#39;landcover&#39;</span>)<span class="op">,</span></span>
+<span id="cb86-43"><a href="#cb86-43" aria-hidden="true" tabindex="-1"></a>    <span class="dt">reducer</span><span class="op">:</span> repeatedReducer<span class="op">,</span></span>
+<span id="cb86-44"><a href="#cb86-44" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb86-45"><a href="#cb86-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-46"><a href="#cb86-46" aria-hidden="true" tabindex="-1"></a><span class="co">// Result is a dictionary, we do some post-processing to</span></span>
+<span id="cb86-47"><a href="#cb86-47" aria-hidden="true" tabindex="-1"></a><span class="co">// extract the results</span></span>
+<span id="cb86-48"><a href="#cb86-48" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> groups <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(gcpMean<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))</span>
+<span id="cb86-49"><a href="#cb86-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-50"><a href="#cb86-50" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classNames <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>([<span class="st">&#39;urban&#39;</span><span class="op">,</span> <span class="st">&#39;bare&#39;</span><span class="op">,</span> <span class="st">&#39;water&#39;</span><span class="op">,</span> <span class="st">&#39;vegetation&#39;</span>])</span>
+<span id="cb86-51"><a href="#cb86-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-52"><a href="#cb86-52" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> fc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(groups<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb86-53"><a href="#cb86-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Extract the means</span></span>
+<span id="cb86-54"><a href="#cb86-54" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> values <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;mean&#39;</span>)</span>
+<span id="cb86-55"><a href="#cb86-55" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> groupNumber <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;group&#39;</span>)</span>
+<span id="cb86-56"><a href="#cb86-56" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> properties <span class="op">=</span> ee<span class="op">.</span><span class="at">Dictionary</span><span class="op">.</span><span class="fu">fromLists</span>(bands<span class="op">,</span> values)</span>
+<span id="cb86-57"><a href="#cb86-57" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> withClass <span class="op">=</span> properties<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;class&#39;</span><span class="op">,</span> classNames<span class="op">.</span><span class="fu">get</span>(groupNumber))</span>
+<span id="cb86-58"><a href="#cb86-58" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> withClass)</span>
+<span id="cb86-59"><a href="#cb86-59" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb86-60"><a href="#cb86-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-61"><a href="#cb86-61" aria-hidden="true" tabindex="-1"></a><span class="co">// Chart spectral signatures of training data</span></span>
+<span id="cb86-62"><a href="#cb86-62" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> options <span class="op">=</span> {</span>
+<span id="cb86-63"><a href="#cb86-63" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Average Spectral Signatures&#39;</span><span class="op">,</span></span>
+<span id="cb86-64"><a href="#cb86-64" aria-hidden="true" tabindex="-1"></a>  <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Bands&#39;</span>}<span class="op">,</span></span>
+<span id="cb86-65"><a href="#cb86-65" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Reflectance&#39;</span><span class="op">,</span> </span>
+<span id="cb86-66"><a href="#cb86-66" aria-hidden="true" tabindex="-1"></a>    <span class="dt">viewWindowMode</span><span class="op">:</span><span class="st">&#39;explicit&#39;</span><span class="op">,</span></span>
+<span id="cb86-67"><a href="#cb86-67" aria-hidden="true" tabindex="-1"></a>    <span class="dt">viewWindow</span><span class="op">:</span> {</span>
+<span id="cb86-68"><a href="#cb86-68" aria-hidden="true" tabindex="-1"></a>        <span class="dt">max</span><span class="op">:</span><span class="fl">0.6</span><span class="op">,</span></span>
+<span id="cb86-69"><a href="#cb86-69" aria-hidden="true" tabindex="-1"></a>        <span class="dt">min</span><span class="op">:</span><span class="dv">0</span></span>
+<span id="cb86-70"><a href="#cb86-70" aria-hidden="true" tabindex="-1"></a>    }}<span class="op">,</span></span>
+<span id="cb86-71"><a href="#cb86-71" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb86-72"><a href="#cb86-72" aria-hidden="true" tabindex="-1"></a>  <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">4</span><span class="op">,</span></span>
+<span id="cb86-73"><a href="#cb86-73" aria-hidden="true" tabindex="-1"></a>  <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb86-74"><a href="#cb86-74" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;grey&#39;</span>}<span class="op">,</span> </span>
+<span id="cb86-75"><a href="#cb86-75" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;brown&#39;</span>}<span class="op">,</span> </span>
+<span id="cb86-76"><a href="#cb86-76" aria-hidden="true" tabindex="-1"></a>    <span class="dv">2</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span>}<span class="op">,</span> </span>
+<span id="cb86-77"><a href="#cb86-77" aria-hidden="true" tabindex="-1"></a>    <span class="dv">3</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;green&#39;</span>}<span class="op">,</span></span>
+<span id="cb86-78"><a href="#cb86-78" aria-hidden="true" tabindex="-1"></a>}}<span class="op">;</span></span>
+<span id="cb86-79"><a href="#cb86-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-80"><a href="#cb86-80" aria-hidden="true" tabindex="-1"></a><span class="co">// Default band names don&#39;t sort propertly</span></span>
+<span id="cb86-81"><a href="#cb86-81" aria-hidden="true" tabindex="-1"></a><span class="co">// Instead, we can give a dictionary with</span></span>
+<span id="cb86-82"><a href="#cb86-82" aria-hidden="true" tabindex="-1"></a><span class="co">// labels for each band in the X-Axis</span></span>
+<span id="cb86-83"><a href="#cb86-83" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bandDescriptions <span class="op">=</span> {</span>
+<span id="cb86-84"><a href="#cb86-84" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B2&#39;</span><span class="op">:</span> <span class="st">&#39;B02/Blue&#39;</span><span class="op">,</span></span>
+<span id="cb86-85"><a href="#cb86-85" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B3&#39;</span><span class="op">:</span> <span class="st">&#39;B03/Green&#39;</span><span class="op">,</span></span>
+<span id="cb86-86"><a href="#cb86-86" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B4&#39;</span><span class="op">:</span> <span class="st">&#39;B04/Red&#39;</span><span class="op">,</span></span>
+<span id="cb86-87"><a href="#cb86-87" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B8&#39;</span><span class="op">:</span> <span class="st">&#39;B08/NIR&#39;</span><span class="op">,</span></span>
+<span id="cb86-88"><a href="#cb86-88" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B11&#39;</span><span class="op">:</span> <span class="st">&#39;B11/SWIR-1&#39;</span><span class="op">,</span></span>
+<span id="cb86-89"><a href="#cb86-89" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;B12&#39;</span><span class="op">:</span> <span class="st">&#39;B12/SWIR-2&#39;</span></span>
+<span id="cb86-90"><a href="#cb86-90" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb86-91"><a href="#cb86-91" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the chart and set options.</span></span>
+<span id="cb86-92"><a href="#cb86-92" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byProperty</span>({</span>
+<span id="cb86-93"><a href="#cb86-93" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> fc<span class="op">,</span></span>
+<span id="cb86-94"><a href="#cb86-94" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xProperties</span><span class="op">:</span> bandDescriptions<span class="op">,</span></span>
+<span id="cb86-95"><a href="#cb86-95" aria-hidden="true" tabindex="-1"></a>  <span class="dt">seriesProperty</span><span class="op">:</span> <span class="st">&#39;class&#39;</span></span>
+<span id="cb86-96"><a href="#cb86-96" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb86-97"><a href="#cb86-97" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;ScatterChart&#39;</span>)</span>
+<span id="cb86-98"><a href="#cb86-98" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">setOptions</span>(options)<span class="op">;</span></span>
+<span id="cb86-99"><a href="#cb86-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-100"><a href="#cb86-100" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)</span>
+<span id="cb86-101"><a href="#cb86-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-102"><a href="#cb86-102" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classChart <span class="op">=</span> <span class="kw">function</span>(landcover<span class="op">,</span> label<span class="op">,</span> color) {</span>
+<span id="cb86-103"><a href="#cb86-103" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> options <span class="op">=</span> {</span>
+<span id="cb86-104"><a href="#cb86-104" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Spectral Signatures for &#39;</span> <span class="op">+</span> label <span class="op">+</span> <span class="st">&#39; Class&#39;</span><span class="op">,</span></span>
+<span id="cb86-105"><a href="#cb86-105" aria-hidden="true" tabindex="-1"></a>  <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Bands&#39;</span>}<span class="op">,</span></span>
+<span id="cb86-106"><a href="#cb86-106" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Reflectance&#39;</span><span class="op">,</span> </span>
+<span id="cb86-107"><a href="#cb86-107" aria-hidden="true" tabindex="-1"></a>    <span class="dt">viewWindowMode</span><span class="op">:</span><span class="st">&#39;explicit&#39;</span><span class="op">,</span></span>
+<span id="cb86-108"><a href="#cb86-108" aria-hidden="true" tabindex="-1"></a>    <span class="dt">viewWindow</span><span class="op">:</span> {</span>
+<span id="cb86-109"><a href="#cb86-109" aria-hidden="true" tabindex="-1"></a>        <span class="dt">max</span><span class="op">:</span><span class="fl">0.6</span><span class="op">,</span></span>
+<span id="cb86-110"><a href="#cb86-110" aria-hidden="true" tabindex="-1"></a>        <span class="dt">min</span><span class="op">:</span><span class="dv">0</span></span>
+<span id="cb86-111"><a href="#cb86-111" aria-hidden="true" tabindex="-1"></a>    }}<span class="op">,</span></span>
+<span id="cb86-112"><a href="#cb86-112" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb86-113"><a href="#cb86-113" aria-hidden="true" tabindex="-1"></a>  <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">4</span><span class="op">,</span></span>
+<span id="cb86-114"><a href="#cb86-114" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb86-115"><a href="#cb86-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-116"><a href="#cb86-116" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> fc <span class="op">=</span> training<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> landcover))</span>
+<span id="cb86-117"><a href="#cb86-117" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byProperty</span>({</span>
+<span id="cb86-118"><a href="#cb86-118" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> fc<span class="op">,</span></span>
+<span id="cb86-119"><a href="#cb86-119" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xProperties</span><span class="op">:</span> bandDescriptions<span class="op">,</span></span>
+<span id="cb86-120"><a href="#cb86-120" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb86-121"><a href="#cb86-121" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;ScatterChart&#39;</span>)</span>
+<span id="cb86-122"><a href="#cb86-122" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">setOptions</span>(options)<span class="op">;</span></span>
+<span id="cb86-123"><a href="#cb86-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-124"><a href="#cb86-124" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)</span>
+<span id="cb86-125"><a href="#cb86-125" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb86-126"><a href="#cb86-126" aria-hidden="true" tabindex="-1"></a><span class="fu">classChart</span>(<span class="dv">0</span><span class="op">,</span> <span class="st">&#39;Urban&#39;</span>)</span>
+<span id="cb86-127"><a href="#cb86-127" aria-hidden="true" tabindex="-1"></a><span class="fu">classChart</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;Bare&#39;</span>)</span>
+<span id="cb86-128"><a href="#cb86-128" aria-hidden="true" tabindex="-1"></a><span class="fu">classChart</span>(<span class="dv">2</span><span class="op">,</span> <span class="st">&#39;Water&#39;</span>)</span>
+<span id="cb86-129"><a href="#cb86-129" aria-hidden="true" tabindex="-1"></a><span class="fu">classChart</span>(<span class="dv">3</span><span class="op">,</span> <span class="st">&#39;Vegetation&#39;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="images/end_to_end_gee/mean_signatures.png" alt="Mean Signatures for All Classes" width="100%" />
+<p class="caption">
+Mean Signatures for All Classes
+</p>
+</div>
+<div class="figure" style="text-align: center">
+<img src="images/end_to_end_gee/spectral_signatures.png" alt="Spectral Signatures for All Training Points by Class" width="100%" />
+<p class="caption">
+Spectral Signatures for All Training Points by Class
+</p>
+</div>
+</div>
 </div>
 <div id="user-interface-templates" class="section level2">
 <h2>User Interface Templates</h2>
 <div id="adding-a-discrete-legend" class="section level3">
 <h3>Adding a Discrete Legend</h3>
 <p>You may want to add a legend for a classified image to your map visualization in your App. Here’s a code snippet that shows how you can build it using the UI Widgets.</p>
-<div class="sourceCode" id="cb86"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classified <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;users/ujavalgandhi/e2e/bangalore_classified&quot;</span>)</span>
-<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(classified)</span>
-<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span></span>
-<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>  {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
-<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({<span class="dt">style</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span><span class="op">,</span> <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span>}})<span class="op">;</span></span>
-<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> makeRow <span class="op">=</span> <span class="kw">function</span>(color<span class="op">,</span> name) {</span>
-<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> colorBox <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#ffffff&#39;</span><span class="op">,</span></span>
-<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">backgroundColor</span><span class="op">:</span> color<span class="op">,</span></span>
-<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;10px&#39;</span><span class="op">,</span></span>
-<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span><span class="op">,</span></span>
-<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> description <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> name<span class="op">,</span></span>
-<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {</span>
-<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0px 0 4px 6px&#39;</span><span class="op">,</span></span>
-<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span> </span>
-<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [colorBox<span class="op">,</span> description]<span class="op">,</span></span>
-<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">Flow</span>(<span class="st">&#39;horizontal&#39;</span>)}</span>
-<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a>)}<span class="op">;</span></span>
-<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> title <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="st">&#39;Legend&#39;</span><span class="op">,</span></span>
-<span id="cb86-29"><a href="#cb86-29" aria-hidden="true" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {<span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span></span>
-<span id="cb86-30"><a href="#cb86-30" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fontSize</span><span class="op">:</span> <span class="st">&#39;16px&#39;</span><span class="op">,</span></span>
-<span id="cb86-31"><a href="#cb86-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0px 0 4px 0px&#39;</span>}})<span class="op">;</span></span>
-<span id="cb86-32"><a href="#cb86-32" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb86-33"><a href="#cb86-33" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(title)<span class="op">;</span></span>
-<span id="cb86-34"><a href="#cb86-34" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;gray&#39;</span><span class="op">,</span><span class="st">&#39;Built-up&#39;</span>))</span>
-<span id="cb86-35"><a href="#cb86-35" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;brown&#39;</span><span class="op">,</span><span class="st">&#39;Bare Earth&#39;</span>))</span>
-<span id="cb86-36"><a href="#cb86-36" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;blue&#39;</span><span class="op">,</span><span class="st">&#39;Water&#39;</span>))</span>
-<span id="cb86-37"><a href="#cb86-37" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;green&#39;</span><span class="op">,</span><span class="st">&#39;Vegetation&#39;</span>))</span>
-<span id="cb86-38"><a href="#cb86-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-39"><a href="#cb86-39" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(legend)<span class="op">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classified <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;users/ujavalgandhi/e2e/bangalore_classified&quot;</span>)</span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(classified)</span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span></span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a>  {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
+<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({<span class="dt">style</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span><span class="op">,</span> <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span>}})<span class="op">;</span></span>
+<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> makeRow <span class="op">=</span> <span class="kw">function</span>(color<span class="op">,</span> name) {</span>
+<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> colorBox <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#ffffff&#39;</span><span class="op">,</span></span>
+<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">backgroundColor</span><span class="op">:</span> color<span class="op">,</span></span>
+<span id="cb87-12"><a href="#cb87-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;10px&#39;</span><span class="op">,</span></span>
+<span id="cb87-13"><a href="#cb87-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span><span class="op">,</span></span>
+<span id="cb87-14"><a href="#cb87-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb87-15"><a href="#cb87-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb87-16"><a href="#cb87-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> description <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb87-17"><a href="#cb87-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> name<span class="op">,</span></span>
+<span id="cb87-18"><a href="#cb87-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {</span>
+<span id="cb87-19"><a href="#cb87-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0px 0 4px 6px&#39;</span><span class="op">,</span></span>
+<span id="cb87-20"><a href="#cb87-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb87-21"><a href="#cb87-21" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span> </span>
+<span id="cb87-22"><a href="#cb87-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb87-23"><a href="#cb87-23" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [colorBox<span class="op">,</span> description]<span class="op">,</span></span>
+<span id="cb87-24"><a href="#cb87-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">Flow</span>(<span class="st">&#39;horizontal&#39;</span>)}</span>
+<span id="cb87-25"><a href="#cb87-25" aria-hidden="true" tabindex="-1"></a>)}<span class="op">;</span></span>
+<span id="cb87-26"><a href="#cb87-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-27"><a href="#cb87-27" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> title <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb87-28"><a href="#cb87-28" aria-hidden="true" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="st">&#39;Legend&#39;</span><span class="op">,</span></span>
+<span id="cb87-29"><a href="#cb87-29" aria-hidden="true" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {<span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span></span>
+<span id="cb87-30"><a href="#cb87-30" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fontSize</span><span class="op">:</span> <span class="st">&#39;16px&#39;</span><span class="op">,</span></span>
+<span id="cb87-31"><a href="#cb87-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0px 0 4px 0px&#39;</span>}})<span class="op">;</span></span>
+<span id="cb87-32"><a href="#cb87-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-33"><a href="#cb87-33" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(title)<span class="op">;</span></span>
+<span id="cb87-34"><a href="#cb87-34" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;gray&#39;</span><span class="op">,</span><span class="st">&#39;Built-up&#39;</span>))</span>
+<span id="cb87-35"><a href="#cb87-35" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;brown&#39;</span><span class="op">,</span><span class="st">&#39;Bare Earth&#39;</span>))</span>
+<span id="cb87-36"><a href="#cb87-36" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;blue&#39;</span><span class="op">,</span><span class="st">&#39;Water&#39;</span>))</span>
+<span id="cb87-37"><a href="#cb87-37" aria-hidden="true" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;green&#39;</span><span class="op">,</span><span class="st">&#39;Vegetation&#39;</span>))</span>
+<span id="cb87-38"><a href="#cb87-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-39"><a href="#cb87-39" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(legend)<span class="op">;</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/map_legend.png" alt="Creating a Discrete Map Legend" width="100%" />
 <p class="caption">
@@ -3366,65 +3514,65 @@ Creating a Discrete Map Legend
 <div id="adding-a-continous-legend" class="section level3">
 <h3>Adding a Continous Legend</h3>
 <p>If you are displaying a raster layer in your app with a color palette, you can use the following technique to add a colorbar using the snipet below.</p>
-<div class="sourceCode" id="cb87"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)<span class="op">;</span></span>
-<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> admin2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)<span class="op">;</span></span>
-<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bangalore <span class="op">=</span> admin2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM2_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Bangalore Urban&#39;</span>))</span>
-<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> bangalore<span class="op">.</span><span class="fu">geometry</span>()</span>
-<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
-<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span> </span>
-<span id="cb87-12"><a href="#cb87-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-13"><a href="#cb87-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate  Normalized Difference Vegetation Index (NDVI)</span></span>
-<span id="cb87-14"><a href="#cb87-14" aria-hidden="true" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;RED&#39; (B4)</span></span>
-<span id="cb87-15"><a href="#cb87-15" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;ndvi&#39;</span>])<span class="op">;</span></span>
-<span id="cb87-16"><a href="#cb87-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-17"><a href="#cb87-17" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;#d7191c&#39;</span><span class="op">,</span><span class="st">&#39;#fdae61&#39;</span><span class="op">,</span><span class="st">&#39;#ffffbf&#39;</span><span class="op">,</span><span class="st">&#39;#a6d96a&#39;</span><span class="op">,</span><span class="st">&#39;#1a9641&#39;</span>]</span>
-<span id="cb87-18"><a href="#cb87-18" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndviVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="fl">0.5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}</span>
-<span id="cb87-19"><a href="#cb87-19" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">12</span>)</span>
-<span id="cb87-20"><a href="#cb87-20" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(ndvi<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> ndviVis<span class="op">,</span> <span class="st">&#39;ndvi&#39;</span>)</span>
-<span id="cb87-21"><a href="#cb87-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-22"><a href="#cb87-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-23"><a href="#cb87-23" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">createColorBar</span>(titleText<span class="op">,</span> palette<span class="op">,</span> min<span class="op">,</span> max) {</span>
-<span id="cb87-24"><a href="#cb87-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Legend Title</span></span>
-<span id="cb87-25"><a href="#cb87-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> title <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb87-26"><a href="#cb87-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> titleText<span class="op">,</span> </span>
-<span id="cb87-27"><a href="#cb87-27" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span> <span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;center&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>}})<span class="op">;</span></span>
-<span id="cb87-28"><a href="#cb87-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-29"><a href="#cb87-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Colorbar</span></span>
-<span id="cb87-30"><a href="#cb87-30" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Thumbnail</span>({</span>
-<span id="cb87-31"><a href="#cb87-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">image</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelLonLat</span>()<span class="op">.</span><span class="fu">select</span>(<span class="dv">0</span>)<span class="op">,</span></span>
-<span id="cb87-32"><a href="#cb87-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">params</span><span class="op">:</span> {</span>
-<span id="cb87-33"><a href="#cb87-33" aria-hidden="true" tabindex="-1"></a>      <span class="dt">bbox</span><span class="op">:</span> [<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="fl">0.1</span>]<span class="op">,</span></span>
-<span id="cb87-34"><a href="#cb87-34" aria-hidden="true" tabindex="-1"></a>      <span class="dt">dimensions</span><span class="op">:</span> <span class="st">&#39;200x20&#39;</span><span class="op">,</span></span>
-<span id="cb87-35"><a href="#cb87-35" aria-hidden="true" tabindex="-1"></a>      <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;png&#39;</span><span class="op">,</span> </span>
-<span id="cb87-36"><a href="#cb87-36" aria-hidden="true" tabindex="-1"></a>      <span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb87-37"><a href="#cb87-37" aria-hidden="true" tabindex="-1"></a>      <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span></span>
-<span id="cb87-38"><a href="#cb87-38" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span> <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;8px 8px&#39;</span><span class="op">,</span> <span class="dt">maxHeight</span><span class="op">:</span> <span class="st">&#39;40px&#39;</span>}<span class="op">,</span></span>
-<span id="cb87-39"><a href="#cb87-39" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb87-40"><a href="#cb87-40" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb87-41"><a href="#cb87-41" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Legend Labels</span></span>
-<span id="cb87-42"><a href="#cb87-42" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> labels <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb87-43"><a href="#cb87-43" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [</span>
-<span id="cb87-44"><a href="#cb87-44" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>(min<span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 10px&#39;</span><span class="op">,</span><span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;left&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})<span class="op">,</span></span>
-<span id="cb87-45"><a href="#cb87-45" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>((min<span class="op">+</span>max)<span class="op">/</span><span class="dv">2</span><span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 20px&#39;</span><span class="op">,</span> <span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;center&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})<span class="op">,</span></span>
-<span id="cb87-46"><a href="#cb87-46" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>(max<span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 10px&#39;</span><span class="op">,</span><span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;right&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})]<span class="op">,</span></span>
-<span id="cb87-47"><a href="#cb87-47" aria-hidden="true" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">flow</span>(<span class="st">&#39;horizontal&#39;</span>)})<span class="op">;</span></span>
-<span id="cb87-48"><a href="#cb87-48" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb87-49"><a href="#cb87-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Create a panel with all 3 widgets</span></span>
-<span id="cb87-50"><a href="#cb87-50" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> legendPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb87-51"><a href="#cb87-51" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [title<span class="op">,</span> legend<span class="op">,</span> labels]<span class="op">,</span></span>
-<span id="cb87-52"><a href="#cb87-52" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;bottom-center&#39;</span><span class="op">,</span> <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span>}</span>
-<span id="cb87-53"><a href="#cb87-53" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb87-54"><a href="#cb87-54" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> legendPanel</span>
-<span id="cb87-55"><a href="#cb87-55" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb87-56"><a href="#cb87-56" aria-hidden="true" tabindex="-1"></a><span class="co">// Call the function to create a colorbar legend  </span></span>
-<span id="cb87-57"><a href="#cb87-57" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> colorBar <span class="op">=</span> <span class="fu">createColorBar</span>(<span class="st">&#39;NDVI Values&#39;</span><span class="op">,</span> palette<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="fl">0.5</span>)</span>
-<span id="cb87-58"><a href="#cb87-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-59"><a href="#cb87-59" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(colorBar)</span></code></pre></div>
+<div class="sourceCode" id="cb88"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)<span class="op">;</span></span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> admin2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)<span class="op">;</span></span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bangalore <span class="op">=</span> admin2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM2_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Bangalore Urban&#39;</span>))</span>
+<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> bangalore<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
+<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span> </span>
+<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate  Normalized Difference Vegetation Index (NDVI)</span></span>
+<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;RED&#39; (B4)</span></span>
+<span id="cb88-15"><a href="#cb88-15" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;ndvi&#39;</span>])<span class="op">;</span></span>
+<span id="cb88-16"><a href="#cb88-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-17"><a href="#cb88-17" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;#d7191c&#39;</span><span class="op">,</span><span class="st">&#39;#fdae61&#39;</span><span class="op">,</span><span class="st">&#39;#ffffbf&#39;</span><span class="op">,</span><span class="st">&#39;#a6d96a&#39;</span><span class="op">,</span><span class="st">&#39;#1a9641&#39;</span>]</span>
+<span id="cb88-18"><a href="#cb88-18" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ndviVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="fl">0.5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}</span>
+<span id="cb88-19"><a href="#cb88-19" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">12</span>)</span>
+<span id="cb88-20"><a href="#cb88-20" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(ndvi<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> ndviVis<span class="op">,</span> <span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb88-21"><a href="#cb88-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-22"><a href="#cb88-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-23"><a href="#cb88-23" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">createColorBar</span>(titleText<span class="op">,</span> palette<span class="op">,</span> min<span class="op">,</span> max) {</span>
+<span id="cb88-24"><a href="#cb88-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Legend Title</span></span>
+<span id="cb88-25"><a href="#cb88-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> title <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb88-26"><a href="#cb88-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> titleText<span class="op">,</span> </span>
+<span id="cb88-27"><a href="#cb88-27" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span> <span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;center&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>}})<span class="op">;</span></span>
+<span id="cb88-28"><a href="#cb88-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-29"><a href="#cb88-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Colorbar</span></span>
+<span id="cb88-30"><a href="#cb88-30" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Thumbnail</span>({</span>
+<span id="cb88-31"><a href="#cb88-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">image</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelLonLat</span>()<span class="op">.</span><span class="fu">select</span>(<span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb88-32"><a href="#cb88-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">params</span><span class="op">:</span> {</span>
+<span id="cb88-33"><a href="#cb88-33" aria-hidden="true" tabindex="-1"></a>      <span class="dt">bbox</span><span class="op">:</span> [<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="fl">0.1</span>]<span class="op">,</span></span>
+<span id="cb88-34"><a href="#cb88-34" aria-hidden="true" tabindex="-1"></a>      <span class="dt">dimensions</span><span class="op">:</span> <span class="st">&#39;200x20&#39;</span><span class="op">,</span></span>
+<span id="cb88-35"><a href="#cb88-35" aria-hidden="true" tabindex="-1"></a>      <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;png&#39;</span><span class="op">,</span> </span>
+<span id="cb88-36"><a href="#cb88-36" aria-hidden="true" tabindex="-1"></a>      <span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb88-37"><a href="#cb88-37" aria-hidden="true" tabindex="-1"></a>      <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span></span>
+<span id="cb88-38"><a href="#cb88-38" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span> <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;8px 8px&#39;</span><span class="op">,</span> <span class="dt">maxHeight</span><span class="op">:</span> <span class="st">&#39;40px&#39;</span>}<span class="op">,</span></span>
+<span id="cb88-39"><a href="#cb88-39" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb88-40"><a href="#cb88-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb88-41"><a href="#cb88-41" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Legend Labels</span></span>
+<span id="cb88-42"><a href="#cb88-42" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> labels <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb88-43"><a href="#cb88-43" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [</span>
+<span id="cb88-44"><a href="#cb88-44" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>(min<span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 10px&#39;</span><span class="op">,</span><span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;left&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})<span class="op">,</span></span>
+<span id="cb88-45"><a href="#cb88-45" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>((min<span class="op">+</span>max)<span class="op">/</span><span class="dv">2</span><span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 20px&#39;</span><span class="op">,</span> <span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;center&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})<span class="op">,</span></span>
+<span id="cb88-46"><a href="#cb88-46" aria-hidden="true" tabindex="-1"></a>      ui<span class="op">.</span><span class="fu">Label</span>(max<span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;4px 10px&#39;</span><span class="op">,</span><span class="dt">textAlign</span><span class="op">:</span> <span class="st">&#39;right&#39;</span><span class="op">,</span> <span class="dt">stretch</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span>})]<span class="op">,</span></span>
+<span id="cb88-47"><a href="#cb88-47" aria-hidden="true" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">flow</span>(<span class="st">&#39;horizontal&#39;</span>)})<span class="op">;</span></span>
+<span id="cb88-48"><a href="#cb88-48" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb88-49"><a href="#cb88-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Create a panel with all 3 widgets</span></span>
+<span id="cb88-50"><a href="#cb88-50" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> legendPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb88-51"><a href="#cb88-51" aria-hidden="true" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [title<span class="op">,</span> legend<span class="op">,</span> labels]<span class="op">,</span></span>
+<span id="cb88-52"><a href="#cb88-52" aria-hidden="true" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;bottom-center&#39;</span><span class="op">,</span> <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span>}</span>
+<span id="cb88-53"><a href="#cb88-53" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb88-54"><a href="#cb88-54" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> legendPanel</span>
+<span id="cb88-55"><a href="#cb88-55" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb88-56"><a href="#cb88-56" aria-hidden="true" tabindex="-1"></a><span class="co">// Call the function to create a colorbar legend  </span></span>
+<span id="cb88-57"><a href="#cb88-57" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> colorBar <span class="op">=</span> <span class="fu">createColorBar</span>(<span class="st">&#39;NDVI Values&#39;</span><span class="op">,</span> palette<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="fl">0.5</span>)</span>
+<span id="cb88-58"><a href="#cb88-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-59"><a href="#cb88-59" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(colorBar)</span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/colorbar.png" alt="Creating a Continuous Raster Legend" width="100%" />
 <p class="caption">
@@ -3435,49 +3583,49 @@ Creating a Continuous Raster Legend
 <div id="split-panel-app-template" class="section level3">
 <h3>Split Panel App Template</h3>
 <p>A common use-case for Earth Engine Apps is to display 2 images in a split panel app. Below script contains a simple template that you can use to create an interactive split panel app. Here we have 2 map objects - <code>leftMap</code> and <code>rightMap</code>. You can add different images to each of the maps and users will be able to explore them side-by-side. [<a href="https://courses.spatialthoughts.com/images/end_to_end_gee/dust_storm_app.gif" target="_blank">View Animated GIF ↗</a>]</p>
-<div class="sourceCode" id="cb88"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co">// On June 9, 2018 - A massive dust storm hit North India</span></span>
-<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="co">// This example shows before and after imagery from Sentinel-2</span></span>
-<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Display two visualizations of a map.</span></span>
-<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
-<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.47</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">28.41</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
-<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
-<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove UI controls from both maps, but leave zoom control on the left map.</span></span>
-<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">setControlVisibility</span>(<span class="kw">false</span>)<span class="op">;</span></span>
-<span id="cb88-15"><a href="#cb88-15" aria-hidden="true" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">setControlVisibility</span>(<span class="kw">false</span>)<span class="op">;</span></span>
-<span id="cb88-16"><a href="#cb88-16" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">setControlVisibility</span>({<span class="dt">zoomControl</span><span class="op">:</span> <span class="kw">true</span>})<span class="op">;</span></span>
-<span id="cb88-17"><a href="#cb88-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-18"><a href="#cb88-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Link them together.</span></span>
-<span id="cb88-19"><a href="#cb88-19" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
-<span id="cb88-20"><a href="#cb88-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-21"><a href="#cb88-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
-<span id="cb88-22"><a href="#cb88-22" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
-<span id="cb88-23"><a href="#cb88-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
-<span id="cb88-24"><a href="#cb88-24" aria-hidden="true" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
-<span id="cb88-25"><a href="#cb88-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
-<span id="cb88-26"><a href="#cb88-26" aria-hidden="true" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
-<span id="cb88-27"><a href="#cb88-27" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb88-28"><a href="#cb88-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-29"><a href="#cb88-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
-<span id="cb88-30"><a href="#cb88-30" aria-hidden="true" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
-<span id="cb88-31"><a href="#cb88-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-32"><a href="#cb88-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
-<span id="cb88-33"><a href="#cb88-33" aria-hidden="true" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
-<span id="cb88-34"><a href="#cb88-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-35"><a href="#cb88-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-36"><a href="#cb88-36" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgb_vis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3200</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
-<span id="cb88-37"><a href="#cb88-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-38"><a href="#cb88-38" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> preStorm <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2/20180604T052651_20180604T053435_T43RGM&#39;</span>)</span>
-<span id="cb88-39"><a href="#cb88-39" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> postStorm <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2/20180614T052651_20180614T053611_T43RGM&#39;</span>)</span>
-<span id="cb88-40"><a href="#cb88-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb88-41"><a href="#cb88-41" aria-hidden="true" tabindex="-1"></a><span class="co">// Add a RGB Landsat 8 layer to the left map.</span></span>
-<span id="cb88-42"><a href="#cb88-42" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(preStorm<span class="op">,</span> rgb_vis)<span class="op">;</span></span>
-<span id="cb88-43"><a href="#cb88-43" aria-hidden="true" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(postStorm<span class="op">,</span> rgb_vis)<span class="op">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb89"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="co">// On June 9, 2018 - A massive dust storm hit North India</span></span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a><span class="co">// This example shows before and after imagery from Sentinel-2</span></span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Display two visualizations of a map.</span></span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.47</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">28.41</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
+<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb89-12"><a href="#cb89-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-13"><a href="#cb89-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove UI controls from both maps, but leave zoom control on the left map.</span></span>
+<span id="cb89-14"><a href="#cb89-14" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">setControlVisibility</span>(<span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb89-15"><a href="#cb89-15" aria-hidden="true" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">setControlVisibility</span>(<span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb89-16"><a href="#cb89-16" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">setControlVisibility</span>({<span class="dt">zoomControl</span><span class="op">:</span> <span class="kw">true</span>})<span class="op">;</span></span>
+<span id="cb89-17"><a href="#cb89-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-18"><a href="#cb89-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Link them together.</span></span>
+<span id="cb89-19"><a href="#cb89-19" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
+<span id="cb89-20"><a href="#cb89-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-21"><a href="#cb89-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
+<span id="cb89-22"><a href="#cb89-22" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
+<span id="cb89-23"><a href="#cb89-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
+<span id="cb89-24"><a href="#cb89-24" aria-hidden="true" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
+<span id="cb89-25"><a href="#cb89-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
+<span id="cb89-26"><a href="#cb89-26" aria-hidden="true" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb89-27"><a href="#cb89-27" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb89-28"><a href="#cb89-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-29"><a href="#cb89-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
+<span id="cb89-30"><a href="#cb89-30" aria-hidden="true" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
+<span id="cb89-31"><a href="#cb89-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-32"><a href="#cb89-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
+<span id="cb89-33"><a href="#cb89-33" aria-hidden="true" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
+<span id="cb89-34"><a href="#cb89-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-35"><a href="#cb89-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-36"><a href="#cb89-36" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgb_vis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3200</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb89-37"><a href="#cb89-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-38"><a href="#cb89-38" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> preStorm <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2/20180604T052651_20180604T053435_T43RGM&#39;</span>)</span>
+<span id="cb89-39"><a href="#cb89-39" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> postStorm <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;COPERNICUS/S2/20180614T052651_20180614T053611_T43RGM&#39;</span>)</span>
+<span id="cb89-40"><a href="#cb89-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-41"><a href="#cb89-41" aria-hidden="true" tabindex="-1"></a><span class="co">// Add a RGB Landsat 8 layer to the left map.</span></span>
+<span id="cb89-42"><a href="#cb89-42" aria-hidden="true" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(preStorm<span class="op">,</span> rgb_vis)<span class="op">;</span></span>
+<span id="cb89-43"><a href="#cb89-43" aria-hidden="true" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(postStorm<span class="op">,</span> rgb_vis)<span class="op">;</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/dust_storm_app.png" alt="A Split Panel App that displays Pre- and Post-Storm Images" width="100%" />
 <p class="caption">
