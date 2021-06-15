@@ -113,7 +113,7 @@ knitr::include_graphics('images/gdal/condamac2.png')
 knitr::include_graphics('images/gdal/condamac3.png')
 ```
 
-# Running GDAL Commands
+# Running the Commands
 
 All the commands in the exercises below are expected to be run from the *Anaconda Shell* on Windows or a *Terminal* on Mac/Linux. Before running the commands, you must activate the environment where you have installed the gdal library.
 
@@ -127,11 +127,13 @@ cd Downloads\gdal-tools
 
 >> **Note:** Many commandline examples are long and span multiple lines. To improve readability, they are separated by **^** character at the end if each line. This is a line continuation character that enables the shell to interpret it as a single command. If you are running these on Mac or Linux, replace the **^** character with **\\**
 
-# Processing Satellite Data
+# GDAL Tools
+
+## Processing Satellite Data
 
 This section shows how to take satellite data from Landsat-8 and create various derived products.
 
-## Merging individual bands into RGB composite
+### Merging individual bands into RGB composite
 
 ```{bash eval=FALSE}
 gdal_merge -o rgb.tif -separate ^
@@ -145,7 +147,7 @@ gdal_merge -o rgb.tif -separate ^
 knitr::include_graphics('images/gdal/rgb.png')
 ```
 
-## Apply Histogram Stretch and Color Correction
+### Apply Histogram Stretch and Color Correction
 
 ```{bash eval=FALSE}
 gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte ^
@@ -156,7 +158,7 @@ gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte ^
 knitr::include_graphics('images/gdal/rgb_stretch.png')
 ```
 
-## Pan Sharpening
+### Pan Sharpening
 
 ```{bash eval=FALSE}
 gdal_pansharpen ^
@@ -175,7 +177,7 @@ knitr::include_graphics('images/gdal/pansharpen_before.png')
 knitr::include_graphics('images/gdal/pansharpen_after.png')
 ```
 
-## Computing NDVI
+### Computing NDVI
 
 ```{bash eval=FALSE}
 gdalinfo -stats ^
@@ -194,9 +196,9 @@ gdal_calc ^
 knitr::include_graphics('images/gdal/ndvi.png')
 ```
 
-# Georeferencing
+## Georeferencing
 
-## Georeferencing images with corner coordinates
+### Georeferencing images with corner coordinates
 
 You can easily assign bounding box coordinates to any image using the `a_ullr` option.
 
@@ -214,7 +216,7 @@ gdalinfo earth_at_night.tif
 knitr::include_graphics('images/gdal/earth_at_night.png')
 ```
 
-## Georeferencing with GCPs
+### Georeferencing with GCPs
 
 GCP format is [pixel line X Y]. You can use QGIS Georeferencer to obtain the GCPs. Ideally, this process is used with images that have known corner coordinates. In that case, if you know the image dimensions, pixel and line values can be obtained easily.
 
@@ -254,9 +256,9 @@ gdalwarp -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^
 knitr::include_graphics('images/gdal/georeference_gcp.png')
 ```
 
-# Processing of Aerial Imagery
+## Processing of Aerial Imagery
 
-## Create a preview image from source tiles
+### Create a preview image from source tiles
 ```{bash eval=FALSE}
 gdalbuildvrt naip.vrt naip/*.jp2
 gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
@@ -266,7 +268,7 @@ gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg
 knitr::include_graphics('images/gdal/naip_preview.jpg')
 ```
 
-## Select a subset of tiles
+### Select a subset of tiles
 
 ```{bash eval=FALSE}
 gdaltindex index.shp naip/*.jp2
@@ -289,7 +291,7 @@ Edit the file to remove the header line. This creates a text file with source ti
 gdalbuildvrt -input_file_list selected.csv aoi.vrt
 ```
 
-## Mosaic and clip to AOI
+### Mosaic and clip to AOI
 
 ```{bash eval=FALSE}
 gdalwarp -cutline naip/aoi.shp  -crop_to_cutline aoi.vrt aoi.tif ^
@@ -299,6 +301,43 @@ gdalwarp -cutline naip/aoi.shp  -crop_to_cutline aoi.vrt aoi.tif ^
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
+
+# OGR Tools
+
+## Working with CSV files
+
+```
+ogrinfo worldcities.csv
+```
+
+```
+ogrinfo -so -al worldcities.csv
+```
+
+```
+ogrinfo -so -al worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat
+```
+
+```
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat 
+```
+
+```
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326
+```
+
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326  -where "country = 'India'"
+```
+
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'"
+```
+
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'" -nln mycities
+```
+
 
 # Multi Criteria Weighted Overlay Analysis
 
