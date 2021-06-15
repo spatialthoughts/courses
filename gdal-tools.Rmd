@@ -129,6 +129,84 @@ cd Downloads\gdal-tools
 
 # GDAL Tools
 
+## Working with Elevation Data
+
+```
+gdalinfo N27E086.hgt
+```
+
+```
+gdalinfo -stats N27E086.hgt
+```
+
+### Merging Tiles
+
+```
+gdalbuildvrt merged.vrt *.hgt
+```
+
+### Converting Formats
+
+```
+gdal_translate merged.vrt merged.tif
+```
+
+### Compressing Output
+```
+gdal_translate merged.vrt merged.tif -co COMPRESS=DEFLATE
+```
+
+```
+gdal_translate merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES
+```
+
+### Setting NoData Values
+
+```
+gdal_translate merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -a_nodata -9999
+```
+
+### Wrting Cloud-Optimized GeoTiff
+
+```
+gdal_translate -of COG merged.vrt merged.tif -co COMPRESS=DEFLATE
+```
+
+
+### Exercise 1
+
+What is the highest elevation value in the merged raster?
+
+## Analyzing and Visualizing DEMs
+
+### Creating Hillshade
+
+```
+gdaldem hillshade merged.tif hillshade.tif -s 111120
+```
+
+```
+gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined
+```
+
+```
+gdaldem color-relief merged.tif colormap.txt colorized.tif
+```
+
+### Creating Contours
+
+```
+gdal_contour merged.tif contours.gpkg -i 500
+```
+
+```
+gdal_contour merged.tif contours.gpkg -i 500 -a elev
+```
+
+### Exercise 2
+
+Create polygon contours shapefile from `merged.tif` and name the attributes `MINELEV` and `MAXELEV` represented by each polygon.
+
 ## Processing Satellite Data
 
 This section shows how to take satellite data from Landsat-8 and create various derived products.
@@ -183,13 +261,13 @@ knitr::include_graphics('images/gdal/pansharpen_after.png')
 gdalinfo -stats ^
   landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
 ```
-It is important to set nodata value. As seen from the output above, nodata is set to -999.
+It is important to set nodata value. As seen from the output above, nodata is set to -9999.
  
 ```{bash eval=FALSE}
 gdal_calc ^
   -A landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^
   -B landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^
-  --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-999
+  --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-9999
 ```
 
 ```{r echo=FALSE, fig.align='center'}
@@ -329,6 +407,8 @@ ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_
 ```
 ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326  -where "country = 'India'"
 ```
+
+[OGR SQL Syntax](https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect)
 
 ```
 ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'"
