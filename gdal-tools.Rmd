@@ -211,6 +211,30 @@ gdal_contour merged.tif contours.gpkg -i 500 -a elev
 
 Create polygon contours shapefile from `merged.tif` and name the attributes `MINELEV` and `MAXELEV` represented by each polygon.
 
+## Processing of Aerial Imagery
+
+### Create a preview image from source tiles
+```{bash eval=FALSE}
+gdalbuildvrt naip.vrt naip/*.jp2
+gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/naip_preview.jpg')
+```
+
+
+### Mosaic and clip to AOI
+
+```{bash eval=FALSE}
+gdalwarp -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
+  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE -dstnodata 0
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/mosaic.png')
+```
+
 ## Processing Satellite Data
 
 This section shows how to take satellite data from Landsat-8 and create various derived products.
@@ -338,29 +362,34 @@ gdalwarp -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^
 knitr::include_graphics('images/gdal/georeference_gcp.png')
 ```
 
-## Processing of Aerial Imagery
 
-### Create a preview image from source tiles
-```{bash eval=FALSE}
-gdalbuildvrt naip.vrt naip/*.jp2
-gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
+## Downloading WMS Layers
+
+```
+gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms
 ```
 
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/naip_preview.jpg')
+[Global Reservoir and Dam (GRanD), v1](https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01)
+
+
+```
+gdalinfo "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&SRS=EPSG:4326&BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614"
 ```
 
-
-### Mosaic and clip to AOI
-
-```{bash eval=FALSE}
-gdalwarp -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
-  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE -dstnodata 0
+```
+gdal_translate -of WMS "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.xml
 ```
 
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/mosaic.png')
 ```
+gdal_translate -outsize 3600 1800 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.tif
+```
+
+Specify a Bounding Box for India
+
+```
+gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=68.106,6.762,97.412,37.078" reservoirs_india.tif
+```
+
 
 # OGR Tools
 
@@ -468,7 +497,26 @@ ogr2ogr -f GPKG NA.gpkg NA.vrt
 ```
 
 
+## Geoprocessing Spatial Queries
 
+```
+ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
+ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg metro_stations -update -nln metro_stations_reprojected
+```
+
+```
+ogr2ogr melbourne.gpkg melbourne.gpkg -update -nln metro_stations_buffer -sql "select m.station, buffer(m.geom, 500) as geom from metro_stations_reprojected m" -dialect SQLITE 
+```
+
+You can dissolve the buffers using `ST_COLLECT`
+
+```
+ogr2ogr melbourne.gpkg melbourne.gpkg -update -nln metro_stations_buffer_dissolved -sql "select st_union(d.geom) as geom from (select st_collect(buffer(m.geom, 500)) as geom from metro_stations_reprojected m) as d" -dialect SQLITE
+```
+
+```
+ogr2ogr -t_srs EPSG:4326 melbourne.gpkg melbourne.gpkg -update -nln selected -sql "select  b.* from bars_and_pubs_reprojected as b join metro_stations_buffer_dissolved as m on ST_Within( b.geom, m.geom)" -dialect SQLITE 
+```
 
 # Multi Criteria Weighted Overlay Analysis
 
@@ -638,6 +686,8 @@ The script runs the commands both in parallel and serial mode and prints the tim
 python3 batch-parallel.py
 ```
 
+# Resources
+* [GDAL Tips @gdaltips](https://twitter.com/gdaltips) on Twitter
 
 # Data Credits
 
