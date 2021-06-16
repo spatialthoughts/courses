@@ -193,6 +193,10 @@ gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined
 gdaldem color-relief merged.tif colormap.txt colorized.tif
 ```
 
+### Exercise 2
+
+Save the color relief in the PNG format.
+
 ### Creating Contours
 
 ```
@@ -203,7 +207,7 @@ gdal_contour merged.tif contours.gpkg -i 500
 gdal_contour merged.tif contours.gpkg -i 500 -a elev
 ```
 
-### Exercise 2
+### Exercise 3
 
 Create polygon contours shapefile from `merged.tif` and name the attributes `MINELEV` and `MAXELEV` represented by each polygon.
 
@@ -346,33 +350,11 @@ gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg
 knitr::include_graphics('images/gdal/naip_preview.jpg')
 ```
 
-### Select a subset of tiles
-
-```{bash eval=FALSE}
-gdaltindex index.shp naip/*.jp2
-```
-We have the area of interest defined in the ``aoi.shp`` file. We want to select and mosaic only the tiles intersecting our AOI
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/aoiselection.png')
-```
-
-Select and save the intersecting tiles using *Extract by Location* Processing algorithm in QGIS and save the selection as a CSV file ``selection.csv``.
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/aoiselected.png')
-```
-
-Edit the file to remove the header line. This creates a text file with source tile locations that can be supplied to the `gdalbuildvrt` command.
-
-```{bash eval=FALSE}
-gdalbuildvrt -input_file_list selected.csv aoi.vrt
-```
 
 ### Mosaic and clip to AOI
 
 ```{bash eval=FALSE}
-gdalwarp -cutline naip/aoi.shp  -crop_to_cutline aoi.vrt aoi.tif ^
+gdalwarp -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
   -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE -dstnodata 0
 ```
 
@@ -417,6 +399,75 @@ ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POS
 ```
 ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'" -nln mycities
 ```
+
+## Working with Virtual Files
+
+### Read Geonames Files
+
+```
+<OGRVRTDataSource>
+	    <OGRVRTLayer name="CA">
+	        <SrcDataSource>CSV:CA.txt</SrcDataSource>
+	        <SrcLayer>CA</SrcLayer>
+	    </OGRVRTLayer>
+</OGRVRTDataSource>
+```
+
+```
+ogrinfo -al -so CA.vrt
+```
+
+### Applying Filters
+
+```
+<OGRVRTDataSource>
+	    <OGRVRTLayer name="CA">
+	        <SrcDataSource>CSV:CA.txt</SrcDataSource>
+	        <SrcLayer>CA</SrcLayer>
+  	     	<SrcSQL>select * from CA where "FEATCLASS" = 'T'</SrcSQL>
+	    </OGRVRTLayer>
+</OGRVRTDataSource>
+```
+
+```
+ogrinfo -al -so CA.vrt
+```
+
+### Merging Files
+
+```
+
+<OGRVRTDataSource>
+	<OGRVRTUnionLayer name="NA">
+	
+	    <OGRVRTLayer name="CA">
+	        <SrcDataSource>CSV:CA.txt</SrcDataSource>
+	        <SrcLayer>CA</SrcLayer>
+	     	<SrcSQL>select * from CA where "FEATCLASS" = 'T'</SrcSQL>
+	    </OGRVRTLayer>
+	
+	    <OGRVRTLayer name="MX">
+	        <SrcDataSource>CSV:MX.txt</SrcDataSource>
+	        <SrcLayer>MX</SrcLayer>
+	     	<SrcSQL>select * from MX where "FEATCLASS" = 'T'</SrcSQL>
+	    </OGRVRTLayer>
+	
+	    <OGRVRTLayer name="US">
+	        <SrcDataSource>CSV:US.txt</SrcDataSource>
+	        <SrcLayer>US</SrcLayer>
+	     	<SrcSQL>select * from US where "FEATCLASS" = 'T'</SrcSQL>
+	    </OGRVRTLayer>
+	
+    </OGRVRTUnionLayer>	
+</OGRVRTDataSource>
+```
+
+
+```
+ogr2ogr -f GPKG NA.gpkg NA.vrt
+```
+
+
 
 
 # Multi Criteria Weighted Overlay Analysis
