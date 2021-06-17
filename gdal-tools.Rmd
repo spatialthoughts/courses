@@ -129,7 +129,7 @@ cd Downloads\gdal-tools
 
 # GDAL Tools
 
-## Working with Elevation Data
+## Basic Raster Processing
 
 We will start learning the basic GDAL commands by processsing elevation rasters from SRTM. In the *Command Prompt* window, use the `cd` command to change to the `srtm` directory which 4 individual SRTM tiles around the Mt. Everest region.
 
@@ -201,17 +201,49 @@ A new format called [Cloud-Optimized GeoTIFF (COG)](https://www.cogeo.org/) is m
 gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
 ```
 
+## Processing Elevation Data
+
+
+GDAL comes with the `gdaldem` utility that provides a suite of tools for visualizing and analyzing Digital Elevation Models (DEM). The tool supports the following modes
+
+* Hillshade
+* Slope
+* Aspect
+* Color-relief
+* Terrain Ruggedness Index (TRI)
+* Topographic Position Index (TPI)
+* Roughness
+
+Am important point to note is that the x, y and z units of the DEM should be in the same unit. If you are using data in a Geographic CRS (like EPSG:4326) and the height units are meters, you must specify a scale value using `-s` option.
+
 ### Creating Hillshade
+
+Let's create a hillshade map from the merged SRTM dataset. The `hillshade` mode creates an 8-bit raster with a nice shaded relief effect. This dataset has X and Y units in degrees and Z units in meters. So we specify `111120` as the scale value.
 
 ```
 gdaldem hillshade merged.tif hillshade.tif -s 111120
 ```
 
+`gdaldem` supports multiple hillshading algorithms. Apart from the default, it currently includes the following algorithms.
+
+* Combined shading (`-combined`):  A combination of slope and oblique shading.
+* Multidirectional shading (`-multidirectional`): A combination of hillshading illuminated from 225 deg, 270 deg, 315 deg, and 360 deg azimuth.
+
+Let's create a hillshade map with the `-multidirectional` option.
+
 ```
-gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined
+gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -multidirectional
 ```
 
 ### Creating Color Relief
+
+A color relief map is an elevation map where different ranges of elevations are colored differently. The `color-relief` mode can create a color relief map with the colors and elevation ranges supplied in a text file. The format of the text file is `elevation,red,green,blue` values.
+
+Your data package contains a `colormap.txt` file with the following content.
+
+```{bash eval=FALSE, code=readLines('code/gdal/colormap.txt')}
+```
+We can supply this file to create a colorized elevation map.
 
 ```
 gdaldem color-relief merged.tif colormap.txt colorized.tif
@@ -235,7 +267,7 @@ gdal_contour merged.tif contours.gpkg -i 500 -a elev
 
 Create polygon contours shapefile from `merged.tif` and name the attributes `MINELEV` and `MAXELEV` represented by each polygon.
 
-## Processing of Aerial Imagery
+## Processing Aerial Imagery
 
 ### Create a preview image from source tiles
 ```{bash eval=FALSE}
@@ -259,7 +291,7 @@ gdalwarp -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
 
-## Processing Satellite Data
+## Processing Satellite Imagery
 
 This section shows how to take satellite data from Landsat-8 and create various derived products.
 
@@ -326,6 +358,34 @@ gdal_calc ^
 knitr::include_graphics('images/gdal/ndvi.png')
 ```
 
+
+## Processing WMS Layers
+
+```
+gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms
+```
+
+[Global Reservoir and Dam (GRanD), v1](https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01)
+
+
+```
+gdalinfo "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&SRS=EPSG:4326&BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614"
+```
+
+```
+gdal_translate -of WMS "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.xml
+```
+
+```
+gdal_translate -outsize 3600 1800 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.tif
+```
+
+Specify a Bounding Box for India
+
+```
+gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=68.106,6.762,97.412,37.078" reservoirs_india.tif
+```
+
 ## Georeferencing
 
 ### Georeferencing images with corner coordinates
@@ -387,34 +447,6 @@ knitr::include_graphics('images/gdal/georeference_gcp.png')
 ```
 
 
-## Downloading WMS Layers
-
-```
-gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms
-```
-
-[Global Reservoir and Dam (GRanD), v1](https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01)
-
-
-```
-gdalinfo "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&SRS=EPSG:4326&BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614"
-```
-
-```
-gdal_translate -of WMS "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.xml
-```
-
-```
-gdal_translate -outsize 3600 1800 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.tif
-```
-
-Specify a Bounding Box for India
-
-```
-gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=68.106,6.762,97.412,37.078" reservoirs_india.tif
-```
-
-
 # OGR Tools
 
 ## Working with CSV files
@@ -453,7 +485,7 @@ ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POS
 ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'" -nln mycities
 ```
 
-## Working with Multiple Files
+## Working with Multiple Layers
 
 ### Read Geonames Files
 
@@ -710,8 +742,29 @@ The script runs the commands both in parallel and serial mode and prints the tim
 python3 batch-parallel.py
 ```
 
+# Supplement
+
+## Combined Hillsahde and Color-Relief
+
+If you want to merge hillshade and color-relief to create a colored shaded relief map, you can use use `gdal_calc.py` to create do gamma and overlay calculations to combine the 2 rasters. [^1]
+
+[^1]: Code reference https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal
+
+```
+gdal_calc.py -A hillshade.tif --outfile=gamma_hillshade.tif \
+  --calc="uint8(((A / 255.)**(1/0.5)) * 255)"
+```
+
+```
+gdal_calc.py -A gamma_hillshade.tif -B colorized.tif --allBands=B \
+--calc="uint8( ( \
+                 2 * (A/255.)*(B/255.)*(A<128) + \
+                 ( 1 - 2 * (1-(A/255.))*(1-(B/255.)) ) * (A>=128) \
+               ) * 255 )" --outfile=colorized_hillshade.tif
+```               
+               
 # Resources
-* [GDAL Tips @gdaltips](https://twitter.com/gdaltips) on Twitter
+* [GDAL Tips](https://twitter.com/gdaltips) `@gdaltips` on Twitter
 
 # Data Credits
 

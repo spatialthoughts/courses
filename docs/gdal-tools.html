@@ -402,7 +402,7 @@ $(document).ready(function () {
 <li><a href="#running-the-commands">Running the Commands</a></li>
 <li><a href="#gdal-tools">GDAL Tools</a>
 <ul>
-<li><a href="#working-with-elevation-data">Working with Elevation Data</a>
+<li><a href="#basic-raster-processing">Basic Raster Processing</a>
 <ul>
 <li><a href="#merging-tiles">Merging Tiles</a></li>
 <li><a href="#exercise-1">Exercise 1</a></li>
@@ -410,35 +410,38 @@ $(document).ready(function () {
 <li><a href="#compressing-output">Compressing Output</a></li>
 <li><a href="#setting-nodata-values">Setting NoData Values</a></li>
 <li><a href="#wrting-cloud-optimized-geotiff-cog">Wrting Cloud-Optimized GeoTIFF (COG)</a></li>
+</ul></li>
+<li><a href="#processing-elevation-data">Processing Elevation Data</a>
+<ul>
 <li><a href="#creating-hillshade">Creating Hillshade</a></li>
 <li><a href="#creating-color-relief">Creating Color Relief</a></li>
 <li><a href="#exercise-2">Exercise 2</a></li>
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#exercise-3">Exercise 3</a></li>
 </ul></li>
-<li><a href="#processing-of-aerial-imagery">Processing of Aerial Imagery</a>
+<li><a href="#processing-aerial-imagery">Processing Aerial Imagery</a>
 <ul>
 <li><a href="#create-a-preview-image-from-source-tiles">Create a preview image from source tiles</a></li>
 <li><a href="#mosaic-and-clip-to-aoi">Mosaic and clip to AOI</a></li>
 </ul></li>
-<li><a href="#processing-satellite-data">Processing Satellite Data</a>
+<li><a href="#processing-satellite-imagery">Processing Satellite Imagery</a>
 <ul>
 <li><a href="#merging-individual-bands-into-rgb-composite">Merging individual bands into RGB composite</a></li>
 <li><a href="#apply-histogram-stretch-and-color-correction">Apply Histogram Stretch and Color Correction</a></li>
 <li><a href="#pan-sharpening">Pan Sharpening</a></li>
 <li><a href="#raster-algebra">Raster Algebra</a></li>
 </ul></li>
+<li><a href="#processing-wms-layers">Processing WMS Layers</a></li>
 <li><a href="#georeferencing">Georeferencing</a>
 <ul>
 <li><a href="#georeferencing-images-with-corner-coordinates">Georeferencing images with corner coordinates</a></li>
 <li><a href="#georeferencing-with-gcps">Georeferencing with GCPs</a></li>
 </ul></li>
-<li><a href="#downloading-wms-layers">Downloading WMS Layers</a></li>
 </ul></li>
 <li><a href="#ogr-tools">OGR Tools</a>
 <ul>
 <li><a href="#working-with-csv-files">Working with CSV files</a></li>
-<li><a href="#working-with-multiple-files">Working with Multiple Files</a>
+<li><a href="#working-with-multiple-layers">Working with Multiple Layers</a>
 <ul>
 <li><a href="#read-geonames-files">Read Geonames Files</a></li>
 <li><a href="#applying-filters">Applying Filters</a></li>
@@ -454,6 +457,10 @@ $(document).ready(function () {
 <li><a href="#overlay-analysis">Overlay analysis</a></li>
 </ul></li>
 <li><a href="#running-commands-in-batch">Running commands in batch</a></li>
+<li><a href="#supplement">Supplement</a>
+<ul>
+<li><a href="#combined-hillsahde-and-color-relief">Combined Hillsahde and Color-Relief</a></li>
+</ul></li>
 <li><a href="#resources">Resources</a></li>
 <li><a href="#data-credits">Data Credits</a></li>
 <li><a href="#license">License</a></li>
@@ -535,8 +542,8 @@ conda install -c conda-forge gdal</code></pre>
 </div>
 <div id="gdal-tools" class="section level1">
 <h1>GDAL Tools</h1>
-<div id="working-with-elevation-data" class="section level2">
-<h2>Working with Elevation Data</h2>
+<div id="basic-raster-processing" class="section level2">
+<h2>Basic Raster Processing</h2>
 <p>We will start learning the basic GDAL commands by processsing elevation rasters from SRTM. In the <em>Command Prompt</em> window, use the <code>cd</code> command to change to the <code>srtm</code> directory which 4 individual SRTM tiles around the Mt. Everest region.</p>
 <pre><code>cd srtm</code></pre>
 <p>Use the <code>gdalinfo</code> command to check the information about a single image.</p>
@@ -576,13 +583,45 @@ conda install -c conda-forge gdal</code></pre>
 <p>A new format called <a href="https://www.cogeo.org/">Cloud-Optimized GeoTIFF (COG)</a> is making access to such vast amount of imagery easier to access and analyze. A <em>Cloud-optimized</em> GeoTIFF is behaves just like a regular GeoTIFF imagery, but instead of downloading the entire image locally, you are able to access <em>portions</em> of imagery hosted on a cloud server streamed to clients like QGIS. This makes is very efficient to access this data and even analyze it - without downloading large files. GDAL makes it very easy to create COG files by specifying the <code>-of COG</code> option.</p>
 <pre><code>gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999</code></pre>
 </div>
+</div>
+<div id="processing-elevation-data" class="section level2">
+<h2>Processing Elevation Data</h2>
+<p>GDAL comes with the <code>gdaldem</code> utility that provides a suite of tools for visualizing and analyzing Digital Elevation Models (DEM). The tool supports the following modes</p>
+<ul>
+<li>Hillshade</li>
+<li>Slope</li>
+<li>Aspect</li>
+<li>Color-relief</li>
+<li>Terrain Ruggedness Index (TRI)</li>
+<li>Topographic Position Index (TPI)</li>
+<li>Roughness</li>
+</ul>
+<p>Am important point to note is that the x, y and z units of the DEM should be in the same unit. If you are using data in a Geographic CRS (like EPSG:4326) and the height units are meters, you must specify a scale value using <code>-s</code> option.</p>
 <div id="creating-hillshade" class="section level3">
 <h3>Creating Hillshade</h3>
+<p>Let’s create a hillshade map from the merged SRTM dataset. The <code>hillshade</code> mode creates an 8-bit raster with a nice shaded relief effect. This dataset has X and Y units in degrees and Z units in meters. So we specify <code>111120</code> as the scale value.</p>
 <pre><code>gdaldem hillshade merged.tif hillshade.tif -s 111120</code></pre>
-<pre><code>gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined</code></pre>
+<p><code>gdaldem</code> supports multiple hillshading algorithms. Apart from the default, it currently includes the following algorithms.</p>
+<ul>
+<li>Combined shading (<code>-combined</code>): A combination of slope and oblique shading.</li>
+<li>Multidirectional shading (<code>-multidirectional</code>): A combination of hillshading illuminated from 225 deg, 270 deg, 315 deg, and 360 deg azimuth.</li>
+</ul>
+<p>Let’s create a hillshade map with the <code>-multidirectional</code> option.</p>
+<pre><code>gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -multidirectional</code></pre>
 </div>
 <div id="creating-color-relief" class="section level3">
 <h3>Creating Color Relief</h3>
+<p>A color relief map is an elevation map where different ranges of elevations are colored differently. The <code>color-relief</code> mode can create a color relief map with the colors and elevation ranges supplied in a text file. The format of the text file is <code>elevation,red,green,blue</code> values.</p>
+<p>Your data package contains a <code>colormap.txt</code> file with the following content.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">1000</span>,101,146,82</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">1500</span>,190,202,130</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="ex">2000</span>,241,225,145</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">2500</span>,244,200,126</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="ex">3000</span>,197,147,117</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="ex">4000</span>,204,169,170</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="ex">5000</span>,251,238,253</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="ex">6000</span>,255,255,255</span></code></pre></div>
+<p>We can supply this file to create a colorized elevation map.</p>
 <pre><code>gdaldem color-relief merged.tif colormap.txt colorized.tif</code></pre>
 </div>
 <div id="exercise-2" class="section level3">
@@ -599,74 +638,84 @@ conda install -c conda-forge gdal</code></pre>
 <p>Create polygon contours shapefile from <code>merged.tif</code> and name the attributes <code>MINELEV</code> and <code>MAXELEV</code> represented by each polygon.</p>
 </div>
 </div>
-<div id="processing-of-aerial-imagery" class="section level2">
-<h2>Processing of Aerial Imagery</h2>
+<div id="processing-aerial-imagery" class="section level2">
+<h2>Processing Aerial Imagery</h2>
 <div id="create-a-preview-image-from-source-tiles" class="section level3">
 <h3>Create a preview image from source tiles</h3>
-<div class="sourceCode" id="cb20"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalbuildvrt</span> naip.vrt naip/*.jp2</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg </span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalbuildvrt</span> naip.vrt naip/*.jp2</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg </span></code></pre></div>
 <p><img src="images/gdal/naip_preview.jpg" style="display: block; margin: auto;" /></p>
 </div>
 <div id="mosaic-and-clip-to-aoi" class="section level3">
 <h3>Mosaic and clip to AOI</h3>
-<div class="sourceCode" id="cb21"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE -dstnodata 0</span></code></pre></div>
+<div class="sourceCode" id="cb22"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -cutline naip/aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE -dstnodata 0</span></code></pre></div>
 <p><img src="images/gdal/mosaic.png" style="display: block; margin: auto;" /></p>
 </div>
 </div>
-<div id="processing-satellite-data" class="section level2">
-<h2>Processing Satellite Data</h2>
+<div id="processing-satellite-imagery" class="section level2">
+<h2>Processing Satellite Imagery</h2>
 <p>This section shows how to take satellite data from Landsat-8 and create various derived products.</p>
 <div id="merging-individual-bands-into-rgb-composite" class="section level3">
 <h3>Merging individual bands into RGB composite</h3>
-<div class="sourceCode" id="cb22"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_merge</span> -o rgb.tif -separate ^</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF</span> ^</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.TIF</span> ^</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.TIF</span></span></code></pre></div>
+<div class="sourceCode" id="cb23"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_merge</span> -o rgb.tif -separate ^</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF</span> ^</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.TIF</span> ^</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.TIF</span></span></code></pre></div>
 <p><img src="images/gdal/rgb.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="apply-histogram-stretch-and-color-correction" class="section level3">
 <h3>Apply Histogram Stretch and Color Correction</h3>
-<div class="sourceCode" id="cb23"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -scale 0 0.3 0 255 -exponent 0.5 -ot Byte ^</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">rgb.tif</span> rgb_stretch.tif</span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -scale 0 0.3 0 255 -exponent 0.5 -ot Byte ^</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">rgb.tif</span> rgb_stretch.tif</span></code></pre></div>
 <p><img src="images/gdal/rgb_stretch.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="pan-sharpening" class="section level3">
 <h3>Pan Sharpening</h3>
-<div class="sourceCode" id="cb24"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_pansharpen</span> ^</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF</span> ^</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">rgb.tif</span> pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 ^</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pansharpened.tif</span> pansharpened_stretch.tif</span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_pansharpen</span> ^</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF</span> ^</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">rgb.tif</span> pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 ^</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pansharpened.tif</span> pansharpened_stretch.tif</span></code></pre></div>
 <p><img src="images/gdal/pansharpen_before.png" style="display: block; margin: auto;" /></p>
 <p><img src="images/gdal/pansharpen_after.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="raster-algebra" class="section level3">
 <h3>Raster Algebra</h3>
-<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> -stats ^</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF</span></span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> -stats ^</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF</span></span></code></pre></div>
 <p>It is important to set nodata value. As seen from the output above, nodata is set to -9999.</p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> ^</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-A</span> landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-B</span> landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> ndvi.tif --calc=<span class="st">&quot;(A-B)/(A+B)&quot;</span> --NoDataValue=-9999</span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> ^</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-A</span> landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-B</span> landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> ndvi.tif --calc=<span class="st">&quot;(A-B)/(A+B)&quot;</span> --NoDataValue=-9999</span></code></pre></div>
 <p><img src="images/gdal/ndvi.png" style="display: block; margin: auto;" /></p>
 </div>
+</div>
+<div id="processing-wms-layers" class="section level2">
+<h2>Processing WMS Layers</h2>
+<pre><code>gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms</code></pre>
+<p><a href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global Reservoir and Dam (GRanD), v1</a></p>
+<pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&amp;SRS=EPSG:4326&amp;BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614&quot;</code></pre>
+<pre><code>gdal_translate -of WMS &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.xml</code></pre>
+<pre><code>gdal_translate -outsize 3600 1800 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.tif</code></pre>
+<p>Specify a Bounding Box for India</p>
+<pre><code>gdal_translate -outsize 10000 10000 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=68.106,6.762,97.412,37.078&quot; reservoirs_india.tif</code></pre>
 </div>
 <div id="georeferencing" class="section level2">
 <h2>Georeferencing</h2>
 <div id="georeferencing-images-with-corner-coordinates" class="section level3">
 <h3>Georeferencing images with corner coordinates</h3>
 <p>You can easily assign bounding box coordinates to any image using the <code>a_ullr</code> option.</p>
-<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.jpg</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -a_ullr -180 90 180 -90 -a_srs EPSG:4326 ^</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">earth_at_night.jpg</span> earth_at_night.tif ^</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.tif</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.jpg</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -a_ullr -180 90 180 -90 -a_srs EPSG:4326 ^</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">earth_at_night.jpg</span> earth_at_night.tif ^</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.tif</span></code></pre></div>
 <p><img src="images/gdal/earth_at_night.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="georeferencing-with-gcps" class="section level3">
@@ -675,32 +724,22 @@ conda install -c conda-forge gdal</code></pre>
 <p>Let’s georeference this old scanned map.</p>
 <p><img src="images/gdal/scanned_map.png" style="display: block; margin: auto;" /></p>
 <p>First store the GCPs in the file</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> ^</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 418 893 70 15 ^</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 380 2432 70 5 ^</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3453 2434  90 5 ^</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3407 895 90 15 ^</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 2662 911 85 15 ^</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1870_southern-india.jpg</span> india-with-gcp.tif</span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> ^</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 418 893 70 15 ^</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 380 2432 70 5 ^</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3453 2434  90 5 ^</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3407 895 90 15 ^</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 2662 911 85 15 ^</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1870_southern-india.jpg</span> india-with-gcp.tif</span></code></pre></div>
 <p>Next, reproject the image using the GCPs</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -r bilinear -tr 0.005 0.005 -overwrite ^</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif</span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -r bilinear -tr 0.005 0.005 -overwrite ^</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif</span></code></pre></div>
 <p>Try a Thin-plate-spline transformation with some compression options.</p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif ^</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR</span></code></pre></div>
+<div class="sourceCode" id="cb36"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif ^</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR</span></code></pre></div>
 <p><img src="images/gdal/georeference_gcp.png" style="display: block; margin: auto;" /></p>
 </div>
-</div>
-<div id="downloading-wms-layers" class="section level2">
-<h2>Downloading WMS Layers</h2>
-<pre><code>gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms</code></pre>
-<p><a href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global Reservoir and Dam (GRanD), v1</a></p>
-<pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&amp;SRS=EPSG:4326&amp;BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614&quot;</code></pre>
-<pre><code>gdal_translate -of WMS &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.xml</code></pre>
-<pre><code>gdal_translate -outsize 3600 1800 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.tif</code></pre>
-<p>Specify a Bounding Box for India</p>
-<pre><code>gdal_translate -outsize 10000 10000 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=68.106,6.762,97.412,37.078&quot; reservoirs_india.tif</code></pre>
 </div>
 </div>
 <div id="ogr-tools" class="section level1">
@@ -717,8 +756,8 @@ conda install -c conda-forge gdal</code></pre>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql &quot;SELECT city, country, CAST(population AS integer) as population from worldcities where country = &#39;India&#39;&quot;</code></pre>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql &quot;SELECT city, country, CAST(population AS integer) as population from worldcities where country = &#39;India&#39;&quot; -nln mycities</code></pre>
 </div>
-<div id="working-with-multiple-files" class="section level2">
-<h2>Working with Multiple Files</h2>
+<div id="working-with-multiple-layers" class="section level2">
+<h2>Working with Multiple Layers</h2>
 <div id="read-geonames-files" class="section level3">
 <h3>Read Geonames Files</h3>
 <pre><code>&lt;OGRVRTDataSource&gt;
@@ -792,37 +831,37 @@ ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg metro_stations -update -n
 <div id="rasterize-vector-layers" class="section level2">
 <h2>Rasterize vector layers</h2>
 <p>For overlay analysis, all rasters must be of the same extent. So we first find the extent of the dataset that we can use while rasterizing.</p>
-<div class="sourceCode" id="cb54"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ogrinfo</span> -so osm/assam.gpkg boundary</span></code></pre></div>
-<div class="sourceCode" id="cb55"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l roads roads.tif</span></code></pre></div>
-<p><img src="images/gdal/roads_raster.png" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ogrinfo</span> -so osm/assam.gpkg boundary</span></code></pre></div>
 <div class="sourceCode" id="cb56"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
-<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l boundary boundary.tif</span></code></pre></div>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l roads roads.tif</span></code></pre></div>
+<p><img src="images/gdal/roads_raster.png" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l boundary boundary.tif</span></code></pre></div>
 <p>Use <code>-i</code> for inverse rasterization. We want to rasterize ‘un-protected’ areas</p>
-<div class="sourceCode" id="cb57"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -i -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l protected_regions protected_regions.tif</span></code></pre></div>
+<div class="sourceCode" id="cb58"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -i -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l protected_regions protected_regions.tif</span></code></pre></div>
 <p>We need a water layer, but the source data has a polygon and a polyline water features layer. We create 2 rasters and then add them to create a single water features raster.</p>
-<div class="sourceCode" id="cb58"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l water_polygons water_polygons.tif</span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
-<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l water_polylines water_polylines.tif</span>
-<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_polygons.tif -B water_polylines.tif ^</span>
-<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> water_add.tif --calc=<span class="st">&quot;A+B&quot;</span></span>
-<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_add.tif --outfile water.tif ^</span>
-<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;A&gt;0&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb59"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l water_polygons water_polygons.tif</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">osm/assam.gpkg</span> -l water_polylines water_polylines.tif</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_polygons.tif -B water_polylines.tif ^</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> water_add.tif --calc=<span class="st">&quot;A+B&quot;</span></span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_add.tif --outfile water.tif ^</span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;A&gt;0&quot;</span></span></code></pre></div>
 <p><img src="images/gdal/water_raster.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="generate-proximity-euclidean-distance-rasters" class="section level2">
 <h2>Generate proximity (Euclidean distance) rasters</h2>
-<div class="sourceCode" id="cb59"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity</span> roads.tif roads_proximity.tif ^</span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-ot</span> Int16 -distunits GEO</span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity</span> water.tif water_proximity.tif ^</span>
-<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-ot</span> Int16 -distunits GEO</span></code></pre></div>
+<div class="sourceCode" id="cb60"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity</span> roads.tif roads_proximity.tif ^</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-ot</span> Int16 -distunits GEO</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity</span> water.tif water_proximity.tif ^</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-ot</span> Int16 -distunits GEO</span></code></pre></div>
 <p><img src="images/gdal/roads_proximity.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="re-classify-raster-values" class="section level2">
@@ -831,85 +870,99 @@ ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg metro_stations -update -n
 <p>0-1000m –&gt; 100</p>
 <p>1000-5000m –&gt; 50</p>
 <p>&gt;5000m –&gt; 10</p>
-<div class="sourceCode" id="cb60"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A roads_proximity.tif --outfile roads_class.tif ^</span>
-<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;100*(A&lt;=1000) + 50*(A&gt;1000)*(A&lt;=5000) + 10*(A&gt;5000)&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb61"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A roads_proximity.tif --outfile roads_class.tif ^</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;100*(A&lt;=1000) + 50*(A&gt;1000)*(A&lt;=5000) + 10*(A&gt;5000)&quot;</span></span></code></pre></div>
 <p><img src="images/gdal/roads_class.png" style="display: block; margin: auto;" /></p>
 <p><strong>Water</strong> Give lower score to nearer pixels</p>
 <p>0-1000m –&gt; 10</p>
 <p>1000 -5000m —&gt; 50</p>
 <p>&gt;5000m –&gt; 100</p>
-<div class="sourceCode" id="cb61"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_proximity.tif --outfile water_class.tif ^</span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;100*(A&gt;5000) + 50*(A&gt;1000)*(A&lt;=5000) + 10*(A&lt;1000)&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb62"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> -A water_proximity.tif --outfile water_class.tif ^</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--calc</span>=<span class="st">&quot;100*(A&gt;5000) + 50*(A&gt;1000)*(A&lt;=5000) + 10*(A&lt;1000)&quot;</span></span></code></pre></div>
 <p><img src="images/gdal/water_class.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="overlay-analysis" class="section level2">
 <h2>Overlay analysis</h2>
 <p>Roads and Water have a range of values, but protected areas are either 0 or 1. So we combine these together accordingly.</p>
-<div class="sourceCode" id="cb62"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> ^</span>
-<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-A</span> roads_class.tif -B water_class.tif -C protected_regions.tif -D boundary.tif ^</span>
-<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> suitability.tif --calc=<span class="st">&quot;(A + B)*(C&gt;0)*D&quot;</span> --NoDataValue=0</span></code></pre></div>
+<div class="sourceCode" id="cb63"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc</span> ^</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-A</span> roads_class.tif -B water_class.tif -C protected_regions.tif -D boundary.tif ^</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--outfile</span> suitability.tif --calc=<span class="st">&quot;(A + B)*(C&gt;0)*D&quot;</span> --NoDataValue=0</span></code></pre></div>
 <p>Smooth the output</p>
-<div class="sourceCode" id="cb63"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -r cubicspline -tr 60 60 -dstnodata 0 ^</span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">suitability.tif</span> suitability_final.tif</span></code></pre></div>
+<div class="sourceCode" id="cb64"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -r cubicspline -tr 60 60 -dstnodata 0 ^</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">suitability.tif</span> suitability_final.tif</span></code></pre></div>
 <p><img src="images/gdal/suitability.png" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="running-commands-in-batch" class="section level1">
 <h1>Running commands in batch</h1>
 <p>You can run the GDAL/OGR commands in a loop using Python. Open OSGeo4W Shell and type the following to set the correct system paths</p>
-<div class="sourceCode" id="cb64"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="ex">py3_env</span></span></code></pre></div>
+<div class="sourceCode" id="cb65"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="ex">py3_env</span></span></code></pre></div>
 <p>Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.</p>
-<div class="sourceCode" id="cb65"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of GTiff -co COMPRESS=JPEG <span class="dt">{input}</span> <span class="dt">{output}</span></span></code></pre></div>
+<div class="sourceCode" id="cb66"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of GTiff -co COMPRESS=JPEG <span class="dt">{input}</span> <span class="dt">{output}</span></span></code></pre></div>
 <p>But it would be a lot of manual effort if you want to run the commands on hundreds of input files. Here’s where a simple python script can help you automate running the commands in a batch. The data directory contains a file called <code>batch.py</code> with the following python code.</p>
-<div class="sourceCode" id="cb66"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
-<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb66-10"><a href="#cb66-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb66-11"><a href="#cb66-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<div class="sourceCode" id="cb67"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
 <p>In OsGeo4W shell, run the following command to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
-<div class="sourceCode" id="cb67"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch.py</span></code></pre></div>
+<div class="sourceCode" id="cb68"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch.py</span></code></pre></div>
 <p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
-<div class="sourceCode" id="cb68"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
-<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-7"><a href="#cb68-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb68-8"><a href="#cb68-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-9"><a href="#cb68-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
-<span id="cb68-10"><a href="#cb68-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb68-11"><a href="#cb68-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb68-12"><a href="#cb68-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb68-13"><a href="#cb68-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb68-14"><a href="#cb68-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb68-15"><a href="#cb68-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb68-16"><a href="#cb68-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-17"><a href="#cb68-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb68-18"><a href="#cb68-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb68-19"><a href="#cb68-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb68-20"><a href="#cb68-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb68-21"><a href="#cb68-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb68-22"><a href="#cb68-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb68-23"><a href="#cb68-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb68-24"><a href="#cb68-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb68-25"><a href="#cb68-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb68-26"><a href="#cb68-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb68-27"><a href="#cb68-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb68-28"><a href="#cb68-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<div class="sourceCode" id="cb69"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
+<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
+<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
+<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
+<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
+<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb69-28"><a href="#cb69-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
-<div class="sourceCode" id="cb69"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch-parallel.py</span></code></pre></div>
+<div class="sourceCode" id="cb70"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch-parallel.py</span></code></pre></div>
+</div>
+<div id="supplement" class="section level1">
+<h1>Supplement</h1>
+<div id="combined-hillsahde-and-color-relief" class="section level2">
+<h2>Combined Hillsahde and Color-Relief</h2>
+<p>If you want to merge hillshade and color-relief to create a colored shaded relief map, you can use use <code>gdal_calc.py</code> to create do gamma and overlay calculations to combine the 2 rasters. <a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<pre><code>gdal_calc.py -A hillshade.tif --outfile=gamma_hillshade.tif \
+  --calc=&quot;uint8(((A / 255.)**(1/0.5)) * 255)&quot;</code></pre>
+<pre><code>gdal_calc.py -A gamma_hillshade.tif -B colorized.tif --allBands=B \
+--calc=&quot;uint8( ( \
+                 2 * (A/255.)*(B/255.)*(A&lt;128) + \
+                 ( 1 - 2 * (1-(A/255.))*(1-(B/255.)) ) * (A&gt;=128) \
+               ) * 255 )&quot; --outfile=colorized_hillshade.tif</code></pre>
+</div>
 </div>
 <div id="resources" class="section level1">
 <h1>Resources</h1>
 <ul>
-<li><span class="citation">[GDAL Tips @gdaltips]</span>(<a href="https://twitter.com/gdaltips" class="uri">https://twitter.com/gdaltips</a>) on Twitter</li>
+<li><a href="https://twitter.com/gdaltips">GDAL Tips</a> <code>@gdaltips</code> on Twitter</li>
 </ul>
 </div>
 <div id="data-credits" class="section level1">
@@ -928,6 +981,12 @@ ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg metro_stations -update -n
 <p>© 2020 Ujaval Gandhi <a href="http://spatialthoughts.com">www.spatialthoughts.com</a></p>
 <hr />
 <p><strong>This course is offered as an instructor-led online class. Visit <a href="https://spatialthoughts.com/events/">Spatial Thoughts</a> to know details of upcoming sessions.</strong></p>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Code reference <a href="https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal" class="uri">https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal</a><a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
 </div>
 
 <div id="disqus_thread" class="standardPadding"></div>
