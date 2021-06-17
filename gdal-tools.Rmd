@@ -168,27 +168,38 @@ gdal_translate -of GTiff merged.vrt merged.tif
 ```
 
 ### Compressing Output
+
+The default output GeoTIFF file is uncompressed - meaning each pixel's value is stored on the disk without any further processing. For large rasters, this can consume a lot of disk space. A smarter approach is to use a lossless compression algorithm to reduce the size of the raster while maintaining full fidelity of the original data. GDAL supports many compression algorithm out-of-the-box and can be specified with GDAL commands using the `-co` option. The most popular loss-less compression algorithms are **DEFLATE**, **LZW** and **PACKBITS**. We can try the `DEFLATE` algorithm on our dataset.
+
 ```
 gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE
 ```
 
+The uncompressed filesize was **99 MB**. After applying the  *DEFLATE* compression, the file size reduced to **72MB**. We can further reduce the file size by specifying additional options. The `PREDICTOR` option helps compress data better when the neighboring values are correlated. For elevation data, this is definitely the case. The `TILED` option will compress the data in blocks rather than line-by-line.
+
 ```
-gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES
+gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2
 ```
+
+The resulting file now comes out much smaller at **39MB**. Check this article [GeoTIFF compression and optimization with GDAL](https://kokoalberti.com/articles/geotiff-compression-optimization-guide/) to learn more about various options and compression algorithms. 
 
 ### Setting NoData Values
 
-```
-gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -a_nodata -9999
-```
-
-### Wrting Cloud-Optimized GeoTiff
+The output from `gdalinfo` command shows that the original data has a *NoData* Value set to `-32768`. We can set a new *NoData* value. The `-a_nodata` option allows us to specify a new value.
 
 ```
-gdal_translate -of COG merged.vrt merged.tif -co COMPRESS=DEFLATE
+gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2 -a_nodata -9999
 ```
 
+After running the command, you can verify the results using the `gdalinfo` command.
 
+### Wrting Cloud-Optimized GeoTIFF (COG)
+
+A new format called [Cloud-Optimized GeoTIFF (COG)](https://www.cogeo.org/) is making access to such vast amount of imagery easier to access and analyze. A *Cloud-optimized* GeoTIFF is behaves just like a regular GeoTIFF imagery, but instead of downloading the entire image locally, you are able to access *portions* of imagery hosted on a cloud server streamed to clients like QGIS. This makes is very efficient to access this data and even analyze it - without downloading large files. GDAL makes it very easy to create COG files by specifying the `-of COG` option.
+
+```
+gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
+```
 
 ### Creating Hillshade
 
@@ -199,6 +210,8 @@ gdaldem hillshade merged.tif hillshade.tif -s 111120
 ```
 gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined
 ```
+
+### Creating Color Relief
 
 ```
 gdaldem color-relief merged.tif colormap.txt colorized.tif

@@ -409,8 +409,9 @@ $(document).ready(function () {
 <li><a href="#converting-formats">Converting Formats</a></li>
 <li><a href="#compressing-output">Compressing Output</a></li>
 <li><a href="#setting-nodata-values">Setting NoData Values</a></li>
-<li><a href="#wrting-cloud-optimized-geotiff">Wrting Cloud-Optimized GeoTiff</a></li>
+<li><a href="#wrting-cloud-optimized-geotiff-cog">Wrting Cloud-Optimized GeoTIFF (COG)</a></li>
 <li><a href="#creating-hillshade">Creating Hillshade</a></li>
+<li><a href="#creating-color-relief">Creating Color Relief</a></li>
 <li><a href="#exercise-2">Exercise 2</a></li>
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#exercise-3">Exercise 3</a></li>
@@ -558,21 +559,30 @@ conda install -c conda-forge gdal</code></pre>
 </div>
 <div id="compressing-output" class="section level3">
 <h3>Compressing Output</h3>
+<p>The default output GeoTIFF file is uncompressed - meaning each pixel’s value is stored on the disk without any further processing. For large rasters, this can consume a lot of disk space. A smarter approach is to use a lossless compression algorithm to reduce the size of the raster while maintaining full fidelity of the original data. GDAL supports many compression algorithm out-of-the-box and can be specified with GDAL commands using the <code>-co</code> option. The most popular loss-less compression algorithms are <strong>DEFLATE</strong>, <strong>LZW</strong> and <strong>PACKBITS</strong>. We can try the <code>DEFLATE</code> algorithm on our dataset.</p>
 <pre><code>gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE</code></pre>
-<pre><code>gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES</code></pre>
+<p>The uncompressed filesize was <strong>99 MB</strong>. After applying the <em>DEFLATE</em> compression, the file size reduced to <strong>72MB</strong>. We can further reduce the file size by specifying additional options. The <code>PREDICTOR</code> option helps compress data better when the neighboring values are correlated. For elevation data, this is definitely the case. The <code>TILED</code> option will compress the data in blocks rather than line-by-line.</p>
+<pre><code>gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2</code></pre>
+<p>The resulting file now comes out much smaller at <strong>39MB</strong>. Check this article <a href="https://kokoalberti.com/articles/geotiff-compression-optimization-guide/">GeoTIFF compression and optimization with GDAL</a> to learn more about various options and compression algorithms.</p>
 </div>
 <div id="setting-nodata-values" class="section level3">
 <h3>Setting NoData Values</h3>
-<pre><code>gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -a_nodata -9999</code></pre>
+<p>The output from <code>gdalinfo</code> command shows that the original data has a <em>NoData</em> Value set to <code>-32768</code>. We can set a new <em>NoData</em> value. The <code>-a_nodata</code> option allows us to specify a new value.</p>
+<pre><code>gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2 -a_nodata -9999</code></pre>
+<p>After running the command, you can verify the results using the <code>gdalinfo</code> command.</p>
 </div>
-<div id="wrting-cloud-optimized-geotiff" class="section level3">
-<h3>Wrting Cloud-Optimized GeoTiff</h3>
-<pre><code>gdal_translate -of COG merged.vrt merged.tif -co COMPRESS=DEFLATE</code></pre>
+<div id="wrting-cloud-optimized-geotiff-cog" class="section level3">
+<h3>Wrting Cloud-Optimized GeoTIFF (COG)</h3>
+<p>A new format called <a href="https://www.cogeo.org/">Cloud-Optimized GeoTIFF (COG)</a> is making access to such vast amount of imagery easier to access and analyze. A <em>Cloud-optimized</em> GeoTIFF is behaves just like a regular GeoTIFF imagery, but instead of downloading the entire image locally, you are able to access <em>portions</em> of imagery hosted on a cloud server streamed to clients like QGIS. This makes is very efficient to access this data and even analyze it - without downloading large files. GDAL makes it very easy to create COG files by specifying the <code>-of COG</code> option.</p>
+<pre><code>gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999</code></pre>
 </div>
 <div id="creating-hillshade" class="section level3">
 <h3>Creating Hillshade</h3>
 <pre><code>gdaldem hillshade merged.tif hillshade.tif -s 111120</code></pre>
 <pre><code>gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -combined</code></pre>
+</div>
+<div id="creating-color-relief" class="section level3">
+<h3>Creating Color Relief</h3>
 <pre><code>gdaldem color-relief merged.tif colormap.txt colorized.tif</code></pre>
 </div>
 <div id="exercise-2" class="section level3">
