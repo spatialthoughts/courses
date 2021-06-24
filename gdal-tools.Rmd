@@ -423,18 +423,28 @@ knitr::include_graphics('images/gdal/naip_preview.jpg')
 
 ### Create a Tile Index
 
+When working with large amounts of imagery tiles, it is useful to generate a tile index. A tile index layer is a polygon layer with the bounding box of each tile. An index layer allows us to check the coverage of the source data and locate specific tiles. It is a simple but effective way to catalog raster data from a hard drive or from a folder on your computer.
+
+`gdaltindex` command creates a tile index from a list of input files. Here we can use the `--optfile` option to supply the list of files via a file.
+
 ```
 gdaltindex -write_absolute_path index.shp --optfile filelist.txt
 ```
+
+### Mosaic and clip to AOI
+
+Let's say we want to mosaic all the source tile into a single image. We also want to clip the mosaic to a given AOI.
 
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/gdal/aoiselection.png')
 ```
 
-### Mosaic and clip to AOI
+We can use the `gdalwarp` utility to clip the raster using the `-cutline` option. We can also add JPEG compression to the output file to reduce the file size. Refer to the post [GeoTiff Compression for Dummies](https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html) by Paul Ramsey that gives more insights into compression imagery. 
+
+> Note that JPEG is a lossy compression method and is suited only for photographic rasters such as aerial/drone imagery. For scientific datasets, you should always use lossless compression as shown in the [previous section](#compressing-output).
 
 ```
-gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
 ```
 
 ```{r echo=FALSE, fig.align='center'}
@@ -443,11 +453,18 @@ knitr::include_graphics('images/gdal/mosaic.png')
 
 ### Creating Overviews
 
+If you try loading the resulting raster into a viewer, you will notice that it takes a lot of time for it to render. Zoom/Pan operations are quite slow as well. This is because the viewer is rendering all the pixels at native resolution. Since this is a very high resolution dataset, it requires processing a lot of pixels, even if you are zoomed out. A common solution to this problem is to create *Pyramid Tiles* or *Overviews*. This process creates low resolution versions of the image by averaging pixel values from higher resolution pixels. If the pyramid tiles are present, imagery viewers can use it to speed up the rendering process. GDAL provides the utility `gdaladdo` to create overview tiles. GeoTIFF format supports storing the overviews within the file itself. For other formats, the program generates external overviews in the `.ovr` format.
 
-### Compressing Imagery for Publishing
+You can run the `gdaladdo` (**GDAL**-**Add**-**O**verview) command with default options to create internal overviews. Once the overviews are created, try opening the `aoi.tif` in QGIS. You will see that it renders much faster and zoom/pan operations are very smooth.
+```
+gdaladdo aoi.tif
+```
 
-[GeoTiff Compression for Dummies](https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html)
+The default overviews use the nearest neighbor resampling. We can pick any resampling method from the many available algorithms. We can try the bilinear interpolation using the `-r bilinear` option. Since the source imagery is JPEG compressed, we can compress the overviews with the same compression.
 
+```
+gdaladdo -r bilinear --config COMPRESS_OVERVIEW JPEG aoi.tif
+```
 
 ## Processing Satellite Imagery
 
