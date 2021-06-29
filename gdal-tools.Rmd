@@ -478,17 +478,21 @@ gdaladdo -r bilinear --config COMPRESS_OVERVIEW JPEG aoi.tif
 
 ## Processing Satellite Imagery
 
-This section shows how to take satellite data from Landsat-8 and create various derived products.
+This section shows how to take satellite data from Landsat-8 and create various derived products. Use the `cd` command to change to the `landsat8` directory which contains Landsat-8 imagery. This diretory has 5 individual GeoTIFF files for 5 different bands from a single landsat-8 scene.
+
+```
+cd landsat8
+```
 
 ### Merging individual bands into RGB composite
 
-```{bash eval=FALSE}
-gdal_merge -o rgb.tif -separate ^
-  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
-  landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^
-  landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.TIF ^
-  landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.TIF
+Let's create a RGB composite image by combining thee 3 different bands - Red, Green and Blue - into a single image. We can use the `gdal_merge.py` command to merge different images. Here we must use the `-separate` option which tells the command to place each image in a separate band.
+
 ```
+gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.TIF RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.TIF
+```
+
+Once the command finishes, you can view the result in QGIS. 
 
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/gdal/rgb.png')
@@ -496,24 +500,39 @@ knitr::include_graphics('images/gdal/rgb.png')
 
 ### Apply Histogram Stretch and Color Correction
 
-```{bash eval=FALSE}
-gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte ^
-  rgb.tif rgb_stretch.tif
+The resulting composite appears quite dark and has low-contrast. QGIS applies a default contrast stretch based on the mimimum and maximum values in the image. Due to the presence of clouds and cloud-shadows - there are outlier pixels which make the default contrast stretch not optimal.
+
+Here's what the histogram of the RGB composite looks like.
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/histogram.png')
 ```
 
+
+We can apply a histogram stretch to increase the contrast. This is done using the `-scale` option. Since most of the pixels have a value between 0 and 0.3, we can choose these are minimum and maximum values and apply a contrast stretch to make them go from 0 to 255. The resulting image will be a 8-bit color image where the input pixel values are linearly scaled to the target value.
+
+> Note: Scaling the image will alter the pixel values. The resulting image is suitable for visualizaion, but they should never be used for analysis. Scientific analysis should always use the un-scaled pixel values.
+
+```
+gdal_translate -scale 0 0.3 0 255 -ot Byte rgb.tif rgb_stretch.tif
+```
+
+We can also apply a non-linear stretch. `gdal_translate` has a `-exponent` option that scales the input values using the following formula. Choosing an exponent value between 0 and 1 will enhance low inensity values - resulting in a brighter image. [Learn more &#8599;](https://homepages.inf.ed.ac.uk/rbf/HIPR2/pixexp.htm)
+
+Let's try exponent value of **0.5**. The result is a much better looking output.
+```
+gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte rgb.tif rgb_stretch.tif
+```
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/gdal/rgb_stretch.png')
 ```
 
 ### Pan Sharpening
 
-```{bash eval=FALSE}
-gdal_pansharpen ^
-  landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF ^
-  rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB
+```
+gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB
 
-gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 ^
-  pansharpened.tif pansharpened_stretch.tif
+gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 pansharpened.tif pansharpened_stretch.tif
 ```
 
 ```{r echo=FALSE, fig.align='center'}
@@ -526,17 +545,13 @@ knitr::include_graphics('images/gdal/pansharpen_after.png')
 
 ### Raster Algebra
 
-```{bash eval=FALSE}
-gdalinfo -stats ^
-  landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
+```
+gdalinfo -stats landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
 ```
 It is important to set nodata value. As seen from the output above, nodata is set to -9999.
  
-```{bash eval=FALSE}
-gdal_calc ^
-  -A landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^
-  -B landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^
-  --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-9999
+```
+gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-9999
 ```
 
 ```{r echo=FALSE, fig.align='center'}
@@ -557,8 +572,16 @@ gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms
 gdalinfo "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&SRS=EPSG:4326&BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614"
 ```
 
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/wms2.png')
 ```
-gdal_translate -of WMS "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.xml
+
+```
+gdal_translate -of WMS "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1:Agrand-v1-reservoirs-rev01" reservoirs.xml
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/wms3.png')
 ```
 
 ```
@@ -569,6 +592,10 @@ Specify a Bounding Box for India
 
 ```
 gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=68.106,6.762,97.412,37.078" reservoirs_india.tif
+```
+
+```{r echo=FALSE, fig.align='center'}
+knitr::include_graphics('images/gdal/wms4.png')
 ```
 
 ## Georeferencing
