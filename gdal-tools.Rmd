@@ -741,22 +741,22 @@ ogr2ogr -f GPKG NA.gpkg NA.vrt
 ## Geoprocessing and Spatial Queries
 
 ```
-ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
-ogr2ogr -t_srs EPSG:7855 melbourne.gpkg melbourne.gpkg metro_stations -update -nln metro_stations_reprojected
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected
 ```
 
 ```
-ogr2ogr melbourne.gpkg melbourne.gpkg -update -nln metro_stations_buffer -sql "select m.station, buffer(m.geom, 500) as geom from metro_stations_reprojected m" -dialect SQLITE 
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql "select m.station, buffer(m.geom, 500) as geom from metro_stations_reprojected m" -dialect SQLITE 
 ```
 
 You can dissolve the buffers using `ST_COLLECT`
 
 ```
-ogr2ogr melbourne.gpkg melbourne.gpkg -update -nln metro_stations_buffer_dissolved -sql "select st_union(d.geom) as geom from (select st_collect(buffer(m.geom, 500)) as geom from metro_stations_reprojected m) as d" -dialect SQLITE
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql "select st_union(d.geom) as geom from (select st_collect(buffer(m.geom, 500)) as geom from metro_stations_reprojected m) as d" -dialect SQLITE
 ```
 
 ```
-ogr2ogr -t_srs EPSG:4326 melbourne.gpkg melbourne.gpkg -update -nln selected -sql "select  b.* from bars_and_pubs_reprojected as b join metro_stations_buffer_dissolved as m on ST_Within( b.geom, m.geom)" -dialect SQLITE 
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "select  b.* from bars_and_pubs_reprojected as b join metro_stations_buffer_dissolved as m on ST_Within( b.geom, m.geom)" -dialect SQLITE 
 ```
 
 # Multi Criteria Weighted Overlay Analysis
@@ -766,140 +766,75 @@ objective on the basis of a variety of attributes that the selected areas should
 
 Although this is a common GIS operation, it is best performed in the raster space. Below is the typical workflow to take source vector data, transform them to appropriate rasters, re-classify them and perform mathematical operations to do a suitability analysis.
 
-The problem statement is **Locate the suitable areas for development**, that are
+We will work with crime and infrastructure data for the city of London and find suitable areas to build new parking facilities that can help reduce bicycle thefts. Our analysis will apply the following 3 criteria. The proposed parking must be
 
-* Close to roads
-* Away from waterbodies
-* Not in protected areas
+1. In a bicycle theft hotspot
+2. Close to a bicycle route
+3. Far from existing parking facilities
 
 ## Rasterize vector layers
 
 For overlay analysis, all rasters must be of the same extent. So we first find the extent of the dataset that we can use while rasterizing.
 
-```{bash eval=FALSE}
-ogrinfo -so osm/assam.gpkg boundary
+```
+ogrinfo multicriteria.gpkg
 ```
 
-```{bash eval=FALSE}
-gdal_rasterize -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^
-  osm/assam.gpkg -l roads roads.tif
+```
+ogrinfo -so multicriteria.gpkg boundary
 ```
 
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/roads_raster.png')
+```
+gdal_rasterize -burn 1 -add -tr 100 100 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l bicycle_thefts thefts.tif -ot Int16
 ```
 
-```{bash eval=FALSE}
-gdal_rasterize -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^
-  osm/assam.gpkg -l boundary boundary.tif
+```
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycling_routes routes.tif
+
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycle_parking existing_parking.tif
 ```
 
-Use `-i` for inverse rasterization. We want to rasterize 'un-protected' areas
-
-```{bash eval=FALSE}
-gdal_rasterize -i -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^
-  osm/assam.gpkg -l protected_regions protected_regions.tif
-```
-
-We need a water layer, but the source data has a polygon and a polyline water features layer. We create 2 rasters and then add them to create a single water features raster.
-
-```{bash eval=FALSE}
-gdal_rasterize -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^
-  osm/assam.gpkg -l water_polygons water_polygons.tif
-
-gdal_rasterize -ot Int16 -burn 1 -tr 15 15 -te 170134 2669018 798842 3097324 ^
-  osm/assam.gpkg -l water_polylines water_polylines.tif
-
-
-gdal_calc -A water_polygons.tif -B water_polylines.tif ^
-  --outfile water_add.tif --calc="A+B"
-
-gdal_calc -A water_add.tif --outfile water.tif ^
-  --calc="A>0"
-```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/water_raster.png')
-```
 
 ## Generate proximity (Euclidean distance) rasters
-```{bash eval=FALSE}
-gdal_proximity roads.tif roads_proximity.tif ^
-  -ot Int16 -distunits GEO
 
-gdal_proximity water.tif water_proximity.tif ^
-  -ot Int16 -distunits GEO
 ```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/roads_proximity.png')
+gdal_proximity.py routes.tif outes_proximity.tif -ot Int16 -distunits GEO
+gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO
 ```
 
 ## Re-classify raster values
 
-**Roads** Give higher score to nearer pixels
 
-0-1000m --> 100
+|   **Thefts**  | **Routes**  | **Existing Parking** | Re-Class Value
+|:--------------|:------------|:---------------------|---------------
+| > 20          | 0-50m       | > 100m               | 100
+| 10-20         | 50-100m     | 50-100m              | 50
+| < 10          | > 100m      | < 50m                | 10
 
-1000-5000m --> 50
-
-\>5000m --> 10
-
-```{bash eval=FALSE}
-gdal_calc -A roads_proximity.tif --outfile roads_class.tif ^
-  --calc="100*(A<=1000) + 50*(A>1000)*(A<=5000) + 10*(A>5000)"
 ```
+gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
 
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/roads_class.png')
-```
+gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
 
-**Water** Give lower score to nearer pixels
-
-0-1000m --> 10
-
-1000 -5000m ---> 50
-
-\>5000m --> 100
-
-```{bash eval=FALSE}
-gdal_calc -A water_proximity.tif --outfile water_class.tif ^
-  --calc="100*(A>5000) + 50*(A>1000)*(A<=5000) + 10*(A<1000)"
-```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/water_class.png')
+gdal_calc.py -A existing_parking_proximity.tif --outfile existing_parking_reclass.tif --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
 ```
 
 ## Overlay analysis
 
 Roads and Water have a range of values, but protected areas are either 0 or 1. So we combine these together accordingly.
 
-```{bash eval=FALSE}
-gdal_calc ^
-  -A roads_class.tif -B water_class.tif -C protected_regions.tif -D boundary.tif ^
-  --outfile suitability.tif --calc="(A + B)*(C>0)*D" --NoDataValue=0
+```
+gdalwarp -r average -tr 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif
+gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif
 ```
 
-Smooth the output
-```{bash eval=FALSE}
-gdalwarp -r cubicspline -tr 60 60 -dstnodata 0 ^
-  suitability.tif suitability_final.tif
 ```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/suitability.png')
+gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif -C parking_reclass_resampled.tif --outfile suitability.tif --calc="(A + B + C)/3" --NoDataValue=0
 ```
 
 # Running commands in batch
 
-You can run the GDAL/OGR commands in a loop using Python. Open OSGeo4W Shell and type the following to set the correct system paths
-
-```{bash eval=FALSE}
-py3_env
-```
-
-Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.
+You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.
 
 ```{bash eval=FALSE}
 gdal_translate -of GTiff -co COMPRESS=JPEG {input} {output}
