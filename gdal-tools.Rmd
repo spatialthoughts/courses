@@ -188,9 +188,9 @@ All the commands in the exercises below are expected to be run from the *Anacond
 | `clear`          | Clear screen                        | `clear` |
 
 
-# GDAL Tools
+# 1. GDAL Tools
 
-## Basic Raster Processing
+## 1.1 Basic Raster Processing
 
 We will start learning the basic GDAL commands by processsing elevation rasters from SRTM. In the *Command Prompt* window, use the `cd` command to change to the `srtm` directory which 4 individual SRTM tiles around the Mt. Everest region.
 
@@ -216,7 +216,7 @@ gdalinfo -stats N27E086.hgt
 knitr::include_graphics('images/gdal/gdalinfo2.png')
 ```
 
-### Merging Tiles
+### 1.1.1 Merging Tiles
 
 We will now merge the 4 neighboring SRTM tiles into 1 raster so we can work with them together. GDAL provides a useful format called [Virtual Raster](https://gdal.org/drivers/raster/vrt.html) that allows us to create a *Virtual* file with `.vrt` extension that is a pointer to multiple source files. A `.vrt` file is just a text file, so it doesn't consume any disk space but allows us to run any GDAL command as if it was a raster file. 
 
@@ -261,7 +261,7 @@ Can you find out what is the highest elevation value in the merged raster? Since
 knitr::include_graphics('images/gdal/exercise1.png')
 ```
 
-### Converting Formats
+### 1.1.2 Converting Formats
 
 Let's conver the *Virtual Raster* to a GeoTIFF file. `gdal_translate` program allows us to convert between any of the hundreds of data formats supported by GDAL. The format is automatically guessed from the file extension. Alternatively, you can also specify it using the `-of` option with the [short name of the format](https://gdal.org/drivers/raster/index.html) such a **GTiff**.
 ```
@@ -272,7 +272,7 @@ gdal_translate -of GTiff merged.vrt merged.tif
 knitr::include_graphics('images/gdal/compression1.png')
 ```
 
-### Compressing Output
+### 1.1.3 Compressing Output
 
 The default output GeoTIFF file is uncompressed - meaning each pixel's value is stored on the disk without any further processing. For large rasters, this can consume a lot of disk space. A smarter approach is to use a lossless compression algorithm to reduce the size of the raster while maintaining full fidelity of the original data. GDAL supports many compression algorithm out-of-the-box and can be specified with GDAL commands using the `-co` option. The most popular loss-less compression algorithms are **DEFLATE**, **LZW** and **PACKBITS**. We can try the `DEFLATE` algorithm on our dataset.
 
@@ -297,7 +297,7 @@ knitr::include_graphics('images/gdal/compression3.png')
 
 The resulting file now comes out much smaller at **39MB**. Check this article [GeoTIFF compression and optimization with GDAL](https://kokoalberti.com/articles/geotiff-compression-optimization-guide/) to learn more about various options and compression algorithms. 
 
-### Setting NoData Values
+### 1.1.4 Setting NoData Values
 
 The output from `gdalinfo` command shows that the original data has a *NoData* Value set to `-32768`. We can set a new *NoData* value. The `-a_nodata` option allows us to specify a new value.
 
@@ -307,7 +307,7 @@ gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YE
 
 After running the command, you can verify the results using the `gdalinfo` command.
 
-### Wrting Cloud-Optimized GeoTIFF (COG)
+### 1.1.5 Wrting Cloud-Optimized GeoTIFF (COG)
 
 A new format called [Cloud-Optimized GeoTIFF (COG)](https://www.cogeo.org/) is making access to such vast amount of imagery easier to access and analyze. A *Cloud-optimized* GeoTIFF is behaves just like a regular GeoTIFF imagery, but instead of downloading the entire image locally, you are able to access *portions* of imagery hosted on a cloud server streamed to clients like QGIS. This makes is very efficient to access this data and even analyze it - without downloading large files. GDAL makes it very easy to create COG files by specifying the `-of COG` option.
 
@@ -315,7 +315,7 @@ A new format called [Cloud-Optimized GeoTIFF (COG)](https://www.cogeo.org/) is m
 gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
 ```
 
-## Processing Elevation Data
+## 1.2 Processing Elevation Data
 
 
 GDAL comes with the `gdaldem` utility that provides a suite of tools for visualizing and analyzing Digital Elevation Models (DEM). The tool supports the following modes
@@ -330,7 +330,7 @@ GDAL comes with the `gdaldem` utility that provides a suite of tools for visuali
 
 Am important point to note is that the x, y and z units of the DEM should be in the same unit. If you are using data in a Geographic CRS (like EPSG:4326) and the height units are meters, you must specify a scale value using `-s` option.
 
-### Creating Hillshade
+### 1.2.1 Creating Hillshade
 
 Let's create a hillshade map from the merged SRTM dataset. The `hillshade` mode creates an 8-bit raster with a nice shaded relief effect. This dataset has X and Y units in degrees and Z units in meters. So we specify `111120` as the scale value.
 
@@ -353,7 +353,7 @@ gdaldem hillshade merged.tif hillshade_combined.tif -s 111120 -multidirectional
 knitr::include_graphics('images/gdal/hillshade.png')
 ```
 
-### Creating Color Relief
+### 1.2.2 Creating Color Relief
 
 A color relief map is an elevation map where different ranges of elevations are colored differently. The `color-relief` mode can create a color relief map with the colors and elevation ranges supplied in a text file. 
 
@@ -375,7 +375,7 @@ knitr::include_graphics('images/gdal/colorized.png')
 
 Save the color relief in the PNG format.
 
-### Creating Contours
+### 1.2.3 Creating Contours
 
 The GDAL package comes with the utility `gdal_countour` that can create contour lines and polygons from DEMs.
 
@@ -401,7 +401,7 @@ knitr::include_graphics('images/gdal/contours_withelevation.png')
 
 Create polygon contours shapefile from `merged.tif` and name the attributes `MINELEV` and `MAXELEV` represented by each polygon.
 
-## Processing Aerial Imagery
+## 1.3 Processing Aerial Imagery
 
 Use the `cd` command to change to the `naip` directory which contains individual aerial imagery tiles in the **JPEG2000** format.
 
@@ -409,7 +409,7 @@ Use the `cd` command to change to the `naip` directory which contains individual
 cd naip
 ```
 
-### Create a preview image from source tiles
+### 1.3.1 Create a preview image from source tiles
 
 The source imagery is heavily compressed and cover a large region. Instead of loading the full resolution tiles in a viewer, it is a good practice to create a preview mosaic that can help us assess the coverage and quality of the data.
 
@@ -443,7 +443,7 @@ gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg
 knitr::include_graphics('images/gdal/naip_preview.jpg')
 ```
 
-### Create a Tile Index
+### 1.3.2 Create a Tile Index
 
 When working with large amounts of imagery tiles, it is useful to generate a tile index. A tile index layer is a polygon layer with the bounding box of each tile. An index layer allows us to check the coverage of the source data and locate specific tiles. It is a simple but effective way to catalog raster data from a hard drive or from a folder on your computer.
 
@@ -453,7 +453,7 @@ When working with large amounts of imagery tiles, it is useful to generate a til
 gdaltindex -write_absolute_path index.shp --optfile filelist.txt
 ```
 
-### Mosaic and clip to AOI
+### 1.3.3 Mosaic and clip to AOI
 
 Let's say we want to mosaic all the source tile into a single image. We also want to clip the mosaic to a given AOI.
 
@@ -473,7 +473,7 @@ gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
 
-### Tips for Improving Performance
+### 1.3.4 Tips for Improving Performance
 
 `gdalwarp` utility supports multithreaded processing. There are 2 different options for parallel processing.
 
@@ -491,7 +491,7 @@ gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -
 ```
 
 
-### Creating Overviews
+### 1.3.5 Creating Overviews
 
 If you try loading the resulting raster into a viewer, you will notice that it takes a lot of time for it to render. Zoom/Pan operations are quite slow as well. This is because the viewer is rendering all the pixels at native resolution. Since this is a very high resolution dataset, it requires processing a lot of pixels, even if you are zoomed out. A common solution to this problem is to create *Pyramid Tiles* or *Overviews*. This process creates low resolution versions of the image by averaging pixel values from higher resolution pixels. If the pyramid tiles are present, imagery viewers can use it to speed up the rendering process. GDAL provides the utility `gdaladdo` to create overview tiles. GeoTIFF format supports storing the overviews within the file itself. For other formats, the program generates external overviews in the `.ovr` format.
 
@@ -506,7 +506,7 @@ The default overviews use the nearest neighbor resampling. We can pick any resam
 gdaladdo -r bilinear --config COMPRESS_OVERVIEW JPEG aoi.tif
 ```
 
-## Processing Satellite Imagery
+## 1.4 Processing Satellite Imagery
 
 This section shows how to take satellite data from Landsat-8 and create various derived products. Use the `cd` command to change to the `landsat8` directory which contains Landsat-8 imagery. This diretory has 5 individual GeoTIFF files for 5 different bands from a single landsat-8 scene.
 
@@ -514,7 +514,7 @@ This section shows how to take satellite data from Landsat-8 and create various 
 cd landsat8
 ```
 
-### Merging individual bands into RGB composite
+### 1.4.1 Merging individual bands into RGB composite
 
 Let's create a RGB composite image by combining thee 3 different bands - Red, Green and Blue - into a single image. We can use the `gdal_merge.py` command to merge different images. Here we must use the `-separate` option which tells the command to place each image in a separate band.
 
@@ -528,7 +528,7 @@ Once the command finishes, you can view the result in QGIS.
 knitr::include_graphics('images/gdal/rgb.png')
 ```
 
-### Apply Histogram Stretch and Color Correction
+### 1.4.2 Apply Histogram Stretch and Color Correction
 
 The resulting composite appears quite dark and has low-contrast. QGIS applies a default contrast stretch based on the mimimum and maximum values in the image. Due to the presence of clouds and cloud-shadows - there are outlier pixels which make the default contrast stretch not optimal.
 
@@ -571,7 +571,7 @@ Create a NRG Composite image with Near Infrared, Red and Green bands. Apply a co
 knitr::include_graphics('images/gdal/nrg_stretch.png')
 ```
 
-### Pan Sharpening
+### 1.4.3 Pan Sharpening
 
 Most satellite and airborne sensors capture images in the *Pan-chromatic* band along with other spectral bands. The *Red*, *Green*, and *Blue* bands capture signmals in the *Red*, *Green*, and *Blue* portions of the electromagnetic spectrum respectively. But the *Pan*-band captures the data across the entire range of wavelengths in the visible spectrum. This allows the sensor to capture the data in a higher spatial resolution than other bands which capture the signal from a subset of this wavelength range.
 
@@ -597,7 +597,7 @@ knitr::include_graphics('images/gdal/pansharpen_before.png')
 knitr::include_graphics('images/gdal/pansharpen_after.png')
 ```
 
-### Raster Algebra
+### 1.4.4 Raster Algebra
 
 ```
 gdalinfo -stats landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
@@ -613,7 +613,7 @@ knitr::include_graphics('images/gdal/ndvi.png')
 ```
 
 
-## Processing WMS Layers
+## 1.5 Processing WMS Layers
 
 ```
 gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms
@@ -652,9 +652,9 @@ gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geose
 knitr::include_graphics('images/gdal/wms4.png')
 ```
 
-## Georeferencing
+## 1.6 Georeferencing
 
-### Georeferencing images with corner coordinates
+### 1.6.1 Georeferencing images with corner coordinates
 
 You can easily assign bounding box coordinates to any image using the `a_ullr` option.
 
@@ -672,7 +672,7 @@ gdalinfo earth_at_night.tif
 knitr::include_graphics('images/gdal/earth_at_night.png')
 ```
 
-### Georeferencing with GCPs
+### 1.6.2 Georeferencing with GCPs
 
 GCP format is [pixel line X Y]. You can use QGIS Georeferencer to obtain the GCPs. Ideally, this process is used with images that have known corner coordinates. In that case, if you know the image dimensions, pixel and line values can be obtained easily.
 
@@ -713,9 +713,9 @@ knitr::include_graphics('images/gdal/georeference_gcp.png')
 ```
 
 
-# OGR Tools
+# 2. OGR Tools
 
-## Working with CSV files
+## 2.1 Working with CSV files
 
 ```
 ogrinfo worldcities.csv
@@ -783,9 +783,9 @@ ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POS
 knitr::include_graphics('images/gdal/ogr_csv08.png')
 ```
 
-## Working with Multiple Layers
+## 2.2 Working with Multiple Layers
 
-### Read Geonames Files
+### 2.2.1 Read Geonames Files
 
 ```
 <OGRVRTDataSource>
@@ -800,7 +800,7 @@ knitr::include_graphics('images/gdal/ogr_csv08.png')
 ogrinfo -al -so CA.vrt
 ```
 
-### Applying Filters
+### 2.2.2 Applying Filters
 
 ```
 <OGRVRTDataSource>
@@ -816,7 +816,7 @@ ogrinfo -al -so CA.vrt
 ogrinfo -al -so CA.vrt
 ```
 
-### Merging Files
+### 2.2.3 Merging Files
 
 ```
 
@@ -851,7 +851,7 @@ ogr2ogr -f GPKG NA.gpkg NA.vrt
 ```
 
 
-## Geoprocessing and Spatial Queries
+## 2.2.4 Geoprocessing and Spatial Queries
 
 ```
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
@@ -872,7 +872,7 @@ ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer
 ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "select  b.* from bars_and_pubs_reprojected as b join metro_stations_buffer_dissolved as m on ST_Within( b.geom, m.geom)" -dialect SQLITE 
 ```
 
-# Multi Criteria Weighted Overlay Analysis
+# 3. Multi Criteria Weighted Overlay Analysis
 
 Multi-criteria analysis is the process of the allocation of land to suit a specific
 objective on the basis of a variety of attributes that the selected areas should possess.
@@ -885,7 +885,7 @@ We will work with crime and infrastructure data for the city of London and find 
 2. Close to a bicycle route
 3. Far from existing parking facilities
 
-## Rasterize vector layers
+## 3.1 Rasterize vector layers
 
 For overlay analysis, all rasters must be of the same extent. So we first find the extent of the dataset that we can use while rasterizing.
 
@@ -908,14 +908,14 @@ gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893
 ```
 
 
-## Generate proximity (Euclidean distance) rasters
+## 3.2 Generate proximity (Euclidean distance) rasters
 
 ```
 gdal_proximity.py routes.tif outes_proximity.tif -ot Int16 -distunits GEO
 gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO
 ```
 
-## Re-classify raster values
+## 3.3 Re-classify raster values
 
 
 |   **Thefts**  | **Routes**  | **Existing Parking** | Re-Class Value
@@ -932,7 +932,7 @@ gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif --calc="100*(A
 gdal_calc.py -A existing_parking_proximity.tif --outfile existing_parking_reclass.tif --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
 ```
 
-## Overlay analysis
+## 3.4 Overlay analysis
 
 Roads and Water have a range of values, but protected areas are either 0 or 1. So we combine these together accordingly.
 
@@ -945,7 +945,7 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif
 gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif -C parking_reclass_resampled.tif --outfile suitability.tif --calc="(A + B + C)/3" --NoDataValue=0
 ```
 
-# Running commands in batch
+# 4. Running commands in batch
 
 You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.
 
