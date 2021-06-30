@@ -461,6 +461,24 @@ gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
 
+### Tips for Improving Performance
+
+`gdalwarp` utility supports multithreaded processing. There are 2 different options for parallel processing.
+
+* `-multi`: This option parallelizes I/O and CPU operations.
+* `-wo NUM_THREADS=ALL_CPUS`: This option parallelizes CPU operations over several cores.
+
+There is also another option that allows `gdalwarp` to use more RAM for caching. This option is very helpful to speed up operations on large rasters
+
+* `-wm`: Set a higher memory for caching
+
+All of these options can be combined that may result in faster processing of the data.
+
+```
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -multi -wo NUM_THREADS=ALL_CPUS -wm 512
+```
+
+
 ### Creating Overviews
 
 If you try loading the resulting raster into a viewer, you will notice that it takes a lot of time for it to render. Zoom/Pan operations are quite slow as well. This is because the viewer is rendering all the pixels at native resolution. Since this is a very high resolution dataset, it requires processing a lot of pixels, even if you are zoomed out. A common solution to this problem is to create *Pyramid Tiles* or *Overviews*. This process creates low resolution versions of the image by averaging pixel values from higher resolution pixels. If the pyramid tiles are present, imagery viewers can use it to speed up the rendering process. GDAL provides the utility `gdaladdo` to create overview tiles. GeoTIFF format supports storing the overviews within the file itself. For other formats, the program generates external overviews in the `.ovr` format.
