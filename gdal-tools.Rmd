@@ -654,17 +654,27 @@ knitr::include_graphics('images/gdal/wms4.png')
 
 ## 1.6 Georeferencing
 
-### 1.6.1 Georeferencing images with corner coordinates
+GDAL command-line utilities are extremely useful in batch georeferencing tasks. We will learn 2 different techniques for georeferencing/warping images.
 
-You can easily assign bounding box coordinates to any image using the `a_ullr` option.
+### 1.6.1 Georeferencing Images with Bounding Box Coordinates
 
-```{bash eval=FALSE}
+Often you get images from web portals that are maps but not in a GIS-ready format. Data from weather satellites, output from simulations, exports from photo editing software etc. can contain images that reference a fixed frame on the earth but are given in a regular image formats such as JPEG or PNG. If you know the bounding box coordinates and the CRS used in creating these images, you can use `gdal_translate` command to assign geoferencing information. The  `-a_ullr` option allows you to specify the bounding box coordinates using the Upper-Left (UL) and Lower-Right (LR) coordinates.
+
+In your data package is the image `earth_at_night.jpg`. Which is a beautifully rendered image of the earth with night lights imagery. You will see that this is a plain JPEG image without any georeference information.
+
+```
 gdalinfo earth_at_night.jpg
+```
 
-gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 ^
-  earth_at_night.jpg earth_at_night.tif ^
-  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE
+Since this is a global image, we know the corner coordinates. We can assign the CRS **EPSG:4326** using the `-a_srs` option and specify the bounding box coordinates in the following order `<ulx> <uly> <lrx> <lry>`. 
+ 
+```
+gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 earth_at_night.jpg earth_at_night.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB
+```
 
+The resulting file `earth_at_night.tif` is a GeoTiff file with the correct georeference information and can now be used in a GIS software.
+
+```
 gdalinfo earth_at_night.tif
 ```
 

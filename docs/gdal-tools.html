@@ -446,7 +446,7 @@ $(document).ready(function () {
 <li><a href="#processing-wms-layers">1.5 Processing WMS Layers</a></li>
 <li><a href="#georeferencing">1.6 Georeferencing</a>
 <ul>
-<li><a href="#georeferencing-images-with-corner-coordinates">1.6.1 Georeferencing images with corner coordinates</a></li>
+<li><a href="#georeferencing-images-with-bounding-box-coordinates">1.6.1 Georeferencing Images with Bounding Box Coordinates</a></li>
 <li><a href="#georeferencing-with-gcps">1.6.2 Georeferencing with GCPs</a></li>
 </ul></li>
 </ul></li>
@@ -956,16 +956,16 @@ NRG Composite
 </div>
 <div id="georeferencing" class="section level2">
 <h2>1.6 Georeferencing</h2>
-<div id="georeferencing-images-with-corner-coordinates" class="section level3">
-<h3>1.6.1 Georeferencing images with corner coordinates</h3>
-<p>You can easily assign bounding box coordinates to any image using the <code>a_ullr</code> option.</p>
-<div class="sourceCode" id="cb47"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.jpg</span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -a_ullr -180 90 180 -90 -a_srs EPSG:4326 ^</span>
-<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">earth_at_night.jpg</span> earth_at_night.tif ^</span>
-<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> PHOTOMETRIC=RGB -co COMPRESS=DEFLATE</span>
-<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalinfo</span> earth_at_night.tif</span></code></pre></div>
+<p>GDAL command-line utilities are extremely useful in batch georeferencing tasks. We will learn 2 different techniques for georeferencing/warping images.</p>
+<div id="georeferencing-images-with-bounding-box-coordinates" class="section level3">
+<h3>1.6.1 Georeferencing Images with Bounding Box Coordinates</h3>
+<p>Often you get images from web portals that are maps but not in a GIS-ready format. Data from weather satellites, output from simulations, exports from photo editing software etc. can contain images that reference a fixed frame on the earth but are given in a regular image formats such as JPEG or PNG. If you know the bounding box coordinates and the CRS used in creating these images, you can use <code>gdal_translate</code> command to assign geoferencing information. The <code>-a_ullr</code> option allows you to specify the bounding box coordinates using the Upper-Left (UL) and Lower-Right (LR) coordinates.</p>
+<p>In your data package is the image <code>earth_at_night.jpg</code>. Which is a beautifully rendered image of the earth with night lights imagery. You will see that this is a plain JPEG image without any georeference information.</p>
+<pre><code>gdalinfo earth_at_night.jpg</code></pre>
+<p>Since this is a global image, we know the corner coordinates. We can assign the CRS <strong>EPSG:4326</strong> using the <code>-a_srs</code> option and specify the bounding box coordinates in the following order <code>&lt;ulx&gt; &lt;uly&gt; &lt;lrx&gt; &lt;lry&gt;</code>.</p>
+<pre><code>gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 earth_at_night.jpg earth_at_night.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB</code></pre>
+<p>The resulting file <code>earth_at_night.tif</code> is a GeoTiff file with the correct georeference information and can now be used in a GIS software.</p>
+<pre><code>gdalinfo earth_at_night.tif</code></pre>
 <p><img src="images/gdal/earth_at_night.png" style="display: block; margin: auto;" /></p>
 </div>
 <div id="georeferencing-with-gcps" class="section level3">
@@ -974,20 +974,20 @@ NRG Composite
 <p>Let’s georeference this old scanned map.</p>
 <p><img src="images/gdal/scanned_map.png" style="display: block; margin: auto;" /></p>
 <p>First store the GCPs in the file</p>
-<div class="sourceCode" id="cb48"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> ^</span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 418 893 70 15 ^</span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 380 2432 70 5 ^</span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3453 2434  90 5 ^</span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3407 895 90 15 ^</span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 2662 911 85 15 ^</span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1870_southern-india.jpg</span> india-with-gcp.tif</span></code></pre></div>
+<div class="sourceCode" id="cb50"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> ^</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 418 893 70 15 ^</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 380 2432 70 5 ^</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3453 2434  90 5 ^</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 3407 895 90 15 ^</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-gcp</span> 2662 911 85 15 ^</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1870_southern-india.jpg</span> india-with-gcp.tif</span></code></pre></div>
 <p>Next, reproject the image using the GCPs</p>
-<div class="sourceCode" id="cb49"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -r bilinear -tr 0.005 0.005 -overwrite ^</span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif</span></code></pre></div>
+<div class="sourceCode" id="cb51"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -r bilinear -tr 0.005 0.005 -overwrite ^</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif</span></code></pre></div>
 <p>Try a Thin-plate-spline transformation with some compression options.</p>
-<div class="sourceCode" id="cb50"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^</span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif ^</span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR</span></code></pre></div>
+<div class="sourceCode" id="cb52"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> -t_srs EPSG:4042 -tps -r bilinear -tr 0.005 0.005 -overwrite ^</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">india-with-gcp.tif</span> india-reprojected.tif ^</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-co</span> COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR</span></code></pre></div>
 <p><img src="images/gdal/georeference_gcp.png" style="display: block; margin: auto;" /></p>
 </div>
 </div>
@@ -1150,52 +1150,52 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <div id="running-commands-in-batch" class="section level1">
 <h1>4. Running commands in batch</h1>
 <p>You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.</p>
-<div class="sourceCode" id="cb77"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of GTiff -co COMPRESS=JPEG <span class="dt">{input}</span> <span class="dt">{output}</span></span></code></pre></div>
+<div class="sourceCode" id="cb79"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> -of GTiff -co COMPRESS=JPEG <span class="dt">{input}</span> <span class="dt">{output}</span></span></code></pre></div>
 <p>But it would be a lot of manual effort if you want to run the commands on hundreds of input files. Here’s where a simple python script can help you automate running the commands in a batch. The data directory contains a file called <code>batch.py</code> with the following python code.</p>
-<div class="sourceCode" id="cb78"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb78-4"><a href="#cb78-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb78-5"><a href="#cb78-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb78-6"><a href="#cb78-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb78-7"><a href="#cb78-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
-<span id="cb78-8"><a href="#cb78-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb78-9"><a href="#cb78-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb78-10"><a href="#cb78-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb78-11"><a href="#cb78-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
-<p>In OsGeo4W shell, run the following command to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
-<div class="sourceCode" id="cb79"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch.py</span></code></pre></div>
-<p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
 <div class="sourceCode" id="cb80"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
 <span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb80-9"><a href="#cb80-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
-<span id="cb80-10"><a href="#cb80-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb80-11"><a href="#cb80-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb80-12"><a href="#cb80-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb80-13"><a href="#cb80-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb80-14"><a href="#cb80-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb80-15"><a href="#cb80-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb80-16"><a href="#cb80-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb80-17"><a href="#cb80-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb80-18"><a href="#cb80-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb80-19"><a href="#cb80-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb80-20"><a href="#cb80-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb80-21"><a href="#cb80-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb80-22"><a href="#cb80-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb80-23"><a href="#cb80-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb80-24"><a href="#cb80-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb80-25"><a href="#cb80-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb80-26"><a href="#cb80-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb80-27"><a href="#cb80-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb80-28"><a href="#cb80-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
+<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb80-9"><a href="#cb80-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb80-10"><a href="#cb80-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb80-11"><a href="#cb80-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<p>In OsGeo4W shell, run the following command to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
+<div class="sourceCode" id="cb81"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch.py</span></code></pre></div>
+<p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
+<div class="sourceCode" id="cb82"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb82-6"><a href="#cb82-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-7"><a href="#cb82-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb82-8"><a href="#cb82-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-9"><a href="#cb82-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
+<span id="cb82-10"><a href="#cb82-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb82-11"><a href="#cb82-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb82-12"><a href="#cb82-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb82-13"><a href="#cb82-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
+<span id="cb82-14"><a href="#cb82-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb82-15"><a href="#cb82-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb82-16"><a href="#cb82-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-17"><a href="#cb82-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb82-18"><a href="#cb82-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb82-19"><a href="#cb82-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
+<span id="cb82-20"><a href="#cb82-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
+<span id="cb82-21"><a href="#cb82-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb82-22"><a href="#cb82-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
+<span id="cb82-23"><a href="#cb82-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb82-24"><a href="#cb82-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb82-25"><a href="#cb82-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb82-26"><a href="#cb82-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
+<span id="cb82-27"><a href="#cb82-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb82-28"><a href="#cb82-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
-<div class="sourceCode" id="cb81"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch-parallel.py</span></code></pre></div>
+<div class="sourceCode" id="cb83"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> batch-parallel.py</span></code></pre></div>
 </div>
 <div id="supplement" class="section level1">
 <h1>Supplement</h1>
