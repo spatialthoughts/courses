@@ -472,6 +472,7 @@ $(document).ready(function () {
 <li><a href="#supplement">Supplement</a>
 <ul>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
+<li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
 </ul></li>
 <li><a href="#resources">Resources</a></li>
 <li><a href="#data-credits">Data Credits</a></li>
@@ -905,7 +906,11 @@ NRG Composite
 </div>
 <div id="pan-sharpening" class="section level3">
 <h3>Pan Sharpening</h3>
+<p>Most satellite and airborne sensors capture images in the <em>Pan-chromatic</em> band along with other spectral bands. The <em>Red</em>, <em>Green</em>, and <em>Blue</em> bands capture signmals in the <em>Red</em>, <em>Green</em>, and <em>Blue</em> portions of the electromagnetic spectrum respectively. But the <em>Pan</em>-band captures the data across the entire range of wavelengths in the visible spectrum. This allows the sensor to capture the data in a higher spatial resolution than other bands which capture the signal from a subset of this wavelength range.</p>
+<p>Landsat-8 satellite produces images at a <strong>30m</strong> spatial resolution in the <em>Red</em>, <em>Green</em>, <em>Blue</em> bands and at a <strong>15m</strong> spatial resolution in the <em>Panchromatic</em> band. We can use the higher spatial resolution of the <em>Panchromatic</em> band to improve the resolution of the other bands, resulting in sharper image with more details. This process is called <em>Pan-Sharpening</em>.</p>
+<p>GDAL comes with a script <code>gdal_pansharpen.py</code> that implements the <a href="https://gdal.org/drivers/raster/vrt.html#gdal-vrttut-pansharpen">Brovey algorithm</a> to compute the pansharpened output. In the example below we fuse the 15m resolution panchromatic band (B8) with the RGB composite created in the previous step.</p>
 <pre><code>gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB</code></pre>
+<p>We can apply the same contrast stretch as before and compare the output. You will notice that the resulting composite is much sharper and is able to resolve the details in the scene much better.</p>
 <pre><code>gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 pansharpened.tif pansharpened_stretch.tif</code></pre>
 <p><img src="images/gdal/pansharpen_before.png" style="display: block; margin: auto;" /></p>
 <p><img src="images/gdal/pansharpen_after.png" style="display: block; margin: auto;" /></p>
@@ -1184,6 +1189,12 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 Colorized Shaded Relief
 </p>
 </div>
+</div>
+<div id="splitting-a-mosaic-into-tiles" class="section level2">
+<h2>Splitting a Mosaic into Tiles</h2>
+<p>When delivering large mosaics, it is a good idea to split your large input file into smaller chunks. If you are working with a very large mosaic, splitting it into smaller chunks and processing them independently can help overcome memory issues. GDAL ships with a handy script called <code>gdal_retile.py</code> that is designed for this task.</p>
+<p>Let’s say we have a large GeoTIFF file <code>aoi.tif</code> and want to split it into tiles of 5000 pixels. We can use the following command to split the file and write the output to a directory named <code>tiles/</code>.</p>
+<pre><code>gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif</code></pre>
 </div>
 </div>
 <div id="resources" class="section level1">
