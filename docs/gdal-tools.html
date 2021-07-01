@@ -459,7 +459,7 @@ $(document).ready(function () {
 <li><a href="#applying-filters">2.2.2 Applying Filters</a></li>
 <li><a href="#merging-files">2.2.3 Merging Files</a></li>
 </ul></li>
-<li><a href="#geoprocessing-and-spatial-queries">2.2.4 Geoprocessing and Spatial Queries</a></li>
+<li><a href="#geoprocessing-and-spatial-queries">2.3 Geoprocessing and Spatial Queries</a></li>
 </ul></li>
 <li><a href="#multi-criteria-weighted-overlay-analysis">3. Multi Criteria Weighted Overlay Analysis</a>
 <ul>
@@ -1044,25 +1044,44 @@ NRG Composite
 </div>
 <div id="ogr-tools" class="section level1">
 <h1>2. OGR Tools</h1>
+<p>We will now learn how to process vector data using OGR Tools. These are a suite of tools that are part of the GDAL package and follow the same convention. In addition to to format translation, the OGR tools also support running Spatial SQL queries - making them very powerful to build Spatial ETL pipelines.</p>
 <div id="working-with-csv-files" class="section level2">
 <h2>2.1 Working with CSV files</h2>
+<p>In this section, we will see how we can build a basic ETL pipeline in a step-by-step manner. The example workflow will show you how to</p>
+<ol style="list-style-type: decimal">
+<li>Read a CSV data source</li>
+<li>Convert it to point data layer</li>
+<li>Assign it a CRS</li>
+<li>Extract a subset</li>
+<li>Change data type of a column</li>
+<li>Write the results to a GeoPackage.</li>
+</ol>
+<p>Your data package has a CSV file called <code>worldcities.csv</code>. This file contains basic information about major cities in the world along with their coordinates.</p>
+<p>Let’s use the <code>ogrinfo</code> command to inspect the dataset.</p>
 <pre><code>ogrinfo worldcities.csv</code></pre>
 <p><img src="images/gdal/ogr_csv01.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>The program is able to open and read the file successfully, but it doesn’t show any other info. We can use the <code>-al</code> option to actually read all the lines from the file and combine it with the <code>-so</code> option to print a summary.</p>
 <pre><code>ogrinfo -so -al worldcities.csv</code></pre>
 <p><img src="images/gdal/ogr_csv02.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>We now get a summary with total number of features in the file along with columns and their types. This is a plain CSV file. Let’s turn it into a spatial data layer using the X and Y coordinates supplied in the <code>lng</code> and <code>lat</code> fields. The <code>-oo</code> option allows us to specify format-specific options. The <a href="https://gdal.org/drivers/vector/csv.html#reading-csv-containing-spatial-information">OGR CSV Driver</a> allows specifying a list of column names or a name pattern (such as <code>Lat*</code>) s using the <code>X_POSSIBLE_NAMES</code> and <code>Y_POSSIBLE_NAMES</code> options to spcify which columns contain geometry information.</p>
 <pre><code>ogrinfo -so -al worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat</code></pre>
 <p><img src="images/gdal/ogr_csv03.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>OGR is now able to recognize this layer as a point geometry layer. Let’s write this to a spatial data format. We can use the <code>ogr2ogr</code> utility to translate between different formats. The following command creates a new GeoPackage file called <code>worldcities.gpkg</code> from the CSV file.</p>
 <pre><code>ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat </code></pre>
 <p><img src="images/gdal/ogr_csv04.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>We can open the result in a GIS software and it shows the cities layer. While the point layer loads fine, it is missing a CRS. We can use the <code>a_srs</code> option to assign a CRS to the resulting layer.</p>
 <pre><code>ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326</code></pre>
 <p><img src="images/gdal/ogr_csv05.png" width="75%" style="display: block; margin: auto;" /></p>
-<p><a href="https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect">OGR SQL Syntax</a></p>
+<p>OGR tools allow executing SQL queries against the datasource. It supports a subset of the SQL capability that is described in the <a href="https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect">OGR SQL Syntax</a>. A simple way to select a subset of features is using the <code>-where</code> option. This allows you to specify an attribute query to filter the results. Here we modify our command to extract only the cities where the <code>country</code> column has the value <strong>India</strong>.</p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326  -where &quot;country = &#39;India&#39;&quot;</code></pre>
 <p><img src="images/gdal/ogr_csv06.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>You can also execute any SQL statement on the input data source. This is a very powerful feature that allows you to filter, join, transform, and summarize the input data. We can apply this on our data layer to transform a column type from string to integer. The column <code>population</code> from the input CSV has the type <em>string</em>. Since this field is primarily used to store integer values, we can use the <code>CAST()</code> SQL function to change the type to <em>integer</em>. The <code>SELECT</code> statement also allows us to pick only the relevant fields that will get written to the output.</p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql &quot;SELECT city, country, CAST(population AS integer) as population from worldcities where country = &#39;India&#39;&quot;</code></pre>
 <p><img src="images/gdal/ogr_csv07.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Lastly, we can rename the name of the output layer using the <code>-nln</code> option.</p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql &quot;SELECT city, country, CAST(population AS integer) as population from worldcities where country = &#39;India&#39;&quot; -nln mycities</code></pre>
 <p><img src="images/gdal/ogr_csv08.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>This shows the power of OGR command-line tools. In just a single line, we are able to read, filter, transform and write the results in any output format supported by OGR.</p>
 </div>
 <div id="working-with-multiple-layers" class="section level2">
 <h2>2.2 Working with Multiple Layers</h2>
@@ -1117,7 +1136,8 @@ NRG Composite
 </div>
 </div>
 <div id="geoprocessing-and-spatial-queries" class="section level2">
-<h2>2.2.4 Geoprocessing and Spatial Queries</h2>
+<h2>2.3 Geoprocessing and Spatial Queries</h2>
+<p>With SQLite dialect you must select also geometry.</p>
 <pre><code>ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected</code></pre>
 <pre><code>ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql &quot;select m.station, buffer(m.geom, 500) as geom from metro_stations_reprojected m&quot; -dialect SQLITE </code></pre>
@@ -1148,7 +1168,7 @@ gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893
 </div>
 <div id="generate-proximity-euclidean-distance-rasters" class="section level2">
 <h2>3.2 Generate proximity (Euclidean distance) rasters</h2>
-<pre><code>gdal_proximity.py routes.tif outes_proximity.tif -ot Int16 -distunits GEO
+<pre><code>gdal_proximity.py routes.tif routes_proximity.tif -ot Int16 -distunits GEO
 gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO</code></pre>
 </div>
 <div id="re-classify-raster-values" class="section level2">
