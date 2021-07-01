@@ -81,7 +81,7 @@ Once Anaconda installed, search for *Anaconda Prompt* in the Start Menu and laun
 ```
 conda create --name gdal
 ```
-> Note: You can use the shortcut *Shift + Insert* to paste commands in Anaconda Prompt.
+> Note: You can select *Right Click &rarr; Paste* to paste commands in Anaconda Prompt.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/condawin1.png')
@@ -834,7 +834,7 @@ knitr::include_graphics('images/gdal/ogr_csv08.png')
 
 This shows the power of OGR command-line tools. In just a single line, we are able to read, filter, transform and write the results in any output format supported by OGR. 
 
-## 2.2 Working with Multiple Layers
+## 2.2 Using Virtual Layers
 
 Similar to GDAL, OGR also supports [Virtual File Format (VRT)](https://gdal.org/drivers/vector/vrt.html). Compared to the raster version, the OGR Virtual Driver is much more capable and can be used for on-the-fly data transformations. Multiple data layers can be combined into a single *virtual* layer using the XML-based `.vrt` format files. VRT files are also used to configure reading tabular data into spatial data formats.
 
@@ -939,29 +939,61 @@ Let's now translate the `NA.vrt` to a GeoPackage using the `ogr2ogr` command.
 ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326
 ```
 
+> This operation requires a lot of processing and may take a few minutes. To improve the performance, you can add the configuration option `--config GDAL_CACHEMAX 512` allow the command to use 512 MB of RAM for reading/writing data.
+
 This command reads all 3 text files, filters them for matching features, combines them and  writes out a spatial layer containing all mountains in North America.
 
 ## 2.3 Geoprocessing and Spatial Queries
 
-With SQLite dialect you must select also geometry. 
+We have seen examples of using SQL queries in OGR commands. So far we have used the queries that adhere to the OGR SQL Dialect. OGR Tools also have support [SQLite dialect](https://gdal.org/user/sql_sqlite_dialect.html). The major advantage of using the SQLite dialect is that you can use Spatial SQL functions provided by [Spatialite](http://www.gaia-gis.it/spatialite/). This enables a wide range of applications where you can do spatial queries using OGR tools. A major difference when using the SQLite dialect is that you must specify geometry column explicitly.
+
+Let's do some geoprocessing and see how we can use spatial queries with OGR Tools. Your data package as a geopackage file `spatial_query.gpkg`. This geopackage contains 2 layers.
+
+* `metro_stations`: Point layer with metro rail locations in the city of Melbourne.
+* `bars_and_pubs`: Point layer with locations of bars and pubs in the city of Melbourne.
+
+Let's see how we can add a new layer to this geopackage with all bars and pubs that are within 500m of a metro station.
+
+
+### 2.3.1 Reprojecting Vector Layers
+
+The source data layers are in the CRS `EPSG:4326`. As we want to run a spatial query with distance in meters, let's reproject both the layers to a projected CRS. Let's use the `ogr2ogr` command to reproject both the input layers and save them into the same geopackage. We can use `-t_srs` option allows us to specify **EPSG:7855** (GDA2020 / MGA Zone 55) as the target projection. the `-update` option along with `-nln` tells `ogr2ogr` to create a new layer and save it in the same geopackage.
 
 ```
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected
 ```
 
-```
-ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql "select m.station, buffer(m.geom, 500) as geom from metro_stations_reprojected m" -dialect SQLITE 
-```
+### 2.3.2 Creating Buffers
 
-You can dissolve the buffers using `ST_COLLECT`
+Let's buffer the `metro_stations_reprojected` layer using a distance of **500** meters. Here we specify the SQL query with the `-sql` option. Note the use the `ST_Buffer()` function which is provided by the Spatialite engine. We need to specify `-dialect SQLITE` as the query uses spatial functions.
 
-```
-ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql "select st_union(d.geom) as geom from (select st_collect(buffer(m.geom, 500)) as geom from metro_stations_reprojected m) as d" -dialect SQLITE
-```
+> Spatial database functions often have the `ST_` prefix. ST stands for **Spatial Type**.
 
 ```
-ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "select  b.* from bars_and_pubs_reprojected as b join metro_stations_buffer_dissolved as m on ST_Within( b.geom, m.geom)" -dialect SQLITE 
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql "SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM metro_stations_reprojected m" -dialect SQLITE 
+```
+
+This query results in individual overlapping buffers. We can dissolve the buffers using `ST_Collect()` function.
+
+```
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql "SELECT ST_Union(d.geom) as geom FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom FROM metro_stations_reprojected m) as d" -dialect SQLITE
+```
+
+### 2.3.2 Performing Spatial Queries
+
+Now that we have a polygon layer with the buffer region around the metro stations, we can use the `ST_Within()` function to find all points from the `bars_and_pubs_reprojected` layer that are contained within this region. The following command adds a new layer `selected` with the resulting points.
+
+```
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "SELECT  b.* from bars_and_pubs_reprojected as b JOIN metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)" -dialect SQLITE 
+```
+
+### 2.3.3 Data Cleaning
+
+Previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclode them in double-quotes.
+
+```
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql 'SELECT t1.* FROM selected t1 JOIN (SELECT "Property ID", MAX("Census year") as year FROM selected GROUP BY "Property ID") t2 ON t1."Property ID" = t2."Property ID" AND t1."Census year" = t2.year'
 ```
 
 # 3. Multi Criteria Weighted Overlay Analysis
@@ -1066,6 +1098,11 @@ The script runs the commands both in parallel and serial mode and prints the tim
 ```{bash eval=FALSE}
 python3 batch-parallel.py
 ```
+
+# Useful Configuration Options
+
+* `--debug on`: Turn on debugging mode. This prints additional information that may help you find performance bottlenecks
+* `--config GDAL_CACHEMAX 512`: Allocate 512MB RAM to read/write buffer. This option usually helps speed up GDAL/OGR operations
 
 # Supplement
 
