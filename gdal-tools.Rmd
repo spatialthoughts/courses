@@ -836,7 +836,17 @@ This shows the power of OGR command-line tools. In just a single line, we are ab
 
 ## 2.2 Working with Multiple Layers
 
+Similar to GDAL, OGR also supports [Virtual File Format (VRT)](https://gdal.org/drivers/vector/vrt.html). Compared to the raster version, the OGR Virtual Driver is much more capable and can be used for on-the-fly data transformations. Multiple data layers can be combined into a single *virtual* layer using the XML-based `.vrt` format files. VRT files are also used to configure reading tabular data into spatial data formats.
+
 ### 2.2.1 Read Geonames Files
+
+Your data package contains 3 large text files from Geonames in the `geonames` folder. These are plain-text files in a Tab-Separated Values (TSV) format. Change to the `geonames` directory.
+
+```
+cd geonames
+```
+
+Let's try reading one of the files `CA.txt` - which has over 300K records of all placenames in Canada. To read this file, we need to create a new file called `CA.vrt` with the following content. Save the file in the same `geonames` directory.
 
 ```
 <OGRVRTDataSource>
@@ -847,11 +857,25 @@ This shows the power of OGR command-line tools. In just a single line, we are ab
 </OGRVRTDataSource>
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/geonames1.png')
+```
+
+Let's check if OGR is able to read the source text file via the newly created `CA.vrt` file.
+
 ```
 ogrinfo -al -so CA.vrt
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/geonames2.png')
+```
+
+The `ogrinfo` command was able to successfully read the data and shows us the summary of the attributes as well as total feature count. Note that OGR has built-in support for the geonames file format. So it was able to correctly detect the geometry columns without us specifying it. For other datasets, you will have to specify the geometry columns explicitly via the `<GeometryField>` attribute in the VRT file.
+
 ### 2.2.2 Applying Filters
+
+VRT format supports applying SQL queries on the source layer using the `<SrcSQL>` field. This allows us to create an on-the-fly filter that reads only a subset of the data. Update the `CA.vrt` with the following content.
 
 ```
 <OGRVRTDataSource>
@@ -863,14 +887,27 @@ ogrinfo -al -so CA.vrt
 </OGRVRTDataSource>
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/geonames3.png')
+```
+
+The VRT file now contains a SQL query to select only the mountain features from the source file. Let's run `ogrinfo` again and check the output.
+
 ```
 ogrinfo -al -so CA.vrt
 ```
 
-### 2.2.3 Merging Files
-
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/geonames4.png')
 ```
 
+You will see that the output contains a subset of features, even though we never changed the source data. 
+
+### 2.2.3 Merging Files
+
+The real power of the VRT file format lies in its ability to dynamically combine multiple data sources into a single data layer. We can adapt the previously created file and use `<OGRVRTUnionLayer>` to create a single layer from the 3 separate text files. Save the following content into a new file named `NA.vrt`.
+
+```
 <OGRVRTDataSource>
 	<OGRVRTUnionLayer name="NA">
 	
@@ -896,11 +933,13 @@ ogrinfo -al -so CA.vrt
 </OGRVRTDataSource>
 ```
 
+Let's now translate the `NA.vrt` to a GeoPackage using the `ogr2ogr` command.
 
 ```
-ogr2ogr -f GPKG NA.gpkg NA.vrt
+ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326
 ```
 
+This command reads all 3 text files, filters them for matching features, combines them and  writes out a spatial layer containing all mountains in North America.
 
 ## 2.3 Geoprocessing and Spatial Queries
 
