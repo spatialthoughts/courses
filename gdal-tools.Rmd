@@ -738,7 +738,7 @@ knitr::include_graphics('images/gdal/georeference_gcp.png')
 
 We will now learn to process vector data using OGR Tools. These are a suite of tools that are part of the GDAL package and follow the same convention. In addition to format translation, the OGR tools also support running Spatial SQL queries - making them very powerful to build Spatial ETL pipelines.
 
-## 2.1 Working with CSV files
+## 2.1 Basic ETL Pipeline
 
 In this section, we will see how we can build a basic ETL pipeline in a step-by-step manner. The example workflow will show you how to
 
@@ -933,6 +933,10 @@ The real power of the VRT file format lies in its ability to dynamically combine
 </OGRVRTDataSource>
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/geonames5.png')
+```
+
 Let's now translate the `NA.vrt` to a GeoPackage using the `ogr2ogr` command.
 
 ```
@@ -942,6 +946,10 @@ ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326
 > This operation requires a lot of processing and may take a few minutes. To improve the performance, you can add the configuration option `--config GDAL_CACHEMAX 512` to allow the command to use 512 MB of RAM for reading/writing data.
 
 This command reads all 3 text files, filters them for matching features, combines them and writes out a spatial layer containing all mountains in North America.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/geonames6.png')
+```
 
 ## 2.3 Geoprocessing and Spatial Queries
 
@@ -964,6 +972,10 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -up
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/geoprocessing1.png')
+```
+
 ### 2.3.2 Creating Buffers
 
 Let's buffer the `metro_stations_reprojected` layer using a distance of **500** meters. Here we specify the SQL query with the `-sql` option. Note the use of the `ST_Buffer()` function which is provided by the Spatialite engine. We need to specify `-dialect SQLITE` as the query uses spatial functions.
@@ -974,10 +986,18 @@ Let's buffer the `metro_stations_reprojected` layer using a distance of **500** 
 ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql "SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM metro_stations_reprojected m" -dialect SQLITE 
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/geoprocessing2.png')
+```
+
 This query results in individual overlapping buffers. We can dissolve the buffers using `ST_Collect()` function.
 
 ```
 ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql "SELECT ST_Union(d.geom) as geom FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom FROM metro_stations_reprojected m) as d" -dialect SQLITE
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/geoprocessing3.png')
 ```
 
 ### 2.3.2 Performing Spatial Queries
@@ -988,12 +1008,16 @@ Now that we have a polygon layer with the buffer region around the metro station
 ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "SELECT  b.* from bars_and_pubs_reprojected as b JOIN metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)" -dialect SQLITE 
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/geoprocessing4.png')
+```
+
 ### 2.3.3 Data Cleaning
 
 The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclode them in double-quotes.
 
 ```
-ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql 'SELECT t1.* FROM selected t1 JOIN (SELECT "Property ID", MAX("Census year") as year FROM selected GROUP BY "Property ID") t2 ON t1."Property ID" = t2."Property ID" AND t1."Census year" = t2.year'
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql "SELECT t1.* FROM selected t1 JOIN (SELECT \"Property ID\", MAX(\"Census year\") as year FROM selected GROUP BY \"Property ID\") t2 ON t1.\"Property ID\" = t2.\"Property ID\" AND t1.\"Census year\" = t2.year"
 ```
 
 # 3. Multi Criteria Weighted Overlay Analysis
