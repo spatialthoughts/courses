@@ -1217,15 +1217,22 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 <h2>3.1 Rasterize vector layers</h2>
 <p>For overlay analysis, all rasters must be of the same extent. So we first find the extent of the dataset that we can use while rasterizing.</p>
 <pre><code>ogrinfo multicriteria.gpkg</code></pre>
+<p><img src="images/gdal/multicriteria1.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>ogrinfo -so multicriteria.gpkg boundary</code></pre>
+<p><img src="images/gdal/multicriteria2.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_rasterize -burn 1 -add -tr 100 100 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l bicycle_thefts thefts.tif -ot Int16</code></pre>
+<p><img src="images/gdal/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycling_routes routes.tif</code></pre>
+<p><img src="images/gdal/multicriteria4.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycle_parking existing_parking.tif</code></pre>
+<p><img src="images/gdal/multicriteria5.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="generate-proximity-euclidean-distance-rasters" class="section level2">
 <h2>3.2 Generate proximity (Euclidean distance) rasters</h2>
 <pre><code>gdal_proximity.py routes.tif routes_proximity.tif -ot Int16 -distunits GEO</code></pre>
+<p><img src="images/gdal/multicriteria6.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO</code></pre>
+<p><img src="images/gdal/multicriteria7.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="re-classify-raster-values" class="section level2">
 <h2>3.3 Re-classify raster values</h2>
@@ -1264,13 +1271,16 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif --calc=&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;
 
 gdal_calc.py -A existing_parking_proximity.tif --outfile existing_parking_reclass.tif --calc=&quot;100*(A&gt;100) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&lt;50)&quot;</code></pre>
+<p><img src="images/gdal/multicriteria8.png" width="100%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="overlay-analysis" class="section level2">
 <h2>3.4 Overlay analysis</h2>
 <p>Roads and Water have a range of values, but protected areas are either 0 or 1. So we combine these together accordingly.</p>
 <pre><code>gdalwarp -r average -tr 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif
 gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif</code></pre>
+<p><img src="images/gdal/multicriteria9.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif -C parking_reclass_resampled.tif --outfile suitability.tif --calc=&quot;(A + B + C)/3&quot; --NoDataValue=0</code></pre>
+<p><img src="images/gdal/multicriteria10.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="running-commands-in-batch" class="section level1">
