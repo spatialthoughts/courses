@@ -961,6 +961,7 @@ NRG Composite
 <h3>1.5.1 Listing WMS Layers</h3>
 <p>NASA’s Socioeconomic Data and Applications Center (SEDAC) provides many useful data layers though <a href="https://sedac.ciesin.columbia.edu/maps/services">WMS Services</a>. We can list all available layers using <code>gdalinfo</code>.</p>
 <pre><code>gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms</code></pre>
+<p><img src="images/gdal/wms1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p>We can get more information about a particular layer by specifying the output from the command above. Let’s get more info about the <a href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global Reservoir and Dam (GRanD), v1</a> layer.</p>
 <pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot;</code></pre>
 </div>
@@ -1231,6 +1232,7 @@ Dissolved Buffers
 <h3>2.3.3 Data Cleaning</h3>
 <p>The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.</p>
 <pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql &quot;SELECT t1.* FROM selected t1 JOIN (SELECT \&quot;Property ID\&quot;, MAX(\&quot;Census year\&quot;) as year FROM selected GROUP BY \&quot;Property ID\&quot;) t2 ON t1.\&quot;Property ID\&quot; = t2.\&quot;Property ID\&quot; AND t1.\&quot;Census year\&quot; = t2.year&quot;</code></pre>
+<p><img src="images/gdal/geoprocessing5.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 </div>
@@ -1243,6 +1245,7 @@ Dissolved Buffers
 <li>Close to a bicycle route</li>
 <li>Far from existing parking facilities</li>
 </ol>
+<p><img src="images/gdal/multi_criteria_analysis.png" width="75%" style="display: block; margin: auto;" /></p>
 <div id="rasterize-vector-layers" class="section level2">
 <h2>3.1 Rasterize vector layers</h2>
 <p>The step in the overlay analysis is to convert each vector data layer to raster. This is accomplished using the <code>gdal_rasterize</code> command. Let’s check the content of the data layers provided in the <code>multicriteria.gpkg</code>.</p>
@@ -1322,7 +1325,7 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 </div>
 <div id="exercise-6" class="section level2">
 <h2>Exercise 6</h2>
-<p>Perform a <em>Weighted</em> Multi-Criteria Overlay Analysis where different criteria are assigned weights on their relative importance. Let’s assume that proximity to cycling routes is not as important as the other two factors in the final decision. We can give more important to other criteria as below.</p>
+<p>Perform a <em>Weighted</em> Multi-Criteria Overlay Analysis where different criteria are assigned weights on their relative importance. Let’s assume that the proximity to cycling routes is not as important as the other two factors in the final decision. We can give more important to other criteria as below.</p>
 <ul>
 <li>Theft Density: Weight=2</li>
 <li>Routes: Weight=1</li>
@@ -1385,10 +1388,11 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <h1>Tips for Improving Performance</h1>
 <div id="configuration-options" class="section level2">
 <h2>Configuration Options</h2>
-<p>There are several configuration options that can be tweaked to help with faster processing.</p>
+<p>GDAL has several <a href="https://gdal.org/user/configoptions.html">configuration options</a> that can be tweaked to help with faster processing.</p>
 <ul>
 <li><code>--config GDAL_CACHEMAX 512</code>: This option is the one that helps speed up most GDAL commands by allowing them to use larger amount of RAM (512 MB) reading/writing data.</li>
-<li><code>--debug on</code>: Turn on debugging mode. This prints additional information that may help you find performance bottlenecks</li>
+<li><code>--config GDAL_NUM_THREADS ALL_CPUS</code>: This option helps speed up write speed by using multiple threads for compression.</li>
+<li><code>--debug on</code>: Turn on debugging mode. This prints additional information that may help you find performance bottlenecks.</li>
 </ul>
 </div>
 <div id="multithreading" class="section level2">
