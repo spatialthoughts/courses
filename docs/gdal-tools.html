@@ -474,6 +474,7 @@ $(document).ready(function () {
 <li><a href="#generate-proximity-euclidean-distance-rasters">3.2 Generate proximity (Euclidean distance) rasters</a></li>
 <li><a href="#re-classify-raster-values">3.3 Re-classify raster values</a></li>
 <li><a href="#overlay-analysis">3.4 Overlay analysis</a></li>
+<li><a href="#exercise-6">Exercise 6</a></li>
 </ul></li>
 <li><a href="#running-commands-in-batch">4. Running commands in batch</a></li>
 <li><a href="#useful-configuration-options">Useful Configuration Options</a></li>
@@ -1101,7 +1102,7 @@ NRG Composite
 </ul>
 <p>All of the above operations should be done in a single-command. Once you arrive at a solution, see if you can improve it by working on the following challenges:</p>
 <ul>
-<li><p>Challenge 1: You will get a warning that some field values could not be written correctly. This is because the default encoding for the Shapefile format is <em>ISO-8859-1</em> - which doesn’t support non-latin characters. You can set the encoding to <strong>UTF-8</strong> using the <code>-lco</code> option. <em>Hint: Review the <a href="https://gdal.org/drivers/vector/shapefile.html#layer-creation-options">Layer Creation Options</a> for the shapefile driver to see the correct syntax</em>.</p></li>
+<li><p>Challenge 1: You will get a warning that some field values could not be written correctly. This is because the default encoding for the Shapefile format is <em>ISO-8859-1</em> - which doesn’t support non-latin characters. You can specify the encoding to <strong>UTF-8</strong> using the <code>-lco</code> option in <code>ogr2ogr</code> command. <em>Hint: Review the <a href="https://gdal.org/drivers/vector/shapefile.html#layer-creation-options">Layer Creation Options</a> for the shapefile driver to see the correct syntax</em>.</p></li>
 <li><p>Challenge 2: While you are exploring the Layer Creation Options, add an option to create a spatial index on the output shapefile. <em>Hint: You can specify the <code>-lco</code> option multiple times in the command.</em></p></li>
 </ul>
 </div>
@@ -1200,10 +1201,20 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 <p>Spatial database functions often have the <code>ST_</code> prefix. ST stands for <strong>Spatial Type</strong>.</p>
 </blockquote>
 <pre><code>ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql &quot;SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM metro_stations_reprojected m&quot; -dialect SQLITE </code></pre>
-<p><img src="images/gdal/geoprocessing2.png" width="75%" style="display: block; margin: auto;" /></p>
+<div class="figure" style="text-align: center">
+<img src="images/gdal/geoprocessing2.png" alt="Metro Station Buffers" width="75%" />
+<p class="caption">
+Metro Station Buffers
+</p>
+</div>
 <p>This query results in individual overlapping buffers. We can dissolve the buffers using <code>ST_Collect()</code> function.</p>
 <pre><code>ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql &quot;SELECT ST_Union(d.geom) as geom FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom FROM metro_stations_reprojected m) as d&quot; -dialect SQLITE</code></pre>
-<p><img src="images/gdal/geoprocessing3.png" width="75%" style="display: block; margin: auto;" /></p>
+<div class="figure" style="text-align: center">
+<img src="images/gdal/geoprocessing3.png" alt="Dissolved Buffers" width="75%" />
+<p class="caption">
+Dissolved Buffers
+</p>
+</div>
 </div>
 <div id="performing-spatial-queries" class="section level3">
 <h3>2.3.2 Performing Spatial Queries</h3>
@@ -1220,8 +1231,7 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 </div>
 <div id="multi-criteria-weighted-overlay-analysis" class="section level1">
 <h1>3. Multi Criteria Weighted Overlay Analysis</h1>
-<p>Multi-criteria analysis is the process of the allocation of land to suit a specific objective on the basis of a variety of attributes that the selected areas should possess.</p>
-<p>Although this is a common GIS operation, it is best performed in the raster space. Below is the typical workflow to take source vector data, transform them to appropriate rasters, re-classify them and perform mathematical operations to do a suitability analysis.</p>
+<p>Multi-criteria analysis is the process of the allocation of land to suit a specific objective on the basis of a variety of attributes that the selected areas should possess. Although this is a common GIS operation, it is best performed in the raster space. Below is the typical workflow to take source vector data, transform them to appropriate rasters, re-classify them and perform mathematical operations to do a suitability analysis.</p>
 <p>We will work with crime and infrastructure data for the city of London and find suitable areas to build new parking facilities that can help reduce bicycle thefts. Our analysis will apply the following 3 criteria. The proposed parking must be</p>
 <ol style="list-style-type: decimal">
 <li>In a bicycle theft hotspot</li>
@@ -1230,20 +1240,25 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 </ol>
 <div id="rasterize-vector-layers" class="section level2">
 <h2>3.1 Rasterize vector layers</h2>
-<p>For overlay analysis, all rasters must be of the same extent. So we first find the extent of the dataset that we can use while rasterizing.</p>
+<p>The step in the overlay analysis is to convert each vector data layer to raster. This is accomplished using the <code>gdal_rasterize</code> command. Let’s check the content of the data layers provided in the <code>multicriteria.gpkg</code>.</p>
 <pre><code>ogrinfo multicriteria.gpkg</code></pre>
 <p><img src="images/gdal/multicriteria1.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>An important consideration is that all rasters must be of the same extent. We can inspect use the boundary layer and find out the extent in the CRS of the layer. We will specify this extent using the <code>-te</code> option with <code>gdal_rasterize</code> command.</p>
 <pre><code>ogrinfo -so multicriteria.gpkg boundary</code></pre>
 <p><img src="images/gdal/multicriteria2.png" width="75%" style="display: block; margin: auto;" /></p>
-<pre><code>gdal_rasterize -burn 1 -add -tr 100 100 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l bicycle_thefts thefts.tif -ot Int16</code></pre>
-<p><img src="images/gdal/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Let’s start by rasterizing the <code>cycling_routes</code> layer. We want to create an output raster where the pixel values are <strong>1</strong> where there is a route and <strong>0</strong> where there are no routes. This value is specified using the <code>-burn</code> option. We can set the resolution of the output raster to be <strong>10</strong> meters using the <code>-tr</code> option. Once the command finishes, each pixel’s value will be set to 1 or 0 depending on whether a route line intersects it or not.</p>
 <pre><code>gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycling_routes routes.tif</code></pre>
-<p><img src="images/gdal/multicriteria4.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><img src="images/gdal/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>We can rasterize the <code>cycle_parking</code> layer with the same options.</p>
 <pre><code>gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycle_parking existing_parking.tif</code></pre>
+<p><img src="images/gdal/multicriteria4.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Now only the <code>bicycle_thefts</code> layer need to be rasterized. This is a dense point layer with locations of individual thefts - with overlapping points. We can create a raster layer by adding the total number of points within each pixel and calculate the density of thefts. This type of approach in mapping point density is called Binning or Aggregation. We can use the <code>-add</code> option to increment the value to the pixel for each input feature.</p>
+<pre><code>gdal_rasterize -burn 1 -add -tr 100 100 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l bicycle_thefts thefts.tif -ot Int16</code></pre>
 <p><img src="images/gdal/multicriteria5.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="generate-proximity-euclidean-distance-rasters" class="section level2">
 <h2>3.2 Generate proximity (Euclidean distance) rasters</h2>
+<p>Now that we have all the input layers converted, we can generate proximity rasters. These are also known as Euclidean distance rasters - where each pixel in the output raster represents the distance to the nearest pixel in the input raster. This resulting raster can be then used to determine suitable areas which are within certain distance from the input.</p>
 <pre><code>gdal_proximity.py routes.tif routes_proximity.tif -ot Int16 -distunits GEO</code></pre>
 <p><img src="images/gdal/multicriteria6.png" width="75%" style="display: block; margin: auto;" /></p>
 <pre><code>gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO</code></pre>
@@ -1251,6 +1266,8 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 </div>
 <div id="re-classify-raster-values" class="section level2">
 <h2>3.3 Re-classify raster values</h2>
+<p>To use the proximity rasters in overlay analysis, we must first re-classify it to create discrete values. Here we use the range 0-100 and assign an appropriate value based on the input range.</p>
+<p>For point density raster representing <strong>Thefts</strong>, we assign higher value to more thefts. For <strong>Routes</strong> raster, we assign higher value to pixels that are close to the routes. Lastly, for the <strong>Existing Parking</strong> raster, we assigned higher value to pixels that are far away. The final assignment look like below.</p>
 <table>
 <thead>
 <tr class="header">
@@ -1281,6 +1298,7 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 </tr>
 </tbody>
 </table>
+<p>For raster algebra operations, GDAL provides a raster calculator in form of <code>gdal_calc.py</code>. The input rasters are specified using using any letters from A-Z. These letters can be then referenced in the expression. The expression is specifited using the <code>--calc</code> option and it supports NumPy syntax and <a href="https://numpy.org/doc/stable/reference/routines.math.html#">functions</a>. The following commands apply the expressions to take the continuous values from the input rasters and create re-classified rasters with discrete values.</p>
 <pre><code>gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif --calc=&quot;100*(A&gt;20) + 50*(A&gt;10)*(A&lt;=20) + 10*(A&lt;10)&quot;
 
 gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif --calc=&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;
@@ -1290,12 +1308,24 @@ gdal_calc.py -A existing_parking_proximity.tif --outfile existing_parking_reclas
 </div>
 <div id="overlay-analysis" class="section level2">
 <h2>3.4 Overlay analysis</h2>
-<p>Roads and Water have a range of values, but protected areas are either 0 or 1. So we combine these together accordingly.</p>
+<p>Now we are ready to do the final overlay analysis. Before we proceed, it is important to make sure that all the rasters have the same pixel resolution. We downsample the <code>existing_parking_reclass.tif</code> and <code>routes_reclass.tif</code> layers so their resolution matches <code>thefts_reclass.tif</code> layer.</p>
 <pre><code>gdalwarp -r average -tr 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif
 gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif</code></pre>
 <p><img src="images/gdal/multicriteria9.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>For our analysis, we will give equal important to all 3 criteria. We simply add all 3 rasters and normalize the pixel values so they are in the 0-100 range. We set the NoData value in the output using the <code>--NoDataValue</code> option.</p>
 <pre><code>gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif -C parking_reclass_resampled.tif --outfile suitability.tif --calc=&quot;(A + B + C)/3&quot; --NoDataValue=0</code></pre>
 <p><img src="images/gdal/multicriteria10.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>The resulting raster represents the suitability of new bicycle parking facilities.</p>
+</div>
+<div id="exercise-6" class="section level2">
+<h2>Exercise 6</h2>
+<p>Perform a <em>Weighted</em> Multi-Criteria Overlay Analysis where different criteria have different relative importance. Let’s assume that proximity to cycling routes is not as important as the other 2 factors in the final decision. We can give more important to other criteria as below.</p>
+<ul>
+<li>Theft Density: 2</li>
+<li>Routes: 1</li>
+<li>Existing Parking: 2</li>
+</ul>
+<p>Create another raster <code>weighted_suitability.tif</code> with the above weights and compare the output with the previous result.</p>
 </div>
 </div>
 <div id="running-commands-in-batch" class="section level1">
