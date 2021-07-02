@@ -738,9 +738,9 @@ knitr::include_graphics('images/gdal/georeference_gcp.png')
 
 We will now learn to process vector data using OGR Tools. These are a suite of tools that are part of the GDAL package and follow the same convention. In addition to format translation, the OGR tools also support running Spatial SQL queries - making them very powerful to build Spatial ETL pipelines.
 
-## 2.1 Basic ETL Pipeline
+## 2.1 ETL Basics
 
-In this section, we will see how we can build a basic ETL pipeline in a step-by-step manner. The example workflow will show you how to
+In this section, we will see how we can build an Extract-Transform-Load (ETL) process in a step-by-step manner. The example workflow will show you how to
 
 1. Read a CSV data source
 2. Convert it to point data layer
@@ -833,6 +833,20 @@ knitr::include_graphics('images/gdal/ogr_csv08.png')
 ```
 
 This shows the power of OGR command-line tools. In just a single line, we can read, filter, transform and write the results in any output format supported by OGR. 
+
+## Exercise 5
+
+Write a command using `ogr2ogr` that performs the following operations. 
+
+* Read the newly created `mycities` layer from the `mycities.gpkg` file.
+* Reproject the layer to a new CRS **EPSG:7755** (WGS84 / India NSF LCC).
+* Save the results as a shapefile `mycities.shp`
+
+All of the above operations should be done in a single-command. Once you arrive at a solution, see if you can improve it by working on the following challenges:
+
+* Challenge 1: You will get a warning that some field values could not be written correctly. This is because the default encoding for the Shapefile format is *ISO-8859-1* - which doesn't support non-latin characters. You can set the encoding to **UTF-8** using the `-lco` option. *Hint: Review the [Layer Creation Options](https://gdal.org/drivers/vector/shapefile.html#layer-creation-options) for the shapefile driver to see the correct syntax*.
+
+* Challenge 2: While you are exploring the Layer Creation Options, add an option to create a spatial index on the output shapefile. *Hint: You can specify the `-lco` option multiple times in the command.*
 
 ## 2.2 Using Virtual Layers
 
@@ -1014,7 +1028,7 @@ knitr::include_graphics('images/gdal/geoprocessing4.png')
 
 ### 2.3.3 Data Cleaning
 
-The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclode them in double-quotes.
+The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.
 
 ```
 ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql "SELECT t1.* FROM selected t1 JOIN (SELECT \"Property ID\", MAX(\"Census year\") as year FROM selected GROUP BY \"Property ID\") t2 ON t1.\"Property ID\" = t2.\"Property ID\" AND t1.\"Census year\" = t2.year"

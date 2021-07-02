@@ -452,7 +452,8 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#ogr-tools">2. OGR Tools</a>
 <ul>
-<li><a href="#basic-etl-pipeline">2.1 Basic ETL Pipeline</a></li>
+<li><a href="#etl-basics">2.1 ETL Basics</a></li>
+<li><a href="#exercise-5">Exercise 5</a></li>
 <li><a href="#using-virtual-layers">2.2 Using Virtual Layers</a>
 <ul>
 <li><a href="#read-geonames-files">2.2.1 Read Geonames Files</a></li>
@@ -1052,9 +1053,9 @@ NRG Composite
 <div id="ogr-tools" class="section level1">
 <h1>2. OGR Tools</h1>
 <p>We will now learn to process vector data using OGR Tools. These are a suite of tools that are part of the GDAL package and follow the same convention. In addition to format translation, the OGR tools also support running Spatial SQL queries - making them very powerful to build Spatial ETL pipelines.</p>
-<div id="basic-etl-pipeline" class="section level2">
-<h2>2.1 Basic ETL Pipeline</h2>
-<p>In this section, we will see how we can build a basic ETL pipeline in a step-by-step manner. The example workflow will show you how to</p>
+<div id="etl-basics" class="section level2">
+<h2>2.1 ETL Basics</h2>
+<p>In this section, we will see how we can build an Extract-Transform-Load (ETL) process in a step-by-step manner. The example workflow will show you how to</p>
 <ol style="list-style-type: decimal">
 <li>Read a CSV data source</li>
 <li>Convert it to point data layer</li>
@@ -1089,6 +1090,20 @@ NRG Composite
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql &quot;SELECT city, country, CAST(population AS integer) as population from worldcities where country = &#39;India&#39;&quot; -nln mycities</code></pre>
 <p><img src="images/gdal/ogr_csv08.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>This shows the power of OGR command-line tools. In just a single line, we can read, filter, transform and write the results in any output format supported by OGR.</p>
+</div>
+<div id="exercise-5" class="section level2">
+<h2>Exercise 5</h2>
+<p>Write a command using <code>ogr2ogr</code> that performs the following operations.</p>
+<ul>
+<li>Read the newly created <code>mycities</code> layer from the <code>mycities.gpkg</code> file.</li>
+<li>Reproject the layer to a new CRS <strong>EPSG:7755</strong> (WGS84 / India NSF LCC).</li>
+<li>Save the results as a shapefile <code>mycities.shp</code></li>
+</ul>
+<p>All of the above operations should be done in a single-command. Once you arrive at a solution, see if you can improve it by working on the following challenges:</p>
+<ul>
+<li><p>Challenge 1: You will get a warning that some field values could not be written correctly. This is because the default encoding for the Shapefile format is <em>ISO-8859-1</em> - which doesn’t support non-latin characters. You can set the encoding to <strong>UTF-8</strong> using the <code>-lco</code> option. <em>Hint: Review the <a href="https://gdal.org/drivers/vector/shapefile.html#layer-creation-options">Layer Creation Options</a> for the shapefile driver to see the correct syntax</em>.</p></li>
+<li><p>Challenge 2: While you are exploring the Layer Creation Options, add an option to create a spatial index on the output shapefile. <em>Hint: You can specify the <code>-lco</code> option multiple times in the command.</em></p></li>
+</ul>
 </div>
 <div id="using-virtual-layers" class="section level2">
 <h2>2.2 Using Virtual Layers</h2>
@@ -1198,7 +1213,7 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -u
 </div>
 <div id="data-cleaning" class="section level3">
 <h3>2.3.3 Data Cleaning</h3>
-<p>The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclode them in double-quotes.</p>
+<p>The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.</p>
 <pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql &quot;SELECT t1.* FROM selected t1 JOIN (SELECT \&quot;Property ID\&quot;, MAX(\&quot;Census year\&quot;) as year FROM selected GROUP BY \&quot;Property ID\&quot;) t2 ON t1.\&quot;Property ID\&quot; = t2.\&quot;Property ID\&quot; AND t1.\&quot;Census year\&quot; = t2.year&quot;</code></pre>
 </div>
 </div>
