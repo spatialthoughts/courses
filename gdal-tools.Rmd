@@ -4,6 +4,10 @@ subtitle: "A practical hands-on introduction to GDAL and OGR command-line progra
 author: "Ujaval Gandhi"
 fontsize: 12pt
 output:
+  # pdf_document:
+  #   latex_engine: xelatex
+  #   toc: yes
+  #   toc_depth: 3
   html_document:
     df_print: paged
     toc: yes
@@ -11,9 +15,6 @@ output:
     highlight: pygments
     includes:
       after_body: disqus.html
-  # pdf_document:
-  #   toc: yes
-  #   toc_depth: 3
   # word_document:
   #   toc: yes
   #   toc_depth: '3'
@@ -47,7 +48,7 @@ knitr::include_graphics('images/spatial_thoughts_logo.png')
 [![View Presentation](images/gdal/introduction.png){width="400px"}](https://docs.google.com/presentation/d/1JvGjb5eNM9F--zfyTFAeAk0R5UG6weFpOUVDVkJSnho/edit?usp=sharing
 ){target="_blank"}
 
-[View the Presentation &#8599;](https://docs.google.com/presentation/d/1JvGjb5eNM9F--zfyTFAeAk0R5UG6weFpOUVDVkJSnho/edit?usp=sharing){target="_blank"}
+[View the Presentation](https://docs.google.com/presentation/d/1JvGjb5eNM9F--zfyTFAeAk0R5UG6weFpOUVDVkJSnho/edit?usp=sharing){target="_blank"}
 
 
 # Get the Data Package
@@ -252,7 +253,7 @@ gdalbuildvrt -input_file_list filelist.txt merged.vrt
 knitr::include_graphics('images/gdal/merging2.png')
 ```
 
-> Note: We could have done this operation in a  single step using the command `gdalbuildvrt merged.vrt *.hgt`. However, some versions of GDAL on Windows do not expand the `*` wildcard correctly and the command results in an error. It is recommended to use a file list instead of wildcards with GDAL commands on Windows to avoid unexpeted results.[[reference](https://github.com/OSGeo/gdal/issues/1749)]
+> Note: We could have done this operation in a  single step using the command `gdalbuildvrt merged.vrt *.hgt`. However, some versions of GDAL on Windows do not expand the `*` wildcard correctly and the command results in an error. It is recommended to use a file list instead of wildcards with GDAL commands on Windows to avoid unexpected results.[[reference](https://github.com/OSGeo/gdal/issues/1749)]
 
 ### Exercise 1
 
@@ -441,7 +442,7 @@ We can use the `-outsize` option and specify a percentage to generate a smaller 
 gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
 ```
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/naip_preview.jpg')
 ```
 
@@ -459,7 +460,7 @@ gdaltindex -write_absolute_path index.shp --optfile filelist.txt
 
 Let's say we want to mosaic all the source tiles into a single image. We also want to clip the mosaic to a given AOI.
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/aoiselection.png')
 ```
 
@@ -471,7 +472,7 @@ We can use the `gdalwarp` utility to clip the raster using the `-cutline` option
 gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
 ```
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
 
@@ -509,7 +510,7 @@ gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_L
 
 Once the command finishes, you can view the result in QGIS. 
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/rgb.png')
 ```
 
@@ -519,7 +520,7 @@ The resulting composite appears quite dark and has low-contrast. QGIS applies a 
 
 Here's what the histogram of the RGB composite looks like.
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/histogram.png')
 ```
 
@@ -537,7 +538,7 @@ gdal_translate -scale 0 0.3 0 255 -ot Byte rgb.tif rgb_stretch.tif
 knitr::include_graphics('images/gdal/rgb_stretch_linear.png')
 ```
 
-We can also apply a non-linear stretch. `gdal_translate` has a `-exponent` option that scales the input values using the following formula. Choosing an exponent value between 0 and 1 will enhance low intensity values - resulting in a brighter image. [Learn more &#8599;    ](https://homepages.inf.ed.ac.uk/rbf/HIPR2/pixexp.htm)
+We can also apply a non-linear stretch. `gdal_translate` has a `-exponent` option that scales the input values using the following formula. Choosing an exponent value between 0 and 1 will enhance low intensity values - resulting in a brighter image. [Learn more](https://homepages.inf.ed.ac.uk/rbf/HIPR2/pixexp.htm)
 
 Let's try exponent value of **0.5**. The result is a much better looking output.
 ```
@@ -548,6 +549,25 @@ gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte rgb.tif rgb_stretch.tif
 knitr::include_graphics('images/gdal/rgb_stretch_exponent.png')
 ```
 
+
+### 1.4.3 Raster Algebra
+
+For raster algebra operations, GDAL provides a raster calculator program `gdal_calc.py`. The input rasters are specified using using any letters from A-Z. These letters can be then referenced in the expression. The expression is specified using the `--calc` option and it supports NumPy syntax and [functions](https://numpy.org/doc/stable/reference/routines.math.html#). 
+
+```
+gdalinfo -stats landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
+```
+It is important to set NoData value. As seen from the output above, NoData is set to -9999.
+ 
+```
+gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-9999
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/ndvi.png')
+```
+
+
 ### Exercise 4
 
 Create an NRG Composite image with Near Infrared, Red and Green bands. Apply a contrast stretch to the result and save it as a PNG image.
@@ -556,7 +576,7 @@ Create an NRG Composite image with Near Infrared, Red and Green bands. Apply a c
 knitr::include_graphics('images/gdal/nrg_stretch.png')
 ```
 
-### 1.4.3 Pan Sharpening
+### 1.4.4 Pan Sharpening
 
 Most satellite and airborne sensors capture images in the *Pan-chromatic* band along with other spectral bands. The *Red*, *Green*, and *Blue* bands capture signals in the *Red*, *Green*, and *Blue* portions of the electromagnetic spectrum respectively. But the *Pan*-band captures the data across the entire range of wavelengths in the visible spectrum. This allows the sensor to capture the data in a higher spatial resolution than other bands which capture the signal from a subset of this wavelength range.
 
@@ -574,27 +594,12 @@ We can apply the same contrast stretch as before and compare the output. You wil
 gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 pansharpened.tif pansharpened_stretch.tif
 ```
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/pansharpen_before.png')
 ```
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/pansharpen_after.png')
-```
-
-### 1.4.4 Raster Algebra
-
-```
-gdalinfo -stats landsat8/RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
-```
-It is important to set NoData value. As seen from the output above, NoData is set to -9999.
- 
-```
-gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-9999
-```
-
-```{r echo=FALSE, fig.align='center'}
-knitr::include_graphics('images/gdal/ndvi.png')
 ```
 
 
@@ -636,10 +641,18 @@ Some applications require offline access to WMS layers. If you want to use a WMS
 gdalwarp -tr 0.1 0.1 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=-153.037,-45.881,176.825,70.398" reservoirs.tif
 ```
 
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/wms4.png')
+```
+
 We can change the WMS URL with any other configuration parameter. We can extract a smaller region by specifying a different bounding box coordinate using the `BBOX` parameter. The command below uses `gdal_translate` to create an output raster of 10000 x 10000 pixels with the data layer clipped to India.
 
 ```
 gdal_translate -outsize 10000 10000 "WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&SRS=EPSG:4326&BBOX=68.106,6.762,97.412,37.078" reservoirs_india.tif
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/wms5.png')
 ```
 
 Learn more about offline WMS and comparison between different formats in this article [Offline WMS – Benchmarking raster formats for QField](https://www.opengis.ch/2020/06/09/offline-wms-benchmarking-raster-formats-for-qfield/) by OpenGIS.ch.
@@ -1126,7 +1139,7 @@ For point density raster representing **Thefts**, we assign higher value to more
 | 10-20         | 50-100m     | 50-100m              | 50
 | < 10          | > 100m      | < 50m                | 10
 
-For raster algebra operations, GDAL provides a raster calculator in form of `gdal_calc.py`. The input rasters are specified using using any letters from A-Z. These letters can be then referenced in the expression. The expression is specifited using the `--calc` option and it supports NumPy syntax and [functions](https://numpy.org/doc/stable/reference/routines.math.html#). The following commands apply the expressions to take the continuous values from the input rasters and create re-classified rasters with discrete values.
+The following commands uses `gdal_calc.py` to take the continuous values from the input rasters and create re-classified rasters with discrete values.
 
 ```
 gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
