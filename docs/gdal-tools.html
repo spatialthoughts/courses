@@ -951,23 +951,25 @@ NRG Composite
 </div>
 <div id="processing-wms-layers" class="section level2">
 <h2>1.5 Processing WMS Layers</h2>
+<p>GDAL supports reading from a variety of web services, including <a href="https://gdal.org/drivers/raster/wms.html">Web Map Services (WMS)</a> layers.</p>
+<p>NASA’s [Socioeconomic Data and Applications Center (SEDAC) provides many useful data layers though <a href="https://sedac.ciesin.columbia.edu/maps/services">WMS Services</a>. We can list all available layers using <code>gdalinfo</code></p>
 <pre><code>gdalinfo WMS:http://sedac.ciesin.columbia.edu/geoserver/wms</code></pre>
-<p><a href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global Reservoir and Dam (GRanD), v1</a></p>
-<pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=lulc%3Alulc-global-grid-prob-urban-expansion-2030&amp;SRS=EPSG:4326&amp;BBOX=-179.99997803468415,-55.922762245435266,180.02788233587063,83.97845284575614&quot;</code></pre>
-<p><img src="images/gdal/wms2.png" style="display: block; margin: auto;" /></p>
-<pre><code>gdal_translate -of WMS &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1:Agrand-v1-reservoirs-rev01&quot; reservoirs.xml</code></pre>
-<p><img src="images/gdal/wms3.png" style="display: block; margin: auto;" /></p>
-<pre><code>gdal_translate -outsize 3600 1800 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.tif</code></pre>
-<p>Specify a Bounding Box for India</p>
+<p>We can get more information about a particular layer by specifying the output from the command above. Let’s get more info about the <a href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global Reservoir and Dam (GRanD), v1</a> layer.</p>
+<pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot;</code></pre>
+<p>GDAL can also create a Service Description XML file from a WMS layer. Many GIS programs, including QGIS recognize these XML files as valid raster layers. This allows users to easily drag-and-drop them into their favorite viewer to access a WMS service without any configuration. <code>gdal_translate</code> can write the WMS XML files by specifying <code>-of WMS</code> option.</p>
+<pre><code>gdal_translate -of WMS &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.xml</code></pre>
+<p>Some applications require offline access to WMS layers. If you want to use a WMS layer as a reference map for field-data collection, or use the layer on a system with low-bandwidth, you can create a georeferenced raster from a WMS layer. Depending on the server configuration, WMS layers can serve data for resolutions exceeding their native resolution, so you should explicitly specify the output resolution. You can use <code>gdalwarp</code> with the <code>-tr</code> option to specify the output resolution you need for the offline raster. In the example below, we create a 0.1 degree resolution raster from the WMS layer.</p>
+<pre><code>gdalwarp -tr 0.1 0.1 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=-153.037,-45.881,176.825,70.398&quot; reservoirs.tif</code></pre>
+<p>We can change the WMS URL with any other configuration parameter. We can extract a smaller region by specifying a different bounding box coordinate using the <code>BBOX</code> parameter. The command below uses <code>gdal_translate</code> to create an output raster of 10000 x 10000 pixels with the data layer clipped to India.</p>
 <pre><code>gdal_translate -outsize 10000 10000 &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;SRS=EPSG:4326&amp;BBOX=68.106,6.762,97.412,37.078&quot; reservoirs_india.tif</code></pre>
-<p><img src="images/gdal/wms4.png" style="display: block; margin: auto;" /></p>
+<p>Learn more about offline WMS and comparison between different formats in this article <a href="https://www.opengis.ch/2020/06/09/offline-wms-benchmarking-raster-formats-for-qfield/">Offline WMS – Benchmarking raster formats for QField</a> by OpenGIS.ch.</p>
 </div>
 <div id="georeferencing" class="section level2">
 <h2>1.6 Georeferencing</h2>
 <p>GDAL command-line utilities are extremely useful in batch georeferencing tasks. We will learn 2 different techniques for georeferencing/warping images.</p>
 <div id="georeferencing-images-with-bounding-box-coordinates" class="section level3">
 <h3>1.6.1 Georeferencing Images with Bounding Box Coordinates</h3>
-<p>Often you get images from web portals that are maps but lack georeferences information. Data from weather satellites, output from simulations, exports from photo editing software etc. can contain images that reference a fixed frame on the earth but are given in regular image formats such as JPEG or PNG. If the bounding box coordinates and the CRS used in creating these images are known, use <code>gdal_translate</code> command to assign georeference information. The <code>-a_ullr</code> option allows you to specify the bounding box coordinates using the Upper-Left (UL) and Lower-Right (LR) coordinates.</p>
+<p>Often you get images from web portals that are maps but lack georeferencing information. Data from weather satellites, output from simulations, exports from photo editing software etc. can contain images that reference a fixed frame on the earth but are given in regular image formats such as JPEG or PNG. If the bounding box coordinates and the CRS used in creating these images are known, use <code>gdal_translate</code> command to assign georeference information. The <code>-a_ullr</code> option allows you to specify the bounding box coordinates using the Upper-Left (UL) and Lower-Right (LR) coordinates.</p>
 <p>Your data package contains the image file <code>earth_at_night.jpg</code>. This is a beautifully rendered image of the earth captured at night time. You will see that this is a plain JPEG image without any georeference information.</p>
 <pre><code>gdalinfo earth_at_night.jpg</code></pre>
 <p>Since this is a global image, we know the corner coordinates. We can assign the CRS <strong>EPSG:4326</strong> using the <code>-a_srs</code> option and specify the bounding box coordinates in the following order <code>&lt;ulx&gt; &lt;uly&gt; &lt;lrx&gt; &lt;lry&gt;</code>.</p>
@@ -978,7 +980,7 @@ NRG Composite
 </div>
 <div id="georeferencing-with-gcps" class="section level3">
 <h3>1.6.2 Georeferencing with GCPs</h3>
-<p>Another option for georeferencing images it by useing Ground Control Points (GCPs) or Tie-Points. A GCP specifies the real-world coordinates for a given pixel in the image. The GCPs can be obtained by reading the map markings or locating landmarks from a georeferenced source. Given a set of GCPs, <code>gdalwarp</code> can georeference the image using a variety of transformation types.</p>
+<p>Another option for georeferencing images it by using Ground Control Points (GCPs) or Tie-Points. A GCP specifies the real-world coordinates for a given pixel in the image. The GCPs can be obtained by reading the map markings or locating landmarks from a georeferenced source. Given a set of GCPs, <code>gdalwarp</code> can georeference the image using a variety of transformation types.</p>
 <p>Your data package contain an old scanned map called <code>1870_southern_india.jpg</code>.</p>
 <p><img src="images/gdal/scanned_map.png" style="display: block; margin: auto;" /></p>
 <p>The map has graticule lines with latitude and longitude markings. To obtain the GCPs, we can read the coordinate values at the grid intersections and find the pixel’s image coordinates. You can use an image viewer or the <em>Georeferencer</em> tool in QGIS to obtain GCPs like below.</p>
