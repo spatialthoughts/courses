@@ -475,23 +475,6 @@ gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -
 knitr::include_graphics('images/gdal/mosaic.png')
 ```
 
-### 1.3.4 Tips for Improving Performance
-
-`gdalwarp` utility supports multithreaded processing. There are 2 different options for parallel processing.
-
-* `-multi`: This option parallelizes I/O and CPU operations.
-* `-wo NUM_THREADS=ALL_CPUS`: This option parallelizes CPU operations over several cores.
-
-There is also another option that allows `gdalwarp` to use more RAM for caching. This option is very helpful to speed up operations on large rasters
-
-* `-wm`: Set a higher memory for caching
-
-All of these options can be combined that may result in faster processing of the data.
-
-```
-gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -multi -wo NUM_THREADS=ALL_CPUS -wm 512
-```
-
 
 ### 1.3.5 Creating Overviews
 
@@ -957,7 +940,7 @@ Let's now translate the `NA.vrt` to a GeoPackage using the `ogr2ogr` command.
 ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326
 ```
 
-> This operation requires a lot of processing and may take a few minutes. To improve the performance, you can add the configuration option `--config GDAL_CACHEMAX 512` to allow the command to use 512 MB of RAM for reading/writing data.
+> This operation requires a lot of processing and may take a few minutes. You can add the `--config GDAL_CACHEMAX 512` option to speed up the process. See [Tips for Improving Performance](#tips-for-improving-performance) section for more details.
 
 This command reads all 3 text files, filters them for matching features, combines them and writes out a spatial layer containing all mountains in North America.
 
@@ -1212,10 +1195,31 @@ The script runs the commands both in parallel and serial mode and prints the tim
 python batch-parallel.py
 ```
 
-# Useful Configuration Options
+# Tips for Improving Performance
 
+## Configuration Options
+
+There are several configuration options that can be tweaked to help with faster processing.
+
+* `--config GDAL_CACHEMAX 512`: This option is the one that helps speed up most GDAL commands by allowing them to use larger amount of RAM (512 MB) reading/writing data.
 * `--debug on`: Turn on debugging mode. This prints additional information that may help you find performance bottlenecks
-* `--config GDAL_CACHEMAX 512`: Allocate 512MB RAM to read/write buffer. This option usually helps speed up GDAL/OGR operations
+
+## Multithreading
+
+`gdalwarp` utility supports multithreaded processing. There are 2 different options for parallel processing.
+
+* `-multi`: This option parallelizes I/O and CPU operations.
+* `-wo NUM_THREADS=ALL_CPUS`: This option parallelizes CPU operations over several cores.
+
+There is also another option that allows `gdalwarp` to use more RAM for caching. This option is very helpful to speed up operations on large rasters
+
+* `-wm`: Set a higher memory for caching
+
+All of these options can be combined that may result in faster processing of the data.
+
+```
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -multi -wo NUM_THREADS=ALL_CPUS -wm 512 --config GDAL_CACHEMAX 512
+```
 
 # Supplement
 
