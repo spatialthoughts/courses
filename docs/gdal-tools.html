@@ -490,6 +490,7 @@ $(document).ready(function () {
 <ul>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
+<li><a href="#extracting-image-metadata-and-statistics">Extracting Image Metadata and Statistics</a></li>
 </ul></li>
 <li><a href="#resources">Resources</a></li>
 <li><a href="#data-credits">Data Credits</a></li>
@@ -1445,6 +1446,29 @@ Colorized Shaded Relief
 <pre><code>cd tiles</code></pre>
 <p>We can now use the following command to split the file and write the output to the <code>tiles</code> directory.</p>
 <pre><code>gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif</code></pre>
+</div>
+<div id="extracting-image-metadata-and-statistics" class="section level2">
+<h2>Extracting Image Metadata and Statistics</h2>
+<p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
+<div class="sourceCode" id="cb96"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb96-3"><a href="#cb96-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb96-4"><a href="#cb96-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb96-5"><a href="#cb96-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb96-6"><a href="#cb96-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb96-7"><a href="#cb96-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb96-8"><a href="#cb96-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb96-9"><a href="#cb96-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb96-10"><a href="#cb96-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb96-11"><a href="#cb96-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb96-12"><a href="#cb96-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb96-13"><a href="#cb96-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb96-14"><a href="#cb96-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb96-15"><a href="#cb96-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb96-16"><a href="#cb96-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb96-17"><a href="#cb96-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb96-18"><a href="#cb96-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb96-19"><a href="#cb96-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 </div>
 <div id="resources" class="section level1">
