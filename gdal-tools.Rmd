@@ -1348,6 +1348,51 @@ We can now use the following command to split the file and write the output to t
 gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif
 ```
 
+## Working with KML Files
+
+Keyhole Markup Language (KML) is a XML-based file format primarily used by Google Earth. Often time, GIS users want to export their data to KML to visualize them in Google Earth. Other times, you may want to extract data from KML files or convert them into other spatial formats used in GIS. The [GDAL KML Driver](https://gdal.org/drivers/vector/kml.html) can both read and write KML files and provides many options to make the conversion compatible.
+
+### Exporting Data to KML files
+
+Let's take the `metro_stations` layer from the `spatial_query.gpkg` file in your data package and export it to KML.
+
+```
+ogr2ogr -f KML metro_stations.kml spatial_query.gpkg metro_stations 
+```
+
+While the above command works, you will notice that when you open the resulting file in Google Earth, the placemarks for each feature doesn't have any labels. This is because the KML format expects a field called **Name** in the layer which is used as the label for each placemark. If your data layer does not have such a field, you can supply an alternate field name that will be used as labels using the `-dsco` option. The `metro_stations` layer has a field named `station` which we can use as the name field.
+
+```
+ogr2ogr -f KML metro_stations.kml spatial_query.gpkg metro_stations -dsco NameField=station
+```
+
+OGR also comes with support for [LIBKML Driver](https://gdal.org/drivers/vector/libkml.html#vector-libkml). This driver supports many more options and allows you to create fully featured KMLs. If your GDAL version supports it, you can use it instead of the KML driver. To specify the name field, the LIBKML driver uses an environment variable called `LIBKML_NAME_FIELD` that can be specified with the `--config` option
+
+```
+ogr2ogr -f LIBKML metro_stations.kml spatial_query.gpkg metro_stations --config LIBKML_NAME_FIELD station
+```
+
+### Converting KML Files to Other Formats
+
+The KML file format supports having multiple data layers within the same KML file. We will now learn how to extract a specific data layer and convert it to a shapefile. GDAL supports reading data from a URL using the [Virtual File System](https://gdal.org/user/virtual_file_systems.html). We can read a KML file from the internet using the `vsicurl/` prefix.
+
+```
+ogrinfo /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml
+```
+
+Let's extract the `Paths` layer from this KML file. The default options create many unwanted fields in the output. We can select a subset of the input fields using the `-select` option.
+
+```
+ogr2ogr -f "ESRI Shapefile" paths.shp /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Paths -select "NAME,Description"
+```
+
+You can also convert a KML layer to a CSV file. The [GDAL CSV Driver](https://gdal.org/drivers/vector/csv.html) is able to extract the geometry of features using the `GEOMETRY` layer creation option. Let's convert the `Placemark` layer from the `KML_Samples.kml` to a CSV file with **X**, **Y** and **Z** columns extracted from the geometry.
+
+```
+ogr2ogr -f CSV points.csv /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Placemarks -lco GEOMETRY=AS_XYZ
+```
+
+
 ## Extracting Image Metadata and Statistics
 
 You can run `gdalinfo` command with the `-json` option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by `gdalinfo`.

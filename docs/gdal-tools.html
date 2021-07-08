@@ -491,6 +491,11 @@ $(document).ready(function () {
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
+<li><a href="#working-with-kml-files">Working with KML Files</a>
+<ul>
+<li><a href="#exporting-data-to-kml-files">Exporting Data to KML files</a></li>
+<li><a href="#converting-kml-files-to-other-formats">Converting KML Files to Other Formats</a></li>
+</ul></li>
 <li><a href="#extracting-image-metadata-and-statistics">Extracting Image Metadata and Statistics</a></li>
 </ul></li>
 <li><a href="#resources">Resources</a></li>
@@ -1482,28 +1487,50 @@ Colorized Shaded Relief
 <p>We can now use the following command to split the file and write the output to the <code>tiles</code> directory.</p>
 <pre><code>gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif</code></pre>
 </div>
+<div id="working-with-kml-files" class="section level2">
+<h2>Working with KML Files</h2>
+<p>Keyhole Markup Language (KML) is a XML-based file format primarily used by Google Earth. Often time, GIS users want to export their data to KML to visualize them in Google Earth. Other times, you may want to extract data from KML files or convert them into other spatial formats used in GIS. The <a href="https://gdal.org/drivers/vector/kml.html">GDAL KML Driver</a> can both read and write KML files and provides many options to make the conversion compatible.</p>
+<div id="exporting-data-to-kml-files" class="section level3">
+<h3>Exporting Data to KML files</h3>
+<p>Let’s take the <code>metro_stations</code> layer from the <code>spatial_query.gpkg</code> file in your data package and export it to KML.</p>
+<pre><code>ogr2ogr -f KML metro_stations.kml spatial_query.gpkg metro_stations </code></pre>
+<p>While the above command works, you will notice that when you open the resulting file in Google Earth, the placemarks for each feature doesn’t have any labels. This is because the KML format expects a field called <strong>Name</strong> in the layer which is used as the label for each placemark. If your data layer does not have such a field, you can supply an alternate field name that will be used as labels using the <code>-dsco</code> option. The <code>metro_stations</code> layer has a field named <code>station</code> which we can use as the name field.</p>
+<pre><code>ogr2ogr -f KML metro_stations.kml spatial_query.gpkg metro_stations -dsco NameField=station</code></pre>
+<p>OGR also comes with support for <a href="https://gdal.org/drivers/vector/libkml.html#vector-libkml">LIBKML Driver</a>. This driver supports many more options and allows you to create fully featured KMLs. If your GDAL version supports it, you can use it instead of the KML driver. To specify the name field, the LIBKML driver uses an environment variable called <code>LIBKML_NAME_FIELD</code> that can be specified with the <code>--config</code> option</p>
+<pre><code>ogr2ogr -f LIBKML metro_stations.kml spatial_query.gpkg metro_stations --config LIBKML_NAME_FIELD station</code></pre>
+</div>
+<div id="converting-kml-files-to-other-formats" class="section level3">
+<h3>Converting KML Files to Other Formats</h3>
+<p>The KML file format supports having multiple data layers within the same KML file. We will now learn how to extract a specific data layer and convert it to a shapefile. GDAL supports reading data from a URL using the <a href="https://gdal.org/user/virtual_file_systems.html">Virtual File System</a>. We can read a KML file from the internet using the <code>vsicurl/</code> prefix.</p>
+<pre><code>ogrinfo /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml</code></pre>
+<p>Let’s extract the <code>Paths</code> layer from this KML file. The default options create many unwanted fields in the output. We can select a subset of the input fields using the <code>-select</code> option.</p>
+<pre><code>ogr2ogr -f &quot;ESRI Shapefile&quot; paths.shp /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Paths -select &quot;NAME,Description&quot;</code></pre>
+<p>You can also convert a KML layer to a CSV file. The <a href="https://gdal.org/drivers/vector/csv.html">GDAL CSV Driver</a> is able to extract the geometry of features using the <code>GEOMETRY</code> layer creation option. Let’s convert the <code>Placemark</code> layer from the <code>KML_Samples.kml</code> to a CSV file with <strong>X</strong>, <strong>Y</strong> and <strong>Z</strong> columns extracted from the geometry.</p>
+<pre><code>ogr2ogr -f CSV points.csv /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Placemarks -lco GEOMETRY=AS_XYZ</code></pre>
+</div>
+</div>
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb101"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb101-2"><a href="#cb101-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb101-3"><a href="#cb101-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb101-4"><a href="#cb101-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb101-5"><a href="#cb101-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb101-6"><a href="#cb101-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb101-7"><a href="#cb101-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb101-8"><a href="#cb101-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb101-9"><a href="#cb101-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb101-10"><a href="#cb101-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb101-11"><a href="#cb101-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb101-12"><a href="#cb101-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb101-13"><a href="#cb101-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb101-14"><a href="#cb101-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb101-15"><a href="#cb101-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb101-16"><a href="#cb101-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb101-17"><a href="#cb101-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb101-18"><a href="#cb101-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb101-19"><a href="#cb101-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb107"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb107-3"><a href="#cb107-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb107-4"><a href="#cb107-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-5"><a href="#cb107-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb107-6"><a href="#cb107-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-7"><a href="#cb107-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb107-8"><a href="#cb107-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb107-9"><a href="#cb107-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb107-10"><a href="#cb107-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb107-11"><a href="#cb107-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb107-12"><a href="#cb107-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb107-13"><a href="#cb107-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb107-14"><a href="#cb107-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb107-15"><a href="#cb107-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb107-16"><a href="#cb107-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb107-17"><a href="#cb107-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb107-18"><a href="#cb107-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb107-19"><a href="#cb107-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 </div>
 <div id="resources" class="section level1">
