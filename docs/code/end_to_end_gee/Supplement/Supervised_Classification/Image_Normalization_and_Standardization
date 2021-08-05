@@ -1,0 +1,134 @@
+var image = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
+var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary")
+var geometry = boundary.geometry()
+
+//************************************************************************** 
+// Function to Normalize Image
+// Pixel Values should be between 0 and 1
+// Formula is (x - xmin) / (xmax - xmin)
+//************************************************************************** 
+function normalize(image){
+  var bandNames = image.bandNames();
+  // Compute min and max of the image
+  var minDict = image.reduceRegion({
+    reducer: ee.Reducer.min(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var maxDict = image.reduceRegion({
+    reducer: ee.Reducer.max(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var mins = ee.Image.constant(minDict.values(bandNames));
+  var maxs = ee.Image.constant(maxDict.values(bandNames));
+
+  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
+  return normalized
+}
+
+//************************************************************************** 
+// Function to Standardize Image
+// (Mean Centered Imagery with Unit Standard Deviation)
+// https://365datascience.com/tutorials/statistics-tutorials/standardization/
+//************************************************************************** 
+function standardize(image){
+  var bandNames = image.bandNames();
+  // Mean center the data to enable a faster covariance reducer
+  // and an SD stretch of the principal components.
+  var meanDict = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var means = ee.Image.constant(meanDict.values(bandNames));
+  var centered = image.subtract(means)
+  
+  var stdDevDict = image.reduceRegion({
+    reducer: ee.Reducer.stdDev(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var stddevs = ee.Image.constant(stdDevDict.values(bandNames));
+
+  var standardized = centered.divide(stddevs);
+   
+  return standardized
+}
+
+var standardizedImage = standardize(image)
+var normalizedImage = normalize(image)
+
+
+Map.addLayer(image, 
+  {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2}, 'Original Image');
+Map.addLayer(normalizedImage,
+  {bands: ['B4', 'B3', 'B2'], min: 0, max: 1, gamma: 1.2}, 'Normalized Image');
+Map.addLayer(standardizedImage,
+  {bands: ['B4', 'B3', 'B2'], min: -1, max: 2, gamma: 1.2}, 'Standarized Image');
+Map.centerObject(geometry)
+
+// Verify Normalization
+
+var beforeDict = image.reduceRegion({
+  reducer: ee.Reducer.minMax(),
+  geometry: geometry,
+  scale: 20,
+  maxPixels: 1e9,
+  bestEffort: true,
+  tileScale: 16
+});
+
+var afterDict = normalizedImage.reduceRegion({
+  reducer: ee.Reducer.minMax(),
+  geometry: geometry,
+  scale: 20,
+  maxPixels: 1e9,
+  bestEffort: true,
+  tileScale: 16
+});
+
+print('Original Image Min/Max', beforeDict)
+print('Normalized Image Min/Max', afterDict)
+
+// Verify Standadization
+// Verify that the means are 0 and standard deviations are 1
+var beforeDict = image.reduceRegion({
+  reducer: ee.Reducer.mean().combine({
+      reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
+  geometry: geometry,
+  scale: 20,
+  maxPixels: 1e9,
+  bestEffort: true,
+  tileScale: 16
+});
+
+var resultDict = standardizedImage.reduceRegion({
+  reducer: ee.Reducer.mean().combine({
+      reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
+  geometry: geometry,
+  scale: 20,
+  maxPixels: 1e9,
+  bestEffort: true,
+  tileScale: 16
+});
+// Means are very small franctions close to 0
+// Round them off to 2 decimals
+var afterDict = resultDict.map(function(key, value) {
+  return ee.Number(value).format('%.2f')
+})
+
+print('Original Image Mean/StdDev', beforeDict)
+print('Standadized Image Mean/StdDev', afterDict)
