@@ -1,0 +1,61 @@
+var image = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
+var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary")
+var geometry = boundary.geometry()
+
+//************************************************************************** 
+// Function to Standardize Image
+// (Mean Centered Imagery with Unit Standard Deviation)
+// https://365datascience.com/tutorials/statistics-tutorials/standardization/
+//************************************************************************** 
+function standardize(image){
+  var bandNames = image.bandNames();
+  // Mean center the data to enable a faster covariance reducer
+  // and an SD stretch of the principal components.
+  var meanDict = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var means = ee.Image.constant(meanDict.values(bandNames));
+  var centered = image.subtract(means)
+  
+  var stdDevDict = image.reduceRegion({
+    reducer: ee.Reducer.stdDev(),
+    geometry: geometry,
+    scale: 20,
+    maxPixels: 1e9,
+    bestEffort: true,
+    tileScale: 16
+  });
+  var stddevs = ee.Image.constant(stdDevDict.values(bandNames));
+
+  var standardized = centered.divide(stddevs);
+   
+  return standardized
+}
+
+var standardizedImage = standardize(image)
+
+
+Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2}, 'Original Image');
+Map.addLayer(standardizedImage, {bands: ['B4', 'B3', 'B2'], min: -1, max: 2, gamma: 1.2}, 'Standarized Image');
+Map.centerObject(geometry)
+
+// Verify that the means are 0 and standard deviations are 1
+var resultDict = standardizedImage.reduceRegion({
+  reducer: ee.Reducer.mean().combine({
+      reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
+  geometry: geometry,
+  scale: 20,
+  maxPixels: 1e9,
+  bestEffort: true,
+  tileScale: 16
+});
+// Means are very small franctions close to 0, round them off to 2 decimals
+var resultDictRounded = resultDict.map(function(key, value) {
+  return ee.Number(value).format('%.2f')
+})
+print('Result Verification', resultDictRounded)
