@@ -191,6 +191,9 @@ output_filename = 'cities_distance.csv'
 output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
 
+if not os.path.exists(output_dir):
+    os.mkdir(output_dir)
+    
 home_city = 'Bengaluru'
 home_country = 'India'
 

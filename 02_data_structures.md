@@ -120,6 +120,13 @@ print(data['city'])
 
 From the dictionary below, how do you access the latitude and longitude values? print the latitude and longitude of new york city by extracting it from the dictionary below.
 
+The expected output should look like below.
+
+```
+40.661
+-73.944
+```
+
 
 ```python
 nyc_data = {'city': 'New York', 'population': 8175133, 'coordinates': (40.661, -73.944) }

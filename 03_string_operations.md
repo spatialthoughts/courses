@@ -72,7 +72,7 @@ We can use triple-quotes! Enclosing the string in triple quotes ensures both sin
 
 
 ```python
-latitude = '''37° 46' 26.2992 N'''
+latitude = '''37° 46' 26.2992" N'''
 longitude = '''122° 25' 52.6692" W'''
 print(latitude, longitude)
 ```
