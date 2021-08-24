@@ -1,0 +1,140 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #d63000 */ee.Geometry.MultiPoint();
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var s2 = ee.ImageCollection("COPERNICUS/S2");
+var geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]]);
+Map.addLayer(geometry, {color: 'red'}, 'Farm')
+Map.centerObject(geometry)
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+
+var startDate = '2017-01-01'
+var endDate = '2018-01-01'
+
+var filtered = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+}
+
+var filtered = filtered//.map(maskS2clouds)
+// Write a function that computes NDVI for an image and adds it as a band
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+}
+
+
+// Map the function over the collection
+var withNdvi = filtered.map(addNDVI);
+
+var ndviCol = withNdvi.select('ndvi')
+
+// Savitzky-Golay smoothing
+
+// We prepare for 3rd Order Polynomial Fitting
+// x3*t^3 + x2*t^2 + x1*t^1 + constant
+
+var order = 3
+var coeffFlattener = [['constant', 'x', 'x2', 'x3']]
+var independentSelectors = ['constant', 't', 't2', 't3']
+
+var ndviCol = ndviCol.map(function(image) {
+  var timestamp = ee.Date(image.get('system:time_start'))
+  var diff = timestamp.difference(ee.Date(startDate), 'hour')
+  return image.addBands(ee.Image(1).toFloat().rename('constant')).
+    addBands(ee.Image(diff).toFloat().rename('t')).
+    addBands(ee.Image(diff).pow(ee.Image(2)).toFloat().rename('t2')).
+    addBands(ee.Image(diff).pow(ee.Image(3)).toFloat().rename('t3'))
+})
+
+// Step 2: Set up Savitzky-Golay smoothing
+var windowSize = 9
+var halfWindow = (windowSize - 1)/2
+
+// Define the axes of variation in the collection array.
+var imageAxis = 0;
+var bandAxis = 1;
+
+var array = ndviCol.toArray();
+// Solve 
+function getLocalFit(i) {
+  // Get a slice corresponding to the window_size of the SG smoother
+  var subarray = array.arraySlice(
+    imageAxis, ee.Number(i).int(), ee.Number(i).add(windowSize).int())
+  var predictors = subarray.arraySlice(bandAxis, 1, 1 + order + 1)
+  //print(predictors.arrayDimensions())
+  var response = subarray.arraySlice(bandAxis, 0, 1); // NDVI
+  //print(response)
+  var coeff = predictors.matrixSolve(response)
+
+  coeff = coeff.arrayProject([0]).arrayFlatten(coeffFlattener)
+  return coeff  
+}
+
+var ndviColList = ndviCol.toList(ndviCol.size())
+var runLength = ee.List.sequence(0,
+  ndviColList.size().subtract(windowSize))
+// Run the SG solver over the series, and return the smoothed image version
+var sgSeries = runLength.map(function(i) {
+  var ref = ee.Image(ndviColList.get(ee.Number(i).add(halfWindow)))
+  return getLocalFit(i).multiply(ref.select(independentSelectors)).reduce(ee.Reducer.sum()).copyProperties(ref)
+})
+
+// Build a stack for all images in the collection
+function stack(i1, i2)
+{
+  return ee.Image(i1).addBands(ee.Image(i2))
+}
+
+var original = ndviColList.slice(1).iterate(stack, ndviColList.get(0))
+
+var smoothed = sgSeries.slice(1).iterate(stack, sgSeries.get(0))
+
+var y = ee.Image(original).select(['ndvi(..)*']).reduceRegion(ee.Reducer.mean(), geometry, 10).values()
+var xlabels = ee.Image(original).select(['t(..)*']).reduceRegion(ee.Reducer.first(), geometry, 10).values()
+var smoothy = ee.Image(smoothed).select(['sum(..)*']).reduceRegion(ee.Reducer.mean(), geometry, 10).values()
+
+var y= y.map(function(v) { return ee.List([v, 0]).reduce(ee.Reducer.firstNonNull())})
+
+xlabels = xlabels.map(function(f) { 
+  // The labels are number of hours from startDate
+  var date = ee.Date(startDate).advance(f, 'hour')
+  return date.millis()
+})
+
+// Chart
+var yValues = ee.Array.cat(
+  [y, ee.List.repeat(smoothy.get(0),
+  halfWindow).cat(smoothy).cat(ee.List.repeat(smoothy.get(-1), halfWindow))], 1);
+var chart = ui.Chart.array.values(yValues, 0, xlabels).setSeriesNames(['Raw', 'Smoothed']).setOptions(
+  {
+    lineWidth: 1,
+    interpolateNulls: true,
+
+    title: 'Savitsky-Golay smoothing (order = ' + order + ', window_size = ' + windowSize + ')', 
+    hAxis: {title: '', format: 'YYYY-MMM'},
+    vAxis: {title: 'NDVI', viewWindow: {min:0, max:1}},
+    legend: null,
+    
+    series: { 
+      0: {color: 'gray', lineDashStyle: [1, 1]},
+      1: {color: 'red', lineWidth: 2 }
+    }
+  })
+print(chart)

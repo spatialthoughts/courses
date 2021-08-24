@@ -127,3 +127,43 @@ var chart = ui.Chart.array.values({
   });
 print(chart)
 
+// Tuning Multiple Parameters
+// We can tune many parameters together using
+// nested map() functions
+// Let's tune 2 parameters
+// numTrees and bagFraction 
+var numTreesList = ee.List.sequence(10, 150, 10);
+var bagFractionList = ee.List.sequence(0.1, 0.9, 0.1);
+
+var accuracies = numTreesList.map(function(numTrees) {
+  return bagFractionList.map(function(bagFraction) {
+     var classifier = ee.Classifier.smileRandomForest({
+       numberOfTrees: numTrees,
+       bagFraction: bagFraction
+     })
+      .train({
+        features: training,
+        classProperty: 'landcover',
+        inputProperties: composite.bandNames()
+      });
+
+    // Here we are classifying a table instead of an image
+    // Classifiers work on both images and tables
+    var accuracy = test
+      .classify(classifier)
+      .errorMatrix('landcover', 'classification')
+      .accuracy();
+    return ee.Feature(null, {'accuracy': accuracy,
+      'numberOfTrees': numTrees,
+      'bagFraction': bagFraction})
+  })
+}).flatten()
+var resultFc = ee.FeatureCollection(accuracies)
+
+// Export the result as CSV
+Export.table.toDrive({
+  collection: resultFc,
+  description: 'Multiple_Parameter_Tuning_Results',
+  folder: 'earthengine',
+  fileNamePrefix: 'numtrees_bagfraction',
+  fileFormat: 'CSV'})

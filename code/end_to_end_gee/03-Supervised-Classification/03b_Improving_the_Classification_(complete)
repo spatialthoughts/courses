@@ -12,6 +12,8 @@ var rgbVis = {
   bands: ['B4', 'B3', 'B2'],
 };
 // Function to remove cloud and snow pixels from Sentinel-2 SR image
+// The function also divides ths image by 10000 to ensure
+// the pixels values are between 0 and 1
 function maskCloudAndShadowsSR(image) {
   var cloudProb = image.select('MSK_CLDPRB');
   var snowProb = image.select('MSK_SNWPRB');
@@ -30,7 +32,7 @@ var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
   .filter(ee.Filter.bounds(boundary))
   .map(maskCloudAndShadowsSR)
-    .select('B.*')
+  .select('B.*')
 
 
 var composite = filtered.median().clip(boundary) 
@@ -52,7 +54,9 @@ var addIndices = function(image) {
 
 var composite = addIndices(composite);
 
-
+// We divide the elevation and slope with maximum values in the region
+// to ensure the values are between 0 and 1
+// A more robust technique for image normalization is provided in the course supplement
 var elev = alos.select('AVE_DSM').divide(2000).rename('elev');
 var slope = ee.Terrain.slope(alos.select('AVE_DSM')).divide(30).rename('slope');
 
