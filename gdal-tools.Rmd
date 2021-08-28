@@ -501,6 +501,23 @@ Once the command finishes, you can view the result in QGIS.
 knitr::include_graphics('images/gdal/rgb.png')
 ```
 
+**Tip: Merging Large Files**
+
+The `gdal_merge.py` script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. `gdal_merge.py` can also be slower than using `gdal_translate` - when you have large files. So a preferred approach for merging large files would be using the appoach shown earlier in the course.
+
+First, create a virtual raster. `gdalbuildvrt` also has a `-separate` flag to put each file in a different band.
+
+```
+gdalbuildvrt -o rgb.vrt -separate RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+```
+
+Then use `gdal_translate` to merge them.
+
+```
+gdal_translate rgb.vrt rgb.tif -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE 
+```
+
+
 ### 1.4.2 Apply Histogram Stretch and Color Correction
 
 The resulting composite appears quite dark and has low-contrast. QGIS applies a default contrast stretch based on the minimum and maximum values in the image. Due to the presence of clouds and cloud-shadows - there are outlier pixels that make the default contrast stretch not optimal.
@@ -729,7 +746,7 @@ UK’s Department of Environment Food & Rural Affairs (DEFRA) provides country-w
 
 Your data package contains a folder `london_1m_dsm`. This folder contains 1m resolution Digital Surface Model (DSM) tiles for central London generated from a LIDAR survey. The tiles are in the [Arc/Info ASCII Grid](https://gdal.org/drivers/raster/aaigrid.html) format with the `.asc` extension. The tiles do not contain any projection information but the [metadata](https://environment.data.gov.uk/dataset/6f51a299-351f-4e30-a5a3-2511da9688f7) contains the information that the CRS for the dataset is **EPSG:27700 British National Grid**.
 
-Apply the skills you learnt in this module to create an output product suitable for analysis. The result should be a single georeferenced mosaic in the GeoTIFF format with appropriate compression. 
+Apply the skills you learnt in this module to create an output product suitable for analysis. The result should be a single georeferenced mosaic in the GeoTIFF format with appropriate compression.
 
 * Hint: Use the `gdal_translate` program with the `-a_srs` option to assign a CRS.
 
@@ -1352,6 +1369,18 @@ We can now use the following command to split the file and write the output to t
 ```
 gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif
 ```
+
+## Merging Files with Different Resolutions
+
+If you had a bunch of tiles that you wanted to merge, but some tiles had a different resolution, you can use specify the `-resolution` flag with `gdalbuildvrt` to ensure the output file has the expected resolution.
+
+Continuing the example from the [Processing Aerial Imagery](#processing-aerial-imagery) section, we can create a virtual raster and specify the `resolution` flag
+
+```
+gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilinear
+```
+
+Translating this file using `gdal_translate` or subsetting it with `gdalwarp` will result in a mosaic with the highest resolution from the source tiles.
 
 ## Working with KML Files
 

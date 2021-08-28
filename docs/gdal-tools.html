@@ -14,7 +14,7 @@
 
 <title>Mastering GDAL Tools (Full Course Material)</title>
 
-<script src="site_libs/header-attrs-2.8/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
@@ -458,6 +458,7 @@ $(document).ready(function () {
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
+<li><a href="#merging-files-with-different-resolutions">Merging Files with Different Resolutions</a></li>
 <li><a href="#working-with-kml-files">Working with KML Files</a>
 <ul>
 <li><a href="#exporting-data-to-kml-files">Exporting Data to KML files</a></li>
@@ -854,6 +855,12 @@ Text File with the List of Images
 <pre><code>python $CONDA_PREFIX/bin/gdal_merge.py  -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif</code></pre>
 <p>Once the command finishes, you can view the result in QGIS.</p>
 <p><img src="images/gdal/rgb.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><strong>Tip: Merging Large Files</strong></p>
+<p>The <code>gdal_merge.py</code> script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. <code>gdal_merge.py</code> can also be slower than using <code>gdal_translate</code> - when you have large files. So a preferred approach for merging large files would be using the appoach shown earlier in the course.</p>
+<p>First, create a virtual raster. <code>gdalbuildvrt</code> also has a <code>-separate</code> flag to put each file in a different band.</p>
+<pre><code>gdalbuildvrt -o rgb.vrt -separate RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif</code></pre>
+<p>Then use <code>gdal_translate</code> to merge them.</p>
+<pre><code>gdal_translate rgb.vrt rgb.tif -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE </code></pre>
 </div>
 <div id="apply-histogram-stretch-and-color-correction" class="section level3">
 <h3>1.4.2 Apply Histogram Stretch and Color Correction</h3>
@@ -1311,17 +1318,17 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <li>Windows: <code>run_multicriteria.bat</code></li>
 <li>Mac/Linux: <code>run_multicriteria.sh</code></li>
 </ul>
-<div class="sourceCode" id="cb85"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-burn</span> 1 <span class="at">-add</span> <span class="at">-tr</span> 100 100 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> bicycle_thefts thefts.tif <span class="at">-ot</span> Int16</span>
-<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycling_routes routes.tif</span>
-<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycle_parking existing_parking.tif</span>
-<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> routes.tif routes_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
-<span id="cb85-5"><a href="#cb85-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> existing_parking.tif existing_parking_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
-<span id="cb85-6"><a href="#cb85-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts.tif <span class="at">--outfile</span> thefts_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;20) + 50*(A&gt;10)*(A&lt;=20) + 10*(A&lt;10)&quot;</span></span>
-<span id="cb85-7"><a href="#cb85-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> routes_proximity.tif <span class="at">--outfile</span> routes_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;</span></span>
-<span id="cb85-8"><a href="#cb85-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> existing_parking_proximity.tif <span class="at">--outfile</span> existing_parking_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;100) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&lt;50)&quot;</span></span>
-<span id="cb85-9"><a href="#cb85-9" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif</span>
-<span id="cb85-10"><a href="#cb85-10" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 routes_reclass.tif routes_reclass_resampled.tif</span>
-<span id="cb85-11"><a href="#cb85-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts_reclass.tif <span class="at">-B</span> routes_reclass_resampled.tif <span class="at">-C</span> parking_reclass_resampled.tif <span class="at">--outfile</span> suitability.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;(A + B + C)/3&quot;</span> <span class="at">--NoDataValue</span><span class="op">=</span>0</span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-burn</span> 1 <span class="at">-add</span> <span class="at">-tr</span> 100 100 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> bicycle_thefts thefts.tif <span class="at">-ot</span> Int16</span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycling_routes routes.tif</span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycle_parking existing_parking.tif</span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> routes.tif routes_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
+<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> existing_parking.tif existing_parking_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
+<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts.tif <span class="at">--outfile</span> thefts_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;20) + 50*(A&gt;10)*(A&lt;=20) + 10*(A&lt;10)&quot;</span></span>
+<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> routes_proximity.tif <span class="at">--outfile</span> routes_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;</span></span>
+<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> existing_parking_proximity.tif <span class="at">--outfile</span> existing_parking_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;100) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&lt;50)&quot;</span></span>
+<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif</span>
+<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 routes_reclass.tif routes_reclass_resampled.tif</span>
+<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts_reclass.tif <span class="at">-B</span> routes_reclass_resampled.tif <span class="at">-C</span> parking_reclass_resampled.tif <span class="at">--outfile</span> suitability.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;(A + B + C)/3&quot;</span> <span class="at">--NoDataValue</span><span class="op">=</span>0</span></code></pre></div>
 <p>Then from the same directory, you can launch the script as below.</p>
 <p><em>Windows</em></p>
 <pre><code>run_multicriteria.bat</code></pre>
@@ -1334,48 +1341,48 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <p>You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.</p>
 <pre><code>gdal_translate -of GTiff -co COMPRESS=JPEG {input} {output}</code></pre>
 <p>But it would be a lot of manual effort if you want to run the commands on hundreds of input files. Here’s where a simple python script can help you automate running the commands in a batch. The data directory contains a file called <code>batch.py</code> with the following python code.</p>
-<div class="sourceCode" id="cb89"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
-<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
+<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
 <p>In Anaconda Prompt, run the following command from <code>gdal-tools</code> directory to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
 <pre><code>python batch.py</code></pre>
 <p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
-<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
-<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
-<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb91-12"><a href="#cb91-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb91-13"><a href="#cb91-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb91-14"><a href="#cb91-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb91-15"><a href="#cb91-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb91-16"><a href="#cb91-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-17"><a href="#cb91-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb91-18"><a href="#cb91-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb91-19"><a href="#cb91-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb91-20"><a href="#cb91-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb91-21"><a href="#cb91-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb91-22"><a href="#cb91-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb91-23"><a href="#cb91-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb91-24"><a href="#cb91-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb91-25"><a href="#cb91-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb91-26"><a href="#cb91-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb91-27"><a href="#cb91-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb91-28"><a href="#cb91-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb93-2"><a href="#cb93-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb93-3"><a href="#cb93-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb93-4"><a href="#cb93-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-5"><a href="#cb93-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb93-6"><a href="#cb93-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-7"><a href="#cb93-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb93-8"><a href="#cb93-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-9"><a href="#cb93-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
+<span id="cb93-10"><a href="#cb93-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb93-11"><a href="#cb93-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb93-12"><a href="#cb93-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb93-13"><a href="#cb93-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
+<span id="cb93-14"><a href="#cb93-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb93-15"><a href="#cb93-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb93-16"><a href="#cb93-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-17"><a href="#cb93-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb93-18"><a href="#cb93-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb93-19"><a href="#cb93-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
+<span id="cb93-20"><a href="#cb93-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
+<span id="cb93-21"><a href="#cb93-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb93-22"><a href="#cb93-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
+<span id="cb93-23"><a href="#cb93-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb93-24"><a href="#cb93-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb93-25"><a href="#cb93-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb93-26"><a href="#cb93-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
+<span id="cb93-27"><a href="#cb93-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb93-28"><a href="#cb93-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
 <pre><code>python batch-parallel.py</code></pre>
 </div>
@@ -1464,6 +1471,13 @@ Colorized Shaded Relief
 <p>We can now use the following command to split the file and write the output to the <code>tiles</code> directory.</p>
 <pre><code>gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif</code></pre>
 </div>
+<div id="merging-files-with-different-resolutions" class="section level2">
+<h2>Merging Files with Different Resolutions</h2>
+<p>If you had a bunch of tiles that you wanted to merge, but some tiles had a different resolution, you can use specify the <code>-resolution</code> flag with <code>gdalbuildvrt</code> to ensure the output file has the expected resolution.</p>
+<p>Continuing the example from the <a href="#processing-aerial-imagery">Processing Aerial Imagery</a> section, we can create a virtual raster and specify the <code>resolution</code> flag</p>
+<pre><code>gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilinear</code></pre>
+<p>Translating this file using <code>gdal_translate</code> or subsetting it with <code>gdalwarp</code> will result in a mosaic with the highest resolution from the source tiles.</p>
+</div>
 <div id="working-with-kml-files" class="section level2">
 <h2>Working with KML Files</h2>
 <p>Keyhole Markup Language (KML) is a XML-based file format primarily used by Google Earth. Often time, GIS users want to export their data to KML for visualizing it in Google Earth. You may also want to extract data from KML files or convert them into other spatial formats used in GIS. The <a href="https://gdal.org/drivers/vector/kml.html">GDAL KML Driver</a> can both read and write KML files and provides many options to make the conversion compatible.</p>
@@ -1512,25 +1526,25 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb108"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb108-2"><a href="#cb108-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb108-3"><a href="#cb108-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb108-4"><a href="#cb108-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb108-5"><a href="#cb108-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb108-6"><a href="#cb108-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb108-7"><a href="#cb108-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb108-8"><a href="#cb108-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb108-9"><a href="#cb108-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb108-10"><a href="#cb108-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb108-11"><a href="#cb108-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb108-12"><a href="#cb108-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb108-13"><a href="#cb108-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb108-14"><a href="#cb108-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb108-15"><a href="#cb108-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb108-16"><a href="#cb108-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb108-17"><a href="#cb108-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb108-18"><a href="#cb108-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb108-19"><a href="#cb108-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb111"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb111-2"><a href="#cb111-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb111-3"><a href="#cb111-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb111-4"><a href="#cb111-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb111-5"><a href="#cb111-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb111-6"><a href="#cb111-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb111-7"><a href="#cb111-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb111-8"><a href="#cb111-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb111-9"><a href="#cb111-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb111-10"><a href="#cb111-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb111-11"><a href="#cb111-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb111-12"><a href="#cb111-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb111-13"><a href="#cb111-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb111-14"><a href="#cb111-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb111-15"><a href="#cb111-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb111-16"><a href="#cb111-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb111-17"><a href="#cb111-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb111-18"><a href="#cb111-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb111-19"><a href="#cb111-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 </div>
 <div id="resources" class="section level1">
