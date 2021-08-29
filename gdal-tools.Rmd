@@ -511,7 +511,7 @@ knitr::include_graphics('images/gdal/rgb.png')
 
 **Tip: Merging Large Files**
 
-The `gdal_merge.py` script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. `gdal_merge.py` can also be slower than using `gdal_translate` - when you have large files. So a preferred approach for merging large files would be using the appoach shown earlier in the course.
+The `gdal_merge.py` script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. `gdal_merge.py` can also be slower than using `gdal_translate` - when you have large files. So a preferred approach for merging large files would be using the approach shown earlier in the course.
 
 First, create a virtual raster. `gdalbuildvrt` also has a `-separate` flag to put each file in a different band.
 
@@ -1221,7 +1221,7 @@ Create another raster `weighted_suitability.tif` with the above weights and comp
 
 ## 3.5 Building a Processing Pipeline
 
-Once you know the individual commands to be run for each step of your procesisng chain, combining them to be run as a pipeline is very easy. You can create a script that executes each step one after the other. When you run the script, you will get the output without any manual intervention.
+Once you know the individual commands to be run for each step of your processing chain, combining them to be run as a pipeline is very easy. You can create a script that executes each step one after the other. When you run the script, you will get the output without any manual intervention.
 
 Below is an example of a script that runs the multicriteria overlay analysis we just saw. Save the content below in a file in the same directory as `multicriteria.gpkg`. The file name will be different depending on your operating system.
 
@@ -1389,6 +1389,28 @@ gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilin
 ```
 
 Translating this file using `gdal_translate` or subsetting it with `gdalwarp` will result in a mosaic with the highest resolution from the source tiles.
+
+## Vectorizing Files
+
+GDAL comes with the `gdal_polygonize.py` allowing us to convert rasters to vector. Let's say we want to extract the coordinates of the highest elevation from the merged raster in the [Merging Tiles](#merging-tiles) section. Querying the raster with `gdalinfo -stats` shows us that the highest pixel value is **8748**. 
+
+We can use `gdal_calc.py` to create a raster using the condition to match only the pixels with that value.
+
+```
+gdal_calc.py --calc 'A==8748' -A merged.vrt --outfile everest.tif --NoDataValue=0
+```
+
+The result of a boolean expression like above will be a raster with 1 and 0 pixel values. As we set the NoData to 0, we only have 1 pixel with value 1 where the condition matched. We can convert it to a vector using `gdal_polygonize.py`.
+
+```
+gdal_polygonize.py everest.tif everest.shp
+```
+
+If we want to extract the centroid of the polygon and print the coordinates, we can use `ogrinfo` command.
+
+```
+ogrinfo everest.shp -sql 'SELECT AsText(ST_Centroid(geometry)) from everest' -dialect SQLite
+```
 
 ## Working with KML Files
 

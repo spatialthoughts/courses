@@ -459,6 +459,7 @@ $(document).ready(function () {
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
 <li><a href="#merging-files-with-different-resolutions">Merging Files with Different Resolutions</a></li>
+<li><a href="#vectorizing-files">Vectorizing Files</a></li>
 <li><a href="#working-with-kml-files">Working with KML Files</a>
 <ul>
 <li><a href="#exporting-data-to-kml-files">Exporting Data to KML files</a></li>
@@ -886,7 +887,7 @@ Text File with the List of Images
 <p>Once the command finishes, you can view the result in QGIS.</p>
 <p><img src="images/gdal/rgb.png" width="75%" style="display: block; margin: auto;" /></p>
 <p><strong>Tip: Merging Large Files</strong></p>
-<p>The <code>gdal_merge.py</code> script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. <code>gdal_merge.py</code> can also be slower than using <code>gdal_translate</code> - when you have large files. So a preferred approach for merging large files would be using the appoach shown earlier in the course.</p>
+<p>The <code>gdal_merge.py</code> script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. <code>gdal_merge.py</code> can also be slower than using <code>gdal_translate</code> - when you have large files. So a preferred approach for merging large files would be using the approach shown earlier in the course.</p>
 <p>First, create a virtual raster. <code>gdalbuildvrt</code> also has a <code>-separate</code> flag to put each file in a different band.</p>
 <pre><code>gdalbuildvrt -o rgb.vrt -separate RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif</code></pre>
 <p>Then use <code>gdal_translate</code> to merge them.</p>
@@ -1342,7 +1343,7 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 </div>
 <div id="building-a-processing-pipeline" class="section level2">
 <h2>3.5 Building a Processing Pipeline</h2>
-<p>Once you know the individual commands to be run for each step of your procesisng chain, combining them to be run as a pipeline is very easy. You can create a script that executes each step one after the other. When you run the script, you will get the output without any manual intervention.</p>
+<p>Once you know the individual commands to be run for each step of your processing chain, combining them to be run as a pipeline is very easy. You can create a script that executes each step one after the other. When you run the script, you will get the output without any manual intervention.</p>
 <p>Below is an example of a script that runs the multicriteria overlay analysis we just saw. Save the content below in a file in the same directory as <code>multicriteria.gpkg</code>. The file name will be different depending on your operating system.</p>
 <ul>
 <li>Windows: <code>run_multicriteria.bat</code></li>
@@ -1508,6 +1509,16 @@ Colorized Shaded Relief
 <pre><code>gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilinear</code></pre>
 <p>Translating this file using <code>gdal_translate</code> or subsetting it with <code>gdalwarp</code> will result in a mosaic with the highest resolution from the source tiles.</p>
 </div>
+<div id="vectorizing-files" class="section level2">
+<h2>Vectorizing Files</h2>
+<p>GDAL comes with the <code>gdal_polygonize.py</code> allowing us to convert rasters to vector. Let’s say we want to extract the coordinates of the highest elevation from the merged raster in the <a href="#merging-tiles">Merging Tiles</a> section. Querying the raster with <code>gdalinfo -stats</code> shows us that the highest pixel value is <strong>8748</strong>.</p>
+<p>We can use <code>gdal_calc.py</code> to create a raster using the condition to match only the pixels with that value.</p>
+<pre><code>gdal_calc.py --calc &#39;A==8748&#39; -A merged.vrt --outfile everest.tif --NoDataValue=0</code></pre>
+<p>The result of a boolean expression like above will be a raster with 1 and 0 pixel values. As we set the NoData to 0, we only have 1 pixel with value 1 where the condition matched. We can convert it to a vector using <code>gdal_polygonize.py</code>.</p>
+<pre><code>gdal_polygonize.py everest.tif everest.shp</code></pre>
+<p>If we want to extract the centroid of the polygon and print the coordinates, we can use <code>ogrinfo</code> command.</p>
+<pre><code>ogrinfo everest.shp -sql &#39;SELECT AsText(ST_Centroid(geometry)) from everest&#39; -dialect SQLite</code></pre>
+</div>
 <div id="working-with-kml-files" class="section level2">
 <h2>Working with KML Files</h2>
 <p>Keyhole Markup Language (KML) is a XML-based file format primarily used by Google Earth. Often time, GIS users want to export their data to KML for visualizing it in Google Earth. You may also want to extract data from KML files or convert them into other spatial formats used in GIS. The <a href="https://gdal.org/drivers/vector/kml.html">GDAL KML Driver</a> can both read and write KML files and provides many options to make the conversion compatible.</p>
@@ -1556,25 +1567,25 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb111"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb111-2"><a href="#cb111-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb111-3"><a href="#cb111-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb111-4"><a href="#cb111-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb111-5"><a href="#cb111-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb111-6"><a href="#cb111-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb111-7"><a href="#cb111-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb111-8"><a href="#cb111-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb111-9"><a href="#cb111-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb111-10"><a href="#cb111-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb111-11"><a href="#cb111-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb111-12"><a href="#cb111-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb111-13"><a href="#cb111-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb111-14"><a href="#cb111-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb111-15"><a href="#cb111-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb111-16"><a href="#cb111-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb111-17"><a href="#cb111-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb111-18"><a href="#cb111-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb111-19"><a href="#cb111-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb114"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb114-2"><a href="#cb114-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb114-3"><a href="#cb114-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb114-4"><a href="#cb114-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-5"><a href="#cb114-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb114-6"><a href="#cb114-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-7"><a href="#cb114-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb114-8"><a href="#cb114-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb114-9"><a href="#cb114-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb114-10"><a href="#cb114-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb114-11"><a href="#cb114-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb114-12"><a href="#cb114-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb114-13"><a href="#cb114-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb114-14"><a href="#cb114-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb114-15"><a href="#cb114-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb114-16"><a href="#cb114-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb114-17"><a href="#cb114-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb114-18"><a href="#cb114-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb114-19"><a href="#cb114-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 </div>
 <div id="resources" class="section level1">
