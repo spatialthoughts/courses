@@ -448,6 +448,7 @@ $(document).ready(function () {
 <li><a href="#building-a-processing-pipeline">3.5 Building a Processing Pipeline</a></li>
 </ul></li>
 <li><a href="#running-commands-in-batch">4. Running commands in batch</a></li>
+<li><a href="#automating-and-scheduling-gdalogr-jobs">5. Automating and Scheduling GDAL/OGR Jobs</a></li>
 <li><a href="#tips-for-improving-performance">Tips for Improving Performance</a>
 <ul>
 <li><a href="#configuration-options">Configuration Options</a></li>
@@ -1417,6 +1418,17 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
 <pre><code>python batch-parallel.py</code></pre>
 </div>
+<div id="automating-and-scheduling-gdalogr-jobs" class="section level1">
+<h1>5. Automating and Scheduling GDAL/OGR Jobs</h1>
+<p>The easiest way to run commands on a schedule on a Linux-based server is using a <a href="https://towardsdatascience.com/create-your-first-cronjob-on-the-linux-server-74e2fdc76e78">Cron Job</a>.</p>
+<p>You will have to edit your <code>crontab</code> and schedule the execution of your script (either Shell Script or Python Script). The key is to activate the conda environment before execution of the script.</p>
+<p>Assuming you have created a script to execute some GDAL/OGR commands and placed it at <code>/usr/local/bin/batch.py</code>, here’s a sample crontab entry that executes it every morning at 6am.</p>
+<pre><code>0 6 * * * conda activate gdal;python /use/local/bin/batch.py; conda deactivate</code></pre>
+<p>If you get an error while execution, you may have to include some environment variables in the crontab file so it can find <code>conda</code> correctly. <a href="https://unix.stackexchange.com/questions/454957/cron-job-to-run-under-conda-virtual-environment">Learn more</a>.</p>
+<pre><code>SHELL=/bin/bash
+BASH_ENV=~/.bashrc
+0 6 * * * conda activate gdal;python batch-parallel.py; conda deactivate</code></pre>
+</div>
 <div id="tips-for-improving-performance" class="section level1">
 <h1>Tips for Improving Performance</h1>
 <div id="configuration-options" class="section level2">
@@ -1567,25 +1579,25 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb114"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb114-2"><a href="#cb114-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb114-3"><a href="#cb114-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb114-4"><a href="#cb114-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb114-5"><a href="#cb114-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb114-6"><a href="#cb114-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb114-7"><a href="#cb114-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb114-8"><a href="#cb114-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb114-9"><a href="#cb114-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb114-10"><a href="#cb114-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb114-11"><a href="#cb114-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb114-12"><a href="#cb114-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb114-13"><a href="#cb114-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb114-14"><a href="#cb114-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb114-15"><a href="#cb114-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb114-16"><a href="#cb114-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb114-17"><a href="#cb114-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb114-18"><a href="#cb114-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb114-19"><a href="#cb114-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb116"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb116-2"><a href="#cb116-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb116-3"><a href="#cb116-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb116-4"><a href="#cb116-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb116-5"><a href="#cb116-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb116-6"><a href="#cb116-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb116-7"><a href="#cb116-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb116-8"><a href="#cb116-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb116-9"><a href="#cb116-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb116-10"><a href="#cb116-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb116-11"><a href="#cb116-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb116-12"><a href="#cb116-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb116-13"><a href="#cb116-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb116-14"><a href="#cb116-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb116-15"><a href="#cb116-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb116-16"><a href="#cb116-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb116-17"><a href="#cb116-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb116-18"><a href="#cb116-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb116-19"><a href="#cb116-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 </div>
 <div id="resources" class="section level1">
