@@ -14,7 +14,8 @@ function maskCloudAndShadowsSR(image) {
   var cirrus = scl.eq(10); // 10 = cirrus
   // Cloud probability less than 10% or cloud shadow classification
   var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
-  return image.updateMask(mask).divide(10000);
+  return image.updateMask(mask).divide(10000)
+    .copyProperties(image, ['system:time_start']);
 }
 
 
@@ -22,7 +23,7 @@ var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
   .filter(ee.Filter.bounds(boundary))
-
+  .map(maskCloudAndShadowsSR)
 // There are 3 distinct crop seasons in the area of interest
 // Jan-March = Winter (Rabi) Crops
 // April-June  = Summer Crops / Harvest
@@ -35,7 +36,7 @@ var createSeasonComposites = function(months) {
   var endMonth = ee.List(months).get(1)
   var monthFilter = ee.Filter.calendarRange(startMonth, endMonth, 'month')
   var seasonFiltered = filtered.filter(monthFilter)
-  var composite = seasonFiltered.map(maskCloudAndShadowsSR).median()
+  var composite = seasonFiltered.median()
   return composite.select('B.*').clip(boundary)
 }
 
