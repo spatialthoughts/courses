@@ -424,18 +424,12 @@ $(document).ready(function () {
 <ul>
 <li><a href="#etl-basics">2.1 ETL Basics</a></li>
 <li><a href="#exercise-4">Exercise 4</a></li>
-<li><a href="#using-virtual-layers">2.2 Using Virtual Layers</a>
+<li><a href="#geoprocessing-and-spatial-queries">2.2 Geoprocessing and Spatial Queries</a>
 <ul>
-<li><a href="#read-geonames-files">2.2.1 Read Geonames Files</a></li>
-<li><a href="#applying-filters">2.2.2 Applying Filters</a></li>
-<li><a href="#merging-files">2.2.3 Merging Files</a></li>
-</ul></li>
-<li><a href="#geoprocessing-and-spatial-queries">2.3 Geoprocessing and Spatial Queries</a>
-<ul>
-<li><a href="#reprojecting-vector-layers">2.3.1 Reprojecting Vector Layers</a></li>
-<li><a href="#creating-buffers">2.3.2 Creating Buffers</a></li>
-<li><a href="#performing-spatial-queries">2.3.2 Performing Spatial Queries</a></li>
-<li><a href="#data-cleaning">2.3.3 Data Cleaning</a></li>
+<li><a href="#reprojecting-vector-layers">2.2.1 Reprojecting Vector Layers</a></li>
+<li><a href="#creating-buffers">2.2.2 Creating Buffers</a></li>
+<li><a href="#performing-spatial-queries">2.2.3 Performing Spatial Queries</a></li>
+<li><a href="#data-cleaning">2.2.4 Data Cleaning</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#multi-criteria-weighted-overlay-analysis">3. Multi Criteria Weighted Overlay Analysis</a>
@@ -468,6 +462,12 @@ $(document).ready(function () {
 <li><a href="#kml-vs.-libkml-drivers">KML vs. LIBKML Drivers</a></li>
 </ul></li>
 <li><a href="#extracting-image-metadata-and-statistics">Extracting Image Metadata and Statistics</a></li>
+<li><a href="#using-virtual-layers">Using Virtual Layers</a>
+<ul>
+<li><a href="#read-geonames-files">Read Geonames Files</a></li>
+<li><a href="#applying-filters">Applying Filters</a></li>
+<li><a href="#merging-files">Merging Files</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#resources">Resources</a></li>
 <li><a href="#data-credits">Data Credits</a></li>
@@ -1119,80 +1119,8 @@ NRG Composite
 <li><p>Challenge 2: While you are exploring the Layer Creation Options, add an option to create a spatial index on the output shapefile. <em>Hint: You can specify the <code>-lco</code> option multiple times in the command.</em></p></li>
 </ul>
 </div>
-<div id="using-virtual-layers" class="section level2">
-<h2>2.2 Using Virtual Layers</h2>
-<p>Similar to GDAL, OGR also supports <a href="https://gdal.org/drivers/vector/vrt.html">Virtual File Format (VRT)</a>. Compared to the raster version, the OGR Virtual Driver is much more capable and can be used for on-the-fly data transformations. Multiple data layers can be combined into a single <em>virtual</em> layer using the XML-based <code>.vrt</code> format files. VRT files are also used to configure reading tabular data into spatial data formats.</p>
-<div id="read-geonames-files" class="section level3">
-<h3>2.2.1 Read Geonames Files</h3>
-<p>Your data package contains 3 large text files from Geonames in the <code>geonames</code> folder. These are plain-text files in a Tab-Separated Values (TSV) format. Change to the <code>geonames</code> directory.</p>
-<pre><code>cd geonames</code></pre>
-<p>Let’s try reading one of the files <code>CA.txt</code> - which has over 300K records of all placenames in Canada. To read this file, we need to create a new file called <code>CA.vrt</code> with the following content. Save the file in the same <code>geonames</code> directory.</p>
-<pre><code>&lt;OGRVRTDataSource&gt;
-        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
-            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
-            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
-        &lt;/OGRVRTLayer&gt;
-&lt;/OGRVRTDataSource&gt;</code></pre>
-<p><img src="images/gdal/geonames1.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>Let’s check if OGR can read the source text file via the newly created <code>CA.vrt</code> file.</p>
-<pre><code>ogrinfo -al -so CA.vrt</code></pre>
-<p><img src="images/gdal/geonames2.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>The <code>ogrinfo</code> command was able to successfully read the data and show us the summary of the attributes as well as the total feature count. Note that OGR has built-in support for the geonames file format. So it was able to correctly detect the geometry columns without us specifying it. For other datasets, you will have to specify the geometry columns explicitly via the <code>&lt;GeometryField&gt;</code> attribute in the VRT file.</p>
-</div>
-<div id="applying-filters" class="section level3">
-<h3>2.2.2 Applying Filters</h3>
-<p>VRT format supports applying SQL queries on the source layer using the <code>&lt;SrcSQL&gt;</code> field. This allows us to create an on-the-fly filter that reads only a subset of the data. Update the <code>CA.vrt</code> with the following content.</p>
-<pre><code>&lt;OGRVRTDataSource&gt;
-        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
-            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
-            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
-            &lt;SrcSQL&gt;select * from CA where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
-        &lt;/OGRVRTLayer&gt;
-&lt;/OGRVRTDataSource&gt;</code></pre>
-<p><img src="images/gdal/geonames3.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>The VRT file now contains a SQL query to select only the mountain features from the source file. Let’s run <code>ogrinfo</code> again and check the output.</p>
-<pre><code>ogrinfo -al -so CA.vrt</code></pre>
-<p><img src="images/gdal/geonames4.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>You will see that the output contains a subset of features, even though we never changed the source data.</p>
-</div>
-<div id="merging-files" class="section level3">
-<h3>2.2.3 Merging Files</h3>
-<p>The real power of the VRT file format lies in its ability to dynamically combine multiple data sources into a single data layer. We can adapt the previously created file and use <code>&lt;OGRVRTUnionLayer&gt;</code> to create a single layer from the 3 separate text files. Save the following content into a new file named <code>NA.vrt</code>.</p>
-<pre><code>&lt;OGRVRTDataSource&gt;
-    &lt;OGRVRTUnionLayer name=&quot;NA&quot;&gt;
-    
-        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
-            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
-            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
-            &lt;SrcSQL&gt;select * from CA where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
-        &lt;/OGRVRTLayer&gt;
-    
-        &lt;OGRVRTLayer name=&quot;MX&quot;&gt;
-            &lt;SrcDataSource&gt;CSV:MX.txt&lt;/SrcDataSource&gt;
-            &lt;SrcLayer&gt;MX&lt;/SrcLayer&gt;
-            &lt;SrcSQL&gt;select * from MX where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
-        &lt;/OGRVRTLayer&gt;
-    
-        &lt;OGRVRTLayer name=&quot;US&quot;&gt;
-            &lt;SrcDataSource&gt;CSV:US.txt&lt;/SrcDataSource&gt;
-            &lt;SrcLayer&gt;US&lt;/SrcLayer&gt;
-            &lt;SrcSQL&gt;select * from US where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
-        &lt;/OGRVRTLayer&gt;
-    
-    &lt;/OGRVRTUnionLayer&gt; 
-&lt;/OGRVRTDataSource&gt;</code></pre>
-<p><img src="images/gdal/geonames5.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>Let’s now translate the <code>NA.vrt</code> to a GeoPackage using the <code>ogr2ogr</code> command.</p>
-<pre><code>ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326</code></pre>
-<blockquote>
-<p>This operation requires a lot of processing and may take a few minutes. You can add the <code>--config GDAL_CACHEMAX 512</code> option to speed up the process. See <a href="#tips-for-improving-performance">Tips for Improving Performance</a> section for more details.</p>
-</blockquote>
-<p>This command reads all 3 text files, filters them for matching features, combines them and writes out a spatial layer containing all mountains in North America.</p>
-<p><img src="images/gdal/geonames6.png" width="75%" style="display: block; margin: auto;" /></p>
-</div>
-</div>
 <div id="geoprocessing-and-spatial-queries" class="section level2">
-<h2>2.3 Geoprocessing and Spatial Queries</h2>
+<h2>2.2 Geoprocessing and Spatial Queries</h2>
 <p>We have seen examples of using SQL queries in OGR commands. So far we have used the queries that adhere to the OGR SQL Dialect. OGR Tools also have support <a href="https://gdal.org/user/sql_sqlite_dialect.html">SQLite dialect</a>. The major advantage of using the SQLite dialect is that you can use Spatial SQL functions provided by <a href="http://www.gaia-gis.it/spatialite/">Spatialite</a>. This enables a wide range of applications where you can do spatial queries using OGR tools. A major difference when using the SQLite dialect is that you must specify the geometry column explicitly.</p>
 <p>Let’s do some geoprocessing and see how we can use spatial queries with OGR Tools. Your data package as a geopackage file <code>spatial_query.gpkg</code>. This geopackage contains 2 layers.</p>
 <ul>
@@ -1201,14 +1129,14 @@ NRG Composite
 </ul>
 <p>Let’s see how we can add a new layer to this geopackage with all bars and pubs that are within 500m of a metro station.</p>
 <div id="reprojecting-vector-layers" class="section level3">
-<h3>2.3.1 Reprojecting Vector Layers</h3>
+<h3>2.2.1 Reprojecting Vector Layers</h3>
 <p>The source data layers are in the CRS <code>EPSG:4326</code>. As we want to run a spatial query with distance in meters, let’s reproject both the layers to a projected CRS. Let’s use the <code>ogr2ogr</code> command to reproject both the input layers and save them into the same geopackage. We can use <code>-t_srs</code> option allows us to specify <strong>EPSG:7855</strong> (GDA2020 / MGA Zone 55) as the target projection. the <code>-update</code> option along with <code>-nln</code> tells <code>ogr2ogr</code> to create a new layer and save it in the same geopackage.</p>
 <pre><code>ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
 ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected</code></pre>
 <p><img src="images/gdal/geoprocessing1.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="creating-buffers" class="section level3">
-<h3>2.3.2 Creating Buffers</h3>
+<h3>2.2.2 Creating Buffers</h3>
 <p>Let’s buffer the <code>metro_stations_reprojected</code> layer using a distance of <strong>500</strong> meters. Here we specify the SQL query with the <code>-sql</code> option. Note the use of the <code>ST_Buffer()</code> function which is provided by the Spatialite engine. We need to specify <code>-dialect SQLITE</code> as the query uses spatial functions.</p>
 <blockquote>
 <p>Spatial database functions often have the <code>ST_</code> prefix. ST stands for <strong>Spatial Type</strong>.</p>
@@ -1230,13 +1158,13 @@ Dissolved Buffers
 </div>
 </div>
 <div id="performing-spatial-queries" class="section level3">
-<h3>2.3.2 Performing Spatial Queries</h3>
+<h3>2.2.3 Performing Spatial Queries</h3>
 <p>Now that we have a polygon layer with the buffer region around the metro stations, we can use the <code>ST_Within()</code> function to find all points from the <code>bars_and_pubs_reprojected</code> layer that are contained within this region. The following command adds a new layer <code>selected</code> with the resulting points.</p>
 <pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql &quot;SELECT  b.* from bars_and_pubs_reprojected as b JOIN metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)&quot; -dialect SQLITE </code></pre>
 <p><img src="images/gdal/geoprocessing4.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="data-cleaning" class="section level3">
-<h3>2.3.3 Data Cleaning</h3>
+<h3>2.2.4 Data Cleaning</h3>
 <p>The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.</p>
 <pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql &quot;SELECT t1.* FROM selected t1 JOIN (SELECT \&quot;Property ID\&quot;, MAX(\&quot;Census year\&quot;) as year FROM selected GROUP BY \&quot;Property ID\&quot;) t2 ON t1.\&quot;Property ID\&quot; = t2.\&quot;Property ID\&quot; AND t1.\&quot;Census year\&quot; = t2.year&quot;</code></pre>
 <p><img src="images/gdal/geoprocessing5.png" width="75%" style="display: block; margin: auto;" /></p>
@@ -1350,17 +1278,17 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <li>Windows: <code>run_multicriteria.bat</code></li>
 <li>Mac/Linux: <code>run_multicriteria.sh</code></li>
 </ul>
-<div class="sourceCode" id="cb87"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-burn</span> 1 <span class="at">-add</span> <span class="at">-tr</span> 100 100 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> bicycle_thefts thefts.tif <span class="at">-ot</span> Int16</span>
-<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycling_routes routes.tif</span>
-<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycle_parking existing_parking.tif</span>
-<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> routes.tif routes_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
-<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> existing_parking.tif existing_parking_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
-<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts.tif <span class="at">--outfile</span> thefts_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;20) + 50*(A&gt;10)*(A&lt;=20) + 10*(A&lt;10)&quot;</span></span>
-<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> routes_proximity.tif <span class="at">--outfile</span> routes_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;</span></span>
-<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> existing_parking_proximity.tif <span class="at">--outfile</span> existing_parking_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;100) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&lt;50)&quot;</span></span>
-<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif</span>
-<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 routes_reclass.tif routes_reclass_resampled.tif</span>
-<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts_reclass.tif <span class="at">-B</span> routes_reclass_resampled.tif <span class="at">-C</span> parking_reclass_resampled.tif <span class="at">--outfile</span> suitability.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;(A + B + C)/3&quot;</span> <span class="at">--NoDataValue</span><span class="op">=</span>0</span></code></pre></div>
+<div class="sourceCode" id="cb80"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-burn</span> 1 <span class="at">-add</span> <span class="at">-tr</span> 100 100 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> bicycle_thefts thefts.tif <span class="at">-ot</span> Int16</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycling_routes routes.tif</span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_rasterize</span> <span class="at">-ot</span> Int16 <span class="at">-burn</span> 1 <span class="at">-tr</span> 10 10 <span class="at">-te</span> 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg <span class="at">-l</span> cycle_parking existing_parking.tif</span>
+<span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> routes.tif routes_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_proximity.py</span> existing_parking.tif existing_parking_proximity.tif <span class="at">-ot</span> Int16 <span class="at">-distunits</span> GEO</span>
+<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts.tif <span class="at">--outfile</span> thefts_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;20) + 50*(A&gt;10)*(A&lt;=20) + 10*(A&lt;10)&quot;</span></span>
+<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> routes_proximity.tif <span class="at">--outfile</span> routes_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&lt;=50) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&gt;100)&quot;</span></span>
+<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> existing_parking_proximity.tif <span class="at">--outfile</span> existing_parking_reclass.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;100*(A&gt;100) + 50*(A&gt;50)*(A&lt;=100) + 10*(A&lt;50)&quot;</span></span>
+<span id="cb80-9"><a href="#cb80-9" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif</span>
+<span id="cb80-10"><a href="#cb80-10" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-r</span> average <span class="at">-tr</span> 100 100 routes_reclass.tif routes_reclass_resampled.tif</span>
+<span id="cb80-11"><a href="#cb80-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_calc.py</span> <span class="at">-A</span> thefts_reclass.tif <span class="at">-B</span> routes_reclass_resampled.tif <span class="at">-C</span> parking_reclass_resampled.tif <span class="at">--outfile</span> suitability.tif <span class="at">--calc</span><span class="op">=</span><span class="st">&quot;(A + B + C)/3&quot;</span> <span class="at">--NoDataValue</span><span class="op">=</span>0</span></code></pre></div>
 <p>Then from the same directory, you can launch the script as below.</p>
 <p><em>Windows</em></p>
 <pre><code>run_multicriteria.bat</code></pre>
@@ -1373,48 +1301,48 @@ gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif<
 <p>You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.</p>
 <pre><code>gdal_translate -of GTiff -co COMPRESS=JPEG {input} {output}</code></pre>
 <p>But it would be a lot of manual effort if you want to run the commands on hundreds of input files. Here’s where a simple python script can help you automate running the commands in a batch. The data directory contains a file called <code>batch.py</code> with the following python code.</p>
-<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
-<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<div class="sourceCode" id="cb84"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb84-7"><a href="#cb84-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
+<span id="cb84-8"><a href="#cb84-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb84-9"><a href="#cb84-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb84-10"><a href="#cb84-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb84-11"><a href="#cb84-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
 <p>In Anaconda Prompt, run the following command from <code>gdal-tools</code> directory to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
 <pre><code>python batch.py</code></pre>
 <p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
-<div class="sourceCode" id="cb93"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb93-2"><a href="#cb93-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb93-3"><a href="#cb93-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
-<span id="cb93-4"><a href="#cb93-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb93-5"><a href="#cb93-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb93-6"><a href="#cb93-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb93-7"><a href="#cb93-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb93-8"><a href="#cb93-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb93-9"><a href="#cb93-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
-<span id="cb93-10"><a href="#cb93-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb93-11"><a href="#cb93-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb93-12"><a href="#cb93-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb93-13"><a href="#cb93-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb93-14"><a href="#cb93-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb93-15"><a href="#cb93-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb93-16"><a href="#cb93-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb93-17"><a href="#cb93-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb93-18"><a href="#cb93-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb93-19"><a href="#cb93-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb93-20"><a href="#cb93-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb93-21"><a href="#cb93-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb93-22"><a href="#cb93-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb93-23"><a href="#cb93-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb93-24"><a href="#cb93-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb93-25"><a href="#cb93-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb93-26"><a href="#cb93-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb93-27"><a href="#cb93-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb93-28"><a href="#cb93-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<div class="sourceCode" id="cb86"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
+<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
+<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
+<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
+<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
+<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
+<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
 <pre><code>python batch-parallel.py</code></pre>
 </div>
@@ -1579,25 +1507,97 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb116"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb116-2"><a href="#cb116-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb116-3"><a href="#cb116-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb116-4"><a href="#cb116-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb116-5"><a href="#cb116-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb116-6"><a href="#cb116-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb116-7"><a href="#cb116-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb116-8"><a href="#cb116-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb116-9"><a href="#cb116-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb116-10"><a href="#cb116-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb116-11"><a href="#cb116-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb116-12"><a href="#cb116-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb116-13"><a href="#cb116-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb116-14"><a href="#cb116-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb116-15"><a href="#cb116-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb116-16"><a href="#cb116-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb116-17"><a href="#cb116-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb116-18"><a href="#cb116-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb116-19"><a href="#cb116-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb109"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb109-2"><a href="#cb109-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb109-3"><a href="#cb109-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb109-4"><a href="#cb109-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-5"><a href="#cb109-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb109-6"><a href="#cb109-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-7"><a href="#cb109-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb109-8"><a href="#cb109-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb109-9"><a href="#cb109-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb109-10"><a href="#cb109-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb109-11"><a href="#cb109-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb109-12"><a href="#cb109-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb109-13"><a href="#cb109-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb109-14"><a href="#cb109-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb109-15"><a href="#cb109-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb109-16"><a href="#cb109-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb109-17"><a href="#cb109-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb109-18"><a href="#cb109-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb109-19"><a href="#cb109-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+</div>
+<div id="using-virtual-layers" class="section level2">
+<h2>Using Virtual Layers</h2>
+<p>Similar to GDAL, OGR also supports <a href="https://gdal.org/drivers/vector/vrt.html">Virtual File Format (VRT)</a>. Compared to the raster version, the OGR Virtual Driver is much more capable and can be used for on-the-fly data transformations. Multiple data layers can be combined into a single <em>virtual</em> layer using the XML-based <code>.vrt</code> format files. VRT files are also used to configure reading tabular data into spatial data formats.</p>
+<div id="read-geonames-files" class="section level3">
+<h3>Read Geonames Files</h3>
+<p>Your data package contains 3 large text files from Geonames in the <code>geonames</code> folder. These are plain-text files in a Tab-Separated Values (TSV) format. Change to the <code>geonames</code> directory.</p>
+<pre><code>cd geonames</code></pre>
+<p>Let’s try reading one of the files <code>CA.txt</code> - which has over 300K records of all placenames in Canada. To read this file, we need to create a new file called <code>CA.vrt</code> with the following content. Save the file in the same <code>geonames</code> directory.</p>
+<pre><code>&lt;OGRVRTDataSource&gt;
+        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
+            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
+            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
+        &lt;/OGRVRTLayer&gt;
+&lt;/OGRVRTDataSource&gt;</code></pre>
+<p><img src="images/gdal/geonames1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>Let’s check if OGR can read the source text file via the newly created <code>CA.vrt</code> file.</p>
+<pre><code>ogrinfo -al -so CA.vrt</code></pre>
+<p><img src="images/gdal/geonames2.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>The <code>ogrinfo</code> command was able to successfully read the data and show us the summary of the attributes as well as the total feature count. Note that OGR has built-in support for the geonames file format. So it was able to correctly detect the geometry columns without us specifying it. For other datasets, you will have to specify the geometry columns explicitly via the <code>&lt;GeometryField&gt;</code> attribute in the VRT file.</p>
+</div>
+<div id="applying-filters" class="section level3">
+<h3>Applying Filters</h3>
+<p>VRT format supports applying SQL queries on the source layer using the <code>&lt;SrcSQL&gt;</code> field. This allows us to create an on-the-fly filter that reads only a subset of the data. Update the <code>CA.vrt</code> with the following content.</p>
+<pre><code>&lt;OGRVRTDataSource&gt;
+        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
+            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
+            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
+            &lt;SrcSQL&gt;select * from CA where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
+        &lt;/OGRVRTLayer&gt;
+&lt;/OGRVRTDataSource&gt;</code></pre>
+<p><img src="images/gdal/geonames3.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>The VRT file now contains a SQL query to select only the mountain features from the source file. Let’s run <code>ogrinfo</code> again and check the output.</p>
+<pre><code>ogrinfo -al -so CA.vrt</code></pre>
+<p><img src="images/gdal/geonames4.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>You will see that the output contains a subset of features, even though we never changed the source data.</p>
+</div>
+<div id="merging-files" class="section level3">
+<h3>Merging Files</h3>
+<p>The real power of the VRT file format lies in its ability to dynamically combine multiple data sources into a single data layer. We can adapt the previously created file and use <code>&lt;OGRVRTUnionLayer&gt;</code> to create a single layer from the 3 separate text files. Save the following content into a new file named <code>NA.vrt</code>.</p>
+<pre><code>&lt;OGRVRTDataSource&gt;
+    &lt;OGRVRTUnionLayer name=&quot;NA&quot;&gt;
+    
+        &lt;OGRVRTLayer name=&quot;CA&quot;&gt;
+            &lt;SrcDataSource&gt;CSV:CA.txt&lt;/SrcDataSource&gt;
+            &lt;SrcLayer&gt;CA&lt;/SrcLayer&gt;
+            &lt;SrcSQL&gt;select * from CA where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
+        &lt;/OGRVRTLayer&gt;
+    
+        &lt;OGRVRTLayer name=&quot;MX&quot;&gt;
+            &lt;SrcDataSource&gt;CSV:MX.txt&lt;/SrcDataSource&gt;
+            &lt;SrcLayer&gt;MX&lt;/SrcLayer&gt;
+            &lt;SrcSQL&gt;select * from MX where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
+        &lt;/OGRVRTLayer&gt;
+    
+        &lt;OGRVRTLayer name=&quot;US&quot;&gt;
+            &lt;SrcDataSource&gt;CSV:US.txt&lt;/SrcDataSource&gt;
+            &lt;SrcLayer&gt;US&lt;/SrcLayer&gt;
+            &lt;SrcSQL&gt;select * from US where &quot;FEATCLASS&quot; = &#39;T&#39;&lt;/SrcSQL&gt;
+        &lt;/OGRVRTLayer&gt;
+    
+    &lt;/OGRVRTUnionLayer&gt; 
+&lt;/OGRVRTDataSource&gt;</code></pre>
+<p><img src="images/gdal/geonames5.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>Let’s now translate the <code>NA.vrt</code> to a GeoPackage using the <code>ogr2ogr</code> command.</p>
+<pre><code>ogr2ogr -f GPKG NA.gpkg NA.vrt -a_srs EPSG:4326</code></pre>
+<blockquote>
+<p>This operation requires a lot of processing and may take a few minutes. You can add the <code>--config GDAL_CACHEMAX 512</code> option to speed up the process. See <a href="#tips-for-improving-performance">Tips for Improving Performance</a> section for more details.</p>
+</blockquote>
+<p>This command reads all 3 text files, filters them for matching features, combines them and writes out a spatial layer containing all mountains in North America.</p>
+<p><img src="images/gdal/geonames6.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
 </div>
 </div>
 <div id="resources" class="section level1">
