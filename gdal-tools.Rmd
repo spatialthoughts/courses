@@ -290,9 +290,20 @@ knitr::include_graphics('images/gdal/compression2.png')
 
 The uncompressed file size was **100+ MB**. After applying the  *DEFLATE* compression, the file size was reduced to **73MB**. We can further reduce the file size by specifying additional options. The `PREDICTOR` option helps compress data better when the neighboring values are correlated. For elevation data, this is definitely the case. The `TILED` option will compress the data in blocks rather than line-by-line.
 
+> Note: You can split long commands into multiple lines using the line-continuation character. Windows shell uses `^` as the line-continuation, while Mac/Linux shells use `\` as the line continuation.
+
+**Windows**
 ```
-gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2
+gdal_translate -of GTiff merged.vrt merged.tif ^
+  -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2
 ```
+
+**Mac/Linux**
+```
+gdal_translate -of GTiff merged.vrt merged.tif \
+  -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2
+```
+
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/compression3.png')
@@ -304,8 +315,17 @@ The resulting file now comes out much smaller at **39MB**. Check this article [G
 
 The output from `gdalinfo` program shows that the original data has a *NoData* Value set to `-32768`. We can set a new *NoData* value. The `-a_nodata` option allows us to specify a new value.
 
+**Windows**
 ```
-gdal_translate -of GTiff merged.vrt merged.tif -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2 -a_nodata -9999
+gdal_translate -of GTiff merged.vrt merged.tif ^
+  -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2 -a_nodata -9999
+```
+
+**Mac/Linux**
+
+```
+gdal_translate -of GTiff merged.vrt merged.tif \
+  -co COMPRESS=DEFLATE -co TILED=YES -co PREDICTOR=2 -a_nodata -9999
 ```
 
 After running the command, you can verify the results using the `gdalinfo` command.
@@ -314,8 +334,16 @@ After running the command, you can verify the results using the `gdalinfo` comma
 
 A new format called [Cloud-Optimized GeoTIFF (COG)](https://www.cogeo.org/) is making access to such a vast amount of imagery easier to access and analyze. A *Cloud-optimized* GeoTIFF is behaving just like a regular GeoTIFF imagery, but instead of downloading the entire image locally, you can access *portions* of imagery hosted on a cloud server streamed to clients like QGIS. This makes it very efficient to access this data and even analyze it - without downloading large files. GDAL makes it very easy to create COG files by specifying the `-of COG` option.
 
+**Windows**
 ```
-gdal_translate -of COG merged.vrt merged_cog.tif -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
+gdal_translate -of COG merged.vrt merged_cog.tif ^
+  -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
+```
+
+**Mac/Linux**
+```
+gdal_translate -of COG merged.vrt merged_cog.tif \
+  -co COMPRESS=DEFLATE -co PREDICTOR=2 -a_nodata -9999
 ```
 
 ## 1.2 Processing Elevation Data
@@ -443,8 +471,16 @@ We can use the `gdalwarp` utility to clip the raster using the `-cutline` option
 
 > Note that JPEG is a lossy compression method and is suited only for photographic rasters such as aerial/drone imagery. For scientific datasets, you should always use lossless compression as shown in the [previous section](#compressing-output).
 
+**Windows**
 ```
-gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
+```
+
+**Mac/Linux**
+```
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -487,20 +523,40 @@ cd landsat8
 
 Let's create an RGB composite image by combining three 3 different bands - Red, Green and Blue - into a single image. We can use the `gdal_merge.py` command to merge different images. Here we must use the `-separate` option which tells the command to place each image in a separate band.
 
+**Windows**
 ```
-gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+```
+
+**Mac/Linux**
+```
+gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
 ```
 
 If you get an error running the above command, you can run the above command using the alternative syntax below. This ensures you are using the `python` binary that comes with Anaconda and not other Python installations you may have on your computer
 
 *Windows*
 ```
-python %CONDA_PREFIX%\Scripts\gdal_merge.py  -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+python %CONDA_PREFIX%\Scripts\gdal_merge.py  -o rgb.tif -separate ^
+  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
 ```
 
 *Mac/Linux*
 ```
-python $CONDA_PREFIX/bin/gdal_merge.py  -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+python $CONDA_PREFIX/bin/gdal_merge.py  -o rgb.tif -separate \
+  -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
 ```
 
 Once the command finishes, you can view the result in QGIS. 
@@ -515,8 +571,20 @@ The `gdal_merge.py` script loads all rasters into memory before merging them. Th
 
 First, create a virtual raster. `gdalbuildvrt` also has a `-separate` flag to put each file in a different band.
 
+**Windows**
 ```
-gdalbuildvrt -o rgb.vrt -separate RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+gdalbuildvrt -o rgb.vrt -separate ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif ^
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
+```
+
+**Mac/Linux**
+```
+gdalbuildvrt -o rgb.vrt -separate \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif \
+  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
 ```
 
 Then use `gdal_translate` to merge them.
@@ -571,8 +639,18 @@ gdalinfo -stats RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
 ```
 It is important to set NoData value. As seen from the output above, NoData is set to **-999**.
  
+**Windows**
 ```
-gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-999
+gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^
+  -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^
+  --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-999
+```
+
+**Mac/Linux**
+```
+gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF \
+  -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF \
+  --outfile ndvi.tif --calc="(A-B)/(A+B)" --NoDataValue=-999
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -596,14 +674,30 @@ Landsat-8 satellite produces images at a **30m** spatial resolution in the *Red*
 
 GDAL comes with a script `gdal_pansharpen.py` that implements the [Brovey algorithm](https://gdal.org/drivers/raster/vrt.html#gdal-vrttut-pansharpen) to compute the pansharpened output. In the example below we fuse the 15m resolution panchromatic  band (B8) with the RGB composite created in the previous step.
 
+**Windows**
 ```
-gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB
+gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF ^
+  rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB
+```
+
+**Mac/Linux**
+```
+gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF \
+  rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB
 ```
 
 We can apply the same contrast stretch as before and compare the output. You will notice that the resulting composite is much sharper and can resolve the details in the scene much better.
 
+**Windows**
 ```
-gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 pansharpened.tif pansharpened_stretch.tif
+gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 ^
+  pansharpened.tif pansharpened_stretch.tif
+```
+
+**Mac/Linux**
+```
+gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte -a_nodata 0 \
+  pansharpened.tif pansharpened_stretch.tif
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -685,8 +779,18 @@ gdalinfo earth_at_night.jpg
 
 Since this is a global image, we know the corner coordinates. We can assign the CRS **EPSG:4326** using the `-a_srs` option and specify the bounding box coordinates in the following order `<ulx> <uly> <lrx> <lry>`. 
  
+**Windows**
 ```
-gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 earth_at_night.jpg earth_at_night.tif -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB
+gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 ^
+  earth_at_night.jpg earth_at_night.tif ^
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB
+```
+
+**Mac/Linux**
+```
+gdal_translate -a_ullr -180 90 180 -90 -a_srs EPSG:4326 \
+  earth_at_night.jpg earth_at_night.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=RGB
 ```
 
 The resulting file `earth_at_night.tif` is a GeoTiff file with the correct georeference information and can now be used in GIS software.
@@ -721,8 +825,18 @@ The map has graticule lines with latitude and longitude markings. To obtain the 
 
 The first step is to store these GCPs in the image metadata using utility `gdal_translate`.
 
+**Windows**
 ```
-gdal_translate -gcp 418 893 70 15 -gcp 380 2432 70 5 -gcp 3453 2434  90 5 -gcp 3407 895 90 15 -gcp 2662 911 85 15 1870_southern-india.jpg india-with-gcp.tif
+gdal_translate -gcp 418 893 70 15 -gcp 380 2432 70 5 -gcp 3453 2434  90 5 ^
+  -gcp 3407 895 90 15 -gcp 2662 911 85 15 ^
+  1870_southern-india.jpg india-with-gcp.tif
+```
+
+**Mac/Linux**
+```
+gdal_translate -gcp 418 893 70 15 -gcp 380 2432 70 5 -gcp 3453 2434  90 5 \
+  -gcp 3407 895 90 15 -gcp 2662 911 85 15 \
+  1870_southern-india.jpg india-with-gcp.tif
 ```
 
 Now that the GCPs are stored in the image, we are ready to do the georeferencing. Assuming the CRS of the map is a Geographic CRS based on the Everest 1830 datum, we choose **EPSG:4042** as the target CRS. 
@@ -734,14 +848,34 @@ Next, we need to choose the transformation type. `gdalwarp` supports the followi
 
 Let's try **Polynomial 1** transformation and check the results.
 
+**Windows**
 ```
-gdalwarp -t_srs EPSG:4042 -order 1 -tr 0.005 0.005  india-with-gcp.tif india-reprojected-polynomial.tif -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
+gdalwarp -t_srs EPSG:4042 -order 1 -tr 0.005 0.005  ^
+  india-with-gcp.tif india-reprojected-polynomial.tif ^
+  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
+```
+
+**Mac/Linux**
+```
+gdalwarp -t_srs EPSG:4042 -order 1 -tr 0.005 0.005 \
+  india-with-gcp.tif india-reprojected-polynomial.tif \
+  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
 ```
 
 We can use the same GCPs and do a Thin-plate-spline transformation.
 
+**Windows**
 ```
-gdalwarp -t_srs EPSG:4042 -tps -tr 0.005 0.005 india-with-gcp.tif india-reprojected-tps.tif -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
+gdalwarp -t_srs EPSG:4042 -tps -tr 0.005 0.005 ^
+  india-with-gcp.tif india-reprojected-tps.tif ^
+  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
+```
+
+**Mac/Linux**
+```
+gdalwarp -t_srs EPSG:4042 -tps -tr 0.005 0.005 \
+  india-with-gcp.tif india-reprojected-tps.tif \
+  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
 ```
 
 ```{r echo=FALSE, fig.align='center'}
@@ -809,8 +943,16 @@ knitr::include_graphics('images/gdal/ogr_csv03.png')
 
 OGR is now able to recognize this layer as Point geometry layer. Let's write this to a spatial data format. We can use the `ogr2ogr` utility to translate between different formats. The following command creates a new GeoPackage file called `worldcities.gpkg` from the CSV file.
 
+**Windows**
 ```
-ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat 
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv ^
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat 
+```
+
+**Mac/Linux**
+```
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv \
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat 
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -819,8 +961,16 @@ knitr::include_graphics('images/gdal/ogr_csv04.png')
 
 We can open the result in a GIS software and it shows the cities layer. While the point layer loads fine, it is missing a CRS. We can use the `a_srs` option to assign a CRS to the resulting layer.
 
+**Windows**
 ```
-ogr2ogr -f GPKG worldcities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv ^
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326
+```
+
+**Mac/Linux**
+```
+ogr2ogr -f GPKG worldcities.gpkg worldcities.csv \
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -829,8 +979,18 @@ knitr::include_graphics('images/gdal/ogr_csv05.png')
 
 OGR tools allow executing SQL queries against the data source. It supports a subset of the SQL capability that is described in the [OGR SQL Syntax](https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect). A simple way to select a subset of features is using the `-where` option. This allows you to specify an attribute query to filter the results. Here we modify our command to extract only the cities where the `country` column has the value **India**.
 
+**Windows**
 ```
-ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326  -where "country = 'India'"
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 ^
+  -where "country = 'India'"
+```
+
+**Mac/Linux**
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv \
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 \
+  -where "country = 'India'"
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -839,8 +999,20 @@ knitr::include_graphics('images/gdal/ogr_csv06.png')
 
 You can also execute any SQL statement on the input data source. This is a very powerful feature that allows you to filter, join, transform, and summarize the input data. We can apply this on our data layer to transform a column type from string to integer. The column `population` from the input CSV has the type *string*. Since this field is primarily used to store integer values, we can use the `CAST()` SQL function to change the type to *integer*. The `SELECT` statement also allows us to pick only the relevant fields that will get written to the output.
 
+**Windows**
 ```
-ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'"
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 ^
+  -sql "SELECT city, country, CAST(population AS integer) as population ^
+    from worldcities where country = 'India'"
+```
+
+**Mac/Linux**
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv \
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 \
+  -sql "SELECT city, country, CAST(population AS integer) as population \
+    from worldcities where country = 'India'"
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -848,8 +1020,20 @@ knitr::include_graphics('images/gdal/ogr_csv07.png')
 ```
 
 Lastly, we can rename the name of the output layer using the `-nln` option. 
+
+**Windows**
 ```
-ogr2ogr -f GPKG mycities.gpkg worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 -sql "SELECT city, country, CAST(population AS integer) as population from worldcities where country = 'India'" -nln mycities
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 ^
+  -sql "SELECT city, country, CAST(population AS integer) as population ^
+  from worldcities where country = 'India'" -nln mycities
+```
+**Mac/Linux**
+```
+ogr2ogr -f GPKG mycities.gpkg worldcities.csv \
+  -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 \
+  -sql "SELECT city, country, CAST(population AS integer) as population \
+  from worldcities where country = 'India'" -nln mycities
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -889,9 +1073,20 @@ Let's see how we can add a new layer to this geopackage with all bars and pubs t
 
 The source data layers are in the CRS `EPSG:4326`. As we want to run a spatial query with distance in meters, let's reproject both the layers to a projected CRS. Let's use the `ogr2ogr` command to reproject both the input layers and save them into the same geopackage. We can use `-t_srs` option allows us to specify **EPSG:7855** (GDA2020 / MGA Zone 55) as the target projection. the `-update` option along with `-nln` tells `ogr2ogr` to create a new layer and save it in the same geopackage.
 
+**Windows**
 ```
-ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg bars_and_pubs -update -nln bars_and_pubs_reprojected
-ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg metro_stations -update -nln metro_stations_reprojected
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg ^
+  bars_and_pubs -update -nln bars_and_pubs_reprojected
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg ^
+  metro_stations -update -nln metro_stations_reprojected
+```
+
+**Mac/Linux**
+```
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg \
+  bars_and_pubs -update -nln bars_and_pubs_reprojected
+ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg \
+  metro_stations -update -nln metro_stations_reprojected
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -904,8 +1099,18 @@ Let's buffer the `metro_stations_reprojected` layer using a distance of **500** 
 
 > Spatial database functions often have the `ST_` prefix. ST stands for **Spatial Type**.
 
+**Windows**
 ```
-ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer -sql "SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM metro_stations_reprojected m" -dialect SQLITE 
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer ^
+  -sql "SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM ^
+    metro_stations_reprojected m" -dialect SQLITE 
+```
+
+**Mac/Linux**
+```
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer \
+  -sql "SELECT m.station, ST_Buffer(m.geom, 500) as geom FROM \
+    metro_stations_reprojected m" -dialect SQLITE 
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Metro Station Buffers'}
@@ -914,8 +1119,20 @@ knitr::include_graphics('images/gdal/geoprocessing2.png')
 
 This query results in individual overlapping buffers. We can dissolve the buffers using `ST_Collect()` function.
 
+**Windows**
 ```
-ogr2ogr spatial_query.gpkg spatial_query.gpkg -update -nln metro_stations_buffer_dissolved -sql "SELECT ST_Union(d.geom) as geom FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom FROM metro_stations_reprojected m) as d" -dialect SQLITE
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update ^
+  -nln metro_stations_buffer_dissolved -sql "SELECT ST_Union(d.geom) as geom ^
+    FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom ^
+    FROM metro_stations_reprojected m) as d" -dialect SQLITE
+```
+
+**Mac/Linux**
+```
+ogr2ogr spatial_query.gpkg spatial_query.gpkg -update \
+  -nln metro_stations_buffer_dissolved -sql "SELECT ST_Union(d.geom) as geom \
+  FROM (SELECT ST_Collect(buffer(m.geom, 500)) as geom \
+  FROM metro_stations_reprojected m) as d" -dialect SQLITE
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Dissolved Buffers'}
@@ -926,8 +1143,20 @@ knitr::include_graphics('images/gdal/geoprocessing3.png')
 
 Now that we have a polygon layer with the buffer region around the metro stations, we can use the `ST_Within()` function to find all points from the `bars_and_pubs_reprojected` layer that are contained within this region. The following command adds a new layer `selected` with the resulting points.
 
+**Windows**
 ```
-ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln selected -sql "SELECT  b.* from bars_and_pubs_reprojected as b JOIN metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)" -dialect SQLITE 
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update ^
+  -nln selected -sql "SELECT  b.* from bars_and_pubs_reprojected as b JOIN ^
+  metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)" ^
+  -dialect SQLITE 
+```
+
+**Mac/Linux**
+```
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update \
+  -nln selected -sql "SELECT  b.* from bars_and_pubs_reprojected as b JOIN \
+  metro_stations_buffer_dissolved as m ON ST_Within( b.geom, m.geom)" \
+  -dialect SQLITE 
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -938,8 +1167,22 @@ knitr::include_graphics('images/gdal/geoprocessing4.png')
 
 The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.
 
+**Windows**
 ```
-ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update -nln cleaned -sql "SELECT t1.* FROM selected t1 JOIN (SELECT \"Property ID\", MAX(\"Census year\") as year FROM selected GROUP BY \"Property ID\") t2 ON t1.\"Property ID\" = t2.\"Property ID\" AND t1.\"Census year\" = t2.year"
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update ^
+  -nln cleaned -sql "SELECT t1.* FROM selected t1 ^
+  JOIN (SELECT \"Property ID\", MAX(\"Census year\") as year FROM selected ^
+  GROUP BY \"Property ID\") t2 ON t1.\"Property ID\" = t2.\"Property ID\" ^
+  AND t1.\"Census year\" = t2.year"
+```
+
+**Mac/Linux**
+```
+ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update \
+  -nln cleaned -sql "SELECT t1.* FROM selected t1 \
+  JOIN (SELECT \"Property ID\", MAX(\"Census year\") as year FROM selected \
+  GROUP BY \"Property ID\") t2 ON t1.\"Property ID\" = t2.\"Property ID\" \
+  AND t1.\"Census year\" = t2.year"
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -990,8 +1233,18 @@ knitr::include_graphics('images/gdal/multicriteria2.png')
 
 Let's start by rasterizing the `cycling_routes` layer. We want to create an output raster where the pixel values are **1** where there is a route and **0** where there are no routes. This value is specified using the `-burn` option. We can set the resolution of the output raster to be **10** meters using the `-tr` option. Once the command finishes, each pixel's value will be set to 1 or 0 depending on whether a route line intersects it or not.
 
+**Windows**
 ```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycling_routes routes.tif
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 ^
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
+  -l cycling_routes routes.tif
+```
+
+**Mac/Linux**
+```
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 \
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
+  -l cycling_routes routes.tif
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -1000,8 +1253,18 @@ knitr::include_graphics('images/gdal/multicriteria3.png')
 
 We can rasterize the `cycle_parking` layer with the same options.
 
+**Windows**
 ```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l cycle_parking existing_parking.tif
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 ^
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
+  -l cycle_parking existing_parking.tif
+```
+
+**Mac/Linux**
+```
+gdal_rasterize -ot Int16 -burn 1 -tr 10 10 \
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
+  -l cycle_parking existing_parking.tif
 ```
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/gdal/multicriteria4.png')
@@ -1009,8 +1272,18 @@ knitr::include_graphics('images/gdal/multicriteria4.png')
 
 Now only the `bicycle_thefts` layer need to be rasterized. This is a dense point layer with locations of individual thefts - with overlapping points. We can create a raster layer by adding the total number of points within each pixel and calculate the density of thefts. This type of approach in mapping point density is called Binning or Aggregation. We can use the `-add` option to increment the value to the pixel for each input feature. 
 
+**Windows**
 ```
-gdal_rasterize -burn 1 -add -tr 100 100 -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg -l bicycle_thefts thefts.tif -ot Int16
+gdal_rasterize -burn 1 -add -tr 100 100 ^
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
+  -l bicycle_thefts thefts.tif -ot Int16
+```
+
+**Mac/Linux**
+```
+gdal_rasterize -burn 1 -add -tr 100 100 \
+  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
+  -l bicycle_thefts thefts.tif -ot Int16
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -1030,8 +1303,16 @@ gdal_proximity.py routes.tif routes_proximity.tif -ot Int16 -distunits GEO
 knitr::include_graphics('images/gdal/multicriteria6.png')
 ```
 
+**Windows**
 ```
-gdal_proximity.py existing_parking.tif existing_parking_proximity.tif -ot Int16 -distunits GEO
+gdal_proximity.py existing_parking.tif existing_parking_proximity.tif ^
+  -ot Int16 -distunits GEO
+```
+
+**Mac/Linux**
+```
+gdal_proximity.py existing_parking.tif existing_parking_proximity.tif \
+  -ot Int16 -distunits GEO
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -1052,16 +1333,30 @@ For point density raster representing **Thefts**, we assign higher value to more
 
 The following commands uses `gdal_calc.py` to take the continuous values from the input rasters and create re-classified rasters with discrete values.
 
+**Windows**
 ```
-gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
+gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif ^
+  --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
+
+gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif ^
+  --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
+
+gdal_calc.py -A existing_parking_proximity.tif ^
+  --outfile existing_parking_reclass.tif ^
+  --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
 ```
 
+**Mac/Linux**
 ```
-gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
-```
+gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif \
+  --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
 
-```
-gdal_calc.py -A existing_parking_proximity.tif --outfile existing_parking_reclass.tif --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
+gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif \
+  --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
+
+gdal_calc.py -A existing_parking_proximity.tif \
+  --outfile existing_parking_reclass.tif \
+  --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='100%'}
@@ -1083,8 +1378,18 @@ knitr::include_graphics('images/gdal/multicriteria9.png')
 
 For our analysis, we will give equal important to all 3 criteria. We simply add all 3 rasters and normalize the pixel values so they are in the 0-100 range. We set the NoData value in the output using the `--NoDataValue` option.
 
+**Windows**
 ```
-gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif -C parking_reclass_resampled.tif --outfile suitability.tif --calc="(A + B + C)/3" --NoDataValue=0
+gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif ^
+  -C parking_reclass_resampled.tif --outfile suitability.tif ^
+  --calc="(A + B + C)/3" --NoDataValue=0
+```
+
+**Mac/Linux**
+```
+gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif \
+  -C parking_reclass_resampled.tif --outfile suitability.tif \
+  --calc="(A + B + C)/3" --NoDataValue=0
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
