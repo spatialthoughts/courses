@@ -13,5 +13,9 @@ jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/python_f
 jupyter-nbconvert --to markdown  code/python_foundation/[0-9]*.ipynb --output-dir .
 # To ensure plots are generated, we run the plotting notebook using --execute
 jupyter-nbconvert --to markdown  code/python_foundation/supplement1_plotting.ipynb --output-dir . --execute
+jupyter-nbconvert --to markdown  code/python_foundation/supplement2_working_with_xarray.ipynb --output-dir . --execute
+# matplotlib figures end up with a title 'png'. Remove it with sed
+sed -i '' 's/\[png\]/\[\]/g' supplement1_plotting.md
+sed -i '' 's/\[png\]/\[\]/g' supplement2_working_with_xarray.md
 cp code/python_foundation/*.ipynb $PACKAGE_DIR/
 cp code/python_foundation/solutions/*.ipynb $SOLUTIONS_DIR/

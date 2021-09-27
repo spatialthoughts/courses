@@ -161,7 +161,9 @@ If we want to display multiple layers, we simply create new plots on the same `A
 
 
 ```python
-fig, ax = plt.subplots(figsize=(10, 15))
+fig, ax = plt.subplots()
+fig.set_size_inches(10,15)
+
 plt.axis('off')
 
 districts.plot(ax=ax, linewidth=1, facecolor='none', edgecolor='#252525')
