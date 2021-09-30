@@ -487,10 +487,18 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#supplement">Supplement</a>
 <ul>
-<li><a href="#maps-and-plots-with-geopandas">Maps and Plots with GeoPandas</a>
+<li><a href="#creating-maps-with-geopandas">Creating Maps with GeoPandas</a>
 <ul>
+<li><a href="#matplotlib-basics">Matplotlib Basics</a></li>
+<li><a href="#rendering-map-layouts">Rendering Map Layouts</a></li>
 <li><a href="#creating-a-map-with-multiple-layers">Creating A Map with Multiple Layers</a></li>
 <li><a href="#labelling-features">Labelling Features</a></li>
+</ul></li>
+<li><a href="#working-with-xarray">Working with Xarray</a>
+<ul>
+<li><a href="#xarray-and-rioxarray-basics">XArray and rioxarray Basics</a></li>
+<li><a href="#merging-rasters">Merging Rasters</a></li>
+<li><a href="#visualizing-rasters-using-matplotlib">Visualizing Rasters using Matplotlib</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#data-credits">Data Credits</a></li>
@@ -1894,16 +1902,18 @@ import rasterio</code></pre>
 <ul>
 <li>University of Helsinki’s Free <a href="https://geo-python.github.io/site/">Geo-Python Course</a></li>
 <li>University of Helsinki’s Free <a href="https://automating-gis-processes.github.io/site/">Automating GIS Processes Course</a></li>
+<li>Kaggle’s Free <a href="https://www.kaggle.com/learn">Python Courses</a>, including <a href="https://www.kaggle.com/learn/geospatial-analysis">Geospatial Analysis</a></li>
 <li>Allen Downey’s Free <a href="https://allendowney.github.io/ElementsOfDataScience/">Elements of Data Science Course</a></li>
 <li><a href="https://geopython.github.io/geopython-workshop/">Doing Geospatial in Python</a> online workshop. Covers some more geospatial libraries, with a focus on OGC services and metadata.</li>
 </ul>
+<div style="page-break-after: always;"></div>
 </div>
 </div>
 <div id="supplement" class="section level1">
 <h1>Supplement</h1>
 <hr />
-<div id="maps-and-plots-with-geopandas" class="section level2">
-<h2>Maps and Plots with GeoPandas</h2>
+<div id="creating-maps-with-geopandas" class="section level2">
+<h2>Creating Maps with GeoPandas</h2>
 <p>GeoPandas comes with built-in functions for visualizing geospatial data and creating maps. It uses the very powerful <code>matplotlib</code> library to do the plotting. If you are not familiar with matplotlib, check out this <a href="https://www.data-blogger.com/2017/11/15/python-matplotlib-pyplot-a-perfect-combination/">introductory tutorial</a>.</p>
 <p>This notebook shows how we can create visualizaion using the datasets from the <a href="#working-with-geopandas">Working with GeoPandas</a> exercise.</p>
 <div class="sourceCode" id="cb165"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb165-1"><a href="#cb165-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
@@ -1914,50 +1924,193 @@ import rasterio</code></pre>
 <span id="cb165-6"><a href="#cb165-6" aria-hidden="true" tabindex="-1"></a>districts <span class="op">=</span> gpd.read_file(path, layer<span class="op">=</span><span class="st">&#39;karnataka_districts&#39;</span>)</span>
 <span id="cb165-7"><a href="#cb165-7" aria-hidden="true" tabindex="-1"></a>roads <span class="op">=</span> gpd.read_file(path, layer<span class="op">=</span><span class="st">&#39;karnataka_major_roads&#39;</span>)</span>
 <span id="cb165-8"><a href="#cb165-8" aria-hidden="true" tabindex="-1"></a>national_highways <span class="op">=</span> roads[roads[<span class="st">&#39;ref&#39;</span>].<span class="bu">str</span>.match(<span class="st">&#39;^NH&#39;</span>) <span class="op">==</span> <span class="va">True</span>]</span></code></pre></div>
-<div id="creating-a-map-with-multiple-layers" class="section level3">
-<h3>Creating A Map with Multiple Layers</h3>
+<div id="matplotlib-basics" class="section level3">
+<h3>Matplotlib Basics</h3>
 <p>Before we start using <code>matplotlib</code> inside a Jupyter notebook, it is useful to set the matplotlib backend to <code>inline</code>. This setting makes the matplotlib graphs included in your notebook, next to the code. We use the <a href="https://ipython.readthedocs.io/en/stable/interactive/tutorial.html#magics-explained">magic function</a> <code>%matplotlib</code> to achieve this.</p>
 <div class="sourceCode" id="cb166"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb166-1"><a href="#cb166-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
 <span id="cb166-2"><a href="#cb166-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
-<p>We first create an empty plot of size 10in x 15in. The <code>plt.subplots()</code> function returns 2 objects</p>
+<p>It is important to understand the 2 matplotlib objects</p>
 <ul>
 <li>Figure: This is the main container of the plot. A figure can contain multiple plots inside it</li>
 <li>Axes: Axes refers to an individual plot or graph. A figure contains 1 or more axes.</li>
 </ul>
-<div class="sourceCode" id="cb167"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb167-1"><a href="#cb167-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span></code></pre></div>
-<p>GeoDataFrame objects have a <code>plot()</code> method that uses <code>pyplot</code> and creates a plot. We supply the <code>ax</code> object to the function so the resulting plot is displayed in the Axes created previously.</p>
-<div class="sourceCode" id="cb168"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb168-1"><a href="#cb168-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span>
-<span id="cb168-2"><a href="#cb168-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb168-3"><a href="#cb168-3" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb169"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb169-1"><a href="#cb169-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span>
-<span id="cb169-2"><a href="#cb169-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb169-3"><a href="#cb169-3" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
-<span id="cb169-4"><a href="#cb169-4" aria-hidden="true" tabindex="-1"></a>roads.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="fl">0.4</span>, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb170"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb170-1"><a href="#cb170-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span>
-<span id="cb170-2"><a href="#cb170-2" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">&#39;off&#39;</span>)</span>
-<span id="cb170-3"><a href="#cb170-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb170-4"><a href="#cb170-4" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
-<span id="cb170-5"><a href="#cb170-5" aria-hidden="true" tabindex="-1"></a>roads.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="fl">0.4</span>, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
-<span id="cb170-6"><a href="#cb170-6" aria-hidden="true" tabindex="-1"></a>national_highways.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, color<span class="op">=</span><span class="st">&#39;#de2d26&#39;</span>)</span>
-<span id="cb170-7"><a href="#cb170-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb170-8"><a href="#cb170-8" aria-hidden="true" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;map.png&#39;</span></span>
-<span id="cb170-9"><a href="#cb170-9" aria-hidden="true" tabindex="-1"></a>output_dir <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb170-10"><a href="#cb170-10" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_dir, output_filename)</span>
-<span id="cb170-11"><a href="#cb170-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb170-12"><a href="#cb170-12" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path, dpi<span class="op">=</span><span class="dv">300</span>)</span></code></pre></div>
+<p>We can now work on creating a <em>figure</em> with multiple <em>axes</em> - each with a different rendering on a map layer.</p>
+</div>
+<div id="rendering-map-layouts" class="section level3">
+<h3>Rendering Map Layouts</h3>
+<p>The <code>subplots()</code> function creates one or more plots within the figure. You can design a map layout with multiple rows/columns. In the code below, we create a map with <strong>1</strong> row and <strong>3</strong> columns. Using the <code>set_size_inches()</code> function, we set the size of the map to 15in x 7in.</p>
+<div class="sourceCode" id="cb167"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb167-1"><a href="#cb167-1" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">3</span>)</span>
+<span id="cb167-2"><a href="#cb167-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_10_0.png" /></p>
+<p>The <code>subplots()</code> function returns 2 items. The figure and a tuple with all the axes within the figure. As we have 3 axes, we unpack them into separate variables</p>
+<div class="sourceCode" id="cb168"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb168-1"><a href="#cb168-1" aria-hidden="true" tabindex="-1"></a>ax0, ax1, ax2 <span class="op">=</span> axes</span></code></pre></div>
+<p>GeoDataFrame objects have a <code>plot()</code> method that uses <code>pyplot</code> and creates a plot. We supply the <code>ax</code> object to the function so the resulting plot is displayed in the Axes created previously. Here we add the <code>districts</code> polygon layer into the <code>ax0</code> object - which refers to the first subplot.</p>
+<div class="sourceCode" id="cb169"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb169-1"><a href="#cb169-1" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax0, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
+<span id="cb169-2"><a href="#cb169-2" aria-hidden="true" tabindex="-1"></a>fig</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_14_0.png" /></p>
+<pre><code>&lt;Figure size 432x288 with 0 Axes&gt;</code></pre>
+<p>Similarly, we add the <code>roads</code> layer to the second axes.</p>
+<div class="sourceCode" id="cb171"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb171-1"><a href="#cb171-1" aria-hidden="true" tabindex="-1"></a>roads.plot(ax<span class="op">=</span>ax1, linewidth<span class="op">=</span><span class="fl">0.4</span>, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
+<span id="cb171-2"><a href="#cb171-2" aria-hidden="true" tabindex="-1"></a>fig</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_16_0.png" /></p>
+<pre><code>&lt;Figure size 432x288 with 0 Axes&gt;</code></pre>
+<p>Lastly, we add the <code>national_highways</code> layer to the third axes.</p>
+<div class="sourceCode" id="cb173"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a>national_highways.plot(ax<span class="op">=</span>ax2, linewidth<span class="op">=</span><span class="dv">1</span>, color<span class="op">=</span><span class="st">&#39;#de2d26&#39;</span>)</span>
+<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a>fig</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_18_0.png" /></p>
+<pre><code>&lt;Figure size 432x288 with 0 Axes&gt;</code></pre>
+<p>We can turn off the coordinates display on the X-axis and Y-axis using <code>plt.axis('off')</code>. It is useful to set a title to each map. The <code>set_title()</code> function adds the title to the approproate axes. We specify a negative <code>y</code> parameter to place the title at the bottom of the map instead of top.</p>
+<div class="sourceCode" id="cb175"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a>ax0.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb175-2"><a href="#cb175-2" aria-hidden="true" tabindex="-1"></a>ax0.set_title(<span class="st">&#39;Karnataka Districts&#39;</span>, y<span class="op">=-</span><span class="fl">0.1</span>)</span>
+<span id="cb175-3"><a href="#cb175-3" aria-hidden="true" tabindex="-1"></a>ax1.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb175-4"><a href="#cb175-4" aria-hidden="true" tabindex="-1"></a>ax1.set_title(<span class="st">&#39;Karnataka Major Roads&#39;</span>, y<span class="op">=-</span><span class="fl">0.1</span>)</span>
+<span id="cb175-5"><a href="#cb175-5" aria-hidden="true" tabindex="-1"></a>ax2.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb175-6"><a href="#cb175-6" aria-hidden="true" tabindex="-1"></a>ax2.set_title(<span class="st">&#39;Karnataka National Highways&#39;</span>, y<span class="op">=-</span><span class="fl">0.1</span>)</span>
+<span id="cb175-7"><a href="#cb175-7" aria-hidden="true" tabindex="-1"></a>fig</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_20_0.png" /></p>
+<p>Now that our map is ready, we can save the map to the computer using the <code>savefig()</code> function.</p>
+<div class="sourceCode" id="cb176"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;map_layout.png&#39;</span></span>
+<span id="cb176-2"><a href="#cb176-2" aria-hidden="true" tabindex="-1"></a>output_dir <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb176-3"><a href="#cb176-3" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_dir, output_filename)</span>
+<span id="cb176-4"><a href="#cb176-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-5"><a href="#cb176-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_dir):</span>
+<span id="cb176-6"><a href="#cb176-6" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_dir)</span>
+<span id="cb176-7"><a href="#cb176-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-8"><a href="#cb176-8" aria-hidden="true" tabindex="-1"></a>fig.savefig(output_path, dpi<span class="op">=</span><span class="dv">300</span>)</span></code></pre></div>
+</div>
+<div id="creating-a-map-with-multiple-layers" class="section level3">
+<h3>Creating A Map with Multiple Layers</h3>
+<p>If we want to display multiple layers, we simply create new plots on the same <code>Axes</code>. Here we create a figure with a single axes and add the <code>districts</code>,<code>roads</code> and <code>national_highways</code> layers to the same axes.</p>
+<div class="sourceCode" id="cb177"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots()</span>
+<span id="cb177-2"><a href="#cb177-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>,<span class="dv">15</span>)</span>
+<span id="cb177-3"><a href="#cb177-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-4"><a href="#cb177-4" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb177-5"><a href="#cb177-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-6"><a href="#cb177-6" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
+<span id="cb177-7"><a href="#cb177-7" aria-hidden="true" tabindex="-1"></a>roads.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="fl">0.4</span>, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
+<span id="cb177-8"><a href="#cb177-8" aria-hidden="true" tabindex="-1"></a>national_highways.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, color<span class="op">=</span><span class="st">&#39;#de2d26&#39;</span>)</span>
+<span id="cb177-9"><a href="#cb177-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-10"><a href="#cb177-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-11"><a href="#cb177-11" aria-hidden="true" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;multiple_layers.png&#39;</span></span>
+<span id="cb177-12"><a href="#cb177-12" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_dir, output_filename)</span>
+<span id="cb177-13"><a href="#cb177-13" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path, dpi<span class="op">=</span><span class="dv">300</span>)</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_25_0.png" /></p>
 </div>
 <div id="labelling-features" class="section level3">
 <h3>Labelling Features</h3>
-<div class="sourceCode" id="cb171"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb171-1"><a href="#cb171-1" aria-hidden="true" tabindex="-1"></a>districts[<span class="st">&#39;label_position&#39;</span>] <span class="op">=</span> districts[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.representative_point().coords[:])</span>
-<span id="cb171-2"><a href="#cb171-2" aria-hidden="true" tabindex="-1"></a>districts[<span class="st">&#39;label_position&#39;</span>] <span class="op">=</span> [coords[<span class="dv">0</span>] <span class="cf">for</span> coords <span class="kw">in</span> districts[<span class="st">&#39;label_position&#39;</span>]]</span>
-<span id="cb171-3"><a href="#cb171-3" aria-hidden="true" tabindex="-1"></a>districts.head()</span></code></pre></div>
-<div class="sourceCode" id="cb172"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb172-1"><a href="#cb172-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span>
-<span id="cb172-2"><a href="#cb172-2" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">&#39;off&#39;</span>)</span>
-<span id="cb172-3"><a href="#cb172-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb172-4"><a href="#cb172-4" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
-<span id="cb172-5"><a href="#cb172-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb172-6"><a href="#cb172-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> idx, row <span class="kw">in</span> districts.iterrows():</span>
-<span id="cb172-7"><a href="#cb172-7" aria-hidden="true" tabindex="-1"></a>    plt.annotate(text<span class="op">=</span>row[<span class="st">&#39;DISTRICT&#39;</span>], xy<span class="op">=</span>row[<span class="st">&#39;label_position&#39;</span>],horizontalalignment<span class="op">=</span><span class="st">&#39;center&#39;</span>)</span></code></pre></div>
+<p>We can also add labels to the maps, but that requires a bit of pre-processing. Let’s say we want to add a label for each of the distrit polygons. First, we need to decide the anchor position of the label. We can use <code>representative_point()</code> to get a point inside each polygon that best represents the geometry. It is similar to a centroid, but is guranteed to be inside the polygon. Below code creates a new field in the GeoDataFrame called <code>label_position</code> with the coordinates of the anchor point.</p>
+<div class="sourceCode" id="cb178"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>districts[<span class="st">&#39;label_position&#39;</span>] <span class="op">=</span> districts[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.representative_point().coords[:])</span>
+<span id="cb178-2"><a href="#cb178-2" aria-hidden="true" tabindex="-1"></a>districts[<span class="st">&#39;label_position&#39;</span>] <span class="op">=</span> [coords[<span class="dv">0</span>] <span class="cf">for</span> coords <span class="kw">in</span> districts[<span class="st">&#39;label_position&#39;</span>]]</span></code></pre></div>
+<p>Now we can use the <code>annotate()</code> function and iterate over each polygon to add labels with the name of the district from the <em>DISTRICT</em> column and place it at the coordinates from the <em>label_position</em> column.</p>
+<div class="sourceCode" id="cb179"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb179-1"><a href="#cb179-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">15</span>))</span>
+<span id="cb179-2"><a href="#cb179-2" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb179-3"><a href="#cb179-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb179-4"><a href="#cb179-4" aria-hidden="true" tabindex="-1"></a>districts.plot(ax<span class="op">=</span>ax, linewidth<span class="op">=</span><span class="dv">1</span>, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>)</span>
+<span id="cb179-5"><a href="#cb179-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb179-6"><a href="#cb179-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> idx, row <span class="kw">in</span> districts.iterrows():</span>
+<span id="cb179-7"><a href="#cb179-7" aria-hidden="true" tabindex="-1"></a>    plt.annotate(text<span class="op">=</span>row[<span class="st">&#39;DISTRICT&#39;</span>], xy<span class="op">=</span>row[<span class="st">&#39;label_position&#39;</span>], horizontalalignment<span class="op">=</span><span class="st">&#39;center&#39;</span>)</span></code></pre></div>
+<p><img src="supplement1_plotting_files/supplement1_plotting_30_0.png" /></p>
+<p><a href="https://nbviewer.jupyter.org/github/spatialthoughts/courses/blob/master/code/python_foundation/supplement1_plotting.ipynb">View the Notebook ↗</a></p>
+</div>
+</div>
+<div id="working-with-xarray" class="section level2">
+<h2>Working with Xarray</h2>
+<p><a href="http://xarray.pydata.org/">Xarray</a> is an evolution of rasterio and is inspired by libraries like pandas to work with raster datasets. It is particularly suited for working with multi-dimensional time-series raster datasets. It also integrates tightly with <a href="https://dask.org/">dask</a> that allows one to scale raster data processing using parallel computing.</p>
+<p><a href="https://corteva.github.io/rioxarray/stable/index.html">rioxarray</a> is an extension of xarray that makes it easy to work with geospatial rasters. You can install the <code>rioxarray</code> package from the <code>conda-forge</code> channel.</p>
+<p>This notebook shows how we can replicate the analysis from the <a href="#working-with-rasterio">Working with RasterIO</a> exercise and also covers raster data visualization using <code>matplotlib</code>.</p>
+<div id="xarray-and-rioxarray-basics" class="section level3">
+<h3>XArray and rioxarray Basics</h3>
+<p>We start by reading a single SRTM tile containing elevation values.</p>
+<div class="sourceCode" id="cb180"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a>data_pkg_path <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>srtm_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb180-4"><a href="#cb180-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;N28E087.hgt&#39;</span></span>
+<span id="cb180-5"><a href="#cb180-5" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> os.path.join(data_pkg_path, srtm_dir, filename)</span></code></pre></div>
+<p>By convention, <code>rioxarray</code> is imported as <code>rxr</code></p>
+<div class="sourceCode" id="cb181"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+<p>The <code>open_rasterio()</code> method is able to read any data source supported by <code>rasterio</code> library.</p>
+<div class="sourceCode" id="cb182"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb182-1"><a href="#cb182-1" aria-hidden="true" tabindex="-1"></a>rds <span class="op">=</span> rxr.open_rasterio(path)</span></code></pre></div>
+<p>The result is a <code>xarray.DataArray</code> object.</p>
+<div class="sourceCode" id="cb183"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(rds)</span></code></pre></div>
+<pre><code>xarray.core.dataarray.DataArray</code></pre>
+<p>You can access the pixel values using the <code>values</code> property which returns the array’s data as a numpy array.</p>
+<div class="sourceCode" id="cb185"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a>rds.values</span></code></pre></div>
+<pre><code>array([[[5217, 5211, 5208, ..., 5097, 5098, 5089],
+        [5206, 5201, 5200, ..., 5080, 5075, 5069],
+        [5199, 5194, 5191, ..., 5063, 5055, 5048],
+        ...,
+        [5347, 5345, 5343, ..., 5747, 5750, 5757],
+        [5338, 5338, 5336, ..., 5737, 5740, 5747],
+        [5332, 5331, 5332, ..., 5734, 5736, 5744]]], dtype=int16)</code></pre>
+<p>A <code>xarray.DataArray</code> object also contains 1 or more <code>coordinates</code>. Each corrdinate is a 1-dimensional array representing values along one of the data axes. In case of the 1-band SRTM elevation data, we have 3 coordinates - <code>x</code>, <code>y</code> and <code>band</code>.</p>
+<div class="sourceCode" id="cb187"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>rds.coords</span></code></pre></div>
+<pre><code>Coordinates:
+  * band         (band) int64 1
+  * x            (x) float64 87.0 87.0 87.0 87.0 87.0 ... 88.0 88.0 88.0 88.0
+  * y            (y) float64 29.0 29.0 29.0 29.0 29.0 ... 28.0 28.0 28.0 28.0
+    spatial_ref  int64 0</code></pre>
+<p>A key feature of <code>xarray</code> is the ability to access slices of the dataset using <a href="http://xarray.pydata.org/en/stable/user-guide/indexing.html">index lookup</a> methods. For example, we can slice the main dataset and get the data for Band1 using the <code>sel()</code> method.</p>
+<div class="sourceCode" id="cb189"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a>band1 <span class="op">=</span> rds.sel(band<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div>
+<p>The raster metadata is stored in the <a href="https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors"><code>rio</code></a> accessor. This is enabled by the <code>rioxarray</code> library which provides geospatial functions on top of <code>xarray</code>.</p>
+<div class="sourceCode" id="cb190"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;CRS:&#39;</span>, rds.rio.crs)</span>
+<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Resolution:&#39;</span>, rds.rio.resolution())</span>
+<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Bounds:&#39;</span>, rds.rio.bounds())</span>
+<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Width:&#39;</span>, rds.rio.width)</span>
+<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Height:&#39;</span>, rds.rio.height)</span></code></pre></div>
+<pre><code>CRS: EPSG:4326
+Resolution: (0.0002777777777777778, -0.0002777777777777778)
+Bounds: (86.99986111111112, 27.999861111111112, 88.00013888888888, 29.000138888888888)
+Width: 3601
+Height: 3601</code></pre>
+</div>
+<div id="merging-rasters" class="section level3">
+<h3>Merging Rasters</h3>
+<p>Now that you understand the basic data structure of <em>xarray</em> and the &amp;rio* extension, let’s use it to process some data. We will take 4 individual SRTM tiles and merge them to a single GeoTiff. You will note that <code>rioxarray</code> handles the CRS and transform much better - taking care of internal details and providing a simple API.</p>
+<blockquote>
+<p>Remember to always import <code>rioxarray</code> even if you are using sub-modules. Importing <code>rioxarray</code> activates the <code>rio</code> accessor which is required for all operations.</p>
+</blockquote>
+<div class="sourceCode" id="cb192"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb192-1"><a href="#cb192-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb192-2"><a href="#cb192-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rioxarray.merge <span class="im">import</span> merge_arrays</span></code></pre></div>
+<p>Define input and output paths.</p>
+<div class="sourceCode" id="cb193"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a>srtm_path <span class="op">=</span> os.path.join(data_pkg_path, <span class="st">&#39;srtm&#39;</span>)</span>
+<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>all_files <span class="op">=</span> os.listdir(srtm_path)</span>
+<span id="cb193-3"><a href="#cb193-3" aria-hidden="true" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;merged.tif&#39;</span></span>
+<span id="cb193-4"><a href="#cb193-4" aria-hidden="true" tabindex="-1"></a>output_dir <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb193-5"><a href="#cb193-5" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_dir, output_filename)</span></code></pre></div>
+<p>Open each source file using <code>open_rasterio()</code> method and store the resulting datasets in a list.</p>
+<div class="sourceCode" id="cb194"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb194-1"><a href="#cb194-1" aria-hidden="true" tabindex="-1"></a>datasets <span class="op">=</span> []</span>
+<span id="cb194-2"><a href="#cb194-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> all_files:</span>
+<span id="cb194-3"><a href="#cb194-3" aria-hidden="true" tabindex="-1"></a>    path <span class="op">=</span> os.path.join(srtm_path, <span class="bu">file</span>)</span>
+<span id="cb194-4"><a href="#cb194-4" aria-hidden="true" tabindex="-1"></a>    datasets.append(rxr.open_rasterio(path))</span></code></pre></div>
+<p>Use the <code>merge_arrays()</code> method from the <code>rioxarray.merge</code> module to merge the rasters.</p>
+<div class="sourceCode" id="cb195"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb195-1"><a href="#cb195-1" aria-hidden="true" tabindex="-1"></a>merged <span class="op">=</span> merge_arrays(datasets)</span></code></pre></div>
+<p>Finally, save the merged array to disk as a GeoTiff file.</p>
+<div class="sourceCode" id="cb196"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb196-1"><a href="#cb196-1" aria-hidden="true" tabindex="-1"></a>merged.rio.to_raster(output_path)</span></code></pre></div>
+</div>
+<div id="visualizing-rasters-using-matplotlib" class="section level3">
+<h3>Visualizing Rasters using Matplotlib</h3>
+<p><code>xarray</code> plotting functionality is built on top of the the popular <code>matplotlib</code> library.</p>
+<div class="sourceCode" id="cb197"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb197-1"><a href="#cb197-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
+<span id="cb197-2"><a href="#cb197-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
+<p>You cna visualize any <code>DataArray</code> object by calling <code>plot()</code> method. Here we create a row of 4 plots and render each of the source SRTM rasters. We can use the <code>cmap</code> option to specify a color ramp. Here we are using the built-in <em>Greys</em> ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values.</p>
+<div class="sourceCode" id="cb198"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb198-1"><a href="#cb198-1" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">4</span>)</span>
+<span id="cb198-2"><a href="#cb198-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">3</span>)</span>
+<span id="cb198-3"><a href="#cb198-3" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb198-4"><a href="#cb198-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> index, dataset <span class="kw">in</span> <span class="bu">enumerate</span>(datasets):</span>
+<span id="cb198-5"><a href="#cb198-5" aria-hidden="true" tabindex="-1"></a>    ax <span class="op">=</span> axes[index]</span>
+<span id="cb198-6"><a href="#cb198-6" aria-hidden="true" tabindex="-1"></a>    dataset.plot(ax<span class="op">=</span>ax, cmap<span class="op">=</span><span class="st">&#39;Greys_r&#39;</span>)</span>
+<span id="cb198-7"><a href="#cb198-7" aria-hidden="true" tabindex="-1"></a>    ax.axis(<span class="st">&#39;off&#39;</span>)</span>
+<span id="cb198-8"><a href="#cb198-8" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> all_files[index]</span>
+<span id="cb198-9"><a href="#cb198-9" aria-hidden="true" tabindex="-1"></a>    ax.set_title(filename)</span></code></pre></div>
+<p><img src="supplement2_working_with_xarray_files/supplement2_working_with_xarray_32_0.png" /></p>
+<p>Similarly, we can visualize the merged raster.</p>
+<div class="sourceCode" id="cb199"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots()</span>
+<span id="cb199-2"><a href="#cb199-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">12</span>, <span class="dv">10</span>)</span>
+<span id="cb199-3"><a href="#cb199-3" aria-hidden="true" tabindex="-1"></a>merged.plot(ax<span class="op">=</span>ax, cmap<span class="op">=</span><span class="st">&#39;Greys_r&#39;</span>)</span>
+<span id="cb199-4"><a href="#cb199-4" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">&#39;merged&#39;</span>)</span>
+<span id="cb199-5"><a href="#cb199-5" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img src="supplement2_working_with_xarray_files/supplement2_working_with_xarray_34_0.png" /></p>
+<p><a href="https://nbviewer.jupyter.org/github/spatialthoughts/courses/blob/master/code/python_foundation/supplement2_working_with_xarray.ipynb">View the Notebook ↗</a></p>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
