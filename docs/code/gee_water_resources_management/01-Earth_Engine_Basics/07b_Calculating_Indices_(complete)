@@ -1,0 +1,54 @@
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
+
+var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry()
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+var image = filtered.median().clip(geometry); 
+
+
+// Calculate  Normalized Difference Vegetation Index (NDVI)
+// 'NIR' (B8) and 'RED' (B4)
+var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+ 
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// Calculate Automated Water Extraction Index (AWEI)
+// AWEI is a Multi-band Index that uses the following bands
+// 'BLUE' (B2), GREEN' (B3), 'NIR' (B8), 'SWIR1' (B11) and 'SWIR2' (B12)
+
+// Formula for AWEI is as follows
+// AWEI = 4 * (GREEN - SWIR2) - (0.25 * NIR + 2.75 * SWIR1)
+
+// For more complex indices, you can use the expression() function
+
+// Note: 
+// For the AWEI formula, the pixel values need to converted to reflectances
+// Multiplyng the pixel values by 'scale' gives us the reflectance value
+// The scale value is 0.0001 for Sentinel-2 dataset
+
+var awei = image.expression(
+    '4*(GREEN - SWIR1) - (0.25*NIR + 2.75*SWIR2)', {
+      'GREEN': image.select('B3').multiply(0.0001),
+      'NIR': image.select('B8').multiply(0.0001),
+      'SWIR1': image.select('B11').multiply(0.0001),
+      'SWIR2': image.select('B12').multiply(0.0001),
+
+}).rename('awei');
+
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var ndviVis = {min:0, max:1, palette: ['white', 'green']}
+var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']}
+
+Map.centerObject(geometry, 10)
+Map.addLayer(image, rgbVis, 'Image');
+Map.addLayer(ndvi, ndviVis, 'ndvi')
+Map.addLayer(mndwi, ndwiVis, 'mndwi')
+Map.addLayer(awei, ndwiVis, 'awei') 
