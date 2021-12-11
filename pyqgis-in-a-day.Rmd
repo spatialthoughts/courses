@@ -15,6 +15,7 @@ output:
   #   toc: false
   #   fig_caption: false
   # pdf_document:
+  #   latex_engine: xelatex
   #   toc: yes
   #   toc_depth: 3
 header-includes:
@@ -186,7 +187,7 @@ d.setEllipsoid('WGS84')
 
 > Tip: All valid ellipsoids can be found by calling `QgsEllipsoidUtils.acronyms()`
 
-Now our object `d` is capable of performing ellipsoidal distance computations. Browsing through the available methods in the `QgsDistanceArea` class, we can see a `measureLine()` method. This method takes a list [QgsPointXY](https://qgis.org/pyqgis/master/core/QgsPointXY.html) objects. We can create these objects from our coordinate pairs and pass them on to the `measureLine()` method to get the distance.
+Now our object `d` is capable of performing ellipsoidal distance computations. Browsing through the available methods in the `QgsDistanceArea` class, we can see a `measureLine()` method. This method takes a list [QgsPointXY](https://qgis.org/pyqgis/master/core/QgsPointXY.html) objects. We can create these objects from our coordinate pairs and pass them on to the `measureLine()` method to get the distance. The output will be in meters. We divide it by 1000 to convert it to kilometers.
 
 
 ```{python eval=FALSE}
@@ -219,6 +220,16 @@ las_vegas = (36.1699, -115.1398)
 
 If your code is correct, you should see the output distance to be `4271.02` kilometers.
 
+## 4.2 Distance Conversion
+
+The distance returned by the `measureLine()` method in the previous section was in meters, and we divided it by 1000 to convert it to kilometers. Rather than doing this conversion manually, we can use the PyQGIS API. The `QgsDistanceArea` class has a method `convertLengthMeasurement()` that can convert the measured distance to any supported unit. The `convertLengthMeasurement()` method takes 2 arguments - the length measured by `measureLine()` method and the unit to convert the measurement to. The  unit should be a value of the type `QgsUnitTypes.DistanceUnit`. The permitted values are defined in the [QgsUnitType documentation](https://qgis.org/pyqgis/master/core/QgsUnitTypes.html#qgis.core.QgsUnitTypes.DistanceUnit). The code below shows how to convert the measured distance to Kilometers and Miles.
+
+```{python eval=FALSE, code=readLines('code/pyqgis/distance_conversion.py')}
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/distance.png')
+```
 
 # 5. Graphical User Interface (GUI) Programming Basics
 
@@ -425,7 +436,7 @@ knitr::include_graphics('images/pyqgis/addlayer.png')
 
 Data sources are identified by an URI (Uniform Resource Identifier)
 - For files on computer the URI is the file path
-- For databases, the URI is constructed using QgsDataSourceUri() class and encodes,the database path, table, username, password etc.
+- For databases, the URI is constructed using the `QgsDataSourceUri` class and encodes,the database path, table, username, password etc.
 - For web layers, such as WMF/WFS etc, the URI is the web URL
 
 
@@ -523,6 +534,8 @@ Once you copy the file at that location, restart QGIS. The title bar should now 
 knitr::include_graphics('images/pyqgis/customtitle.png')
 ```
 
+> Pro Tip: It is possible to put the `startup.py` file on a shared drive for enterprise deployment of QGIS customizations. [Learn more](https://gis.stackexchange.com/questions/319224/central-deployment-of-startup-py-in-qgis/319225).
+
 ## Exercise 4
 
 Trying opening a new project in QGIS after you have restarted GIS with `startup.py` file in place. You will notice that the custom title with the version name is replaced with the default title. 
@@ -537,7 +550,7 @@ Actions provide an easy way to add custom behavior to QGIS without having to wri
 
 Actions are defined at the layer level. We will define an action for the `parcels` layer so when a user clicks on a parcel, all parcels that belong to the same block will be selected. The parcel layer has an attribute **block_num** that refers to the block that parcel belongs to. 
 
-Right-click the `parcels` layer and switch to *Actions* tab. Click *Add a new action* button. Select **Python** as the *Type*. Name the action as **Select all parcels from the same block**. This action is meant to be used for selecting features on the map canvas, so check the **Canvas** as the *Action Scope*. Enter the following code snippet in the *Action Text* and click *OK*. [^9]
+Load the `sf.qgz` project from your data package. Right-click the `parcels` layer, click *Properties* and switch to the *Actions* tab. Click *Add a new action* button. Select **Python** as the *Type*. Name the action as **Select all parcels from the same block**. This action is meant to be used for selecting features on the map canvas, so check the **Canvas** as the *Action Scope*. Enter the following code snippet in the *Action Text* and click *OK*. [^9]
 
 [^9]: Code reference: https://gis.stackexchange.com/a/340615/5160
 
@@ -558,10 +571,17 @@ Back in the main QGIS window, enable the `parcels` layer. Click the *Run feature
 knitr::include_graphics('images/pyqgis/action2.png')
 ```
 
+## 8.1 Actions Deep Dive
+
+Learn about actions in the following video where I explain some powerful use cases.
+
+[![Video](images/pyqgis/actions_deep_dive.png){width="70%"}](https://www.youtube.com/watch?v=8rOe-9A84O8){target="_blank"}
+
+[View the Presentation &#8599;](https://docs.google.com/presentation/d/12J5XaJ8vVNvx8AfYywAk76rrxBxgn8Qyht6ouyB2_Yg/edit?usp=sharing){target="_blank"}
 
 # 9. Running Processing Algorithms
 
-While the PyQGIS API providers many functions to work with layers, features, attributes and geometry - it is a much better practice to use the built-in processing algorithms to alter the layers or do any analysis. This will give you better performance and result in much lesser code. Here are some examples on how to use processing algorithms from Python to do vector and raster layer editing.
+While the PyQGIS API providers many functions to work with layers, features, attributes and geometry - it is a much better practice to use the built-in processing algorithms to alter the layers or do any analysis. This will give you better performance and result in much lesser code. Here are some examples on how to use processing algorithms from Python to do vector and raster layer editing. You will find more information about various options and techniques in the article [Using processing algorithms from the console](https://docs.qgis.org/testing/en/docs/user_manual/processing/console.html) of the QGIS User Guide 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/pyqgis/processing.png')
@@ -675,11 +695,13 @@ clipped_dem = results['OUTPUT']
 # Use the qgis:rasterlayerstatistics algorithm on clipped_dem
 ```
 
-# 10. Understanding Python Iterators
+# 10. Advanced Python Concepts
+
+## 10.1 Understanding Python Iterators
 
 An *Iterator* is a type of Python object that contains items that can be iterator upon. They are similar to other objects, like *lists* - but with a key difference. When you create an iterator, you don't store all the items in memory. The iterator loads a single item at a time and then fetches the next item when asked for it. This makes it very efficient for reading large amounts of data without having to read the entire dataset. QGIS implements iterators for many different object types. 
 
-In the example below, the result of calling `layer.getFeatures()` is an iterator. You can call the `next()` function to fetch the next item from the iterator. 
+We will continue to work with the `sf.qgz` project. Open the project and select the `blocks` layer. In the example below, the result of calling `layer.getFeatures()` is an iterator. You can call the `next()` function to fetch the next item from the iterator. 
 
 ```{python eval=FALSE}
 layer = iface.activeLayer()
@@ -703,6 +725,15 @@ for f in features:
 print(ids)
 ```
 
+## 10.2 List Compresensions
+
+A common data processing task in Python is to read items from a list or an iterator, doing some processing on each item and creating a new list with the results. The regular way to do this is to first create an empty list, iterate over each item of the existing list, and append the results to the new empty list. Python provides a powerful alternative to this workflow in the form of *List Comprehension*. The snippet below shows the syntax.
+
+
+```{python eval=FALSE, code=readLines('code/pyqgis/list_comprehensions.py')}
+```
+
+
 # 11. Writing Python Console Scripts
 
 We will now see how can we write python scripts, save them and run them within QGIS. We will also see examples of best practices - such as validating inputs, writing files safely and communicating the status to the user.
@@ -718,7 +749,7 @@ knitr::include_graphics('images/pyqgis/consolescript.png')
 ```{python eval=FALSE, code=readLines('code/pyqgis/save_attributes_console.py')}
 ```
 
-You can run this script by clicking the *Run Script* button. The script will process the layer and write the file at the given location.
+Select the `blocks` layer and run this script by clicking the *Run Script* button. The script will process the layer and write the file at the given location.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/pyqgis/consolescriptrun.png')
@@ -773,23 +804,12 @@ We will now see how the Python Console script can be converted to a Processing s
 
 ## 13.1 Writing a Python Class
 
-We have sen how to use a class from PyQt or PyQGIS libraries. But we have not written a new class. To write a Processing Script, we must write a new class. A new class is defined using the word `class`. All classes have a function called` __init__()`, which is always executed when a new object is being created. There is also the keyword `self` which refers to the current instance of the class.
+We have sen how to use a class from PyQt or PyQGIS libraries. But we have not written a new class. To write a Processing Script, we must write a new class. A new class is defined using the word `class`. All classes have a function called` __init__()`, which is always executed when a new object is being created. There is also the keyword `self` which refers to the current instance of the class. Here's the code to create a class called `Car` demonstrating the example we covered in the [Classes and Objects](https://docs.google.com/presentation/d/1b4i1nEDR_uKJVu0IIqjoqrxeFD2a-tnj88JRXQW0JiA/edit?usp=sharing) presentation.
 
-```{python eval=FALSE}
-class Hello:
-  def __init__(self, greeting):
-    self.greeting = greeting
-
-  def hello(self):
-    print(self.greeting, 'World!')
-
-hi = Hello('Hi')
-hi.hello()
-hola = Hello('Hola')
-hola.hello()
+```{python eval=FALSE, code=readLines('code/pyqgis/car.py')}
 ```
 
-As we saw, all PyQGIS and PyQt inherit from other classes. When using them, sometimes you will see the use of a function `super()`. Here `super` refers to the parent class and when you are using the child class, you need to initialize the parent class using this keyword. Let's see this in action.
+As we saw, all PyQGIS and PyQt inherit from other classes. Let's see them in action.
 
 ## 13.2 Writing a Processing Script
 
@@ -854,16 +874,17 @@ The first requirement for plugins is a file called `metadata.txt`. This file con
 ```{python eval=FALSE, code=readLines('code/pyqgis/minimal/metadata.txt')}
 ```
 
-Second file is called `__init__.py` which is the starting point of the plugin. It has to have the classFactory() method that returns the instance of the main plugin class.
-
-`__init__.py`
-```{python eval=FALSE, code=readLines('code/pyqgis/minimal/__init__.py')}
-```
-
-Third is the file that contains the main logic of the plugin. It must have `__init__()` method that gives the plugin access to the QGIS Interface (iface). The `initGui()` method is called when the plugin is loaded and `unload()` method which is called when the plugin is unloaded. For now, we are creating a minimal plugin that just add a button and a menu entry that displays message when clicked.
+Second is the file that contains the main logic of the plugin. It must have `__init__()` method that gives the plugin access to the QGIS Interface (iface). The `initGui()` method is called when the plugin is loaded and `unload()` method which is called when the plugin is unloaded. For now, we are creating a minimal plugin that just add a button and a menu entry that displays message when clicked.
 
 `save_attributes.py`
 ```{python eval=FALSE, code=readLines('code/pyqgis/minimal/save_attributes.py')}
+```
+
+
+Third file is called `__init__.py` which is the starting point of the plugin. It imports the plugin class created in the second file and creates an instance of it.
+
+`__init__.py`
+```{python eval=FALSE, code=readLines('code/pyqgis/minimal/__init__.py')}
 ```
 
 Create these 3 files and put them in a folder named `save_attributes`. Copy the `logo.png` file from `<home folder>/Downloads/pyqgis_in_a_day/logo.png` to this folder. Copy the folder to the python plugins directory at `{profile folder}/python/plugins`. 
@@ -887,7 +908,7 @@ knitr::include_graphics('images/pyqgis/pluginminimalshow2.png')
 
 ## Exercise 6
 
-Take the minimal plugin template from above and build a new plugin called **Show Time**. This plugin will add a button to the Plugin Toolbar which will display the current time when clicked. The code to add such a button is already covered in the **Add a button to a toolbar** section.exer
+Take the minimal plugin template from above and build a new plugin called **Show Time**. This plugin will add a button to the Plugin Toolbar which will display the current time when clicked. The code to add such a button is already covered in the [Add a button to a toolbar](#add-a-button-to-a-toolbar) section.
 
 ## 14.2 Processing Plugin
 
@@ -895,7 +916,12 @@ The new and preferred way to write plugins in QGIS is using the Processing Frame
 
 Let's take the minimal plugin and see what is required to make it a functional processing plugin. We need 2 additional files. One to define the processing algorithm and another to define a new processing provider. 
 
-The processing algorithm file is identical to the script we wrote earlier. Create a new file called `save_attributes_algorithm.py` with the contents of the processing script from the 'Writing a Processing Script' section of this document.
+The processing algorithm file is identical to the script we wrote earlier. Create a new file called `save_attributes_algorithm.py` with the following contents.
+
+`save_attributes_algorithm.py`
+```{python eval=FALSE, code=readLines('code/pyqgis/save_attributes_processing.py')}
+```
+
 
 Next, we need to define a new processing provider. Create a new file `save_attributes_provider.py` with the following content.
 
@@ -1321,13 +1347,35 @@ exporter.exportToPdf(
 knitr::include_graphics('images/pyqgis/layoutpdf.png')
 ```
 
+*[Back to Top](#){style="float:right"}*
+
+# What next?
+
+We have several step-by-step tutorials and guides on PyQGIS development. You can do those tutorials to practice your skills and build confidence.
+
+**Tutorials**
+
+- [Getting Started With Python Programming](https://www.qgistutorials.com/en/docs/3/getting_started_with_pyqgis.html){target="_blank"}
+- [Running Processing Algorithms via Python](https://www.qgistutorials.com/en/docs/3/processing_algorithms_pyqgis.html){target="_blank"}
+- [Using Custom Python Expression Functions](https://www.qgistutorials.com/en/docs/3/custom_python_functions.html){target="_blank"}
+- [Writing Python Scripts for Processing Framework](https://www.qgistutorials.com/en/docs/3/processing_python_scripts.html){target="_blank"}
+- [Building a Python Plugin](https://www.qgistutorials.com/en/docs/3/building_a_python_plugin.html){target="_blank"}
+- [Building a Processing Plugin](https://www.qgistutorials.com/en/docs/3/processing_python_plugin.html){target="_blank"}
+
+**Guides**
+
+- [Snapping GPS tracks to Roads using PyQGIS and OSRM](https://spatialthoughts.com/2020/02/22/snap-to-roads-qgis-and-osrm/){target="_blank"}
+- [Approximating Geodesic Buffers with PyQGIS](https://spatialthoughts.com/2019/04/05/geodesic-buffers-in-qgis/){target="_blank"}
+- [Exporting Print Layouts from Processing Scripts](https://spatialthoughts.com/2020/02/09/exporting-map-layouts/){target="_blank"}
+- [K-Means Clustering with Equal Sized Clusters in QGIS](https://spatialthoughts.com/2021/01/31/equal-sized-kmeans-qgis/){target="_blank"}
+- [Creating Maps with Google Earth Engine and PyQGIS](https://spatialthoughts.com/2020/04/04/ndvi-time-series-gee-qgis/){target="_blank"}
 
 # Resources
 
-* Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/)
-* [PyQGIS 101: Introduction to QGIS Python programming for non-programmers](https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/) by Anita Graser
-* [PyQGIS Samples](https://webgeodatavore.github.io/pyqgis-samples/) by Thomas Gratier
-* [Deploying a Customized Version of QGIS](https://github.com/haubourg/custom-osgeo4w-qgis) by Régis Haubourg 
+* Official QGIS Documentation - [PyQGIS Developer Cookbook](https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/){target="_blank"}
+* [PyQGIS 101: Introduction to QGIS Python programming for non-programmers](https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/){target="_blank"} by Anita Graser
+* [PyQGIS Samples](https://webgeodatavore.github.io/pyqgis-samples/){target="_blank"} by Thomas Gratier
+* [Deploying a Customized Version of QGIS](https://github.com/haubourg/custom-osgeo4w-qgis){target="_blank"} by Régis Haubourg 
 
 # Data Credits
 
