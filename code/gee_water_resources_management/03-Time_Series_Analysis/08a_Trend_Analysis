@@ -1,0 +1,25 @@
+var taluks = ee.FeatureCollection("users/ujavalgandhi/gee-water-resources/kgis_taluks");
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD')
+
+// We will compute the trend of total seasonal rainfall
+
+// Rainy season is June - September
+var createSeasonalImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 6, 1)
+  var endDate = ee.Date.fromYMD(year, 9, 30)
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate))
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum())
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  })
+}
+
+// Aggregate Precipitation Data over 40 years
+var years = ee.List.sequence(1981, 2020)
+var yearlyImages = years.map(createSeasonalImage)
+
+var yearlyCol = ee.ImageCollection.fromImages(yearlyImages)

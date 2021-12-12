@@ -1,0 +1,32 @@
+var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
+var s2 = ee.ImageCollection("COPERNICUS/S2");
+    
+// Computing stats on a list
+var myList = ee.List.sequence(1, 10);
+print(myList)
+
+// Use a reducer to compute min and max in the list
+var mean = myList.reduce(ee.Reducer.mean());
+print(mean);
+
+
+// Apply a reducer on a image collection
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*')
+
+print(filtered.size())
+var collMean = filtered.reduce(ee.Reducer.mean());
+print('Reducer on Collection', collMean);
+
+var image = ee.Image(filtered.first())
+// If we want to compute min and max for each band, use reduceRegion instead
+var stats = image.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: image.geometry(),
+  scale: 100,
+  maxPixels: 1e10
+  })
+print(stats);
+

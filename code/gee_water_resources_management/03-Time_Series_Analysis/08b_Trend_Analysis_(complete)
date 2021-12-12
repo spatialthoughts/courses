@@ -1,0 +1,51 @@
+var taluks = ee.FeatureCollection("users/ujavalgandhi/gee-water-resources/kgis_taluks");
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD')
+
+// We will compute the trend of total seasonal rainfall
+
+// Rainy season is June - September
+var createSeasonalImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 6, 1)
+  var endDate = ee.Date.fromYMD(year, 9, 30)
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate))
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum())
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  })
+}
+
+// Aggregate Precipitation Data over 40 years
+var years = ee.List.sequence(1981, 2013)
+var yearlyImages = years.map(createSeasonalImage)
+print(yearlyImages)
+
+var yearlyCol = ee.ImageCollection.fromImages(yearlyImages)
+
+
+// Prepare data for Sen's Slope Estimation
+// We need an image with 2 bands for X and Y varibles
+// X = year
+// Y = total precipitation
+
+var processImage = function(image) {
+  var year = image.get('year');
+  var yearImage = ee.Image.constant(ee.Number(year)).toShort();
+  return ee.Image.cat(yearImage, image).rename(['year', 'prcp']).set('year', year);
+}
+
+var processedCol = yearlyCol.map(processImage)
+print(processedCol)
+
+// Calculate time series slope using sensSlope().
+var sens = processedCol.reduce(ee.Reducer.sensSlope());
+
+// The resulting image has 2 bands: slope and intercept
+// We select the 'slope' band
+var slope = sens.select('slope')
+// Set visualisation parameters
+var visParams = {min: -10, max: 10, palette: ['brown', 'white', 'blue']};
+Map.addLayer(slope, visParams, 'Trend');
