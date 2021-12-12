@@ -1,0 +1,28 @@
+var gsw = ee.Image("JRC/GSW1_3/GlobalSurfaceWater");
+var hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var basin = hydrobasins.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
+var geometry = basin.geometry()
+Map.centerObject(geometry, 10)
+
+var water = gsw.select('max_extent');
+
+var clipped = water.clip(geometry)
+
+var visParams = {min:0, max:1, palette: ['white','blue']}
+Map.addLayer(clipped, visParams, 'Surface Water') 
+
+// Do unmask() to replace masked pixels with 0
+// This avoids extra pixels along the edges
+var clipped = clipped.unmask(0)
+// Perform a morphological closing to fill holes in waterbodies
+var waterProcessed = clipped
+  .focal_max({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'})
+  .focal_min({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'});
+
+Map.addLayer(waterProcessed, visParams, 'Surface Water (Processed)')
