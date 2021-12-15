@@ -1042,7 +1042,7 @@ knitr::include_graphics('images/gdal/ogr_csv08.png')
 
 This shows the power of OGR command-line tools. In just a single line, we can read, filter, transform and write the results in any output format supported by OGR. 
 
-## Exercise 4
+### Exercise 4
 
 Write a command using `ogr2ogr` that performs the following operations. 
 
@@ -1056,8 +1056,55 @@ All of the above operations should be done in a single-command. Once you arrive 
 
 * Challenge 2: While you are exploring the Layer Creation Options, add an option to create a spatial index on the output shapefile. *Hint: You can specify the `-lco` option multiple times in the command.*
 
+## 2.2 Merging Vector Files
 
-## 2.2 Geoprocessing and Spatial Queries
+Another useful utility provided by OGR is [ogrmerge.py](https://gdal.org/programs/ogrmerge.html). This command can merge several vector layers into a single data layer. It also has several options to control how the datasets are merged - making it a very handy tool for data processing tasks.
+
+We will work with several GeoJSON files containing locations of earthquakes. Your data package contains several GEOJSON files in the `earthquakes/` directory. We will merge these 12 files into a single file. Switch to the directory
+
+```
+cd earthquakes
+```
+
+We will create a geopackage file by merging all files in the directory.
+
+```
+ogrmerge.py -o earthquakes.gpkg *.geojson
+```
+
+If you get an error running the command, use the alternative syntax specified earlier to specify the full path to `ogrmerge.py`.
+
+*Windows*
+```
+python %CONDA_PREFIX%\Scripts\ogrmerge.py -o earthquakes.gpkg *.geojson
+```
+
+*Mac/Linux*
+```
+python $CONDA_PREFIX/bin/ogrmerge.py -o earthquakes.gpkg *.geojson
+```
+
+The result will be a single geopackage containing 12 layers - one for each source file. For most applications, it will be preferable to combine source files into a single layer. We can use the `-single` option to indicate we want a single layer as the output. We also use the `-nln` option to specify the name of the merged layer. Since the GeoPackage dataset already exists, we need to specify the `-overwrite_ds` to overwrite the file with the new content.
+
+```
+ogrmerge.py -o earthquakes.gpkg *.geojson -single -nln all_earthquakes -overwrite_ds
+```
+
+Now you will have a single layer named `all_earthquakes` in the GeoPackage containing all earthquakes recorded during the year.
+
+> Tip: There is a very useful option `-src_layer_field_name` that can add a new field to the output layer containing the name of the input file which contributed that particular record.
+
+### Exercise 5
+
+Create a new GeoPackage `large_earthquakes.gpkg` containing only the earthquakes with magnitude greater than 4.5.
+
+* Use `ogr2ogr` utility to read the `earthquakes.gpkg` file created in the previous section.
+* Use the `-where` option to write the query to filter the records where `mag` field has values greater `>4.5`.
+
+Challenge: Instead of creating a new geopackage, add a layer named `large_earthquakes` to the existing `earthquakes.gpkg` file. *Hint: Use the `-update` option along with `-nln` to specify the layer name.*
+
+
+## 2.3 Geoprocessing and Spatial Queries
 
 We have seen examples of using SQL queries in OGR commands. So far we have used the queries that adhere to the OGR SQL Dialect. OGR Tools also have support [SQLite dialect](https://gdal.org/user/sql_sqlite_dialect.html). The major advantage of using the SQLite dialect is that you can use Spatial SQL functions provided by [Spatialite](http://www.gaia-gis.it/spatialite/). This enables a wide range of applications where you can do spatial queries using OGR tools. A major difference when using the SQLite dialect is that you must specify the geometry column explicitly.
 
@@ -1069,7 +1116,7 @@ Let's do some geoprocessing and see how we can use spatial queries with OGR Tool
 Let's see how we can add a new layer to this geopackage with all bars and pubs that are within 500m of a metro station.
 
 
-### 2.2.1 Reprojecting Vector Layers
+### 2.3.1 Reprojecting Vector Layers
 
 The source data layers are in the CRS `EPSG:4326`. As we want to run a spatial query with distance in meters, let's reproject both the layers to a projected CRS. Let's use the `ogr2ogr` command to reproject both the input layers and save them into the same geopackage. We can use `-t_srs` option allows us to specify **EPSG:7855** (GDA2020 / MGA Zone 55) as the target projection. the `-update` option along with `-nln` tells `ogr2ogr` to create a new layer and save it in the same geopackage.
 
@@ -1093,7 +1140,7 @@ ogr2ogr -t_srs EPSG:7855 spatial_query.gpkg spatial_query.gpkg \
 knitr::include_graphics('images/gdal/geoprocessing1.png')
 ```
 
-### 2.2.2 Creating Buffers
+### 2.3.2 Creating Buffers
 
 Let's buffer the `metro_stations_reprojected` layer using a distance of **500** meters. Here we specify the SQL query with the `-sql` option. Note the use of the `ST_Buffer()` function which is provided by the Spatialite engine. We need to specify `-dialect SQLITE` as the query uses spatial functions.
 
@@ -1139,7 +1186,7 @@ ogr2ogr spatial_query.gpkg spatial_query.gpkg -update \
 knitr::include_graphics('images/gdal/geoprocessing3.png')
 ```
 
-### 2.2.3 Performing Spatial Queries
+### 2.3.3 Performing Spatial Queries
 
 Now that we have a polygon layer with the buffer region around the metro stations, we can use the `ST_Within()` function to find all points from the `bars_and_pubs_reprojected` layer that are contained within this region. The following command adds a new layer `selected` with the resulting points.
 
@@ -1163,7 +1210,7 @@ ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update \
 knitr::include_graphics('images/gdal/geoprocessing4.png')
 ```
 
-### 2.2.4 Data Cleaning
+### 2.3.4 Data Cleaning
 
 The previous query does the job and you find all points that are within the buffer region. But you will notice that there are many duplicate points at the same location. Upon inspecting, you will note that the source data contains multiple features for each establishment from different years. We can run a final SQL query to de-duplicate the data by selecting the feature from the latest year for each establishment. Note that some column names have spaces in the names, so we enclose them in double-quotes.
 
@@ -1398,7 +1445,7 @@ knitr::include_graphics('images/gdal/multicriteria10.png')
 
 The resulting raster represents the suitability of new bicycle parking facilities.
 
-## Exercise 5
+## Exercise 6
 
 Perform a *Weighted* Multi-Criteria Overlay Analysis where different criteria are assigned weights on their relative importance. Let's assume that the proximity to cycling routes is not as important as the other two factors in the final decision. We can give more important to other criteria as below.
 
