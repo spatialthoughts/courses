@@ -519,12 +519,11 @@ Use the *eq* filter and filter the water bodies alone.
 
 # Module 3: Precipitation Time Series Analysis 
 
-Time series analysis is plotting a sequence of data collected over a period of time, remote sensing observation are such big data and these data can be crunched to user needs to create a graphical representation of the data. With computation capacity Earth Engine offers this analysis can be done as large sacle. 
+Time series analysis is a technique to plot a sequence of data collected over a period of time. Remote sensing observations are such big data that can be crunched to user needs to create a graphical representation of the data. With the earth engine's computation capacity, this analysis can be done at a large scale. But to attain this computation power earth engine uses a different method of computation which we will learn in this module.
 
-Unlike traditional network programming, where conditional statements and loops are used to filter data and perform a task over a collection, the Earth Engine servers use the [MapReduce](https://en.wikipedia.org/wiki/MapReduce) concept to increase the efficiency of computation power by parallel computing. Earth Engine servers don't understand anything apart from earth engine objects. So, all the objects before being mapped into a function should be converted as earth engine objects.
+Unlike traditional network programming, where conditional statements and loops are used to filter data and perform a task over a collection, the Earth Engine servers use the [MapReduce](https://en.wikipedia.org/wiki/MapReduce) concept to increase the efficiency by parallel computing. Earth Engine servers don't understand anything apart from earth engine objects. So, all the objects before being mapped into a function should be converted as earth engine objects.
 
-
-In this module we will take the do a find trend for a state in India, 
+In this module, we will learn about earth engine objects, creating user-defined functions, mapping a function, and using reducers. As a final result, we will create a time series chart and do a Spatio-temporal trend analysis of precipitation.
 
 ## 01. Mapping a Function
 
@@ -554,7 +553,7 @@ A *Reduce* operation allows you to compute statistics on a large amount of input
 ```
 [Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F02b_Reducers_(complete)){target="_blank"}
 
-### Exercise
+### Exercise 
 
 ```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/02c_Reducers_(exercise)')}
 ```
@@ -564,24 +563,87 @@ A *Reduce* operation allows you to compute statistics on a large amount of input
 
 The CHIRPS Pentad is 5 days composite of rainfall at ~6 km spatial resolution. To compute this data, both satellite and grounds values are considered. To read more about the methodology, visit [nature.com](https://www.nature.com/articles/sdata201566)
 
-Using this image collection, lets filter all the images for 2017. To get a yearly rainfall we can reduce the collection using `reduce` function with `sum` reducer. This will return a single global image where each pixel represent the total annual rainfall value in *mm* at that location. Now to get a annual average rainfall at a particular region of interest, we can do a *reduceRegions* with *mean* reducer over the region. This reducer will reduce the region's image and return a dictionary. The dictionary will contain the average value of all the bands in the image, which can be extracted using the *get* function.
+Using this image collection, lets filter all the images for 2017. To get a yearly rainfall we can reduce the collection using `reduce` function with *sum* reducer. This will return a single global image where each pixel represent the total annual rainfall value in *mm* at that location. Now to get a annual average rainfall at a particular region of interest, we can do a `reduceRegions` with a *mean* reducer over the region. This reducer will reduce the region's image and return a dictionary. The dictionary will contain the average value of all the bands in the image, which can be extracted using the *get* function.
 
 
 ```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/03b_Calculating_Total_Rainfall_(complete)')}
 ```
+
+Output 
+
+```{js eval=FALSE}
+Average rainfall across ROI :
+1345.867775034789
+```
+
 [Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F03b_Calculating_Total_Rainfall_(complete)){target="_blank"}
 
 ### Exercise
 
 Update the date rage for monsoon season(1 June - 30 September) in India. 
 
-```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/03c_Calculating_Total_Rainfall_(exercise))')}
+```{js eval=FALSE}
+// Update the script to calculate total rainfall for the monsoon season
+// Monsoon season in India is from 1 June - 30 September
 ```
+
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F03c_Calculating_Total_Rainfall_(exercise)){target="_blank"}
+
 
 ## 04. Aggregating Time Series
 
+In the previous exercise, we aggregated to get the average rainfall across a region. Let's compute a time series representing the total rainfall of each month in 2019.
+
+Earth Engine has a function called `ee.Date.fromYMD` to create a date from *Year*, *Month*, and *Date*. Using this function and `.advance()`, we can create the filter date to filter the image collection to a particular month. Then with `reduce` function with *sum* as reducer, the monthly image collection is aggregated to the monthly total image. This newly created image won't have any properties. Hence using the `.set()` function, we have to assign the *Year*, *Month*, *system:time_start*, and *system:time_end* properties. With the above procedure in the sequence, we can create a function to input the month's number and return the monthly total precipitation image.
+
+We can create the month's list using `ee.List.sequence` and map it to the function built. Since the mapped object is of type List, the resultant will also be a list with 12 images. This list of images can be converted back as Image Collection using `ee.ImageCollection.fromYMD`.
+Once we have the collection print, it will contain 12 images representing the month's total precipitation.
+
+>The *system:time_start* is a unique property that the earth engine can natively understand. It is the [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) that is used to create a time series chart.
+ 
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/04b_Aggregating_Time_Series_(complete)')}
+```
+
+[Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F04b_Aggregating_Time_Series_(complete)){target="_blank"}
+
+### Exercise
+
+Filter the `monthlyCollection` for the months June, July, August and September.
+```{js eval=FALSE}
+// Apply a filter to select images for the months
+// June, July, August and September
+// Print the collection to verify
+```
+
+[Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F04c_Aggregating_Time_Series_(exercise)){target="_blank"}
+
 ## 05. Charting Monthly Rainfall 
+
+Now we can put together all the skills we have learned so far - filter, map, and reduce to create a chart of monthly total rainfall in the year 2019 over a region. Earth Engine API supports charting functions based on the Google Chart API. There are various charts to use, from which we use the `ui.Chart.image.series()` function to create a time-series chart.
+
+Image series chart accepts an *image collection*, *geometry*, *scale*, and *reducer*. The geometry in the region of interest, reducer in the reduction operation the region of interest should be aggregated if the geometry is a polygon. Scale is the resolution at which the image should be reduced. Using `.setOptions`, we can customize the chart to our needs. 
+
+Charting itself is vast, and all function are self explanatory. Google Earth Engine documentation provides all types of [charting examples](https://developers.google.com/earth-engine/guides/charts_overview.)   
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/05b_Charting_Monthly_Rainfall_(complete)')}
+```
+[Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F05b_Charting_Monthly_Rainfall_(complete)){target="_blank"}
+
+```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='2019 - Monthly rainfall'}
+knitr::include_graphics('images/gee_water_resources_management/charting_monthly_rainfall.png')
+```
+
+### Exercise
+
+Change the geometry to your location, comput the monthly total rainfall. Download the timeseries chart generated.
+
+```{js eval=FALSE}
+// Create a chart of monthly rainfall at your selected location
+// print the chart and download it as a PNG
+```
+
+[Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F05c_Charting_Monthly_Rainfall_(exercise)){target="_blank"}
 
 ## 06. Import
 
@@ -607,7 +669,41 @@ Explore the uploaded Feature Collection, `SHAPE_STAr` property contains the area
 
 ## 07. Zonal Statistics
 
+Now that we have uploaded a shapefile with many Taluk boundaries let us calculate the mean rainfall for each district. Before in `reduceRegion`, we learned to reduce a single image over a whole geometry. But by using the `reduceRegions`, we can reduce the image for each geometry in the feature collection. This function will return a *Feature Collection*, which contains all the features with an additional property of the reduced value.
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/07b_Zonal_Statistics_(complete)')}
+```
+[Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F07b_Zonal_Statistics_(complete)){target="_blank"}
+
+### Exercise
+
+Write an export function to export the Feature Collection as a CSV file. 
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/07c_Zonal_Statistics_(exercise)')}
+```
+[Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F07c_Zonal_Statistics_(exercise)){target="_blank"}
+
 ## 08. Trend Analysis
+
+Trend Analysis is a technique that is used to find the pattern. Let us do a Non-Parametric Trend Analysis using the [Sen Slope](https://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator) technique to find the pattern of rainfall over time.
+
+The sens slope is a reduction operation that expects two-band X and Y. The X is the constant band with value year, and the Y is the total precipitation of that pixel in that year. After creating the image collection in this format we can use the `ee.Reducer.sensSlope()` with the collection to compute the slope at each year.
+
+This function returns an image with a positive pixel value representing the increase in precipitation and vice-versa.
+
+> An advantage of doing trend analysis in earth engine is computing pre-pixel calculation other wise which would be computation intestiive task to perform. 
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/08b_Trend_Analysis_(complete)')}
+```
+[Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F08b_Trend_Analysis_(complete)){target="_blank"}
+
+### Exercise
+
+The trend analysis is done for a particular season. Change the filter dates to compute the annual precipitation trend.
+
+```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/08c_Trend_Analysis_(exercise)')}
+```
+[Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F08c_Trend_Analysis_(exercise)){target="_blank"}
 
 # Module 4: Land Use Land Cover Mapping
 
