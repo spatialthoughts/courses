@@ -1,5 +1,3 @@
-### Python API Syntax
-
 Coming from the programming in Earth Engine through the Code Editor, you will need to slightly adapt your scripts to be able to run in Python. For the bulk of your code, you will be using Earth Engine API's server-side objects and functions - which will be exactly the same in Python. You only need to make a few syntactical changes.
 
 [Here's the full list](https://developers.google.com/earth-engine/python_install#syntax) of differences. Most important ones are elaborated below
