@@ -1,0 +1,69 @@
+var gswYearly = ee.ImageCollection("JRC/GSW1_3/YearlyHistory") 
+
+// Filter to select the year range for analysis
+var startYear = 1990
+var endYear = 2019
+
+
+var filtered = gswYearly
+  .filter(ee.Filter.gte('year', startYear))
+  .filter(ee.Filter.lte('year', endYear))
+Map.addLayer(filtered.select('waterClass'), {}, 'Water History', false)
+
+var maskNonWater = function(image) {
+  // Mask all pixels that are not seasonal or permanent water
+  // Pixel values
+  // 2 = Seasonal Water
+  // 3 = Permanent Water
+  // Return a binary image with only water pixels
+  return image.gte(2).selfMask()
+    .copyProperties(image, ['year'])
+}
+
+var addYearBand = function (image) {
+  var year = image.get('year');
+  var yearImage = ee.Image.constant(year).toShort();
+  return image.addBands(yearImage).rename(['water', 'year'])
+}
+
+var processed = filtered
+  .map(maskNonWater)
+  .map(addYearBand)
+  
+// Understanding Multi-input reducers
+var myList = ee.List([[3,2], [4,5], [1,9], [1,6], [9,7]])
+// ee.Reducer.min(2) will sort by first element of each item
+// and return that item
+print(myList.reduce(ee.Reducer.min(2)))
+// We now apply this to our collection
+
+// Our collection has 40 2-band images
+// 'water' and 'year'
+// Applying a reducer we will get a single 2-band image
+// where each pixel will have the value from the first water pixel
+// and corresponding year
+var result = processed.reduce(ee.Reducer.min(2)).rename(['water', 'year'])
+
+var gsw = ee.Image("JRC/GSW1_3/GlobalSurfaceWater")
+var permanentWater = gsw.select('seasonality').gte(5)
+var newWaterYear = result.select(['year']).updateMask(permanentWater.not())
+
+Map.setCenter(79.899, 12.164, 17)
+Map.setOptions('SATELLITE')
+Map.addLayer(newWaterYear, 
+  {min: startYear, max: endYear, palette: ['white', 'purple']},
+  'Year of First Water')
+
+// Convert the pixels to vectors and label them
+var vectors = newWaterYear.reduceToVectors({
+  geometry: Map.getBounds(true),
+  scale: 30,
+  eightConnected: true
+})
+
+// 3rd party package for labelling
+var style = require('users/gena/packages:style')
+var textProperties = { textColor: 'ffffff', fontSize: 12, outlineColor: '000000'}
+var labels = style.Feature.label(vectors, 'label', textProperties)
+
+Map.addLayer(labels, {}, 'labels')

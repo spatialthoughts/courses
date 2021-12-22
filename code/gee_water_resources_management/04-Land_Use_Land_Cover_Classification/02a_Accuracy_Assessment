@@ -1,0 +1,45 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7"),
+    gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
+var boundary = arkavathy.geometry()
+Map.centerObject(boundary, 10)
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+ 
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(boundary))
+  .select('B.*')
+
+var composite = filtered.median().clip(boundary) 
+
+// Display the input composite.
+Map.addLayer(composite, rgbVis, 'image');
+
+
+// Overlay the point on the image to get training data.
+var training = composite.sampleRegions({
+  collection: gcp,
+  properties: ['landcover'],
+  scale: 10,
+});
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50)
+.train({
+  features: training,  
+  classProperty: 'landcover',
+  inputProperties: composite.bandNames()
+});
+
+// Classify the image.
+var classified = composite.classify(classifier);
+
+Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');

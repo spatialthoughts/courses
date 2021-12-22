@@ -1,0 +1,29 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var imdCol = ee.ImageCollection("users/ujavalgandhi/imd/rainfall"),
+    india = ee.FeatureCollection("users/ujavalgandhi/public/soi_india_boundary");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// IMD Collection is a processed version of raw IMD Rainfall Images
+// See https://github.com/spatialthoughts/projects/tree/master/imd
+// It has 1 image per day with a 'rainfall' band with precipitation values in mm
+
+var filtered = imdCol
+  .filter(ee.Filter.date('2017-01-01', '2017-12-31'))
+  .filter(ee.Filter.bounds(india))
+
+// Rainy day is when the total daily rainfall is > 2.5mm
+// Let's process the collection to find all pixels which are 'rainy'
+var rainyCol = filtered.map(function(dayImage){
+  // selfMask() is important as it will mask all 0 values
+  // Otherwise it will still count as a valid pixel
+  return dayImage.gt(2.5).selfMask()
+})
+
+// We can now apply a reducer to count all valid pixels from the stack of images
+var raindayCount = rainyCol.reduce(ee.Reducer.count())
+
+var visParams = {
+  min: 30,
+  max: 120,
+  palette: ['#feebe2','#fbb4b9','#f768a1','#c51b8a','#7a0177']
+}
+Map.addLayer(raindayCount, visParams, 'Number of Rainy Days')

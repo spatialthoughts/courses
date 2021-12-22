@@ -1,0 +1,46 @@
+var chirpsDaily = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY");
+
+// Define a water year
+var startDate = ee.Date('2020-06-01')
+var endDate = ee.Date('2020-09-30')
+
+var days = endDate.difference(startDate, 'day')
+var daysList = ee.List.sequence(1, days)
+
+// map() a function over the list of days
+
+var cumulativeImages = daysList.map(function(day) {
+  // Filter the collection from start date till the day of computatiton
+  var begin = startDate
+  var current = startDate.advance(day, 'day')
+  var filtered = chirpsDaily.filter(ee.Filter.date(begin, current))
+  // Use sum() to calculate total rainfall in the period
+  // Make sure to set the start_time for the image
+  var cumulativeImage = filtered.reduce(ee.Reducer.sum())
+    .set('system:time_start', current.millis())
+  return cumulativeImage
+})
+
+// We have list of images containing cumulative rainfall
+// Put them in a collection
+var cumulativeCol = ee.ImageCollection.fromImages(cumulativeImages)
+
+// Create a point with coordinates for the city of Bengaluru, India
+var point = ee.Geometry.Point(77.5946, 12.9716)
+
+// Chart cumulative rainfall
+var chart = ui.Chart.image.series({
+  imageCollection: cumulativeCol, 
+  region: point, 
+  reducer: ee.Reducer.mean(), 
+  scale: 5566,
+}).setOptions({
+      interpolateNulls: true,
+      lineWidth: 1,
+      pointSize: 3,
+      title: 'Cumulative Monsoon Rainfall at Bengaluru (2020)',
+      vAxis: {title: 'Cumulative Rainfall (mm)'},
+      hAxis: {title: 'Month', format: 'YYYY-MMM'}
+
+});
+print(chart);

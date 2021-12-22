@@ -1,0 +1,164 @@
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
+
+var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry()
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+var image = filtered.median().clip(geometry); 
+
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']);
+
+// Simple Thresholding
+var waterMndwi = mndwi.gt(0)
+
+// Otsu Thresholding
+// Source https://code.earthengine.google.com/e9c699d7b5ef811d0a67c02756473e9d
+
+// Use lower scale to avoid edges from small buildings
+var scale = 100
+var bounds = geometry
+var cannyThreshold = 0.7
+var cannySigma = 1
+var minValue = -0.2
+// Set debug=false if you do not want the charts
+var debug = true
+// Set this higher to discard smaller edges
+var minEdgeLength = 40
+var th = computeThresholdUsingOtsu(
+  mndwi, scale, bounds, cannyThreshold, cannySigma, minValue, debug, minEdgeLength)
+print('Threshold', th)
+var waterOtsu = mndwi.gt(th);
+
+var rgbVis = {min: 0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var waterVis = {min:0, max:1, palette: ['white', 'black']}
+
+Map.centerObject(geometry, 10)
+Map.addLayer(image, rgbVis, 'Image');
+Map.addLayer(waterMndwi.selfMask(), waterVis, 'MNDWI - Simple threshold')
+Map.addLayer(waterOtsu.selfMask(), waterVis, 'MNDWI with Otsu Thresholding') 
+
+
+/***
+ * Compute a threshold using Otsu method (bimodal)
+ */
+function computeThresholdUsingOtsu(image, scale, bounds, cannyThreshold, cannySigma, minValue, debug, minEdgeLength, minEdgeGradient, minEdgeValue) {
+    // clip image edges
+    var bufferDistance = ee.Number(scale).multiply(10).multiply(-1)
+    var mask = image.mask().clip(bounds.buffer(bufferDistance));
+
+    // detect sharp changes
+    var edge = ee.Algorithms.CannyEdgeDetector(image, cannyThreshold, cannySigma);
+    edge = edge.multiply(mask);
+    
+    if(minEdgeLength) {
+        var connected = edge.mask(edge).lt(cannyThreshold).connectedPixelCount(200, true);
+
+        var edgeLong = connected.gte(minEdgeLength);
+
+        if(debug) {
+          print('Edge length: ', ui.Chart.image.histogram(connected, bounds, scale, buckets))
+          
+          Map.addLayer(edge.mask(edge), {palette:['ff0000']}, 'edges (short)', false);
+        }
+
+        edge = edgeLong;
+    }
+    
+    // buffer around NDWI edges
+    var edgeBuffer = edge.focal_max(ee.Number(scale), 'square', 'meters');
+    if(minEdgeValue) {
+      var edgeMin = image.reduceNeighborhood(ee.Reducer.min(), ee.Kernel.circle(ee.Number(scale), 'meters'))
+
+      edgeBuffer = edgeBuffer.updateMask(edgeMin.gt(minEdgeValue))
+
+      if(debug) {
+        Map.addLayer(edge.updateMask(edgeBuffer), {palette:['ff0000']}, 'edge min', false);
+      }
+    }
+
+    if(minEdgeGradient) {
+      var edgeGradient = image.gradient().abs().reduce(ee.Reducer.max()).updateMask(edgeBuffer.mask())
+
+      var edgeGradientTh = ee.Number(edgeGradient.reduceRegion(ee.Reducer.percentile([minEdgeGradient]), bounds, scale).values().get(0))
+
+      if(debug) {e
+        print('Edge gradient threshold: ', edgeGradientTh)
+        
+        Map.addLayer(edgeGradient.mask(edgeGradient), {palette:['ff0000']}, 'edge gradient', false);
+
+        print('Edge gradient: ', ui.Chart.image.histogram(edgeGradient, bounds, scale, buckets))
+      }
+      
+      edgeBuffer = edgeBuffer.updateMask(edgeGradient.gt(edgeGradientTh))
+    }
+
+    edge = edge.updateMask(edgeBuffer)
+    var edgeBuffer = edge.focal_max(ee.Number(scale).multiply(1), 'square', 'meters');
+    var imageEdge = image.mask(edgeBuffer);
+    Map.addLayer(edgeBuffer)
+
+    if(debug) {
+      Map.addLayer(imageEdge, {palette:['222200', 'ffff00']}, 'image edge buffer', false)
+    }
+    
+    // compute threshold using Otsu thresholding
+    var buckets = 100;
+    var hist = ee.Dictionary(ee.Dictionary(imageEdge.reduceRegion(ee.Reducer.histogram(buckets), bounds, scale)).values().get(0));
+    var threshold = ee.Algorithms.If(hist.contains('bucketMeans'), otsu(hist), minValue);
+    threshold = ee.Number(threshold)
+
+
+    if(debug) {
+        // experimental
+        // var jrc = ee.Image('JRC/GSW1_0/GlobalSurfaceWater').select('occurrence')
+        // var jrcTh = ee.Number(ee.Dictionary(jrc.updateMask(edge).reduceRegion(ee.Reducer.mode(), bounds, scale)).values().get(0))
+        // var water = jrc.gt(jrcTh)
+        // Map.addLayer(jrc, {palette: ['000000', 'ffff00']}, 'JRC')
+        // print('JRC occurrence (edge)', ui.Chart.image.histogram(jrc.updateMask(edge), bounds, scale, buckets))
+
+        Map.addLayer(edge.mask(edge), {palette:['ff0000']}, 'edges', true);
+
+        print('Threshold: ', threshold);
+
+        print('Image values:', ui.Chart.image.histogram(image, bounds, scale, buckets));
+        print('Image values (edge): ', ui.Chart.image.histogram(imageEdge, bounds, scale, buckets));
+        Map.addLayer(mask.mask(mask), {palette:['000000']}, 'image mask', false);
+    }
+
+    return minValue !== 'undefined' ? threshold.max(minValue) : threshold;
+}
+
+function otsu(histogram) {
+    histogram = ee.Dictionary(histogram);
+
+    var counts = ee.Array(histogram.get('histogram'));
+    var means = ee.Array(histogram.get('bucketMeans'));
+    var size = means.length().get([0]);
+    var total = counts.reduce(ee.Reducer.sum(), [0]).get([0]);
+    var sum = means.multiply(counts).reduce(ee.Reducer.sum(), [0]).get([0]);
+    var mean = sum.divide(total);
+
+    var indices = ee.List.sequence(1, size);
+
+    // Compute between sum of squares, where each mean partitions the data.
+    var bss = indices.map(function(i) {
+        var aCounts = counts.slice(0, 0, i);
+        var aCount = aCounts.reduce(ee.Reducer.sum(), [0]).get([0]);
+        var aMeans = means.slice(0, 0, i);
+        var aMean = aMeans.multiply(aCounts)
+            .reduce(ee.Reducer.sum(), [0]).get([0])
+            .divide(aCount);
+        var bCount = total.subtract(aCount);
+        var bMean = sum.subtract(aCount.multiply(aMean)).divide(bCount);
+        return aCount.multiply(aMean.subtract(mean).pow(2)).add(
+            bCount.multiply(bMean.subtract(mean).pow(2)));
+    });
+
+    // Return the mean value corresponding to the maximum BSS.
+    return means.sort(bss).get([-1]);
+};
+

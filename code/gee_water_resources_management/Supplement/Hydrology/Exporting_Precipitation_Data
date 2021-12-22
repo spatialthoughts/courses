@@ -1,0 +1,60 @@
+// This script demonstrates how to create and export
+// country/continent-wide precipitation data from CHIRPS
+// The goal is to create 1 yearly image with 12 bands -
+// with each band having the monthly total precipitation
+var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD");
+var lsib = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017");
+
+var region = lsib.filter(ee.Filter.eq('wld_rgn', 'South America'))
+var geometry = region.geometry()
+Map.centerObject(geometry)
+
+var year = 2020
+var months = ee.List.sequence(1, 12)
+
+// Map over the years and create a monthly totals collection
+var monthlyImages = months.map(function(month) {
+    var filtered = chirps
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'))
+    var monthly = filtered.sum()
+    return monthly.set({'month': month, 'year': year})
+  })
+
+// We now have 1 image per month for the chosen year
+var monthlyCol = ee.ImageCollection.fromImages(monthlyImages)
+print('Image Collection:', monthlyCol)
+
+// Use the toBands() function to create a multi-band image
+var yearImage = monthlyCol.toBands()
+
+// Rename the bands so they have names '1', '2' ... '12'
+var bandNames = months.map(function(month) {
+  return ee.Number(month).format('%d')
+})
+var yearImage = yearImage.rename(bandNames)
+print('Multi-band Image', yearImage)
+
+// Export to GeoTiff
+// The resulting region is large and geometry is complex/
+// Extract the bounding-box to be used in the export.
+var exportGeometry = geometry.bounds()
+
+Export.image.toDrive({
+  image: yearImage,
+  description: 'multi_band_image_export',
+  folder: 'earthengine',
+  fileNamePrefix: 'precipitation',
+  region: exportGeometry,
+  scale: 5566,
+  crs: 'EPSG:4326',
+  maxPixels: 1e10
+})
+
+// Visualize the collection by creating a yearly total image
+var visParams = {
+  min:0,
+  max: 2500,
+  palette: ['#f1eef6','#bdc9e1','#74a9cf','#2b8cbe','#045a8d']
+}
+Map.addLayer(monthlyCol.sum().clip(geometry), visParams, 'Yearly Precipitation')

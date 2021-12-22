@@ -1,0 +1,121 @@
+/*
+GEE adaptation of the 'waterdetect' algorithm
+
+Copyright (c) 2021 Ujaval Gandhi.
+This work is licensed under the terms of the MIT license.  
+For a copy, see https://opensource.org/licenses/MIT
+
+Reference: https://github.com/cordmaur/WaterDetect
+Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. 
+Automatic Water Detection from Multidimensional Hierarchical Clustering for Sentinel-2 Images
+and a Comparison with Level 2A Processors. 
+Remote Sensing of Environment 2021, 253, 112209. https://doi.org/10.1016/j.rse.2020.112209.
+*/
+
+// Create a composite for the selected region
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
+
+var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry()
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+var image = filtered.median().clip(geometry); 
+
+
+// Calculate  Normalized Difference Vegetation Index (NDWI)
+// 'GREEN' (B3) and 'NIR' (B8)
+var ndwi = image.normalizedDifference(['B3', 'B8']).rename(['ndwi']);
+ 
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// Select the MIR (SWIR2) band (B12)
+var mir = image.select('B12').multiply(0.0001).rename('mir')
+
+// Use [MNDWI, MNDWI, Mir2] combination
+var stackedImage = ndwi.addBands(mndwi).addBands(mir)
+
+// Make the training dataset for unsupervised clustering
+var training = stackedImage.sample({
+  region: geometry,
+  scale: 20,
+  numPixels: 1000
+});
+print(training.first())
+
+// Instantiate the clusterer and train it.
+var clusterer = ee.Clusterer.wekaCascadeKMeans({
+  minClusters: 2,
+  maxClusters: 10}).train(training);
+
+// Cluster the stacked image
+var clustered = stackedImage.cluster(clusterer);
+
+// We need to identify which of the clusters represent water
+// We use the MNDWI band and select the cluster with the 
+// highest average MNDWI values of all pixels within the cluster
+
+// Calculate the stats on MNDWI band, grouped by clusters
+var stats = mndwi.addBands(clustered).reduceRegion({
+  reducer: ee.Reducer.mean().group({
+    groupField: 1,
+    groupName: 'cluster',
+  }),
+  geometry: geometry,
+  scale: 100,
+  maxPixels: 1e8
+});
+print(stats)
+
+// Extract the cluster-wise stats as a list of lists
+// We get a list in the following format
+// [[avg_mndwi, cluster_number], [avg_mndwi, cluster_number] ...]]
+var groupStats = ee.List(stats.get('groups'))
+
+var groupStatsLists = groupStats.map(function(item) {
+      var areaDict = ee.Dictionary(item)
+      var clusterNumber = ee.Number(
+        areaDict.get('cluster'))
+      var mndwi = ee.Number(
+        areaDict.get('mean'))
+      return ee.List([mndwi, clusterNumber])
+    })
+    
+// Use the ee.Reducer.max() on the list of lists
+// It will pick the list with the highest MNDWI
+var waterClusterList = ee.Dictionary(ee.List(groupStatsLists).reduce(ee.Reducer.max(2)))
+
+// Extract the cluster number
+var waterCluster = ee.Number(waterClusterList.get('max1'))
+
+// Select all pixels from the water cluster and mask everything else
+var water = clustered.eq(waterCluster).selfMask()
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var waterVis = {min:0, max:1, palette: ['white', 'blue']}
+
+// Visualize the results
+Map.setCenter(77.61, 13.08, 14)
+
+Map.centerObject(geometry, 10)
+Map.addLayer(image, rgbVis, 'Image');
+Map.addLayer(clustered.randomVisualizer(), {}, 'clusters')
+Map.addLayer(water, waterVis, 'water')
+
+// Interactive visualization may time-out for large images
+// Export the image to use the batch processing mode
+Export.image.toDrive({
+  image: water,
+  description: 'Water_Cluster',
+  folder: 'earthengine',
+  fileNamePrefix: 'water_cluster',
+  region: geometry,
+  scale: 20,
+  maxPixels: 1e10})
+  
+
