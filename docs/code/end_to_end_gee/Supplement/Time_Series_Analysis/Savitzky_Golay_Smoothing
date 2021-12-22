@@ -32,7 +32,9 @@ function maskS2clouds(image) {
       .copyProperties(image, ["system:time_start"])
 }
 
-var filtered = filtered//.map(maskS2clouds)
+var filtered = filtered.map(maskS2clouds)
+
+
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
@@ -45,7 +47,24 @@ var withNdvi = filtered.map(addNDVI);
 
 var ndviCol = withNdvi.select('ndvi')
 
+print(ndviCol)
+
 // Savitzky-Golay smoothing
+
+// We cannot have any masked pixels
+// Filter out images which have any masked pixel in the region
+var countPixels = function(image) {
+  var mask = image.mask().not().selfMask()
+  var stats = mask.reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: geometry,
+    scale: 10})
+  var count = stats.get('ndvi')
+  
+  return image.set('masked_pixels', count)  
+}
+var ndviCol = ndviCol.map(countPixels).filter(ee.Filter.eq('masked_pixels', 0))
+print(ndviCol)
 
 // We prepare for 3rd Order Polynomial Fitting
 // x3*t^3 + x2*t^2 + x1*t^1 + constant
@@ -64,7 +83,7 @@ var ndviCol = ndviCol.map(function(image) {
 })
 
 // Step 2: Set up Savitzky-Golay smoothing
-var windowSize = 9
+var windowSize = 5
 var halfWindow = (windowSize - 1)/2
 
 // Define the axes of variation in the collection array.
