@@ -1,0 +1,69 @@
+var taluks = ee.FeatureCollection("users/ujavalgandhi/gee-water-resources/kgis_taluks");
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD')
+
+
+// We will compute the trend of total seasonal rainfall
+
+// Introducting calendarRange()
+var julyImages = chirps
+  .filter(ee.Filter.calendarRange(7, 7, 'month'))
+print(julyImages)
+
+// Rainy season is June - September
+var createSeasonalImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 6, 1)
+  var endDate = ee.Date.fromYMD(year, 9, 30)
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate))
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum())
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  })
+}
+
+
+
+// Aggregate Precipitation Data over 40 years
+var years = ee.List.sequence(1981, 2013)
+var yearlyImages = years.map(createSeasonalImage)
+print(yearlyImages)
+
+var yearlyCol = ee.ImageCollection.fromImages(yearlyImages)
+
+
+// Join the time series to itself
+var afterFilter = ee.Filter.lessThan({
+  leftField: 'system:time_start',
+  rightField: 'system:time_start'
+});
+
+var joined = ee.ImageCollection(ee.Join.saveAll('after').apply({
+  primary: yearlyCol,
+  secondary: yearlyCol,
+  condition: afterFilter
+}));
+print(joined)
+
+// Mann-Kendall trend test
+var sign = function(i, j) { // i and j are images
+  return ee.Image(j).neq(i) // Zero case
+      .multiply(ee.Image(j).subtract(i).clamp(-1, 1)).int();
+};
+
+var kendall = ee.ImageCollection(joined.map(function(current) {
+  var afterCollection = ee.ImageCollection.fromImages(current.get('after'));
+  return afterCollection.map(function(image) {
+    // The unmask is to prevent accumulation of masked pixels that
+    // result from the undefined case of when either current or image
+    // is masked.  It won't affect the sum, since it's unmasked to zero.
+    return ee.Image(sign(current, image)).unmask(0);
+  });
+  // Set parallelScale to avoid User memory limit exceeded.
+}).flatten()).reduce('sum', 2);
+
+var palette = ['red', 'white', 'green'];
+// Stretch this as necessary.
+Map.addLayer(kendall, {min:-30, max: 30, palette: palette}, 'kendall'); 

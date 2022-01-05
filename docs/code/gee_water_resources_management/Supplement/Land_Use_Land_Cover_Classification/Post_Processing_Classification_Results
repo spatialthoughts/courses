@@ -1,0 +1,57 @@
+// Sentinel-2 Median Composite
+var composite = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
+Map.addLayer(composite, {min: 0, max: 0.3,   bands: ['B4', 'B3', 'B2']}, 'RGB Composite');
+
+// Raw Supervised Classification Results
+var classified = ee.Image("users/ujavalgandhi/e2e/arkavathy_final_classification");
+Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'Original');
+Map.centerObject(classified, 10)
+
+
+//************************************************************************** 
+// Post process by clustering
+//************************************************************************** 
+
+// Cluster using Unsupervised Clustering methods
+var seeds = ee.Algorithms.Image.Segmentation.seedGrid(5);
+
+var snic = ee.Algorithms.Image.Segmentation.SNIC({
+  image: composite.select('B.*'), 
+  compactness: 0,
+  connectivity: 4,
+  neighborhoodSize: 10,
+  size: 2,
+  seeds: seeds
+})
+var clusters = snic.select('clusters')
+
+// Assign class to each cluster based on 'majority' voting (using ee.Reducer.mode()
+var smoothed = classified.addBands(clusters);
+
+var clusterMajority = smoothed.reduceConnectedComponents({
+  reducer: ee.Reducer.mode(),
+  labelBand: 'clusters'
+});
+Map.addLayer(clusterMajority, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']},
+  'Processed using Clusters');
+
+
+//************************************************************************** 
+// Post process by replacing isolated pixels with surrounding value
+//************************************************************************** 
+
+// count patch sizes
+var patchsize = classified.connectedPixelCount(40, false);
+
+// run a majority filter
+var filtered = classified.focal_mode({
+    radius: 10,
+    kernelType: 'square',
+    units: 'meters',
+}); 
+  
+// updated image with majority filter where patch size is small
+var connectedClassified =  classified.where(patchsize.lt(25),filtered);
+Map.addLayer(connectedClassified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']},
+  'Processed using Connected Pixels');
+

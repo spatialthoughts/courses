@@ -1,0 +1,109 @@
+var modis = ee.ImageCollection("MODIS/006/MOD13Q1");
+
+var startYear = 2010
+var endYear = 2020
+var startDate = ee.Date.fromYMD(startYear, 1, 1)
+var endDate = ee.Date.fromYMD(endYear, 12, 31)
+var filtered = modis
+  .filter(ee.Filter.date(startDate, endDate))
+
+// Cloud Masking
+var bitwiseExtract = function(input, fromBit, toBit) {
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+}
+
+var maskSnowAndClouds = function(image) {
+  var summaryQa = image.select('SummaryQA')
+  // Select pixels which are less than or equals to 1 (0 or 1)
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
+  var maskedImage = image.updateMask(qaMask)
+  return maskedImage.copyProperties(image, ['system:index', 'system:time_start'])
+}
+
+// Apply the function to all images in the collection
+var maskedCol = filtered.map(maskSnowAndClouds)
+
+var ndviCol = maskedCol.select('NDVI')
+// MODIS NDVI values come as NDVI x 10000 that need to be scaled by 0.0001
+var scaleNdvi = function(image) {
+  var scaled = image.divide(10000)
+  return scaled.copyProperties(image, ['system:index', 'system:time_start'])
+};
+
+var ndviScaled = ndviCol.map(scaleNdvi)
+
+// Create NDVI composite for every month
+var years = ee.List.sequence(startYear,endYear);
+var months = ee.List.sequence(1, 12);
+
+// Map over the years and create a monthly average collection
+var monthlyImages = years.map(function(year) {
+  return months.map(function(month) {
+    var filtered = ndviScaled
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'))
+    var monthly = filtered.mean()
+    return monthly.set({'month': month, 'year': year})
+  })
+}).flatten()
+
+// We now have 1 image per month for entire duratioon
+var monthlyCol = ee.ImageCollection.fromImages(monthlyImages)
+
+
+// We can compute Minimum NDVI for each month across all years
+// i.e. Minimum NDVI for all May months in the collection
+var monthlyMinImages = months.map(function(month) {
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
+    var monthlyMin = filtered.min()
+    return monthlyMin.set('month', month)
+})
+var monthlyMin = ee.ImageCollection.fromImages(monthlyMinImages)
+
+// We can compute Maximum NDVI for each month across all years
+// i.e. Maximum NDVI for all May months in the collection
+var monthlyMaxImages = months.map(function(month) {
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
+    var monthlyMax = filtered.max()
+    return monthlyMax.set('month', month)
+})
+var monthlyMax = ee.ImageCollection.fromImages(monthlyMaxImages)
+
+// Calculate VCI for 2020
+
+// We are interested in calculating VCI for a particular month
+var currentYear = 2020
+var currentMonth = 5
+
+var filtered = monthlyCol
+  .filter(ee.Filter.eq('year', currentYear))
+  .filter(ee.Filter.eq('month', currentMonth))
+var currentMonthNdvi = ee.Image(filtered.first())
+
+var minNdvi = ee.Image(monthlyMin.filter(ee.Filter.eq('month', currentMonth)).first())
+var maxNdvi = ee.Image(monthlyMax.filter(ee.Filter.eq('month', currentMonth)).first())
+
+// VCI = (NDVI - min) / (max - min)
+var image = ee.Image.cat([currentMonthNdvi, minNdvi, maxNdvi]).rename(['ndvi', 'min', 'max'])
+var vci = image.expression('100* (ndvi - min) / (max - min)',
+    {'ndvi': image.select('ndvi'),
+      'min': image.select('min'),
+      'max': image.select('max')
+    }).rename('vci')
+
+
+var visParams = {min: 0, max: 1, palette: ['white', 'green']}
+var vciPalette = ['#a50026','#d73027','#f46d43','#fdae61',
+  '#fee08b','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'];
+var vciVisParams = {min: 0, max: 100, palette: vciPalette}
+Map.addLayer(minNdvi, visParams, 'Minimum May NDVI', false)  
+Map.addLayer(maxNdvi, visParams, 'Maximum May NDVI', false)
+Map.addLayer(currentMonthNdvi, visParams, 'Current May NDVI', false)
+Map.addLayer(vci, vciVisParams, 'VCI')
+
+// Exercise
+// Mask Non-Cropland from VCI Computation
+var gfsad = ee.Image("USGS/GFSAD1000_V1");
+var cropLand = gfsad.select('landcover').neq(0)

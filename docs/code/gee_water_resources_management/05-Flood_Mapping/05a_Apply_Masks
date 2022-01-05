@@ -1,7 +1,8 @@
-var gsw = ee.Image("JRC/GSW1_2/GlobalSurfaceWater"),
-    admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2"),
-    hydrosheds = ee.Image("WWF/HydroSHEDS/03VFDEM");
-
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2"),
+    hydrosheds = ee.Image("WWF/HydroSHEDS/03VFDEM"),
+    gsw = ee.Image("JRC/GSW1_3/GlobalSurfaceWater");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
 var beforeStart = '2018-07-15'
 var beforeEnd = '2018-08-10'
 var afterStart = '2018-08-10'
@@ -24,18 +25,12 @@ var beforeCollection = collection
 
 var afterCollection = collection
   .filter(ee.Filter.date(afterStart, afterEnd))
-  
+
 var before = beforeCollection.mosaic().clip(geometry);
 var after = afterCollection.mosaic().clip(geometry);
 
 var beforeFiltered = ee.Image(toDB(RefinedLee(toNatural(before))))
 var afterFiltered = ee.Image(toDB(RefinedLee(toNatural(after))))
-
-Map.centerObject(geometry, 10)
-Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
-Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
-Map.addLayer(beforeFiltered, {min:-25,max:0}, 'Before Filtered', false);
-Map.addLayer(afterFiltered, {min:-25,max:0}, 'After Filtered', false); 
 
 var difference = afterFiltered.divide(beforeFiltered);
 
@@ -43,7 +38,13 @@ var difference = afterFiltered.divide(beforeFiltered);
 var diffThreshold = 1.25;
 // Initial estimate of flooded pixels
 var flooded = difference.gt(diffThreshold).rename('water').selfMask();
-Map.addLayer(flooded, {min:0, max:1, palette: ['orange']}, 'Initial Flood Area', false);
+
+Map.centerObject(geometry, 10)
+Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
+Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
+Map.addLayer(beforeFiltered, {min:-25,max:0}, 'Before Filtered', false);
+Map.addLayer(afterFiltered, {min:-25,max:0}, 'After Filtered', false); 
+Map.addLayer(flooded, {min:0, max:1, palette: ['orange']}, 'Initial Flood Area');
 
 
 //############################

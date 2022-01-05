@@ -1,6 +1,6 @@
-var gsw = ee.Image("JRC/GSW1_2/GlobalSurfaceWater"),
-    admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2"),
-    hydrosheds = ee.Image("WWF/HydroSHEDS/03VFDEM");
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2')
+var hydrosheds = ee.Image('WWF/HydroSHEDS/03VFDEM')
+var gsw = ee.Image('JRC/GSW1_3/GlobalSurfaceWater')
 
 var beforeStart = '2018-07-15'
 var beforeEnd = '2018-08-10'
@@ -31,20 +31,54 @@ var after = afterCollection.mosaic().clip(geometry);
 var beforeFiltered = ee.Image(toDB(RefinedLee(toNatural(before))))
 var afterFiltered = ee.Image(toDB(RefinedLee(toNatural(after))))
 
-Map.centerObject(geometry, 10)
-Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
-Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
-Map.addLayer(beforeFiltered, {min:-25,max:0}, 'Before Filtered', false);
-Map.addLayer(afterFiltered, {min:-25,max:0}, 'After Filtered', false); 
-
 var difference = afterFiltered.divide(beforeFiltered);
 
 // Define a threshold
 var diffThreshold = 1.25;
 // Initial estimate of flooded pixels
 var flooded = difference.gt(diffThreshold).rename('water').selfMask();
+
+Map.centerObject(geometry, 10)
+Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
+Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
+Map.addLayer(beforeFiltered, {min:-25,max:0}, 'Before Filtered', false);
+Map.addLayer(afterFiltered, {min:-25,max:0}, 'After Filtered', false); 
 Map.addLayer(flooded, {min:0, max:1, palette: ['orange']}, 'Initial Flood Area', false);
 
+// Mask out area with permanent/semi-permanent water
+var permanentWater = gsw.select('seasonality').gte(5).clip(geometry)
+var permanentWaterMask = permanentWater.unmask(0).not()
+var flooded = flooded.updateMask(permanentWaterMask)
+
+// Mask out areas with more than 5 percent slope using the HydroSHEDS DEM
+var slopeThreshold = 5;
+var terrain = ee.Algorithms.Terrain(hydrosheds);
+var slope = terrain.select('slope');
+var steepAreas = slope.gt(slopeThreshold)
+var slopeMask = steepAreas.not()
+var flooded = flooded.updateMask(slopeMask)
+
+// Remove isolated pixels
+// connectedPixelCount is Zoom dependent, so visual result will vary
+var connectedPixelThreshold = 8;
+var connections = flooded.connectedPixelCount(25)
+var disconnectedAreas = connections.lt(connectedPixelThreshold)
+var disconnectedAreasMask = disconnectedAreas.not()
+var flooded = flooded.updateMask(disconnectedAreasMask)
+
+Map.addLayer(flooded, {min:0, max:1, palette: ['red']}, 'Flooded Areas');
+
+// Calculate Affected Area
+print('Total District Area (Ha)', geometry.area().divide(10000))
+
+var stats = flooded.multiply(ee.Image.pixelArea()).reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10,
+  tileScale: 16
+})
+print('Flooded Area (Ha)', ee.Number(stats.get('water')).divide(10000))
 
 //############################
 // Speckle Filtering Functions

@@ -1,8 +1,8 @@
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
-
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7"),
+    alos = ee.Image("JAXA/ALOS/AW3D30/V2_2"),
+    gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
@@ -11,7 +11,6 @@ var rgbVis = {
   max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
-
 // Function to remove cloud and snow pixels from Sentinel-2 SR image
 function maskCloudAndShadowsSR(image) {
   var cloudProb = image.select('MSK_CLDPRB');
@@ -25,20 +24,22 @@ function maskCloudAndShadowsSR(image) {
   return image.updateMask(mask).divide(10000);
 }
 
-var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-                  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-                  .filter(ee.Filter.bounds(boundary))
-                  .map(maskCloudAndShadowsSR)
-                  .select('B.*')
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(boundary))
+  .map(maskCloudAndShadowsSR)
+    .select('B.*')
 
 
 var composite = filtered.median().clip(boundary) 
 
 
 var addIndices = function(image) {
-var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
   var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
-var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+  var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
   var bsi = image.expression(
       '(( X + Y ) - (A + B)) /(( X + Y ) + (A + B)) ', {
         'X': image.select('B11'), //swir1
@@ -56,34 +57,6 @@ var elev = alos.select('AVE_DSM').divide(2000).rename('elev');
 var slope = ee.Terrain.slope(alos.select('AVE_DSM')).divide(30).rename('slope');
 
 var composite = composite.addBands(elev).addBands(slope);
-
-function normalize(image){
-  var bandNames = image.bandNames();
-  // Compute min and max of the image
-  var minDict = image.reduceRegion({
-    reducer: ee.Reducer.min(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var maxDict = image.reduceRegion({
-    reducer: ee.Reducer.max(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var mins = ee.Image.constant(minDict.values(bandNames));
-  var maxs = ee.Image.constant(maxDict.values(bandNames));
-
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
-  return normalized
-}
-
-var composite = normalize(composite);
 
 var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
 Map.addLayer(composite, visParams, 'RGB');
@@ -118,6 +91,10 @@ var classified = composite.classify(classifier);
 
 Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
 
+//************************************************************************** 
+// Accuracy Assessment
+//************************************************************************** 
+
 // Use classification map to assess accuracy using the validation fraction
 // of the overall training set created above.
 var test = classified.sampleRegions({
@@ -128,51 +105,8 @@ var test = classified.sampleRegions({
 });
 
 var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
-// Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy()); 
+// Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 
-//************************************************************************** 
-// Exporting Results
-//************************************************************************** 
-
-// Create a Feature with null geometry and the value we want to export.
-// Use .array() to convert Confusion Matrix to an Array so it can be
-// exported in a CSV file
-var fc = ee.FeatureCollection([
-  ee.Feature(null, {
-    'accuracy': testConfusionMatrix.accuracy(),
-    'matrix': testConfusionMatrix.array()
-  })
-  ])
-print(fc)  
-Export.table.toDrive({
-  collection: fc,
-  description: 'Accuracy_Export',
-  folder: 'earthengine',
-  fileNamePrefix: 'accuracy',
-  fileFormat: 'CSV'
-})
-
-// It is also a good idea to export the classified image as an Asset
-// This will allows you to import the classified image in another script
-// without running the whole classification workflow.
-
-// For images with discrete pixel values, we must set the
-// pyramidingPolicy to 'mode'.
-
-// Change the assetId parameter with the path to your asset folder.
-Export.image.toAsset({
-  image: classified,
-  description: 'Classified_Image_Asset_Export',
-  assetId: 'users/ujavalgandhi/classified',
-  region: boundary,
-  scale: 10,
-  maxPixels: 1e10,
-  pyramidingPolicy: {'.default': 'mode'}
-})
-
-
- 
- 
 

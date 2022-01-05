@@ -1,0 +1,62 @@
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var urbanAreas = ee.FeatureCollection("users/ujavalgandhi/e2e/ne_10m_urban_areas")
+
+// Perform supervised classification for your city
+// Find the feature id by adding the layer to the map and using Inspector.
+var city = urbanAreas.filter(ee.Filter.eq('system:index', '00000000000000002bf8'))
+var geometry = city.geometry()
+Map.centerObject(geometry)
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*')
+
+var composite = filtered.median().clip(geometry) 
+
+// Display the input composite.
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite, rgbVis, 'image');
+
+// Exercise
+// Add training points for 4 classes
+// Assign the 'landcover' property as follows
+
+// urban: 0
+// bare: 1
+// water: 2
+// vegetation: 3
+
+// After adding points, uncomments lines below
+
+// var gcps = urban.merge(bare).merge(water).merge(vegetation)
+
+
+
+// // Overlay the point on the image to get training data.
+// var training = composite.sampleRegions({
+//   collection: gcps, 
+//   properties: ['landcover'], 
+//   scale: 200,
+//   tileScale: 16
+// });
+// print(training)
+
+
+// // Train a classifier.
+// var classifier = ee.Classifier.smileRandomForest(50).train({
+//   features: training,  
+//   classProperty: 'landcover', 
+//   inputProperties: composite.bandNames()
+// });
+// // // Classify the image.
+// var classified = composite.classify(classifier);
+// Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019'); 
+
+// // Extract water
+// var waterClass = classified.eq(2)
+// Map.addLayer(waterClass, {min: 0, max: 1, palette: ['white', 'blue']}, 'Water');
+
+

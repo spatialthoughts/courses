@@ -3,7 +3,6 @@ var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
 var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
 var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
 
-
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
 var rgbVis = {
@@ -12,8 +11,6 @@ var rgbVis = {
   bands: ['B4', 'B3', 'B2'],
 };
 // Function to remove cloud and snow pixels from Sentinel-2 SR image
-// The function also divides ths image by 10000 to ensure
-// the pixels values are between 0 and 1
 function maskCloudAndShadowsSR(image) {
   var cloudProb = image.select('MSK_CLDPRB');
   var snowProb = image.select('MSK_SNWPRB');
@@ -32,14 +29,13 @@ var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
   .filter(ee.Filter.bounds(boundary))
   .map(maskCloudAndShadowsSR)
-  .select('B.*')
+    .select('B.*')
 
 
 var composite = filtered.median().clip(boundary) 
 
-
 var addIndices = function(image) {
-  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
   var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
   var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
   var bsi = image.expression(
@@ -54,50 +50,10 @@ var addIndices = function(image) {
 
 var composite = addIndices(composite);
 
-// We divide the elevation and slope with maximum values in the region
-// to ensure the values are between 0 and 1
-// A more robust technique for image normalization is provided in the course supplement
 var elev = alos.select('AVE_DSM').divide(2000).rename('elev');
 var slope = ee.Terrain.slope(alos.select('AVE_DSM')).divide(30).rename('slope');
 
 var composite = composite.addBands(elev).addBands(slope);
-
-// Normalize the image 
-
-// Machine learning algorithms work best on images when all features have
-// the same range
-
-// Function to Normalize Image
-// Pixel Values should be between 0 and 1
-// Formula is (x - xmin) / (xmax - xmin)
-//************************************************************************** 
-function normalize(image){
-  var bandNames = image.bandNames();
-  // Compute min and max of the image
-  var minDict = image.reduceRegion({
-    reducer: ee.Reducer.min(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var maxDict = image.reduceRegion({
-    reducer: ee.Reducer.max(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var mins = ee.Image.constant(minDict.values(bandNames));
-  var maxs = ee.Image.constant(maxDict.values(bandNames));
-
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
-  return normalized
-}
-
-var composite = normalize(composite);
 
 var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
 Map.addLayer(composite, visParams, 'RGB');
@@ -105,9 +61,9 @@ Map.addLayer(composite, visParams, 'RGB');
 // Add a random column and split the GCPs into training and validation set
 var gcp = gcp.randomColumn()
 
-// This being a simpler classification, lets take 60% points for validation.
-// Normal recommended ratio is 70% training, 30% validation
-
+// This being a simpler classification, we take 60% points
+// for validation. Normal recommended ratio is
+// 70% training, 30% validation
 var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
 var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
 Map.addLayer(validationGcp)
@@ -127,27 +83,87 @@ var classifier = ee.Classifier.smileRandomForest(50)
   inputProperties: composite.bandNames()
 });
 
-// Classify the image.
-var classified = composite.classify(classifier);
-
-Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
-
 //************************************************************************** 
-// Accuracy Assessment
+// Hyperparameter Tuning
 //************************************************************************** 
 
-// Use classification map to assess accuracy using the validation fraction
-// of the overall training set created above.
-var test = classified.sampleRegions({
+// Run .explain() to see what the classifer looks like
+print(classifier.explain())
+
+var test = composite.sampleRegions({
   collection: validationGcp,
   properties: ['landcover'],
   scale: 10,
   tileScale: 16
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
-// Printing of confusion matrix may time out. Alternatively, you can export it as CSV
-print('Confusion Matrix', testConfusionMatrix);
-print('Test Accuracy', testConfusionMatrix.accuracy());
- 
+// Tune the numberOfTrees parameter.
+var numTreesList = ee.List.sequence(10, 150, 10);
 
+var accuracies = numTreesList.map(function(numTrees) {
+  var classifier = ee.Classifier.smileRandomForest(numTrees)
+      .train({
+        features: training,
+        classProperty: 'landcover',
+        inputProperties: composite.bandNames()
+      });
+
+  // Here we are classifying a table instead of an image
+  // Classifiers work on both images and tables
+  return test
+    .classify(classifier)
+    .errorMatrix('landcover', 'classification')
+    .accuracy();
+});
+
+var chart = ui.Chart.array.values({
+  array: ee.Array(accuracies),
+  axis: 0,
+  xLabels: numTreesList
+  }).setOptions({
+      title: 'Hyperparameter Tuning for the numberOfTrees Parameters',
+      vAxis: {title: 'Validation Accuracy'},
+      hAxis: {title: 'Number of Tress', gridlines: {count: 15}}
+  });
+print(chart)
+
+// Tuning Multiple Parameters
+// We can tune many parameters together using
+// nested map() functions
+// Let's tune 2 parameters
+// numTrees and bagFraction 
+var numTreesList = ee.List.sequence(10, 150, 10);
+var bagFractionList = ee.List.sequence(0.1, 0.9, 0.1);
+
+var accuracies = numTreesList.map(function(numTrees) {
+  return bagFractionList.map(function(bagFraction) {
+     var classifier = ee.Classifier.smileRandomForest({
+       numberOfTrees: numTrees,
+       bagFraction: bagFraction
+     })
+      .train({
+        features: training,
+        classProperty: 'landcover',
+        inputProperties: composite.bandNames()
+      });
+
+    // Here we are classifying a table instead of an image
+    // Classifiers work on both images and tables
+    var accuracy = test
+      .classify(classifier)
+      .errorMatrix('landcover', 'classification')
+      .accuracy();
+    return ee.Feature(null, {'accuracy': accuracy,
+      'numberOfTrees': numTrees,
+      'bagFraction': bagFraction})
+  })
+}).flatten()
+var resultFc = ee.FeatureCollection(accuracies)
+
+// Export the result as CSV
+Export.table.toDrive({
+  collection: resultFc,
+  description: 'Multiple_Parameter_Tuning_Results',
+  folder: 'earthengine',
+  fileNamePrefix: 'numtrees_bagfraction',
+  fileFormat: 'CSV'}) 

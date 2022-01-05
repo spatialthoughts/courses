@@ -12,16 +12,23 @@ var afterEnd = '2018-08-23'
 var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
 var ernakulam = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Ernakulam'))
 var geometry = ernakulam.geometry()
-Map.centerObject(geometry)
 Map.addLayer(geometry, {color: 'grey'}, 'Ernakulam District')
 
 var collection= ee.ImageCollection('COPERNICUS/S1_GRD')
-  .filter(ee.Filter.date(beforeStart, beforeEnd))
   .filter(ee.Filter.bounds(geometry))
 
-var image = ee.Image(collection.first())
 
-var imageVh = image.select('VH').clip(geometry)
+var beforeCollection = collection
+  .filter(ee.Filter.date(beforeStart, beforeEnd))
 
-Map.addLayer(imageVh, {min:-30, max: 0}, 'VH (dB)')
+var afterCollection = collection
+  .filter(ee.Filter.date(afterStart, afterEnd))
 
+var before = beforeCollection.mosaic().clip(geometry);
+var after = afterCollection.mosaic().clip(geometry);
+
+var beforeVh = before.select('VH')
+var afterVh = after.select('VH')
+
+Map.addLayer(beforeVh, {min: -30, max: 0}, 'Before')
+Map.addLayer(afterVh, {min: -30, max: 0}, 'After')
