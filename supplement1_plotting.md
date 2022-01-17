@@ -18,7 +18,9 @@ national_highways = roads[roads['ref'].str.match('^NH') == True]
 
 ### Matplotlib Basics
 
-Before we start using `matplotlib` inside a Jupyter notebook, it is useful to set the matplotlib backend to `inline`. This setting makes the matplotlib graphs included in your notebook, next to the code. We use the [magic function](https://ipython.readthedocs.io/en/stable/interactive/tutorial.html#magics-explained) `%matplotlib` to achieve this.
+Before we start using `matplotlib` inside a Jupyter notebook, it is useful to set the matplotlib backend to `inline`. This setting makes the matplotlib graphs included in your notebook, next to the code. [Learn more](https://ipython.readthedocs.io/en/stable/interactive/plotting.html) about different plotting backends.
+
+We use the [magic function](https://ipython.readthedocs.io/en/stable/interactive/tutorial.html#magics-explained) `%matplotlib` to achieve this.
 
 
 ```python
@@ -31,11 +33,84 @@ It is important to understand the 2 matplotlib objects
 * Figure: This is the main container of the plot. A figure can contain multiple plots inside it
 * Axes:  Axes refers to an individual plot or graph. A figure contains 1 or more axes.
 
-We can now work on creating a *figure* with multiple *axes* - each with a different rendering on a map layer.
+We create a figure and a single subplot. Specifying 1 row and 1 column for the `subplots()` function create a figure and an axes within it. Even if we have a single plot in the figure, it is useful to use tthis logic of intialization so it is consistent across different scripts.
+
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+plt.show()
+```
+
+
+    
+![](supplement1_plotting_files/supplement1_plotting_9_0.png)
+    
+
+
+First, let's learn how to plot a single point using matplotlib. Let's say we want to display a point at the coordinate (0.5, 0.5). 
+
+
+
+```python
+point = (0.5, 0.5)
+```
+
+We display the point using the `plot()` function. The `plot()` function expects at least 2 arguments, first one being one or more x coordinates and the second one being one or more y coordinates. Remember that once a plot is displayed using `plt.show()`, it displays the plot and empties the figure. So you'll have to create it again.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+ax.plot(point[0], point[1], color='green', marker='o')
+plt.show()
+```
+
+
+    
+![](supplement1_plotting_files/supplement1_plotting_13_0.png)
+    
+
+
+One problematic area for plotting geospatial data using matplotlib is that geospatial data is typically represented as a list of x and y coordinates. But to plot it, we require 2 separate lists or x and y coordinates. Here we can use the `zip()` function to create list of x and y coordinates.
+
+
+```python
+points = [(0.1, 0.5), (0.5, 0.5), (0.9, 0.5)]
+x, y = zip(*points)
+print(x)
+print(y)
+```
+
+    (0.1, 0.5, 0.9)
+    (0.5, 0.5, 0.5)
+
+
+Now these can be plotted using the `plot()` function. We can set `linestyle=None` so it displays the points but doesn't connect them. You can also use `ax.scatter(x, y)` to create a scatter plot with the same result.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+ax.plot(x, y, color='green', marker='o', linestyle='none')
+plt.show()
+```
+
+
+    
+![](supplement1_plotting_files/supplement1_plotting_17_0.png)
+    
+
+
+GeoPandas provides a convenient `plot()` function for GeoDataFrame and GeoSeries objects. It takes care of doing the coordinate transformations so that it can be plotted using matplotlib. Calling `.plot()` on a GeoDataFrame returns a matplotlib axes instance. Any options one can pass to matplotlib as seen before can be used with the GeoPandas `plot()` function. [Learn more](https://geopandas.org/en/stable/docs/user_guide/mapping.html#mapping-and-plotting-tools) about mapping and plotting using GeoPandas.
+
+
+We will now see different examples of creating maps.
 
 ### Rendering Map Layouts
 
-The `subplots()` function creates one or more plots within the figure. You can design a map layout with multiple rows/columns. In the code below, we create a map with **1** row and **3** columns. Using the `set_size_inches()` function, we set the size of the map to 15in x 7in.
+We can now work on creating a *figure* with multiple *axes* - each with a different rendering on a map layer. The `subplots()` function creates one or more plots within the figure. You can design a map layout with multiple rows/columns. In the code below, we create a map with **1** row and **3** columns. Using the `set_size_inches()` function, we set the size of the map to 15in x 7in.
 
 
 ```python
@@ -45,7 +120,7 @@ fig.set_size_inches(15,7)
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_10_0.png)
+![](supplement1_plotting_files/supplement1_plotting_21_0.png)
     
 
 
@@ -68,7 +143,7 @@ fig
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_14_0.png)
+![](supplement1_plotting_files/supplement1_plotting_25_0.png)
     
 
 
@@ -89,7 +164,7 @@ fig
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_16_0.png)
+![](supplement1_plotting_files/supplement1_plotting_27_0.png)
     
 
 
@@ -110,7 +185,7 @@ fig
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_18_0.png)
+![](supplement1_plotting_files/supplement1_plotting_29_0.png)
     
 
 
@@ -136,7 +211,7 @@ fig
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_20_0.png)
+![](supplement1_plotting_files/supplement1_plotting_31_0.png)
     
 
 
@@ -178,7 +253,7 @@ plt.savefig(output_path, dpi=300)
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_25_0.png)
+![](supplement1_plotting_files/supplement1_plotting_36_0.png)
     
 
 
@@ -208,6 +283,6 @@ for idx, row in districts.iterrows():
 
 
     
-![](supplement1_plotting_files/supplement1_plotting_30_0.png)
+![](supplement1_plotting_files/supplement1_plotting_41_0.png)
     
 
