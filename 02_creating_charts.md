@@ -457,8 +457,3 @@ plt.show()
 ![](02_creating_charts_files/02_creating_charts_11_0.png)
     
 
-
-
-```python
-
-```

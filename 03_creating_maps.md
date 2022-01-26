@@ -22,7 +22,7 @@ tracts = gpd.read_file(file_path)
 
 ```python
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(15,7)
+fig.set_size_inches(10,10)
 tracts.plot(ax=ax)
 plt.show()
 ```
@@ -65,7 +65,7 @@ gdf['density'] = 1e6*gdf['Population']/gdf['ALAND']
 
 ```python
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(7,15)
+fig.set_size_inches(10,10)
 gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='quantiles', k=10, legend=True)
 ax.set_axis_off()
 plt.show()
@@ -81,7 +81,7 @@ plt.show()
 
 ```python
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(15,7)
+fig.set_size_inches(10,10)
 gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined', 
          legend=True, classification_kwds=dict(bins=[1,10,25,50,100, 250, 500, 1000, 5000]))
 ax.set_axis_off()
