@@ -1,5 +1,9 @@
 # Creating Charts
 
+Pandas allows you to read structured datasets and visualize them using the `plot()` method. By default, Pandas uses `matplotlib` to create the plots.
+
+In this notebook, we will take work with open dataset of crime in London.
+
 
 ```python
 import pandas as pd
@@ -9,6 +13,8 @@ import glob
 %matplotlib inline
 import matplotlib.pyplot as plt
 ```
+
+We have 12 different CSV files containing crime data for each month of 2020. We can use the `glob` module to find all files matching a pattern.
 
 
 ```python
@@ -41,6 +47,8 @@ file_list
 
 
 
+It will be helpful to merge all these files into a single dataframe. We can use `pd.concat()` to merge a list of dataframes.
+
 
 ```python
 dataframe_list = []
@@ -51,6 +59,8 @@ for file in file_list:
 
 merged_df = pd.concat(dataframe_list)
 ```
+
+Let's create a pie-chart showing the distribution of different types of crime. Pandas `groupby()` function allows us to calculate group statistics.
 
 
 ```python
@@ -80,6 +90,10 @@ type_counts
 
 
 
+We now uses the `plot()` method to create the chart. This method is a wrapper around `matplotlib` and can accept supported arguments from it. 
+
+Reference: [pandas.DataFrame.plot](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.plot.html)
+
 
 ```python
 fig, ax = plt.subplots(1, 1)
@@ -93,11 +107,11 @@ plt.show()
 
 
     
-![](02_creating_charts_files/02_creating_charts_5_0.png)
+![](02_creating_charts_files/02_creating_charts_9_0.png)
     
 
 
-https://www.pythoncharts.com/matplotlib/pie-chart-matplotlib/
+We can also chart the trend of crime over the year. For this, let's group the data by month.
 
 
 ```python
@@ -135,9 +149,11 @@ plt.show()
 
 
     
-![](02_creating_charts_files/02_creating_charts_8_0.png)
+![](02_creating_charts_files/02_creating_charts_12_0.png)
     
 
+
+We can make the chart more informating by stacking the chart with information about crime type. 
 
 
 ```python
@@ -163,6 +179,8 @@ counts_by_type
     Length: 168, dtype: int64
 
 
+
+The result is not in a suitable format for plotting. We call `unstack()` to create a dataframe. 
 
 
 ```python
@@ -435,6 +453,8 @@ counts_df
 
 
 
+Now we can create the stacked bar chart. Instead of the default legend, we create a horizontal legend with a frame using the `legend()` function.
+
 
 ```python
 fig, ax = plt.subplots(1, 1)
@@ -454,6 +474,12 @@ plt.show()
 
 
     
-![](02_creating_charts_files/02_creating_charts_11_0.png)
+![](02_creating_charts_files/02_creating_charts_18_0.png)
     
 
+
+## Exercise
+
+Plot the trend of Bicycle thefts as a line chart.
+
+Hint: Select the column 'Bicycle theft' from the `counts_df` dataframe and use the `plot()` function on the result.
