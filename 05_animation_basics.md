@@ -60,8 +60,3 @@ We can also use the `to_jshtml()` function to create an HTML representation of t
 from IPython.display import HTML
 #HTML(ani.to_jshtml())
 ```
-
-
-```python
-
-```

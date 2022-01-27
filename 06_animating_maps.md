@@ -1,5 +1,7 @@
 # Creating Animated Maps
 
+We can now apply the same technique to animate the path of the solar eclipse.
+
 
 ```python
 import contextily as cx
@@ -26,8 +28,6 @@ umbra_gdf = gpd.read_file(umbra_file)
 path_reprojected = path_gdf.to_crs('epsg:3857')
 umbra_reprojected = umbra_gdf.to_crs('epsg:3857')
 ```
-
-https://svs.gsfc.nasa.gov/4518
 
 
 ```python
@@ -115,9 +115,4 @@ output_folder = 'output'
 output_path = os.path.join(output_folder, 'solar_eclipse.gif')
 
 #ani.save(output_path, writer=PillowWriter(fps=5))
-```
-
-
-```python
-
 ```

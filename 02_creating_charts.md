@@ -465,7 +465,7 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 plt.xlabel('Year', size = 15)
 plt.ylabel('Number of Incidents', size = 15)
-plt.title('Crime in London (2020)', size = 18)
+plt.title('Crime in London (2020)', size = 18, y=1.1)
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'stacked_chart.jpg')
 plt.savefig(output_path)

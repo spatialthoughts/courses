@@ -126,7 +126,7 @@ plt.show()
 
 Plot the census tracts geodataframe `tracts` with just outlines and no fill color.
 
-Hint: The styling options as specified as keyword arguments to the `plot()` function. Set the `facecolor` option to `'none'` for no fills. Check the [*style_kwds* parameter]((https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) of the `plot()` method for more details.
+Hint: The styling options as specified as keyword arguments to the `plot()` function. Set the `facecolor` option to `'none'` for no fills. Check the [*style_kwds* parameter](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) of the `plot()` method for more details.
 
 
 ```python
