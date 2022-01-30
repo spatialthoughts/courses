@@ -469,7 +469,7 @@ knitr::include_graphics('images/gdal/aoiselection.png')
 
 We can use the `gdalwarp` utility to clip the raster using the `-cutline` option. We can also add JPEG compression to the output file to reduce the file size. Refer to the post [GeoTiff Compression for Dummies](https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html) by Paul Ramsey that gives more insights into compression imagery. 
 
-> Note that JPEG is a lossy compression method and is suited only for photographic rasters such as aerial/drone imagery. For scientific datasets, you should always use lossless compression as shown in the [previous section](#compressing-output).
+> Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. See [Supplement](#removing-jpeg-compression-artifacts) for techniques to mask the black portion and obtian clean edges.
 
 **Windows**
 ```
@@ -1627,22 +1627,43 @@ gdal_calc.py -A gamma_hillshade.tif -B colorized.tif --allBands=B \
 knitr::include_graphics('images/gdal/colorized_hillshade.png')
 ```
 
+## Removing JPEG Compression Artifacts
+
+Applying JPEG compression on aerial or drone imagery, sometimes you end up with edge artifacts. Since JPEG is a lossy compression algorithm, the black pixels values (0) are This is caused by no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called [nearblack](https://gdal.org/programs/nearblack.html) that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel value and masks it. Let's say we want to take the mosaic created in the [Moasic and Clip to AOI](#mosaic-and-clip-to-aoi) section and mask the black pixels. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the `nearblack` program to set edge pixels with value 0-5 being considered nodata.
+
+```
+nearblack -near 5 -setmask -o aoi_masked.tif aoi.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='JPEG Artifacts Cleaned by GDAL nearblack'}
+knitr::include_graphics('images/gdal/nearblack.png')
+```
+
 ## Splitting a Mosaic into Tiles
 
-When delivering large mosaics, it is a good idea to split your large input file into smaller chunks. If you are working with a very large mosaic, splitting it into smaller chunks and processing them independently can help overcome memory issues. GDAL ships with a handy script called `gdal_retile.py` that is designed for this task.
+When delivering large mosaics, it is a good idea to split your large input file into smaller chunks. If you are working with a very large mosaic, splitting it into smaller chunks and processing them independently can help overcome memory issues. This is also helpful to prepare the satellite imagery for Deep Learning. GDAL ships with a handy script called `gdal_retile.py` that is designed for this task.
 
-Let's say we have a large GeoTIFF file `aoi.tif` and want to split it into tiles of 5000 pixels. 
+Let's say we have a large GeoTIFF file `aoi.tif` and want to split it into tiles of 256 x 256 pixels, with an overlap to 10 pixels.
 
 First we create a directory where the output tiles will be written.
 ```
-cd tiles
+mkdir tiles
 ```
 
 We can now use the following command to split the file and write the output to the `tiles` directory.
 
 ```
-gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif
+gdal_retile.py -ps 256 256 -overlap 10 -targetDir tiles/ aoi.tif
 ```
+
+This will create smaller GeoTiff files. If you want to train a Deep Learning model, you would typically require JPEG or PNG tiles. You can batch-convert these to JPEG format using the technique shown in the [Running Commands in batch](#running-commands-in-batch) section. Since JPEG/PNG cannot hold the georeferencing information, we supply the `WORLDFILE=YES` creation option. 
+
+```
+gdal_translate -of JPEG <input_tile>.tif <input_tile>.jpg -co WORLDFILE=YES
+```
+
+This will create a sidecar file with the `.wld` extension that will store the georeferencing information for each tile. GDAL will automatically apply the georeferencing information to the JPEG tile as long this file exists in the same directory. This way, you can make inference using the JPG tiles, and use the `.wld` files with your output to automatically georeference and mosaic the results.
 
 ## Merging Files with Different Resolutions
 

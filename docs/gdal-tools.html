@@ -460,6 +460,7 @@ $(document).ready(function () {
 <ul>
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
+<li><a href="#removing-jpeg-compression-artifacts">Removing JPEG Compression Artifacts</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
 <li><a href="#merging-files-with-different-resolutions">Merging Files with Different Resolutions</a></li>
 <li><a href="#raster-to-vector-conversion">Raster to Vector Conversion</a></li>
@@ -854,7 +855,7 @@ Text File with the List of Images
 <p><img src="images/gdal/aoiselection.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>We can use the <code>gdalwarp</code> utility to clip the raster using the <code>-cutline</code> option. We can also add JPEG compression to the output file to reduce the file size. Refer to the post <a href="https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html">GeoTiff Compression for Dummies</a> by Paul Ramsey that gives more insights into compression imagery.</p>
 <blockquote>
-<p>Note that JPEG is a lossy compression method and is suited only for photographic rasters such as aerial/drone imagery. For scientific datasets, you should always use lossless compression as shown in the <a href="#compressing-output">previous section</a>.</p>
+<p>Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. See <a href="#removing-jpeg-compression-artifacts">Supplement</a> for techniques to mask the black portion and obtian clean edges.</p>
 </blockquote>
 <p><strong>Windows</strong></p>
 <pre><code>gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
@@ -1694,14 +1695,29 @@ Colorized Shaded Relief
 </p>
 </div>
 </div>
+<div id="removing-jpeg-compression-artifacts" class="section level2">
+<h2>Removing JPEG Compression Artifacts</h2>
+<p>Applying JPEG compression on aerial or drone imagery, sometimes you end up with edge artifacts. Since JPEG is a lossy compression algorithm, the black pixels values (0) are This is caused by no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called <a href="https://gdal.org/programs/nearblack.html">nearblack</a> that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel value and masks it. Let’s say we want to take the mosaic created in the <a href="#mosaic-and-clip-to-aoi">Moasic and Clip to AOI</a> section and mask the black pixels. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the <code>nearblack</code> program to set edge pixels with value 0-5 being considered nodata.</p>
+<pre><code>nearblack -near 5 -setmask -o aoi_masked.tif aoi.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR</code></pre>
+<div class="figure" style="text-align: center">
+<img src="images/gdal/nearblack.png" alt="JPEG Artifacts Cleaned by GDAL nearblack" width="75%" />
+<p class="caption">
+JPEG Artifacts Cleaned by GDAL nearblack
+</p>
+</div>
+</div>
 <div id="splitting-a-mosaic-into-tiles" class="section level2">
 <h2>Splitting a Mosaic into Tiles</h2>
-<p>When delivering large mosaics, it is a good idea to split your large input file into smaller chunks. If you are working with a very large mosaic, splitting it into smaller chunks and processing them independently can help overcome memory issues. GDAL ships with a handy script called <code>gdal_retile.py</code> that is designed for this task.</p>
-<p>Let’s say we have a large GeoTIFF file <code>aoi.tif</code> and want to split it into tiles of 5000 pixels.</p>
+<p>When delivering large mosaics, it is a good idea to split your large input file into smaller chunks. If you are working with a very large mosaic, splitting it into smaller chunks and processing them independently can help overcome memory issues. This is also helpful to prepare the satellite imagery for Deep Learning. GDAL ships with a handy script called <code>gdal_retile.py</code> that is designed for this task.</p>
+<p>Let’s say we have a large GeoTIFF file <code>aoi.tif</code> and want to split it into tiles of 256 x 256 pixels, with an overlap to 10 pixels.</p>
 <p>First we create a directory where the output tiles will be written.</p>
-<pre><code>cd tiles</code></pre>
+<pre><code>mkdir tiles</code></pre>
 <p>We can now use the following command to split the file and write the output to the <code>tiles</code> directory.</p>
-<pre><code>gdal_retile.py -targetDir tiles -ps 5000 5000 aoi.tif</code></pre>
+<pre><code>gdal_retile.py -ps 256 256 -overlap 10 -targetDir tiles/ aoi.tif</code></pre>
+<p>This will create smaller GeoTiff files. If you want to train a Deep Learning model, you would typically require JPEG or PNG tiles. You can batch-convert these to JPEG format using the technique shown in the <a href="#running-commands-in-batch">Running Commands in batch</a> section. Since JPEG/PNG cannot hold the georeferencing information, we supply the <code>WORLDFILE=YES</code> creation option.</p>
+<pre><code>gdal_translate -of JPEG &lt;input_tile&gt;.tif &lt;input_tile&gt;.jpg -co WORLDFILE=YES</code></pre>
+<p>This will create a sidecar file with the <code>.wld</code> extension that will store the georeferencing information for each tile. GDAL will automatically apply the georeferencing information to the JPEG tile as long this file exists in the same directory. This way, you can make inference using the JPG tiles, and use the <code>.wld</code> files with your output to automatically georeference and mosaic the results.</p>
 </div>
 <div id="merging-files-with-different-resolutions" class="section level2">
 <h2>Merging Files with Different Resolutions</h2>
@@ -1768,25 +1784,25 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb141"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb141-1"><a href="#cb141-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb141-2"><a href="#cb141-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb141-3"><a href="#cb141-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb141-4"><a href="#cb141-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb141-5"><a href="#cb141-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb141-6"><a href="#cb141-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb141-7"><a href="#cb141-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb141-8"><a href="#cb141-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb141-9"><a href="#cb141-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb141-10"><a href="#cb141-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb141-11"><a href="#cb141-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb141-12"><a href="#cb141-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb141-13"><a href="#cb141-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb141-14"><a href="#cb141-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb141-15"><a href="#cb141-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb141-16"><a href="#cb141-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb141-17"><a href="#cb141-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb141-18"><a href="#cb141-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb141-19"><a href="#cb141-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb143"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb143-1"><a href="#cb143-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb143-2"><a href="#cb143-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb143-3"><a href="#cb143-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb143-4"><a href="#cb143-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb143-5"><a href="#cb143-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb143-6"><a href="#cb143-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb143-7"><a href="#cb143-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb143-8"><a href="#cb143-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb143-9"><a href="#cb143-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb143-10"><a href="#cb143-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb143-11"><a href="#cb143-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb143-12"><a href="#cb143-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb143-13"><a href="#cb143-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb143-14"><a href="#cb143-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb143-15"><a href="#cb143-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb143-16"><a href="#cb143-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb143-17"><a href="#cb143-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb143-18"><a href="#cb143-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb143-19"><a href="#cb143-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 <div id="using-virtual-layers" class="section level2">
 <h2>Using Virtual Layers</h2>
