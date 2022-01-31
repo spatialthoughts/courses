@@ -1246,251 +1246,9 @@ ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update \
 knitr::include_graphics('images/gdal/geoprocessing5.png')
 ```
 
-# 3. Multi Criteria Weighted Overlay Analysis
+\newpage
 
-Multi-criteria analysis is the process of the allocation of land to suit a specific objective on the basis of a variety of attributes that the selected areas should possess. Although this is a common GIS operation, it is best performed in the raster space. Below is the typical workflow to take source vector data, transform them to appropriate rasters, re-classify them and perform mathematical operations to do a suitability analysis.
-
-We will work with crime and infrastructure data for the city of London and find suitable areas to build new parking facilities that can help reduce bicycle thefts. Our analysis will apply the following 3 criteria. The proposed parking must be
-
-1. In a bicycle theft hotspot
-2. Close to a bicycle route
-3. Far from existing parking facilities
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multi_criteria_analysis.png')
-```
-
-## 3.1 Rasterize vector layers
-
-The source data layers are provided in the `multicriteria.gpkg`. This file is in the `multicriteria_overlay` folder. Switch to the folder using the `cd` command.
-
-```
-cd multicriteria_overlay
-```
-
-The step in the overlay analysis is to convert each vector data layer to raster. This is accomplished using the `gdal_rasterize` command. Let's check the content of the data layers.
-
-```
-ogrinfo multicriteria.gpkg
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria1.png')
-```
-
-An important consideration is that all rasters must be of the same extent. We can inspect use the boundary layer and find out the extent in the CRS of the layer. We will specify this extent using the `-te` option with `gdal_rasterize` command.
-
-```
-ogrinfo -so multicriteria.gpkg boundary
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria2.png')
-```
-
-Let's start by rasterizing the `cycling_routes` layer. We want to create an output raster where the pixel values are **1** where there is a route and **0** where there are no routes. This value is specified using the `-burn` option. We can set the resolution of the output raster to be **10** meters using the `-tr` option. Once the command finishes, each pixel's value will be set to 1 or 0 depending on whether a route line intersects it or not.
-
-**Windows**
-```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 ^
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
-  -l cycling_routes routes.tif
-```
-
-**Mac/Linux**
-```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 \
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
-  -l cycling_routes routes.tif
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria3.png')
-```
-
-We can rasterize the `cycle_parking` layer with the same options.
-
-**Windows**
-```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 ^
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
-  -l cycle_parking existing_parking.tif
-```
-
-**Mac/Linux**
-```
-gdal_rasterize -ot Int16 -burn 1 -tr 10 10 \
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
-  -l cycle_parking existing_parking.tif
-```
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria4.png')
-```
-
-Now only the `bicycle_thefts` layer need to be rasterized. This is a dense point layer with locations of individual thefts - with overlapping points. We can create a raster layer by adding the total number of points within each pixel and calculate the density of thefts. This type of approach in mapping point density is called Binning or Aggregation. We can use the `-add` option to increment the value to the pixel for each input feature. 
-
-**Windows**
-```
-gdal_rasterize -burn 1 -add -tr 100 100 ^
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg ^
-  -l bicycle_thefts thefts.tif -ot Int16
-```
-
-**Mac/Linux**
-```
-gdal_rasterize -burn 1 -add -tr 100 100 \
-  -te 523843.7 177847.3 531169.1 183893.8 multicriteria.gpkg \
-  -l bicycle_thefts thefts.tif -ot Int16
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria5.png')
-```
-
-
-## 3.2 Generate proximity (Euclidean distance) rasters
-
-Now that we have all the input layers converted, we can generate proximity rasters. These are also known as Euclidean distance rasters - where each pixel in the output raster represents the distance to the nearest pixel in the input raster. The distance can be specified in *pixels* or *geographic units* using the `-distunits` option.  This resulting raster can be then used to determine suitable areas which are within certain distance from the input. 
-
-```
-gdal_proximity.py routes.tif routes_proximity.tif -ot Int16 -distunits GEO
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria6.png')
-```
-
-**Windows**
-```
-gdal_proximity.py existing_parking.tif existing_parking_proximity.tif ^
-  -ot Int16 -distunits GEO
-```
-
-**Mac/Linux**
-```
-gdal_proximity.py existing_parking.tif existing_parking_proximity.tif \
-  -ot Int16 -distunits GEO
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria7.png')
-```
-
-## 3.3 Re-classify raster values
-
-To use the proximity rasters in overlay analysis, we must first re-classify it to create discrete values. Here we use the range 0-100 and assign an appropriate value based on the input range. 
-
-For point density raster representing **Thefts**, we assign higher value to more thefts. For **Routes** raster, we assign higher value to pixels that are close to the routes. Lastly, for the **Existing Parking** raster, we assigned higher value to pixels that are far away. The final assignment look like below.
-
-|   **Thefts**  | **Routes**  | **Existing Parking** | Re-Class Value
-|:--------------|:------------|:---------------------|---------------
-| > 20          | 0-50m       | > 100m               | 100
-| 10-20         | 50-100m     | 50-100m              | 50
-| < 10          | > 100m      | < 50m                | 10
-
-The following commands uses `gdal_calc.py` to take the continuous values from the input rasters and create re-classified rasters with discrete values.
-
-**Windows**
-```
-gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif ^
-  --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
-
-gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif ^
-  --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
-
-gdal_calc.py -A existing_parking_proximity.tif ^
-  --outfile existing_parking_reclass.tif ^
-  --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
-```
-
-**Mac/Linux**
-```
-gdal_calc.py -A thefts.tif --outfile thefts_reclass.tif \
-  --calc="100*(A>20) + 50*(A>10)*(A<=20) + 10*(A<10)"
-
-gdal_calc.py -A routes_proximity.tif --outfile routes_reclass.tif \
-  --calc="100*(A<=50) + 50*(A>50)*(A<=100) + 10*(A>100)"
-
-gdal_calc.py -A existing_parking_proximity.tif \
-  --outfile existing_parking_reclass.tif \
-  --calc="100*(A>100) + 50*(A>50)*(A<=100) + 10*(A<50)"
-```
-
-```{r echo=FALSE, fig.align='center', out.width='100%'}
-knitr::include_graphics('images/gdal/multicriteria8.png')
-```
-
-## 3.4 Overlay analysis
-
-Now we are ready to do the final overlay analysis. Before we proceed, it is important to make sure that all the rasters have the same pixel resolution. We downsample the `existing_parking_reclass.tif` and `routes_reclass.tif` layers so their resolution matches `thefts_reclass.tif` layer.
-
-```
-gdalwarp -r average -tr 100 100 existing_parking_reclass.tif parking_reclass_resampled.tif
-gdalwarp -r average -tr 100 100 routes_reclass.tif routes_reclass_resampled.tif
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria9.png')
-```
-
-For our analysis, we will give equal important to all 3 criteria. We simply add all 3 rasters and normalize the pixel values so they are in the 0-100 range. We set the NoData value in the output using the `--NoDataValue` option.
-
-**Windows**
-```
-gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif ^
-  -C parking_reclass_resampled.tif --outfile suitability.tif ^
-  --calc="(A + B + C)/3" --NoDataValue=0
-```
-
-**Mac/Linux**
-```
-gdal_calc.py -A thefts_reclass.tif -B routes_reclass_resampled.tif \
-  -C parking_reclass_resampled.tif --outfile suitability.tif \
-  --calc="(A + B + C)/3" --NoDataValue=0
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/multicriteria10.png')
-```
-
-The resulting raster represents the suitability of new bicycle parking facilities.
-
-## Exercise 6
-
-Perform a *Weighted* Multi-Criteria Overlay Analysis where different criteria are assigned weights on their relative importance. Let's assume that the proximity to cycling routes is not as important as the other two factors in the final decision. We can give more important to other criteria as below.
-
-* Theft Density: Weight=2
-* Routes: Weight=1
-* Existing Parking: Weight=2
-
-Create another raster `weighted_suitability.tif` with the above weights and compare the output with the previous result.
-
-## 3.5 Building a Processing Pipeline
-
-Once you know the individual commands to be run for each step of your processing chain, combining them to be run as a pipeline is very easy. You can create a script that executes each step one after the other. When you run the script, you will get the output without any manual intervention.
-
-Below is an example of a script that runs the multicriteria overlay analysis we just saw. Save the content below in a file in the same directory as `multicriteria.gpkg`. The file name will be different depending on your operating system.
-
-* Windows: `run_multicriteria.bat`
-* Mac/Linux: `run_multicriteria.sh`
-
-
-```{bash eval=FALSE, code=readLines('code/gdal/run_multicriteria.sh')}
-```
-
-Then from the same directory, you can launch the script as below.
-
-*Windows*
-```
-run_multicriteria.bat
-```
-
-*Mac/Linux*
-```
-bash run_multicriteria.sh
-```
-
-# 4. Running commands in batch
+# 3. Running commands in batch
 
 You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.
 
@@ -1520,7 +1278,9 @@ The script runs the commands both in parallel and serial mode and prints the tim
 python batch-parallel.py
 ```
 
-# 5. Automating and Scheduling GDAL/OGR Jobs
+\newpage
+
+# 4. Automating and Scheduling GDAL/OGR Jobs
 
 The easiest way to run commands on a schedule on a Linux-based server is using a [Cron Job](https://towardsdatascience.com/create-your-first-cronjob-on-the-linux-server-74e2fdc76e78).
 
@@ -1909,6 +1669,7 @@ knitr::include_graphics('images/gdal/geonames6.png')
 
 # Resources
 * [GDAL Tips](https://twitter.com/gdaltips) `@gdaltips` on Twitter
+* [Data Science at the Command Line](https://datascienceatthecommandline.com/2e/chapter-1-introduction.html) by Jeroen Janssens
 
 # Data Credits
 
@@ -1919,9 +1680,6 @@ knitr::include_graphics('images/gdal/geonames6.png')
 * London 1m DSM. Downloaded from Defra Data Services Platform. © Environment Agency copyright and/or database right 2019. All rights reserved. 
 * Melbourne Metro Stations: © 2019 [The City of Melbourne Open Data Portal](https://data.melbourne.vic.gov.au/). Data provided by Metro Trains Melbourne 
 * Melbourne Bars and Pubs: © 2019 [The City of Melbourne Open Data Portal](https://data.melbourne.vic.gov.au/). Data provided by Census of Land Use and Employment (CLUE)
-* Bicycle Parking: [Cycling Infrastructure data: Public Tfl data](https://cycling.data.tfl.gov.uk/). Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights [2019]
-* Cycling Thefts: London Individual crime and anti-social behavior (ASB) incidents, including street-level location information and subsequent police and court outcomes associated with the crime. Published by Single Online Home National Digital Team under Open Government Licence v3.0. Downloaded from https://data.police.uk/
-* Westminster Boundary: [Statistical GIS Boundary Files for London](https://data.london.gov.uk/). Contains National Statistics data © Crown copyright and database right [2015], Contains Ordnance Survey data © Crown copyright and database right [2015]
 
 # License
 
