@@ -1437,6 +1437,46 @@ gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilin
 
 Translating this file using `gdal_translate` or subsetting it with `gdalwarp` will result in a mosaic with the highest resolution from the source tiles.
 
+## Calculate Pixel-Wise Statistics over Multiple Rasters
+
+`gdal_calc.py` can compute pixel-wise statistics over many input rasters or multi-band rasters. Starting GDAL v3.3, it supports the full range of numpy functions, such as `numpy.average()`, `numpy.sum()` etc.
+
+Here's an example showing how to compute the per-pixel total from 12 different input rasters. The `prism` folder in your data package contains 12 rasters of precipitation over the continental US. We will compute pixel-wise total precipitation from these rasters. When you read multiple rasters using the same input flag `-A`, gdal_calc.py creates a 3D numpy array. It can then be reduced along the axis 0 to produce totals.
+
+```
+cd prism
+```
+
+```
+gdal_calc.py \
+	-A PRISM_ppt_stable_4kmM3_201701_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201702_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201703_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201704_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201705_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201706_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201707_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201708_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201709_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201710_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201711_bil.bil \
+	-A PRISM_ppt_stable_4kmM3_201712_bil.bil \
+	--calc='numpy.sum(A, axis=0)' \
+	--outfile total.tif
+```
+
+Currently, `gdal_calc.py` doesn't support reading multi-band rasters as a 3D array. So if you want to apply a similar computation on a multi-band raster, you'll have to specify each band separately. Let's say, we want to calculate the pixel-wise average value from the RGB composite created in the [Merging individual bands into RGB composite](#merging-individual-bands-into-rgb-composite) section. We can use the command as follows.
+
+```
+gdal_calc.py \
+  -A rgb.tif --A_band=1 \
+  -B rgb.tif --B_band=2 \
+  -C rgb.tif --C_band=3 \
+  --calc='(A+B+C)/3' \
+  --outfile mean.tif
+```
+
+
 ## Raster to Vector Conversion
 
 GDAL comes with the `gdal_polygonize.py` allowing us to convert rasters to vector layers. Let's say we want to extract the coordinates of the highest elevation from the merged raster in the [Merging Tiles](#merging-tiles) section. Querying the raster with `gdalinfo -stats` shows us that the highest pixel value is **8748**. 

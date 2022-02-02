@@ -454,6 +454,7 @@ $(document).ready(function () {
 <li><a href="#removing-jpeg-compression-artifacts">Removing JPEG Compression Artifacts</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
 <li><a href="#merging-files-with-different-resolutions">Merging Files with Different Resolutions</a></li>
+<li><a href="#calculate-pixel-wise-statistics-over-multiple-rasters">Calculate Pixel-Wise Statistics over Multiple Rasters</a></li>
 <li><a href="#raster-to-vector-conversion">Raster to Vector Conversion</a></li>
 <li><a href="#working-with-kml-files">Working with KML Files</a>
 <ul>
@@ -1544,6 +1545,34 @@ JPEG Artifacts Cleaned by GDAL nearblack
 <pre><code>gdalbuildvrt -input_file_list filelist.txt naip.vrt -resolution highest -r bilinear</code></pre>
 <p>Translating this file using <code>gdal_translate</code> or subsetting it with <code>gdalwarp</code> will result in a mosaic with the highest resolution from the source tiles.</p>
 </div>
+<div id="calculate-pixel-wise-statistics-over-multiple-rasters" class="section level2">
+<h2>Calculate Pixel-Wise Statistics over Multiple Rasters</h2>
+<p><code>gdal_calc.py</code> can compute pixel-wise statistics over many input rasters or multi-band rasters. Starting GDAL v3.3, it supports the full range of numpy functions, such as <code>numpy.average()</code>, <code>numpy.sum()</code> etc.</p>
+<p>Here’s an example showing how to compute the per-pixel total from 12 different input rasters. The <code>prism</code> folder in your data package contains 12 rasters of precipitation over the continental US. We will compute pixel-wise total precipitation from these rasters. When you read multiple rasters using the same input flag <code>-A</code>, gdal_calc.py creates a 3D numpy array. It can then be reduced along the axis 0 to produce totals.</p>
+<pre><code>cd prism</code></pre>
+<pre><code>gdal_calc.py \
+    -A PRISM_ppt_stable_4kmM3_201701_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201702_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201703_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201704_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201705_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201706_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201707_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201708_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201709_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201710_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201711_bil.bil \
+    -A PRISM_ppt_stable_4kmM3_201712_bil.bil \
+    --calc=&#39;numpy.sum(A, axis=0)&#39; \
+    --outfile total.tif</code></pre>
+<p>Currently, <code>gdal_calc.py</code> doesn’t support reading multi-band rasters as a 3D array. So if you want to apply a similar computation on a multi-band raster, you’ll have to specify each band separately. Let’s say, we want to calculate the pixel-wise average value from the RGB composite created in the <a href="#merging-individual-bands-into-rgb-composite">Merging individual bands into RGB composite</a> section. We can use the command as follows.</p>
+<pre><code>gdal_calc.py \
+  -A rgb.tif --A_band=1 \
+  -B rgb.tif --B_band=2 \
+  -C rgb.tif --C_band=3 \
+  --calc=&#39;(A+B+C)/3&#39; \
+  --outfile mean.tif</code></pre>
+</div>
 <div id="raster-to-vector-conversion" class="section level2">
 <h2>Raster to Vector Conversion</h2>
 <p>GDAL comes with the <code>gdal_polygonize.py</code> allowing us to convert rasters to vector layers. Let’s say we want to extract the coordinates of the highest elevation from the merged raster in the <a href="#merging-tiles">Merging Tiles</a> section. Querying the raster with <code>gdalinfo -stats</code> shows us that the highest pixel value is <strong>8748</strong>.</p>
@@ -1602,25 +1631,25 @@ KML Export with NameField
 <div id="extracting-image-metadata-and-statistics" class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
 <p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by <code>gdalinfo</code>.</p>
-<div class="sourceCode" id="cb123"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb123-5"><a href="#cb123-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb123-6"><a href="#cb123-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb123-7"><a href="#cb123-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb123-8"><a href="#cb123-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb123-9"><a href="#cb123-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb123-10"><a href="#cb123-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb123-11"><a href="#cb123-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb123-12"><a href="#cb123-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb123-13"><a href="#cb123-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb123-14"><a href="#cb123-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb123-15"><a href="#cb123-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb123-16"><a href="#cb123-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb123-17"><a href="#cb123-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb123-18"><a href="#cb123-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb123-19"><a href="#cb123-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb126"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb126-1"><a href="#cb126-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb126-2"><a href="#cb126-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb126-3"><a href="#cb126-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb126-4"><a href="#cb126-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb126-5"><a href="#cb126-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb126-6"><a href="#cb126-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb126-7"><a href="#cb126-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb126-8"><a href="#cb126-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb126-9"><a href="#cb126-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb126-10"><a href="#cb126-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb126-11"><a href="#cb126-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb126-12"><a href="#cb126-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb126-13"><a href="#cb126-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb126-14"><a href="#cb126-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb126-15"><a href="#cb126-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb126-16"><a href="#cb126-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb126-17"><a href="#cb126-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb126-18"><a href="#cb126-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb126-19"><a href="#cb126-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 <div id="using-virtual-layers" class="section level2">
 <h2>Using Virtual Layers</h2>
