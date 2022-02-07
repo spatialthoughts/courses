@@ -500,7 +500,7 @@ $(document).ready(function () {
 <li><a href="#identify-misclassified-gcps">Identify Misclassified GCPs</a></li>
 <li><a href="#image-normalization-and-standardization">Image Normalization and Standardization</a></li>
 </ul></li>
-<li><a href="#time-series-analysis">Time-Series Analysis</a>
+<li><a href="#time-series-smoothing-and-gap-filling">Time-Series Smoothing and Gap-filling</a>
 <ul>
 <li><a href="#moving-window-smoothing">Moving Window Smoothing</a></li>
 <li><a href="#temporal-interpolation">Temporal Interpolation</a></li>
@@ -3752,96 +3752,97 @@ Spectral Signatures for All Training Points by Class
 <span id="cb103-3"><a href="#cb103-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_SR&quot;</span>)<span class="op">;</span></span>
 <span id="cb103-4"><a href="#cb103-4" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> basin <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;WWF/HydroSHEDS/v1/Basins/hybas_7&quot;</span>)<span class="op">;</span></span>
 <span id="cb103-5"><a href="#cb103-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gcp <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/e2e/arkavathy_gcps&quot;</span>)<span class="op">;</span></span>
-<span id="cb103-6"><a href="#cb103-6" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb103-7"><a href="#cb103-7" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> arkavathy <span class="op">=</span> basin<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;HYBAS_ID&#39;</span><span class="op">,</span> <span class="dv">4071139640</span>))</span>
-<span id="cb103-8"><a href="#cb103-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> boundary <span class="op">=</span> arkavathy<span class="op">.</span><span class="fu">geometry</span>()</span>
-<span id="cb103-9"><a href="#cb103-9" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {</span>
-<span id="cb103-10"><a href="#cb103-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
-<span id="cb103-11"><a href="#cb103-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
-<span id="cb103-12"><a href="#cb103-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
-<span id="cb103-13"><a href="#cb103-13" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
-<span id="cb103-14"><a href="#cb103-14" aria-hidden="true" tabindex="-1"></a> </span>
-<span id="cb103-15"><a href="#cb103-15" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb103-16"><a href="#cb103-16" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb103-17"><a href="#cb103-17" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
-<span id="cb103-18"><a href="#cb103-18" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(boundary))</span>
-<span id="cb103-19"><a href="#cb103-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb103-20"><a href="#cb103-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-21"><a href="#cb103-21" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(boundary) </span>
-<span id="cb103-22"><a href="#cb103-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-23"><a href="#cb103-23" aria-hidden="true" tabindex="-1"></a><span class="co">// Display the input composite.</span></span>
-<span id="cb103-24"><a href="#cb103-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;image&#39;</span>)<span class="op">;</span></span>
-<span id="cb103-25"><a href="#cb103-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-6"><a href="#cb103-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-7"><a href="#cb103-7" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(gcp)</span>
+<span id="cb103-8"><a href="#cb103-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> arkavathy <span class="op">=</span> basin<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;HYBAS_ID&#39;</span><span class="op">,</span> <span class="dv">4071139640</span>))</span>
+<span id="cb103-9"><a href="#cb103-9" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> boundary <span class="op">=</span> arkavathy<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb103-10"><a href="#cb103-10" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {</span>
+<span id="cb103-11"><a href="#cb103-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb103-12"><a href="#cb103-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
+<span id="cb103-13"><a href="#cb103-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
+<span id="cb103-14"><a href="#cb103-14" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb103-15"><a href="#cb103-15" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb103-16"><a href="#cb103-16" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb103-17"><a href="#cb103-17" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb103-18"><a href="#cb103-18" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2019-12-31&#39;</span>))</span>
+<span id="cb103-19"><a href="#cb103-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(boundary))</span>
+<span id="cb103-20"><a href="#cb103-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb103-21"><a href="#cb103-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-22"><a href="#cb103-22" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(boundary) </span>
+<span id="cb103-23"><a href="#cb103-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-24"><a href="#cb103-24" aria-hidden="true" tabindex="-1"></a><span class="co">// Display the input composite.</span></span>
+<span id="cb103-25"><a href="#cb103-25" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;image&#39;</span>)<span class="op">;</span></span>
 <span id="cb103-26"><a href="#cb103-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-27"><a href="#cb103-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Add a random column and split the GCPs into training and validation set</span></span>
-<span id="cb103-28"><a href="#cb103-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">randomColumn</span>()</span>
-<span id="cb103-29"><a href="#cb103-29" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> trainingGcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;random&#39;</span><span class="op">,</span> <span class="fl">0.6</span>))<span class="op">;</span></span>
-<span id="cb103-30"><a href="#cb103-30" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> validationGcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">gte</span>(<span class="st">&#39;random&#39;</span><span class="op">,</span> <span class="fl">0.6</span>))<span class="op">;</span></span>
-<span id="cb103-31"><a href="#cb103-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-32"><a href="#cb103-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Overlay the point on the image to get training data.</span></span>
-<span id="cb103-33"><a href="#cb103-33" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> training <span class="op">=</span> composite<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
-<span id="cb103-34"><a href="#cb103-34" aria-hidden="true" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> trainingGcp<span class="op">,</span></span>
-<span id="cb103-35"><a href="#cb103-35" aria-hidden="true" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;landcover&#39;</span>]<span class="op">,</span></span>
-<span id="cb103-36"><a href="#cb103-36" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
-<span id="cb103-37"><a href="#cb103-37" aria-hidden="true" tabindex="-1"></a>  <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">16</span><span class="op">,</span></span>
-<span id="cb103-38"><a href="#cb103-38" aria-hidden="true" tabindex="-1"></a>  <span class="dt">geometries</span><span class="op">:</span><span class="kw">true</span></span>
-<span id="cb103-39"><a href="#cb103-39" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb103-40"><a href="#cb103-40" aria-hidden="true" tabindex="-1"></a><span class="co">// Train a classifier.</span></span>
-<span id="cb103-41"><a href="#cb103-41" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classifier <span class="op">=</span> ee<span class="op">.</span><span class="at">Classifier</span><span class="op">.</span><span class="fu">smileRandomForest</span>(<span class="dv">50</span>)</span>
-<span id="cb103-42"><a href="#cb103-42" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">train</span>({</span>
-<span id="cb103-43"><a href="#cb103-43" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> training<span class="op">,</span>  </span>
-<span id="cb103-44"><a href="#cb103-44" aria-hidden="true" tabindex="-1"></a>  <span class="dt">classProperty</span><span class="op">:</span> <span class="st">&#39;landcover&#39;</span><span class="op">,</span></span>
-<span id="cb103-45"><a href="#cb103-45" aria-hidden="true" tabindex="-1"></a>  <span class="dt">inputProperties</span><span class="op">:</span> composite<span class="op">.</span><span class="fu">bandNames</span>()</span>
-<span id="cb103-46"><a href="#cb103-46" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb103-47"><a href="#cb103-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-48"><a href="#cb103-48" aria-hidden="true" tabindex="-1"></a><span class="co">// Classify the image.</span></span>
-<span id="cb103-49"><a href="#cb103-49" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classified <span class="op">=</span> composite<span class="op">.</span><span class="fu">classify</span>(classifier)<span class="op">;</span></span>
-<span id="cb103-50"><a href="#cb103-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-51"><a href="#cb103-51" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
-<span id="cb103-52"><a href="#cb103-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-53"><a href="#cb103-53" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> test <span class="op">=</span> classified<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
-<span id="cb103-54"><a href="#cb103-54" aria-hidden="true" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> validationGcp<span class="op">,</span></span>
-<span id="cb103-55"><a href="#cb103-55" aria-hidden="true" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;landcover&#39;</span>]<span class="op">,</span></span>
-<span id="cb103-56"><a href="#cb103-56" aria-hidden="true" tabindex="-1"></a>  <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">16</span><span class="op">,</span></span>
-<span id="cb103-57"><a href="#cb103-57" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
-<span id="cb103-58"><a href="#cb103-58" aria-hidden="true" tabindex="-1"></a>  <span class="dt">geometries</span><span class="op">:</span><span class="kw">true</span></span>
-<span id="cb103-59"><a href="#cb103-59" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb103-60"><a href="#cb103-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-61"><a href="#cb103-61" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> testConfusionMatrix <span class="op">=</span> test<span class="op">.</span><span class="fu">errorMatrix</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> <span class="st">&#39;classification&#39;</span>)</span>
-<span id="cb103-62"><a href="#cb103-62" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Confusion Matrix&#39;</span><span class="op">,</span> testConfusionMatrix)<span class="op">;</span></span>
-<span id="cb103-63"><a href="#cb103-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-64"><a href="#cb103-64" aria-hidden="true" tabindex="-1"></a><span class="co">// Let&#39;s apply filters to find misclassified points</span></span>
-<span id="cb103-65"><a href="#cb103-65" aria-hidden="true" tabindex="-1"></a><span class="co">// We can find all points which are labeled landcover=0 (urban) </span></span>
-<span id="cb103-66"><a href="#cb103-66" aria-hidden="true" tabindex="-1"></a><span class="co">// but were not classified correctly</span></span>
-<span id="cb103-67"><a href="#cb103-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-68"><a href="#cb103-68" aria-hidden="true" tabindex="-1"></a><span class="co">// We use ee.Filter.and() function to create a combined filter</span></span>
-<span id="cb103-69"><a href="#cb103-69" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> combinedFilter <span class="op">=</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb103-70"><a href="#cb103-70" aria-hidden="true" tabindex="-1"></a>  ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">neq</span>(<span class="st">&#39;classification&#39;</span><span class="op">,</span> <span class="dv">0</span>))</span>
-<span id="cb103-71"><a href="#cb103-71" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> urbanMisclassified <span class="op">=</span> test<span class="op">.</span><span class="fu">filter</span>(combinedFilter)</span>
-<span id="cb103-72"><a href="#cb103-72" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Urban Misclassified Points&#39;</span><span class="op">,</span> urbanMisclassified)</span>
-<span id="cb103-73"><a href="#cb103-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-74"><a href="#cb103-74" aria-hidden="true" tabindex="-1"></a><span class="co">// We can also apply a filter to select all misclassified points</span></span>
-<span id="cb103-75"><a href="#cb103-75" aria-hidden="true" tabindex="-1"></a><span class="co">// Since we are comparing 2 properties agaist each-other,</span></span>
-<span id="cb103-76"><a href="#cb103-76" aria-hidden="true" tabindex="-1"></a><span class="co">// we need to use a binary filter</span></span>
-<span id="cb103-77"><a href="#cb103-77" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> misClassified <span class="op">=</span> test<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">notEquals</span>({</span>
-<span id="cb103-78"><a href="#cb103-78" aria-hidden="true" tabindex="-1"></a>  <span class="dt">leftField</span><span class="op">:</span><span class="st">&#39;classification&#39;</span><span class="op">,</span> <span class="dt">rightField</span><span class="op">:</span><span class="st">&#39;landcover&#39;</span>}))</span>
-<span id="cb103-79"><a href="#cb103-79" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb103-80"><a href="#cb103-80" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;All Misclassified Points&#39;</span><span class="op">,</span> misClassified)</span>
-<span id="cb103-81"><a href="#cb103-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-82"><a href="#cb103-82" aria-hidden="true" tabindex="-1"></a><span class="co">// Display the misclassified points by styling them</span></span>
-<span id="cb103-83"><a href="#cb103-83" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> landcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>([<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span>])</span>
-<span id="cb103-84"><a href="#cb103-84" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>([<span class="st">&#39;gray&#39;</span><span class="op">,</span><span class="st">&#39;brown&#39;</span><span class="op">,</span><span class="st">&#39;blue&#39;</span><span class="op">,</span><span class="st">&#39;green&#39;</span>])</span>
-<span id="cb103-85"><a href="#cb103-85" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> misclassStyled <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(</span>
-<span id="cb103-86"><a href="#cb103-86" aria-hidden="true" tabindex="-1"></a>  landcover<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(lc){</span>
-<span id="cb103-87"><a href="#cb103-87" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> feature <span class="op">=</span> misClassified<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> lc))</span>
-<span id="cb103-88"><a href="#cb103-88" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> color <span class="op">=</span> palette<span class="op">.</span><span class="fu">get</span>(landcover<span class="op">.</span><span class="fu">indexOf</span>(lc))<span class="op">;</span></span>
-<span id="cb103-89"><a href="#cb103-89" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> markerStyle <span class="op">=</span> {<span class="dt">color</span><span class="op">:</span>color}</span>
-<span id="cb103-90"><a href="#cb103-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> feature<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(point){</span>
-<span id="cb103-91"><a href="#cb103-91" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> point<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;style&#39;</span><span class="op">,</span> markerStyle)</span>
-<span id="cb103-92"><a href="#cb103-92" aria-hidden="true" tabindex="-1"></a>       })</span>
-<span id="cb103-93"><a href="#cb103-93" aria-hidden="true" tabindex="-1"></a>    }))<span class="op">.</span><span class="fu">flatten</span>()<span class="op">;</span></span>
-<span id="cb103-94"><a href="#cb103-94" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb103-95"><a href="#cb103-95" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(misclassStyled<span class="op">.</span><span class="fu">style</span>({<span class="dt">styleProperty</span><span class="op">:</span><span class="st">&quot;style&quot;</span>})<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;Misclassified Points&#39;</span>)</span></code></pre></div>
+<span id="cb103-27"><a href="#cb103-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-28"><a href="#cb103-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Add a random column and split the GCPs into training and validation set</span></span>
+<span id="cb103-29"><a href="#cb103-29" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">randomColumn</span>()</span>
+<span id="cb103-30"><a href="#cb103-30" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> trainingGcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;random&#39;</span><span class="op">,</span> <span class="fl">0.6</span>))<span class="op">;</span></span>
+<span id="cb103-31"><a href="#cb103-31" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> validationGcp <span class="op">=</span> gcp<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">gte</span>(<span class="st">&#39;random&#39;</span><span class="op">,</span> <span class="fl">0.6</span>))<span class="op">;</span></span>
+<span id="cb103-32"><a href="#cb103-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-33"><a href="#cb103-33" aria-hidden="true" tabindex="-1"></a><span class="co">// Overlay the point on the image to get training data.</span></span>
+<span id="cb103-34"><a href="#cb103-34" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> training <span class="op">=</span> composite<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
+<span id="cb103-35"><a href="#cb103-35" aria-hidden="true" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> trainingGcp<span class="op">,</span></span>
+<span id="cb103-36"><a href="#cb103-36" aria-hidden="true" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;landcover&#39;</span>]<span class="op">,</span></span>
+<span id="cb103-37"><a href="#cb103-37" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb103-38"><a href="#cb103-38" aria-hidden="true" tabindex="-1"></a>  <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">16</span><span class="op">,</span></span>
+<span id="cb103-39"><a href="#cb103-39" aria-hidden="true" tabindex="-1"></a>  <span class="dt">geometries</span><span class="op">:</span><span class="kw">true</span></span>
+<span id="cb103-40"><a href="#cb103-40" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb103-41"><a href="#cb103-41" aria-hidden="true" tabindex="-1"></a><span class="co">// Train a classifier.</span></span>
+<span id="cb103-42"><a href="#cb103-42" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classifier <span class="op">=</span> ee<span class="op">.</span><span class="at">Classifier</span><span class="op">.</span><span class="fu">smileRandomForest</span>(<span class="dv">50</span>)</span>
+<span id="cb103-43"><a href="#cb103-43" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">train</span>({</span>
+<span id="cb103-44"><a href="#cb103-44" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> training<span class="op">,</span>  </span>
+<span id="cb103-45"><a href="#cb103-45" aria-hidden="true" tabindex="-1"></a>  <span class="dt">classProperty</span><span class="op">:</span> <span class="st">&#39;landcover&#39;</span><span class="op">,</span></span>
+<span id="cb103-46"><a href="#cb103-46" aria-hidden="true" tabindex="-1"></a>  <span class="dt">inputProperties</span><span class="op">:</span> composite<span class="op">.</span><span class="fu">bandNames</span>()</span>
+<span id="cb103-47"><a href="#cb103-47" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb103-48"><a href="#cb103-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-49"><a href="#cb103-49" aria-hidden="true" tabindex="-1"></a><span class="co">// Classify the image.</span></span>
+<span id="cb103-50"><a href="#cb103-50" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classified <span class="op">=</span> composite<span class="op">.</span><span class="fu">classify</span>(classifier)<span class="op">;</span></span>
+<span id="cb103-51"><a href="#cb103-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-52"><a href="#cb103-52" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
+<span id="cb103-53"><a href="#cb103-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-54"><a href="#cb103-54" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> test <span class="op">=</span> classified<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
+<span id="cb103-55"><a href="#cb103-55" aria-hidden="true" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> validationGcp<span class="op">,</span></span>
+<span id="cb103-56"><a href="#cb103-56" aria-hidden="true" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;landcover&#39;</span>]<span class="op">,</span></span>
+<span id="cb103-57"><a href="#cb103-57" aria-hidden="true" tabindex="-1"></a>  <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">16</span><span class="op">,</span></span>
+<span id="cb103-58"><a href="#cb103-58" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb103-59"><a href="#cb103-59" aria-hidden="true" tabindex="-1"></a>  <span class="dt">geometries</span><span class="op">:</span><span class="kw">true</span></span>
+<span id="cb103-60"><a href="#cb103-60" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb103-61"><a href="#cb103-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-62"><a href="#cb103-62" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> testConfusionMatrix <span class="op">=</span> test<span class="op">.</span><span class="fu">errorMatrix</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> <span class="st">&#39;classification&#39;</span>)</span>
+<span id="cb103-63"><a href="#cb103-63" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Confusion Matrix&#39;</span><span class="op">,</span> testConfusionMatrix)<span class="op">;</span></span>
+<span id="cb103-64"><a href="#cb103-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-65"><a href="#cb103-65" aria-hidden="true" tabindex="-1"></a><span class="co">// Let&#39;s apply filters to find misclassified points</span></span>
+<span id="cb103-66"><a href="#cb103-66" aria-hidden="true" tabindex="-1"></a><span class="co">// We can find all points which are labeled landcover=0 (urban) </span></span>
+<span id="cb103-67"><a href="#cb103-67" aria-hidden="true" tabindex="-1"></a><span class="co">// but were not classified correctly</span></span>
+<span id="cb103-68"><a href="#cb103-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-69"><a href="#cb103-69" aria-hidden="true" tabindex="-1"></a><span class="co">// We use ee.Filter.and() function to create a combined filter</span></span>
+<span id="cb103-70"><a href="#cb103-70" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> combinedFilter <span class="op">=</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">and</span>(</span>
+<span id="cb103-71"><a href="#cb103-71" aria-hidden="true" tabindex="-1"></a>  ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">neq</span>(<span class="st">&#39;classification&#39;</span><span class="op">,</span> <span class="dv">0</span>))</span>
+<span id="cb103-72"><a href="#cb103-72" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> urbanMisclassified <span class="op">=</span> test<span class="op">.</span><span class="fu">filter</span>(combinedFilter)</span>
+<span id="cb103-73"><a href="#cb103-73" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Urban Misclassified Points&#39;</span><span class="op">,</span> urbanMisclassified)</span>
+<span id="cb103-74"><a href="#cb103-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-75"><a href="#cb103-75" aria-hidden="true" tabindex="-1"></a><span class="co">// We can also apply a filter to select all misclassified points</span></span>
+<span id="cb103-76"><a href="#cb103-76" aria-hidden="true" tabindex="-1"></a><span class="co">// Since we are comparing 2 properties agaist each-other,</span></span>
+<span id="cb103-77"><a href="#cb103-77" aria-hidden="true" tabindex="-1"></a><span class="co">// we need to use a binary filter</span></span>
+<span id="cb103-78"><a href="#cb103-78" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> misClassified <span class="op">=</span> test<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">notEquals</span>({</span>
+<span id="cb103-79"><a href="#cb103-79" aria-hidden="true" tabindex="-1"></a>  <span class="dt">leftField</span><span class="op">:</span><span class="st">&#39;classification&#39;</span><span class="op">,</span> <span class="dt">rightField</span><span class="op">:</span><span class="st">&#39;landcover&#39;</span>}))</span>
+<span id="cb103-80"><a href="#cb103-80" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb103-81"><a href="#cb103-81" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;All Misclassified Points&#39;</span><span class="op">,</span> misClassified)</span>
+<span id="cb103-82"><a href="#cb103-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-83"><a href="#cb103-83" aria-hidden="true" tabindex="-1"></a><span class="co">// Display the misclassified points by styling them</span></span>
+<span id="cb103-84"><a href="#cb103-84" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> landcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>([<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span>])</span>
+<span id="cb103-85"><a href="#cb103-85" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>([<span class="st">&#39;gray&#39;</span><span class="op">,</span><span class="st">&#39;brown&#39;</span><span class="op">,</span><span class="st">&#39;blue&#39;</span><span class="op">,</span><span class="st">&#39;green&#39;</span>])</span>
+<span id="cb103-86"><a href="#cb103-86" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> misclassStyled <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(</span>
+<span id="cb103-87"><a href="#cb103-87" aria-hidden="true" tabindex="-1"></a>  landcover<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(lc){</span>
+<span id="cb103-88"><a href="#cb103-88" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> feature <span class="op">=</span> misClassified<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;landcover&#39;</span><span class="op">,</span> lc))</span>
+<span id="cb103-89"><a href="#cb103-89" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> color <span class="op">=</span> palette<span class="op">.</span><span class="fu">get</span>(landcover<span class="op">.</span><span class="fu">indexOf</span>(lc))<span class="op">;</span></span>
+<span id="cb103-90"><a href="#cb103-90" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> markerStyle <span class="op">=</span> {<span class="dt">color</span><span class="op">:</span>color}</span>
+<span id="cb103-91"><a href="#cb103-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> feature<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(point){</span>
+<span id="cb103-92"><a href="#cb103-92" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> point<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;style&#39;</span><span class="op">,</span> markerStyle)</span>
+<span id="cb103-93"><a href="#cb103-93" aria-hidden="true" tabindex="-1"></a>       })</span>
+<span id="cb103-94"><a href="#cb103-94" aria-hidden="true" tabindex="-1"></a>    }))<span class="op">.</span><span class="fu">flatten</span>()<span class="op">;</span></span>
+<span id="cb103-95"><a href="#cb103-95" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb103-96"><a href="#cb103-96" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(misclassStyled<span class="op">.</span><span class="fu">style</span>({<span class="dt">styleProperty</span><span class="op">:</span><span class="st">&quot;style&quot;</span>})<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;Misclassified Points&#39;</span>)</span></code></pre></div>
 <p><a href="https://code.earthengine.google.com/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3ASupplement%2FSupervised_Classification%2FIdentify_Misclassified_Data" target="_blank">Open in Code Editor ↗</a></p>
 </div>
 <div id="image-normalization-and-standardization" class="section level3">
@@ -3984,8 +3985,8 @@ Spectral Signatures for All Training Points by Class
 <p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3ASupplement%2FSupervised_Classification%2FImage_Normalization_and_Standardization" target="_blank">Open in Code Editor ↗</a></p>
 </div>
 </div>
-<div id="time-series-analysis" class="section level2">
-<h2>Time-Series Analysis</h2>
+<div id="time-series-smoothing-and-gap-filling" class="section level2">
+<h2>Time-Series Smoothing and Gap-filling</h2>
 <div id="moving-window-smoothing" class="section level3">
 <h3>Moving Window Smoothing</h3>
 <p>A technique applied to a time series for removal of the fine-grained variation between time steps is known as Smoothing. This example shows how a moving-window smoothing algorithm can be applied in Earth Engine. Using a <a href="https://developers.google.com/earth-engine/guides/joins_save_all">Save-all Join</a>, the collection is joined with itself and all images that fall within the temporal-window are added as a property of each image. Next, a <em>mean</em> reducer is applied on all the images, resulting in the average value of the pixel within the time-frame. The resulting time-series reduces the sharp peaks and valleys - and is more robust against outliers (such as cloudy pixels)</p>
