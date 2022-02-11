@@ -8,11 +8,14 @@ The content has the following course pages
 
 * Spatial Data Visualization and Analytics
 * Advanced QGIS
+* Automating GIS Workflows with QGIS
 * Python Foundation for Spatial Analysis
+* Mapping and Data Visualization with Python
 * Customizing QGIS with Python
 * Mastering GDAL Tools
 * End-to-End Google Earth Engine
-* Automating GIS Workflows with QGIS
+* Google Earth Engine for Water Resources Management
+
 
 ## Updating the content
 
@@ -23,6 +26,11 @@ Most courses are written using pure MarkDown in the corresponding `.Rmd` file. Y
 1. Update the `.ipynb` files in the `code/python_foundation/` directory.
 2. Run `python-foundation-package.sh` to generate `.md` files for each notebook
 
+### Mapping and Data Visualization with Python
+
+1. Update the `.ipynb` files in the `code/python_dataviz/` directory.
+2. Run `python-dataviz-package.sh` to generate `.md` files for each notebook
+
 ### End-to-End Google Earth Engine
 
 The code for the course comes from a Google Earth Engine repository `users/ujavalgandhi/End-to-End-GEE`. 
@@ -30,6 +38,15 @@ The code for the course comes from a Google Earth Engine repository `users/ujava
 1. Clone the `users/ujavalgandhi/End-to-End-GEE` repository to `~/projects` directory.
 2. Update the `.ipynb` files in the `code/end_to_end_gee/` directory.
 3. Run `end-to-end-gee-package.sh` to generate `.md` files from the updated code and notebooks.
+
+### Google Earth Engine for Water Resources Management
+
+The code for the course comes from a Google Earth Engine repository `users/ujavalgandhi/GEE-Water-Resources-Management`. 
+
+1. Clone the `users/ujavalgandhi/GEE-Water-Resources-Management` repository to `~/projects` directory.
+2. Update the `.ipynb` files in the `code/gee_water_resources_management/` directory.
+3. Run `gee-water-resources-management-package.sh` to generate `.md` files from the updated code and notebooks.
+
 
 ### Formatting Guide
 
