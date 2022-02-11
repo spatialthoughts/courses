@@ -426,6 +426,12 @@ $(document).ready(function () {
 <ul>
 <li><a href="#etl-basics">2.1 ETL Basics</a>
 <ul>
+<li><a href="#read-a-csv-data-source">2.1.1 Read a CSV data source</a></li>
+<li><a href="#convert-it-to-point-data-layer">2.1.2 Convert it to point data layer</a></li>
+<li><a href="#assign-it-a-crs">2.1.3 Assign it a CRS</a></li>
+<li><a href="#extract-a-subset">2.1.4 Extract a subset</a></li>
+<li><a href="#change-the-data-type-of-a-column">2.1.5 Change the data type of a column</a></li>
+<li><a href="#rename-the-layer-in-geopackage.">2.1.6 Rename the layer in GeoPackage.</a></li>
 <li><a href="#exercise-4">Exercise 4</a></li>
 </ul></li>
 <li><a href="#merging-vector-files">2.2 Merging Vector Files</a>
@@ -904,7 +910,7 @@ Text File with the List of Images
 <h3>1.4.1 Merging individual bands into RGB composite</h3>
 <p>Let’s create an RGB composite image by combining three 3 different bands - Red, Green and Blue - into a single image. We can use the <code>gdal_merge.py</code> command to merge different images. Here we must use the <code>-separate</code> option which tells the command to place each image in a separate band.</p>
 <p><strong>Windows</strong></p>
-<pre><code>gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
+<pre><code>python %CONDA_PREFIX%\Scripts\gdal_merge.py -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
   RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif ^
   RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif ^
   RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif</code></pre>
@@ -976,7 +982,7 @@ RGB Composite with Exponential Stretch
 <pre><code>gdalinfo -stats RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF</code></pre>
 <p>It is important to set NoData value. As seen from the output above, NoData is set to <strong>-999</strong>.</p>
 <p><strong>Windows</strong></p>
-<pre><code>gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^
+<pre><code>python %CONDA_PREFIX%\Scripts\gdal_calc.py -A RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B5.TIF ^
   -B RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF ^
   --outfile ndvi.tif --calc=&quot;(A-B)/(A+B)&quot; --NoDataValue=-999</code></pre>
 <p><strong>Mac/Linux</strong></p>
@@ -1001,7 +1007,7 @@ NRG Composite
 <p>Landsat-8 satellite produces images at a <strong>30m</strong> spatial resolution in the <em>Red</em>, <em>Green</em>, <em>Blue</em> bands and at a <strong>15m</strong> spatial resolution in the <em>Panchromatic</em> band. We can use the higher spatial resolution of the <em>Panchromatic</em> band to improve the resolution of the other bands, resulting in a sharper image with more details. This process is called <em>Pan-Sharpening</em>.</p>
 <p>GDAL comes with a script <code>gdal_pansharpen.py</code> that implements the <a href="https://gdal.org/drivers/raster/vrt.html#gdal-vrttut-pansharpen">Brovey algorithm</a> to compute the pansharpened output. In the example below we fuse the 15m resolution panchromatic band (B8) with the RGB composite created in the previous step.</p>
 <p><strong>Windows</strong></p>
-<pre><code>gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF ^
+<pre><code>python %CONDA_PREFIX%\Scripts\gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF ^
   rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB</code></pre>
 <p><strong>Mac/Linux</strong></p>
 <pre><code>gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.TIF \
@@ -1173,6 +1179,8 @@ NRG Composite
 <li>Change the data type of a column</li>
 <li>Write the results to a GeoPackage.</li>
 </ol>
+<div id="read-a-csv-data-source" class="section level3">
+<h3>2.1.1 Read a CSV data source</h3>
 <p>Your data package has a CSV file called <code>worldcities.csv</code>. This file contains basic information about major cities in the world along with their coordinates.</p>
 <p>Let’s use the <code>ogrinfo</code> command to inspect the dataset.</p>
 <pre><code>ogrinfo worldcities.csv</code></pre>
@@ -1180,6 +1188,9 @@ NRG Composite
 <p>The program can open and read the file successfully, but it doesn’t show any other info. We can use the <code>-al</code> option to actually read all the lines from the file and combine it with the <code>-so</code> option to print a summary.</p>
 <pre><code>ogrinfo -so -al worldcities.csv</code></pre>
 <p><img src="images/gdal/ogr_csv02.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="convert-it-to-point-data-layer" class="section level3">
+<h3>2.1.2 Convert it to point data layer</h3>
 <p>We now get a summary with the total number of features in the file along with columns and their types. This is a plain CSV file. Let’s turn it into a spatial data layer using the X and Y coordinates supplied in the <code>lng</code> and <code>lat</code> fields. The <code>-oo</code> option allows us to specify format-specific options. The <a href="https://gdal.org/drivers/vector/csv.html#reading-csv-containing-spatial-information">OGR CSV Driver</a> allows specifying a list of column names or a name pattern (such as <code>Lat*</code>) s using the <code>X_POSSIBLE_NAMES</code> and <code>Y_POSSIBLE_NAMES</code> options to specify which columns contain geometry information.</p>
 <pre><code>ogrinfo -so -al worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat</code></pre>
 <p><img src="images/gdal/ogr_csv03.png" width="75%" style="display: block; margin: auto;" /></p>
@@ -1191,6 +1202,9 @@ NRG Composite
 <pre><code>ogr2ogr -f GPKG worldcities.gpkg worldcities.csv \
   -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat </code></pre>
 <p><img src="images/gdal/ogr_csv04.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="assign-it-a-crs" class="section level3">
+<h3>2.1.3 Assign it a CRS</h3>
 <p>We can open the result in a GIS software and it shows the cities layer. While the point layer loads fine, it is missing a CRS. We can use the <code>a_srs</code> option to assign a CRS to the resulting layer.</p>
 <p><strong>Windows</strong></p>
 <pre><code>ogr2ogr -f GPKG worldcities.gpkg worldcities.csv ^
@@ -1199,6 +1213,9 @@ NRG Composite
 <pre><code>ogr2ogr -f GPKG worldcities.gpkg worldcities.csv \
   -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326</code></pre>
 <p><img src="images/gdal/ogr_csv05.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="extract-a-subset" class="section level3">
+<h3>2.1.4 Extract a subset</h3>
 <p>OGR tools allow executing SQL queries against the data source. It supports a subset of the SQL capability that is described in the <a href="https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect">OGR SQL Syntax</a>. A simple way to select a subset of features is using the <code>-where</code> option. This allows you to specify an attribute query to filter the results. Here we modify our command to extract only the cities where the <code>country</code> column has the value <strong>India</strong>.</p>
 <p><strong>Windows</strong></p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
@@ -1209,6 +1226,9 @@ NRG Composite
   -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 \
   -where &quot;country = &#39;India&#39;&quot;</code></pre>
 <p><img src="images/gdal/ogr_csv06.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="change-the-data-type-of-a-column" class="section level3">
+<h3>2.1.5 Change the data type of a column</h3>
 <p>You can also execute any SQL statement on the input data source. This is a very powerful feature that allows you to filter, join, transform, and summarize the input data. We can apply this on our data layer to transform a column type from string to integer. The column <code>population</code> from the input CSV has the type <em>string</em>. Since this field is primarily used to store integer values, we can use the <code>CAST()</code> SQL function to change the type to <em>integer</em>. The <code>SELECT</code> statement also allows us to pick only the relevant fields that will get written to the output.</p>
 <p><strong>Windows</strong></p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
@@ -1221,6 +1241,9 @@ NRG Composite
   -sql &quot;SELECT city, country, CAST(population AS integer) as population \
     from worldcities where country = &#39;India&#39;&quot;</code></pre>
 <p><img src="images/gdal/ogr_csv07.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="rename-the-layer-in-geopackage." class="section level3">
+<h3>2.1.6 Rename the layer in GeoPackage.</h3>
 <p>Lastly, we can rename the name of the output layer using the <code>-nln</code> option.</p>
 <p><strong>Windows</strong></p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
@@ -1234,6 +1257,7 @@ NRG Composite
   from worldcities where country = &#39;India&#39;&quot; -nln mycities</code></pre>
 <p><img src="images/gdal/ogr_csv08.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>This shows the power of OGR command-line tools. In just a single line, we can read, filter, transform and write the results in any output format supported by OGR.</p>
+</div>
 <div id="exercise-4" class="section level3">
 <h3>Exercise 4</h3>
 <p>Write a command using <code>ogr2ogr</code> that performs the following operations.</p>
@@ -1254,16 +1278,19 @@ NRG Composite
 <p>Another useful utility provided by OGR is <a href="https://gdal.org/programs/ogrmerge.html">ogrmerge.py</a>. This command can merge several vector layers into a single data layer. It also has several options to control how the datasets are merged - making it a very handy tool for data processing tasks.</p>
 <p>We will work with several GeoJSON files containing locations of earthquakes. Your data package contains several GEOJSON files in the <code>earthquakes/</code> directory. We will merge these 12 files into a single file. Switch to the directory</p>
 <pre><code>cd earthquakes</code></pre>
-<p>We will create a geopackage file by merging all files in the directory.</p>
-<pre><code>ogrmerge.py -o earthquakes.gpkg *.geojson</code></pre>
-<p>If you get an error running the command, use the alternative syntax specified earlier to specify the full path to <code>ogrmerge.py</code>.</p>
+<p>We will create a geopackage file by merging all files in the directory. Windows users may need to specify the full path to <code>ogrmerge.py</code> script as follows.</p>
 <p><em>Windows</em></p>
 <pre><code>python %CONDA_PREFIX%\Scripts\ogrmerge.py -o earthquakes.gpkg *.geojson</code></pre>
 <p><em>Mac/Linux</em></p>
-<pre><code>python $CONDA_PREFIX/bin/ogrmerge.py -o earthquakes.gpkg *.geojson</code></pre>
+<pre><code>ogrmerge.py -o earthquakes.gpkg *.geojson</code></pre>
 <p><img src="images/gdal/ogrmerge01.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>The result will be a single geopackage containing 12 layers - one for each source file. For most applications, it will be preferable to combine source files into a single layer. We can use the <code>-single</code> option to indicate we want a single layer as the output. We also use the <code>-nln</code> option to specify the name of the merged layer. Since the GeoPackage dataset already exists, we need to specify the <code>-overwrite_ds</code> to overwrite the file with the new content.</p>
-<pre><code>ogrmerge.py -o earthquakes.gpkg *.geojson -single -nln all_earthquakes -overwrite_ds</code></pre>
+<p><em>Windows</em></p>
+<pre><code>python %CONDA_PREFIX%\Scripts\ogrmerge.py -o earthquakes.gpkg *.geojson ^
+  -single -nln all_earthquakes -overwrite_ds</code></pre>
+<p><em>Mac/Linux</em></p>
+<pre><code>ogrmerge.py -o earthquakes.gpkg *.geojson \
+  -single -nln all_earthquakes -overwrite_ds</code></pre>
 <p>Now you will have a single layer named <code>all_earthquakes</code> in the GeoPackage containing all earthquakes recorded during the year.</p>
 <p><img src="images/gdal/ogrmerge02.png" width="75%" style="display: block; margin: auto;" /></p>
 <blockquote>
