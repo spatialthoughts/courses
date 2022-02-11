@@ -39,7 +39,7 @@ plt.show()
 
 
     
-![](python-dataviz/03_creating_maps_files/03_creating_maps_6_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_6_0.png)
     
 
 
@@ -95,7 +95,7 @@ plt.show()
 
 
     
-![](python-dataviz/03_creating_maps_files/03_creating_maps_16_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_16_0.png)
     
 
 
@@ -118,7 +118,7 @@ plt.show()
 
 
     
-![](python-dataviz/03_creating_maps_files/03_creating_maps_18_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_18_0.png)
     
 
 
@@ -138,6 +138,6 @@ plt.show()
 
 
     
-![](python-dataviz/03_creating_maps_files/03_creating_maps_20_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_20_0.png)
     
 

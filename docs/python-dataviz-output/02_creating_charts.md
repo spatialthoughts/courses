@@ -107,7 +107,7 @@ plt.show()
 
 
     
-![](python-dataviz/02_creating_charts_files/02_creating_charts_9_0.png)
+![](python-dataviz-output/02_creating_charts_files/02_creating_charts_9_0.png)
     
 
 
@@ -149,7 +149,7 @@ plt.show()
 
 
     
-![](python-dataviz/02_creating_charts_files/02_creating_charts_12_0.png)
+![](python-dataviz-output/02_creating_charts_files/02_creating_charts_12_0.png)
     
 
 
@@ -474,7 +474,7 @@ plt.show()
 
 
     
-![](python-dataviz/02_creating_charts_files/02_creating_charts_18_0.png)
+![](python-dataviz-output/02_creating_charts_files/02_creating_charts_18_0.png)
     
 
 

@@ -29,7 +29,7 @@ plt.show()
 
 
     
-![](python-dataviz/01_matplotlib_basics_files/01_matplotlib_basics_5_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_5_0.png)
     
 
 
@@ -55,7 +55,7 @@ plt.show()
 
 
     
-![](python-dataviz/01_matplotlib_basics_files/01_matplotlib_basics_9_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_9_0.png)
     
 
 
@@ -97,7 +97,7 @@ plt.show()
 
 
     
-![](python-dataviz/01_matplotlib_basics_files/01_matplotlib_basics_16_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_16_0.png)
     
 
 
@@ -118,7 +118,7 @@ plt.show()
 
 
     
-![](python-dataviz/01_matplotlib_basics_files/01_matplotlib_basics_18_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_18_0.png)
     
 
 
@@ -140,7 +140,7 @@ plt.show()
 
 
     
-![](python-dataviz/01_matplotlib_basics_files/01_matplotlib_basics_21_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_21_0.png)
     
 
 

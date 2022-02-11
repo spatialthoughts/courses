@@ -59,7 +59,7 @@ plt.show()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_8_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_8_0.png)
     
 
 
@@ -78,7 +78,7 @@ plt.show()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_10_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_10_0.png)
     
 
 
@@ -108,7 +108,7 @@ plt.tight_layout()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_14_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_14_0.png)
     
 
 
@@ -120,7 +120,7 @@ fig, axes = plt.subplots(1, 4)
 fig.set_size_inches(15,3)
 plt.tight_layout()
 
-for index, file in enumerate(python-dataviz/all_files):
+for index, file in enumerate(python-dataviz-output/all_files):
     with rasterio.open(file) as dataset:
         band = dataset.read(1)
         transform = dataset.transform
@@ -134,7 +134,7 @@ plt.show()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_16_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_16_0.png)
     
 
 
@@ -164,7 +164,7 @@ plt.show()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_20_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_20_0.png)
     
 
 
@@ -212,7 +212,7 @@ plt.show()
 
 
     
-![](python-dataviz/07_visualizing_rasters_files/07_visualizing_rasters_26_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_26_0.png)
     
 
 

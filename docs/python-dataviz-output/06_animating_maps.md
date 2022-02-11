@@ -45,7 +45,7 @@ plt.show()
 
 
     
-![](python-dataviz/06_animating_maps_files/06_animating_maps_5_0.png)
+![](python-dataviz-output/06_animating_maps_files/06_animating_maps_5_0.png)
     
 
 
@@ -71,7 +71,7 @@ plt.show()
 
 
     
-![](python-dataviz/06_animating_maps_files/06_animating_maps_7_0.png)
+![](python-dataviz-output/06_animating_maps_files/06_animating_maps_7_0.png)
     
 
 
