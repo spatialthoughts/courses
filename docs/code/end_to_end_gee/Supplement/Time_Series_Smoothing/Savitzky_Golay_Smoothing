@@ -12,7 +12,7 @@
 // Step-3: Use Joins to find before/after images
 // Step-4: Apply linear interpolation to fill each image
 // Step-5: Apply Savitzky-Golay filter
-
+// Step-6: Visualize the results
 
 //##############################################################
 // Step-1: Prepare a NDVI time-series
@@ -63,7 +63,7 @@ var withNdvi = filtered.map(addNDVI);
 
 // Select 'ndvi' band
 var ndviCol = withNdvi.select('ndvi')
-
+print('Original Collection', ndviCol)
 //##############################################################
 // Step-2: Create an empty Time-Series with images at n days
 //##############################################################
@@ -157,7 +157,7 @@ var join2Result = join2.apply({
 // as properties
 var filtered = join2Result.filter(ee.Filter.eq('type', 'interpolated'))
 
-// Interpolation function
+// Interpolatinon function
 function interpolateImages(image) {
   var image = ee.Image(image)
 
@@ -191,7 +191,7 @@ print('Interpolated Collection', interpolatedCol)
 
 
 //##############################################################
-// Step-4: Apply Savitzky-Golay filter
+// Step-5: Apply Savitzky-Golay filter
 //##############################################################
 
 
@@ -222,15 +222,20 @@ var smoothed = oeel.ImageCollection.SavatskyGolayFilter(
   distanceFunction,
   order)
 
-// Select the ndvi and d_0_ndvi (smoothed) bands
-var smoothed = smoothed.select(
-  ['ndvi', 'd_0_ndvi'], ['ndvi', 'smoothed'])
+// Select the d_0_ndvi band and rename it
+var smoothed = smoothed.select(['d_0_ndvi'], ['smoothed'])
 
+//##############################################################
+// Step-6: Visualize the results
+//##############################################################
+
+// Chart the time-series at a single location
 var title = 'Savitsky-Golay smoothing' +
   '(order = '+ order + ', window_size = ' + days + ')'
 
+// Plot the original and fitted NDVI time-series
 var chart = ui.Chart.image.series({
-  imageCollection: smoothed,
+  imageCollection: ndviCol.merge(smoothed),
   region: geometry,
   reducer: ee.Reducer.mean(),
   scale: 20
@@ -241,9 +246,36 @@ var chart = ui.Chart.image.series({
       vAxis: {title: 'NDVI'},
       hAxis: {title: '', format: 'YYYY-MMM'},
       series: {
-        0: {color: 'gray', lineDashStyle: [1, 1]}, // Original NDVI
+        0: {color: 'blue', lineWidth: 1, 
+          lineDashStyle: [1, 1], pointSize: 1,
+          }, // Original NDVI
         1: {color: 'red', lineWidth: 2 }, // Smoothed NDVI
       },
 
     })
 print(chart)
+
+// Create an animation to visualize the smoothed collection
+var ndviVis = {min:0, max: 0.7,  palette: [
+    '#fdae61','#fee08b','#d9ef8b',
+    '#a6d96a','#66bd63','#1a9850','#006837']
+  }
+
+var visualizeImage = function(image) {
+  return image.visualize(ndviVis).clip(geometry)
+}
+
+var visCollectionOriginal = ndviCol
+  .map(visualizeImage)
+var visCollectionInterpolated = smoothed
+  .map(visualizeImage)
+  
+var videoArgs = {
+  dimensions: 400,
+  region: geometry,
+  framesPerSecond: 10,
+  crs: 'EPSG:3857',
+};
+
+print('Original NDVI Images', visCollectionOriginal.getVideoThumbURL(videoArgs))
+print('Gap Filled NDVI Images', visCollectionInterpolated.getVideoThumbURL(videoArgs))
