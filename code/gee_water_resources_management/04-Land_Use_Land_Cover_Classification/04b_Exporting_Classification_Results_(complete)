@@ -5,14 +5,12 @@ var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
 
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
-
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
 var rgbVis = {
   min: 0.0,
-  max: 0.3,
+  max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
- 
 function maskCloudAndShadowsSR(image) {
   var cloudProb = image.select('MSK_CLDPRB');
   var snowProb = image.select('MSK_SNWPRB');
@@ -138,3 +136,25 @@ var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy());
 
+
+//************************************************************************** 
+// Exporting Results
+//************************************************************************** 
+
+// Create a Feature with null geometry and the value we want to export.
+// Use .array() to convert Confusion Matrix to an Array so it can be
+// exported in a CSV file
+var fc = ee.FeatureCollection([
+  ee.Feature(null, {
+    'accuracy': testConfusionMatrix.accuracy(),
+    'matrix': testConfusionMatrix.array()
+  })
+  ])
+print(fc)  
+Export.table.toDrive({
+  collection: fc,
+  description: 'Accuracy_Export',
+  folder: 'earthengine',
+  fileNamePrefix: 'accuracy',
+  fileFormat: 'CSV'
+})

@@ -5,14 +5,12 @@ var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
 
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
-
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
 var rgbVis = {
   min: 0.0,
-  max: 0.3,
+  max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
- 
 function maskCloudAndShadowsSR(image) {
   var cloudProb = image.select('MSK_CLDPRB');
   var snowProb = image.select('MSK_SNWPRB');
@@ -120,21 +118,35 @@ var classified = composite.classify(classifier);
 
 Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
 
-//************************************************************************** 
-// Accuracy Assessment
-//************************************************************************** 
+// Exercise 
 
-// Use classification map to assess accuracy using the validation fraction
-// of the overall training set created above.
-var test = classified.sampleRegions({
-  collection: validationGcp,
-  properties: ['landcover'],
+// Use the Export.image.toAsset() function to export the 
+// classified image as a Earth Engine Asset.
+
+// This will allows you to import the classified image in another script
+// without running the whole classification workflow.
+
+// Hint: For images with discrete pixel values, we must set the
+// pyramidingPolicy to 'mode'.
+// The pyramidingPolicy parameter should a dictionary specifying
+// the policy for each band. A simpler way to specify it for all
+// bands is to use {'.default': 'mode'}
+
+
+
+
+// Change the assetId parameter with the path to your asset folder.
+Export.image.toAsset({
+  image: classified,
+  description: 'Classified_Image_Asset_Export',
+  assetId: 'users/ujavalgandhi/classified',
+  region: boundary,
   scale: 10,
-  tileScale: 16
-});
+  maxPixels: 1e10,
+  pyramidingPolicy: {'.default': 'mode'}
+})
+ 
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
-// Printing of confusion matrix may time out. Alternatively, you can export it as CSV
-print('Confusion Matrix', testConfusionMatrix);
-print('Test Accuracy', testConfusionMatrix.accuracy());
+ 
+ 
 
