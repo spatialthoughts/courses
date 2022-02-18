@@ -1,0 +1,72 @@
+var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary")
+var urban = ee.FeatureCollection("users/ujavalgandhi/e2e/urban_gcps")
+var bare = ee.FeatureCollection("users/ujavalgandhi/e2e/bare_gcps")
+var water = ee.FeatureCollection("users/ujavalgandhi/e2e/water_gcps")
+var vegetation = ee.FeatureCollection("users/ujavalgandhi/e2e/vegetation_gcps")
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+
+Map.centerObject(bangalore)
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+
+var filtered = s2
+  .filter(ee.Filter.date('2019-01-01', '2019-01-31'))
+  .filter(ee.Filter.bounds(bangalore))
+  .select('B.*')
+
+  
+var before = filtered.median().clip(bangalore)
+// Display the input composite.
+Map.addLayer(before, rgbVis, 'before');
+
+var training = urban.merge(bare).merge(water).merge(vegetation)
+
+// Overlay the point on the image to get training data.
+var training = before.sampleRegions({
+  collection: training, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: before.bandNames()
+});
+
+// // Classify the image.
+var beforeClassified = before.classify(classifier);
+Map.addLayer(beforeClassified,
+  {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'before_classified');
+
+
+// 2020 Jan
+var after = s2
+  .filter(ee.Filter.date('2020-01-01', '2020-01-31'))
+  .filter(ee.Filter.bounds(bangalore))
+  .select('B.*')
+  .median()
+  .clip(bangalore)
+
+Map.addLayer(after, rgbVis, 'after');
+
+// Classify the image.
+var afterClassified= after.classify(classifier);
+Map.addLayer(afterClassified,
+  {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'after_classified');
+
+// Reclassify from 0-3 to 1-4
+var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
+var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
+
+// Show all changed areas
+var changed = afterClasses.subtract(beforeClasses).neq(0)
+
+// Exercise
+// Show all areas where water became other classes and display the result
+// Hint1: Select class 3 pixels from before image and NOT class 3 pixels from after image
+// Hint2: use the .and() operation to select pixels matching both conditions
