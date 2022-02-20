@@ -3441,7 +3441,7 @@ Launching multiple tasks using the Python API
 <div id="automating-downloads" class="section level2">
 <h2>07. Automating Downloads</h2>
 <p>Another common use of the GEE Python API is to automate data processing and export. You can create a Python script that can be called from a server or launched on a schedule using tools such as <a href="https://medium.com/@roddyjaques/how-to-run-anaconda-programs-with-a-bat-file-5f6dd7675508">Windows Scheduler</a> or <a href="https://donny-son.github.io/posts/cronjob-with-conda/">crontab</a>.</p>
-<p>This script below provides a complete example of automating a download using Google Earth Engine API. It uses the Google Earth Engine API to compute the average soil moisture for the past 1-week over all districts in a state. The result is then downloaded as a JSON file and saved locally.</p>
+<p>This script below provides a complete example of automating a download using Google Earth Engine API. It uses the Google Earth Engine API to compute the average soil moisture for the past 2 weeks over all districts in a state. The result is then downloaded as a JSON file and saved locally.</p>
 <p>To enable this script run on your machine or server, you must complete a one-time authentication. This can be done from a terminal using the <code>earthengine authenticate</code> command. Once you complete the authentication flow, a token is permanently saved on the machine and will be used by the API automatically.</p>
 <div class="sourceCode" id="cb103"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> datetime</span>
 <span id="cb103-2"><a href="#cb103-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span>
@@ -3452,7 +3452,7 @@ Launching multiple tasks using the Python API
 <span id="cb103-7"><a href="#cb103-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb103-8"><a href="#cb103-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Get current date and convert to milliseconds </span></span>
 <span id="cb103-9"><a href="#cb103-9" aria-hidden="true" tabindex="-1"></a>end_date <span class="op">=</span> ee.Date(datetime.datetime.now().timestamp()<span class="op">*</span><span class="dv">1000</span>)</span>
-<span id="cb103-10"><a href="#cb103-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">1</span>, <span class="st">&#39;week&#39;</span>)</span>
+<span id="cb103-10"><a href="#cb103-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">2</span>, <span class="st">&#39;week&#39;</span>)</span>
 <span id="cb103-11"><a href="#cb103-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb103-12"><a href="#cb103-12" aria-hidden="true" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM_dd&#39;</span>)</span>
 <span id="cb103-13"><a href="#cb103-13" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.geojson&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
@@ -3478,21 +3478,22 @@ Launching multiple tasks using the Python API
 <span id="cb103-33"><a href="#cb103-33" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
 <span id="cb103-34"><a href="#cb103-34" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
 <span id="cb103-35"><a href="#cb103-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">10000</span>,</span>
-<span id="cb103-36"><a href="#cb103-36" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb103-37"><a href="#cb103-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-38"><a href="#cb103-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
-<span id="cb103-39"><a href="#cb103-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
-<span id="cb103-40"><a href="#cb103-40" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb103-41"><a href="#cb103-41" aria-hidden="true" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
-<span id="cb103-42"><a href="#cb103-42" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
-<span id="cb103-43"><a href="#cb103-43" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
-<span id="cb103-44"><a href="#cb103-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-45"><a href="#cb103-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the result from the server</span></span>
-<span id="cb103-46"><a href="#cb103-46" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> json.dumps(exportCollection.getInfo())</span>
-<span id="cb103-47"><a href="#cb103-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb103-48"><a href="#cb103-48" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> f:</span>
-<span id="cb103-49"><a href="#cb103-49" aria-hidden="true" tabindex="-1"></a>    f.write(output)</span>
-<span id="cb103-50"><a href="#cb103-50" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
+<span id="cb103-36"><a href="#cb103-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
+<span id="cb103-37"><a href="#cb103-37" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb103-38"><a href="#cb103-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-39"><a href="#cb103-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
+<span id="cb103-40"><a href="#cb103-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
+<span id="cb103-41"><a href="#cb103-41" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb103-42"><a href="#cb103-42" aria-hidden="true" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
+<span id="cb103-43"><a href="#cb103-43" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
+<span id="cb103-44"><a href="#cb103-44" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
+<span id="cb103-45"><a href="#cb103-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-46"><a href="#cb103-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the result from the server</span></span>
+<span id="cb103-47"><a href="#cb103-47" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> json.dumps(exportCollection.getInfo())</span>
+<span id="cb103-48"><a href="#cb103-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-49"><a href="#cb103-49" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb103-50"><a href="#cb103-50" aria-hidden="true" tabindex="-1"></a>    f.write(output)</span>
+<span id="cb103-51"><a href="#cb103-51" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
 <div style="page-break-after: always;"></div>
 </div>
 </div>

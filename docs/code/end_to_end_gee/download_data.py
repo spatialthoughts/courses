@@ -7,7 +7,7 @@ ee.Initialize()
 
 # Get current date and convert to milliseconds 
 end_date = ee.Date(datetime.datetime.now().timestamp()*1000)
-start_date = end_date.advance(-1, 'week')
+start_date = end_date.advance(-2, 'week')
 
 date_string = end_date.format('YYYY_MM_dd')
 filename = 'ssm_{}.geojson'.format(date_string.getInfo())
@@ -33,6 +33,7 @@ stats = mean.reduceRegions(**{
   'collection': karnataka,
   'reducer': ee.Reducer.mean().setOutputs(['meanssm']),
   'scale': 10000,
+  'crs': 'EPSG:32643'
   })
 
 # Select columns to keep and remove geometry to make the result lightweight
