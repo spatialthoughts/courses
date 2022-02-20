@@ -1,0 +1,40 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #d63000 */ee.Geometry.Point([-110.36819718505114, 44.552218156357135]),
+    imageVisParam = {"opacity":1,"bands":["B5","B4","B3"],"min":-2580.0725738675847,"max":8156.444040893157,"gamma":1};
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// slope and intercept citation: Roy, D.P., Kovalskyy, V., Zhang, H.K., Vermote, E.F., Yan, L., Kumar, S.S, Egorov, A., 2016, Characterization of Landsat-7 to Landsat-8 reflective wavelength and normalized difference vegetation index continuity, Remote Sensing of Environment, 185, 57-70.(http://dx.doi.org/10.1016/j.rse.2015.12.024); Table 2 - reduced major axis (RMA) regression coefficients
+// harmonize oli to tm
+var oli2tm = function(oli) {
+  var slopes = ee.Image.constant([0.9785, 0.9542, 0.9825, 1.0073, 1.0171, 0.9949]);
+  var itcp = ee.Image.constant([-0.0095, -0.0016, -0.0022, -0.0021, -0.0030, 0.0029]);
+  var y = oli.select(['B2','B3','B4','B5','B6','B7'],['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
+             .resample('bicubic')
+             .subtract(itcp.multiply(10000)).divide(slopes)
+             .set('system:time_start', oli.get('system:time_start'));
+  return y.toShort();
+};
+
+// harmonize tm and etm+ to oli
+var tm2oli = function(tm) {
+  var slopes = ee.Image.constant([0.9785, 0.9542, 0.9825, 1.0073, 1.0171, 0.9949]);
+  var itcp = ee.Image.constant([-0.0095, -0.0016, -0.0022, -0.0021, -0.0030, 0.0029]);
+   var y = tm.select(['B1','B2','B3','B4','B5','B7'])
+             .resample('bicubic')
+             .multiply(slopes).add(itcp.multiply(10000))
+             .set('system:time_start', tm.get('system:time_start'));
+  return y.toShort();
+};
+
+
+// build a collection (TM in this case)
+var tmCollection =  ee.ImageCollection('LANDSAT/LT05/C01/T1_SR')
+                      .filter(ee.Filter.bounds(geometry))
+                      .filter(ee.Filter.date('2005-06-15', '2005-09-15'));
+
+// harmonize the collection
+var tmCollection2oli = tmCollection.map(tm2oli);
+
+Map.centerObject(geometry, 10)
+// map the two versions of the first image in the collection - use inspector to compare values
+Map.addLayer(ee.Image(tmCollection.first()),imageVisParam,'TM');
+Map.addLayer(ee.Image(tmCollection2oli.first()),imageVisParam,'TM2OLI');
