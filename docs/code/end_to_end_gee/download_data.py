@@ -49,3 +49,4 @@ output = json.dumps(exportCollection.getInfo())
 with open(output_path, 'w') as f:
     f.write(output)
     print('Success: File written at', output_path)
+    

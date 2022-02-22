@@ -1,0 +1,62 @@
+var geometry = ee.Geometry.Polygon([[
+  [75.70357667713435, 12.49723970868507],
+  [75.70357667713435, 12.470171844429931],
+  [75.7528434923199, 12.470171844429931],
+  [75.7528434923199, 12.49723970868507]
+]]);
+Map.centerObject(geometry)
+var s2 = ee.ImageCollection("COPERNICUS/S2")
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+} 
+
+var filtered = s2
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*')
+  
+var dateOfIncident = ee.Date('2018-12-15')
+var before = filtered
+  .filter(ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident))
+  .filter(ee.Filter.calendarRange(12, 12, 'month'))
+  .median()
+var after = filtered.filter(ee.Filter.date(
+  dateOfIncident, dateOfIncident.advance(1, 'month'))).median()
+
+
+Map.addLayer(before, rgbVis, 'Before')
+Map.addLayer(after, rgbVis, 'After')
+
+
+// Calculate Distance
+// Formula at https://www.varsitytutors.com/calculus_3-help/distance-between-vectors
+var magnitude = function(image) {
+  return image.pow(2).reduce(ee.Reducer.sum()).sqrt();
+};
+
+var distance = magnitude(after.subtract(before))
+
+// Calculate Angle
+// https://byjus.com/angle-between-two-vectors-formula/
+var dot = before.multiply(after).reduce(ee.Reducer.sum());
+
+var angle = dot.divide(magnitude(after))
+              .divide(magnitude(before))
+              .acos()
+
+Map.addLayer(distance, {min: 0, max: 1500, palette: ['white', 'red']}, 'spectral distance');
+Map.addLayer(angle, {min: 0, max: 1, palette: ['white', 'purple']}, 'angle');
