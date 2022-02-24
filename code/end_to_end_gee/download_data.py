@@ -1,6 +1,6 @@
 import datetime
 import ee
-import json
+import csv
 import os
 
 ee.Initialize()
@@ -10,7 +10,7 @@ end_date = ee.Date(datetime.datetime.now().timestamp()*1000)
 start_date = end_date.advance(-2, 'week')
 
 date_string = end_date.format('YYYY_MM_dd')
-filename = 'ssm_{}.geojson'.format(date_string.getInfo())
+filename = 'ssm_{}.csv'.format(date_string.getInfo())
 
 # Saving to current directory. You can change the path to appropriate location
 output_path = os.path.join(filename)
@@ -43,10 +43,17 @@ exportCollection = stats.select(**{
     'propertySelectors': columns,
     'retainGeometry': False})
 
-# Get the result from the server
-output = json.dumps(exportCollection.getInfo())
+features = exportCollection.getInfo()['features']
 
-with open(output_path, 'w') as f:
-    f.write(output)
+data = []
+
+for f in features:
+    data.append(f['properties'])
+
+field_names = ['ADM2_NAME', 'meanssm']
+
+with open(output_path, 'w') as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames = field_names)
+    writer.writeheader()
+    writer.writerows(data)
     print('Success: File written at', output_path)
-    
