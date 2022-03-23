@@ -150,15 +150,21 @@ print(points.first().getInfo())
 
 #### Automatic Conversion of Scripts
 
-[geemap](https://github.com/giswqs/geemap) is an open-source PYthon package that comes with many helpful features that help you use Earth Engine effectively in Python. 
+[geemap](https://github.com/giswqs/geemap) is an open-source Python package that comes with many helpful features that help you use Earth Engine effectively in Python. 
 
 It comes with a function that can help you translate your javascript earth engine code to Python automatically.
 
-The automatic conversion works great, but it is not perfect. You may have to tweak the output a bit. An important filter that is missing from the Python API is the `ee.Filter.bounds()`. You can use an alternative `ee.Filter.intersects('.geo', geometry)` instead.
-
 
 ```python
-import geemap
+try:
+    import geemap
+except ModuleNotFoundError:
+    if 'google.colab' in str(get_ipython()):
+        print('geemap not found, installing via pip in Google Colab...')
+        !pip install geemap --quiet
+        import geemap
+    else:
+        print('geemap not found, please install via conda in your environment')
 ```
 
 
@@ -213,8 +219,12 @@ Map.addLayer(withNdvi.select('ndvi'), ndviVis, 'NDVI Composite')
 
 
 ```python
-geemap.js_snippet_to_py(javascript_code)
+lines = geemap.js_snippet_to_py(javascript_code, add_new_cell=False, import_ee=True, import_geemap=True, show_map=True)
+for line in lines:
+    print(line.rstrip())
 ```
+
+The automatic conversion works great, but it is not perfect. You may have to tweak the output a bit. An important filter that is missing from the Python API is the `ee.Filter.bounds()`. You can use an alternative `ee.Filter.intersects('.geo', geometry)` instead. Below is the fixed version.
 
 
 ```python
