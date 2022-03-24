@@ -35,6 +35,9 @@ var filtered = s2
 
 var composite = filtered.median().clip(boundary) 
 
+var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
+Map.centerObject(boundary)
+Map.addLayer(composite, visParams, 'RGB');
 
 var addIndices = function(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
@@ -59,8 +62,7 @@ var slope = ee.Terrain.slope(alos.select('AVE_DSM')).rename('slope');
 
 var composite = composite.addBands(elev).addBands(slope);
 
-var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
-Map.addLayer(composite, visParams, 'RGB');
+
 
 // Normalize the image 
 
@@ -122,12 +124,42 @@ var classifier = ee.Classifier.smileRandomForest(50)
   classProperty: 'landcover',
   inputProperties: composite.bandNames()
 });
+
 //************************************************************************** 
-// Hyperparameter Tuning
+// Feature Importance
 //************************************************************************** 
 
 // Run .explain() to see what the classifer looks like
 print(classifier.explain())
+
+// Calculate variable importance
+var importance = ee.Dictionary(classifier.explain().get('importance'))
+
+// Calculate relative importance
+var sum = importance.values().reduce(ee.Reducer.sum())
+
+var relativeImportance = importance.map(function(key, val) {
+   return (ee.Number(val).multiply(100)).divide(sum)
+  })
+print(relativeImportance)
+
+// Create a FeatureCollection so we can chart it
+var importanceFc = ee.FeatureCollection([
+  ee.Feature(null, relativeImportance)
+])
+
+var chart = ui.Chart.feature.byProperty({
+  features: importanceFc
+}).setOptions({
+      title: 'Feature Importance',
+      vAxis: {title: 'Importance'},
+      hAxis: {title: 'Feature'}
+  })
+print(chart)
+
+//************************************************************************** 
+// Hyperparameter Tuning
+//************************************************************************** 
 
 var test = composite.sampleRegions({
   collection: validationGcp,
@@ -135,6 +167,7 @@ var test = composite.sampleRegions({
   scale: 10,
   tileScale: 16
 });
+
 
 // Tune the numberOfTrees parameter.
 var numTreesList = ee.List.sequence(10, 150, 10);

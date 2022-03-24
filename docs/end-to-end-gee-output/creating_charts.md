@@ -15,6 +15,19 @@ import ee
 
 
 ```python
+try:
+    import geemap
+except ModuleNotFoundError:
+    if 'google.colab' in str(get_ipython()):
+        print('geemap not found, installing via pip in Google Colab...')
+        !pip install geemap --quiet
+        import geemap
+    else:
+        print('geemap not found, please install via conda in your environment')
+```
+
+
+```python
 ee.Authenticate()
 ```
 
@@ -137,8 +150,3 @@ plt.tight_layout()
 ```
 
 ![](https://courses.spatialthoughts.com/images/end_to_end_gee/matplotlib_timeseries_chart.png)
-
-
-```python
-
-```
