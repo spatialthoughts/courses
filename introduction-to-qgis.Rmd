@@ -1109,18 +1109,155 @@ knitr::include_graphics('images/introduction_to_qgis/digitizing_23.png')
 knitr::include_graphics('images/introduction_to_qgis/digitizing_challenge.png')
 ```
 
+# 5. Geoprocessing
+
+Geoprocessing refers to the set of operations used to transform the input data to create a new dataset. In this section, we will learn about some essential vector and raster geoprocessing tools to solve a complex spatial analysis problem. 
+
+In this analysis, we will learn how to download vector data from OpenStreetMap, and use it to determine number of people who live within 1 km of a metro station.
+
+## 5.1 Download and Clean Data
+
+1. Locate the ``bangalore.geojson`` file and drag it to the canvas. This polygon layer represents the city boundary.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_1.png')
+```
+
+2. Now, we will query OpenStreetMap database to get a vector layer of railway stations in the city. We will use the **QuickOSM** plugin for this task. Once installed, go to **Vector &rarr; QuickOSM &rarr; QuickOSM**. OpenStreetMap uses a tagging system to record properties of physical features. The tags and the key/value pairs are described in [OpenStreetMap wiki](https://wiki.openstreetmap.org/wiki/Map_Features). The railway stations are tagged with ``railway=station``. Enter ``railway`` as the *Key*, ``station`` as the *Value* and *Bangalore* as the geographic filter *In*. Expand the *Advanced* section and check only the *Node* and *Points* boxes. Click *Run Query*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_2.png')
+```
+
+3. Once the query finishes, you will see a new layer, ``railway_station_Bangalore`` loaded in the canvas. This includes all railway stations - including the one's operator by Indian Railways and stations under construction. We can apply a filter to select only the operational metro stations. Right-click the layer and select *Filter*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_3.png')
+```
+
+4. In the *Query Builder* enter the following expression and click *OK*.
+
+> Note the use of `IS NOT` operator instead of `!=`. The reason is that these columns contain **NULL** records. *NULL* is not a value that cannot be equal or not equal to another value. The `IS NOT` operator will match all records that do not match the value, including NULL records.
+
+```
+"operator" = 'BMRCL' AND 
+"disused" IS NOT 'yes' AND 
+"disused:railway" IS NOT 'station'
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_4.png')
+```
+
+5. Now, the map will update to show all the operation metro stations in the city. A station is constructed but disconnected from the system as the intermediate station is under construction. So on visual interpretation, let's clean the data a little more. Click on the *Select Features* icon and select the un-connected metro station. Then click on *Open Attribute Table* icon..
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_5.png')
+```
+
+6. In the Attribute table, switch to *Show selected Features*. Then only the particular feature to be deleted will be displayed. Now click on *Toggle editing mode* and then click *Delete selected features*. After deleting, click again *Toggle editing mode* icon and click *Save*. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part1_6.png')
+```
+
+### 5.1.1 Challenge
+
+You will notice that the attribute table for the ``rainway_station_bangalore` layer has many columns. Open the attribute table and delete all the columns except the ``osm_id`` column. Hint: Use the *Delete field* tool from the attribute table.
+
+## 5.2 Reproject and Buffer
+
+1. Now, the map will update to show only the operation metro stations in the city. Next, we need to apply a *Buffer* to these stations to find areas within 1km. But our data comes in the EPSG:4326 WGS84 Geographic Projection - which has degrees as units. To do geoprocessing operations on this layer in projected units such as kilometers, we must first reproject the layer in a suitable projected coordinate reference system (CRS). Go to **Processing &rarr; Toolbox**. Search for and locate the **Vector general &rarr; Reproject layer** algorithm. Double-click to launch it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_1.png')
+```
+
+2. Choose  ``railway_station_Bangalore`` as the *Input layer*. Select ``EPSG:32643 - WGS 84 UTM Zone 43N`` as the *Target CRS*. Name the *Reprojected* layer as ``metro_stations_reprojected.gpkg``.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_2.png')
+```
+
+3. Once the reprojected layer ``metro_stations_reprojected`` is created, search for the **Vector geometry &rarr; Buffer** algorithm and double-click to launch the algorithm.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_3.png')
+```
+
+4. Select ``metro_stations_reprojected`` as the *Input layer*. Enter ``1 kilometer `` as the *Distance*. Check the *Dissolve result* option and name the *Buffered* output layer as ``metro_stations_buffer.gpkg``. Click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_4.png')
+```
+
+5. The layer now has a polygon representing areas within 1km of a metro station. Now that we are done with the geoprocessing operation, let's convert the result back to the original projection to use it along with other layers. Search for **Vector general &rarr; Reproject layer** algorithm and launch it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_5.png')
+```
+
+6. Select ``metro_stations_buffer`` as the *Input layer* and ``EPSG:4326 -WGS 84`` as the *Target CRS*. Name the output as ``metro_station_buffer_reprojected.gpkg``. Click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_6.png')
+```
+
+7. A new layer ``metro_station_buffer_reprojected`` will be added to the canvas representing the area within 1 km of a metro station. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part2_7.png')
+```
+
+### 5.2.1 Challenge
+
+Your data package contains a dataset called ``bangalore_pubs.gpkg`` with the location of all pubs within the city. Select all the pubs from the layer that are within 1km of a metro station. Hint: Use the **Select by Location** tool from the Processing Toolbox.
+
+## 5.3 Calculate Zonal Statistics
+
+We will now use a population grid and overlay the buffered polygon to calculate the number of people who live within the buffer zone.
 
 
+1. Locate the ``ind_ppp_2000_KA.tif`` in the *Browser* panel. Drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part3_1.png')
+```
+
+2. Select the ``ind_ppp_2000_KA`` layer and use the *Identify* tool to explore the pixel values. The resolution of the raster is roughly 100m x 100m. The raster layer has only one band, and the pixel value is the estimated number of people within the 100 sq. m. area.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part3_2.png')
+```
+
+3. We can determine the total population by summing up the values from the pixels that fall within a polygon. This operation is known as *Zonal Statistics*. Search for and locate the **Raster analysis &rarr; Zonal statistics** algorithm. This algorithm would add a new attribute to each layer with the total population contained within the polygons—double-click to launch it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part3_3.png')
+```
 
 
-<!-- "catalog_name" IN ('EMME', 'EOS_SE_Asia', 'HimaTibetMap') -->
+4. Once the algorithm finishes, select the ``metro_station_buffer_reprojected`` as the *Input layer* and in *Zonal Statistics* click ``...`` and save the layer as ``metro_station_buffer_pop.gpkg`` Click *Run*.
 
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part3_4.png')
+```
+
+5. Now, a new layer ``metro_station_buffer_pop`` will be added to the canvas. Make sure that layer is selected and click on the *Identify* tool. Click on the buffer region. The **population_sum** field will contain the population within the buffer polygon.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/introduction_to_qgis/geoprocessing_part3_5.png')
+```
+
+### 5.3.1 Challenge
+
+Repeat the Zonal Statistics operation on the ``bangalore`` layer to calculate the total population of the city. Determine what percentage of the city population lives within 1km of a metro station.
 
 # Data Credits
 
 * OSM Tile Layer, Bangalore Metro Stations : (c) OpenStreetMap contributors
 * Bangalore Ward Maps Provided by [Spatial Data of Municipalities (Maps) Project](http://projects.datameet.org/Municipal_Spatial_Data/) by Data{Meet}.
-* Karnataka Population Grid 2020: Downloaded from [WorldPop](https://www.worldpop.org/geodata/summary?id=6527) - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00645
+* Bangalore Population Grid 2020: Downloaded from [WorldPop](https://www.worldpop.org/geodata/summary?id=6527) - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00645
 
 # License
 
