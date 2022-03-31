@@ -97,12 +97,15 @@ You can cancel tasks as well
 
 
 ```python
-if task_state == 'RUNNING' or task_state == 'READY':
-    task.cancel()
-    print('Task {} canceled'.format(task_id))
-else:
-    print('Task {} state is {}'.format(task_id, task_state))
-
+tasks = ee.batch.Task.list()
+for task in tasks:
+    task_id = task.status()['id']
+    task_state = task.status()['state']
+    if task_state == 'RUNNING' or task_state == 'READY':
+        task.cancel()
+        print('Task {} canceled'.format(task_id))
+    else:
+        print('Task {} state is {}'.format(task_id, task_state))
 ```
 
 ### Exercise
