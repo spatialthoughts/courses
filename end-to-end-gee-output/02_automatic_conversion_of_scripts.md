@@ -136,26 +136,55 @@ Take the Javascript code snippet below and use `geemap` to automatically convert
 ---
 
 ```
-var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
-var s2 = ee.ImageCollection("COPERNICUS/S2");
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
 
-var rgbVis = {
-  min: 0.0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
-var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry))
- 
-var mosaic = filtered.mosaic() 
- 
-var medianComposite = filtered.median();
+var karnataka = admin2.filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
 
-Map.centerObject(geometry, 10)
-Map.addLayer(medianComposite, rgbVis, 'Median Composite')
+var visParams = {color: 'red'}
+Map.centerObject(karnataka)
+Map.addLayer(karnataka, visParams, 'Karnataka Districts')
 ```
 ---
+
+
+```python
+code = """
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+
+var bhutan = admin2.filter(ee.Filter.eq('ADM0_NAME', 'Bhutan'))
+var geometry = bhutan.geometry()
+Map.centerObject(geometry)
+
+var terraclimate = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE")
+var tmax = terraclimate.select('tmmx')
+
+var tmaxScaled = tmax.map(function(image) {
+  return image.multiply(0.1)
+    .copyProperties(image,['system:time_start']);
+})
+
+var filtered = tmaxScaled
+  .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+var janTemp = filtered.mean()
+
+// Display Image 
+var palette = ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']
+Map.addLayer(janTemp, {min: 10, max: 25, palette: palette}, 'April 2016 Max Temperature')
+// Display Admin2
+Map.addLayer(bhutan, {}, 'Admin2')
+
+var withStats = janTemp.reduceRegions({
+  collection: bhutan, 
+  reducer: ee.Reducer.mean(),
+  scale: 5000})
+print(withStats)
+"""
+lines = geemap.js_snippet_to_py(code, add_new_cell=False, import_ee=True, import_geemap=True, show_map=True)
+for line in lines:
+    print(line.rstrip())
+```
 
 
 ```python

@@ -1,4 +1,4 @@
-One of the most commonly asked questions by Earth Engine users is - *How do I download all images in a collection*? The Earth Engine API allows you to export a single image, but not collection of images. The recommended way to do batch exports like this is to use the Python API's `ee.batch.Export` functions and use a Python for-loop to iterate and export each image. The `ee.batch` module also gives you ability to control *Tasks* - allowing you to automate exports.
+One of the most commonly asked questions by Earth Engine users is - *How do I download all images in a collection*? The Earth Engine Python API comes with a `ee.batch` module that allows you to launch batch exports and manage tasks. The recommended way to do batch exports like this is to use the Python API's `ee.batch.Export` functions and use a Python for-loop to iterate and export each image. The `ee.batch` module also gives you ability to control *Tasks* - allowing you to automate exports.
 
 
 ```python
@@ -41,7 +41,7 @@ def maskS2clouds(image):
 filtered = s2 \
   .filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
-  .filter(ee.Filter.intersects('.geo', geometry)) \
+  .filter(ee.Filter.bounds(geometry)) \
   .map(maskS2clouds)
 
 # Write a function that computes NDVI for an image and adds it as a band
@@ -64,23 +64,16 @@ print('Total images: ', len(image_ids))
 
 
 ```python
-palette = [
-  'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
-  '74A901', '66A000', '529400', '3E8601', '207401', '056201',
-  '004C00', '023B01', '012E01', '011D01', '011301'];
-
-ndviVis = {'min':0, 'max':0.5, 'palette': palette }
-
 # Export with 100m resolution for this demo
 for i, image_id in enumerate(image_ids):
   image = ee.Image(withNdvi.filter(ee.Filter.eq('system:index', image_id)).first())
   task = ee.batch.Export.image.toDrive(**{
-    'image': image.select('ndvi').visualize(**ndviVis),
+    'image': image.select('ndvi'),
     'description': 'Image Export {}'.format(i+1),
     'fileNamePrefix': image.id().getInfo(),
     'folder':'earthengine',
     'scale': 100,
-    'region': image.geometry().getInfo()['coordinates'],
+    'region': image.geometry().bounds().getInfo()['coordinates'],
     'maxPixels': 1e10
   })
   task.start()
@@ -110,4 +103,49 @@ if task_state == 'RUNNING' or task_state == 'READY':
 else:
     print('Task {} state is {}'.format(task_id, task_state))
 
+```
+
+### Exercise
+
+The code below uses the TerraClimate data and creates an ImageCollection with 12 monthly images of maximum temperature. It also extract the geometry for Australia from the LSIB collection. Add the code to start an export task for each image in the collection for australia.
+
+- **Hint1**: TerraClimate images have a scale of 4638.3m
+
+
+```python
+import ee
+
+lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')
+australia = lsib.filter(ee.Filter.eq('country_na', 'Australia'))
+geometry = australia.geometry()
+
+terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE')
+tmax = terraclimate.select('tmmx')
+
+def scale(image):
+  return image.multiply(0.1) \
+    .copyProperties(image,['system:time_start'])
+
+tmaxScaled = tmax.map(scale)
+
+filtered = tmaxScaled \
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01')) \
+  .filter(ee.Filter.bounds(geometry))
+
+image_ids = filtered.aggregate_array('system:index').getInfo()
+print('Total images: ', len(image_ids))
+```
+
+Replace the comments with your code.
+
+
+```python
+for i, image_id in enumerate(image_ids):
+    exportImage = ee.Image(filtered.filter(ee.Filter.eq('system:index', image_id)).first())
+    # Clip the image to the region geometry
+    clippedImage = exportImage.clip(geometry)
+    
+    ## Create the export task using ee.batch.Export.image.toDrive()
+    
+    ## Start the task
 ```

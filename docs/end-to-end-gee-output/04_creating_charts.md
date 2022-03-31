@@ -66,7 +66,7 @@ Filter the collection.
 
 
 ```python
-filtered = tmaxScaled.filter(ee.Filter.date('1970-01-01', '2020-01-01')) \
+filtered = tmaxScaled.filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
                      .filter(ee.Filter.intersects('.geo', geometry))
 ```
 
@@ -107,7 +107,8 @@ options = {
     'title': 'Max Monthly Temperature at Bangalore', 
     'legend_location': 'top-right',
     'height': '500px',
-    'ylabel': 'Temperature (C)'
+    'ylabel': 'Temperature (C)',
+    'xlabel': 'Date'
 }
 ```
 
@@ -115,8 +116,6 @@ options = {
 ```python
 chart.feature_byFeature(data, 'month', ['tmmx'], **options)
 ```
-
-![](https://courses.spatialthoughts.com/images/end_to_end_gee/geemap_timeseries_chart.png)
 
 ### Create a chart using Matplotlib
 
@@ -145,8 +144,13 @@ fig.set_size_inches(20,10)
 df.plot(ax=ax,
         title='Max Monthly Temperature at Bangalore',
         x='month',
-        ylabel='Temperature (C)')
+        ylabel='Temperature (C)',
+        kind='bar')
 plt.tight_layout()
 ```
 
-![](https://courses.spatialthoughts.com/images/end_to_end_gee/matplotlib_timeseries_chart.png)
+### Exercise
+
+Customize the above chart by plotting it as a Line Chart in red color.
+
+- **Hint1**: Use `kind='line'` along with a `color` option.
