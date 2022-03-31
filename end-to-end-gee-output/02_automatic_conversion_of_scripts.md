@@ -148,45 +148,5 @@ Map.addLayer(karnataka, visParams, 'Karnataka Districts')
 
 
 ```python
-code = """
-var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
-
-var bhutan = admin2.filter(ee.Filter.eq('ADM0_NAME', 'Bhutan'))
-var geometry = bhutan.geometry()
-Map.centerObject(geometry)
-
-var terraclimate = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE")
-var tmax = terraclimate.select('tmmx')
-
-var tmaxScaled = tmax.map(function(image) {
-  return image.multiply(0.1)
-    .copyProperties(image,['system:time_start']);
-})
-
-var filtered = tmaxScaled
-  .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
-  .filter(ee.Filter.bounds(geometry))
-
-var janTemp = filtered.mean()
-
-// Display Image 
-var palette = ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']
-Map.addLayer(janTemp, {min: 10, max: 25, palette: palette}, 'April 2016 Max Temperature')
-// Display Admin2
-Map.addLayer(bhutan, {}, 'Admin2')
-
-var withStats = janTemp.reduceRegions({
-  collection: bhutan, 
-  reducer: ee.Reducer.mean(),
-  scale: 5000})
-print(withStats)
-"""
-lines = geemap.js_snippet_to_py(code, add_new_cell=False, import_ee=True, import_geemap=True, show_map=True)
-for line in lines:
-    print(line.rstrip())
-```
-
-
-```python
 
 ```
