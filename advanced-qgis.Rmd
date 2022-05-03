@@ -77,7 +77,7 @@ QGIS 2.0 introduced a new concept called Processing Framework. Previously known 
 
 The Processing Framework consists of the following distinct elements that work together.
 
-- **Processing Toolbox**: Contains individual tools (i.e. algorithms) grouped by providers and functionality
+- **Processing Toolbox**: Contains individual tools (i.e. algorithms) grouped by providers and functionality. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers are available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS, and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
 - **Batch Processing Interface**: Allows any processing tool to be executed on multiple layers together.
 - **Graphical Modeler**: This allows the user to define the workflow and chain multiple processing steps together using a drag-and-drop mechanism. 
 - **History Manager**: Records and stores all executions of algorithms to allow users to reproduce the past analysis.
@@ -90,20 +90,15 @@ The Processing Framework consists of the following distinct elements that work t
 
 We will learn about each of these through hands-on exercises in the following sections.
 
-# 1. Processing Toolbox
-
-Processing Toolbox is available from the top-level menu **Processing &rarr; Toolbox**. There are hundreds of algorithms available out of the box. They are organized by *Providers*. The tools created by QGIS developers are available as a **Native** QGIS provider. Processing Framework providers an easy way to integrate tools written by other software and libraries such as GDAL, GRASS, and SAGA. QGIS Plugins can also add new functionality via processing algorithms in the toolbox.  
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/toolbox_algorithms.png')
-```
-
-
-## 1.1 Find the length of national highways in a state
+# 1. Using Processing Toolbox
 
 This exercise aims is to show how a multi-step spatial analysis problem can be solved using a purely processing-based workflow. This exercise also shows the richness of available algorithms in QGIS that can do sophisticated operations that previously needed plugins or were more complex.
 
 We will work with roads extracted from OpenStreetMap for the state of Karnataka in India. The admin boundary for the state and the districts come from DataMeet.
+
+## 1.1 Extract, Transform and Load
+
+We will learn about some useful processing algorithms for basic data processing operations such as Extract, Transform and Load (ETL). Our goal for this section is to read a road layer and a boundary layer from a GeoPackage and calculate what is the total length of the national highways in a state. We will also see how to append the resulting layer to same GeoPackage.
 
 1. Browse to the data directory and expand ``karnataka.gpkg``. Drag and drop the ``karnataka``, ``karnataka_districts`` and ``karnataka_major_roads`` layers to the canvas.
 
@@ -190,35 +185,50 @@ knitr::include_graphics('images/advanced_qgis/karnataka11.png')
 knitr::include_graphics('images/advanced_qgis/karnataka12.png')
 ```
 
-13. The layer ``national_highways`` will be added to the Layers panel. We achieved the goal of the exercise, but we can explore the results a bit better if we can break down the results into a smaller administrative unit. Let's try to calculate the length of national highways for each district in the state.
+13. The layer ``national_highways`` will be added to the Layers panel. 
 
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka13.png')
-```
+We have now finish the first part of this exercise. Your output should match the contents of the `Processing_Tools_Checkpoint1.qgz` file in the `solutions` folder.
 
-14. We have the district information in the ``karnataka_districts`` layer, but not in the ``national_highways`` layer. To add the name of the district to the roads layer, we need to perform a spatial-join. This is done using the **Join attributes by Location** algorithm. Select the ``national_highways`` as the input layer and do a one-to-one join with the ``karnataka_districts`` layer. Select only the **DISTRICT** field to be added to the output.
+
+### 1.1.1 Challenge
+
+Your data folder contains a data layer ``national_highways_v2``. This contains an updated version of the ``national_highways`` layer extracted from the OpenStreetMap database. Use the **Detect Dataset Changes** algorithm from the Processing Toolbox and find out all road segments that have changed in the new version.
+
+Hint: Use only the **osm_id** as the attribute for matching.
+
+## 1.2 Spatial Join and Summary Statistics
+
+We achieved the goal of the exercise, but we can explore the results a bit better if we can break down the results into a smaller administrative unit. Let's try to calculate the length of national highways for each district in the state. This will require us to perform a spatial join and analyze the results using group statistics.
+
+
+1. Add the ``karnataka_districts`` later from the ``karnataka.gpkg`` file. This layer contains the geometry of each district along with its name in the **DISTRICT** field.
+
+
+2. To add the name of the district to the roads layer, we need to perform a spatial-join. This is done using the **Join attributes by Location** algorithm. Search and locate the tool in the toolbox. Double-click to open it. Select the ``national_highways`` as the input layer and do a one-to-one join with the ``karnataka_districts`` layer. Select only the **DISTRICT** field to be added to the output.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/karnataka14.png')
 ```
 
-15. The new layer ``Joined layer`` now has the intersecting district name in the **DISTRICT** field. We can now sum the road lengths and group them for each district. You may recall that in earlier versions of QGIS, you needed a plugin called Group Stats to do this. But now we can do this via the built-in **Statistic by Categories** algorithm. Select the ``Joined layer`` as the *Input vector layer*, **length_km** as the *Field to calculate statistics on*.  Select  the **DISTRICT** field as the *Field(s) with Categories*. Click *Run*.
+3. The new layer ``Joined layer`` now has the intersecting district name in the **DISTRICT** field. We can now sum the road lengths and group them for each district. You may recall that in earlier versions of QGIS, you needed a plugin called Group Stats to do this. But now we can do this via the built-in **Statistic by Categories** algorithm. Select the ``Joined layer`` as the *Input vector layer*, **length_km** as the *Field to calculate statistics on*.  Select  the **DISTRICT** field as the *Field(s) with Categories*. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/karnataka15.png')
 ```
 
-16. The output of the algorithm is a table containing various statistics on the ``length_km`` column for each district. The values in the **Sum** column is the total length of national highways in the district.
+4. Save the layer to the ``karnataka.gpkg`` as a layer named ``national_highways_by_districts``. Click *Run*. 
+
+5. The output of the algorithm is a table containing various statistics on the ``length_km`` column for each district. The values in the **Sum** column is the total length of national highways in the district.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/karnataka16.png')
 ```
 
-Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, reproducible and intuitive workflow.
+Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, reproducible and intuitive workflow. We have now finish the first part of this exercise. Your output should match the contents of the `Processing_Tools_Checkpoint2.qgz` file in the `solutions` folder.
 
-## 1.2 Challenge: Post-process the output
+### 1.2.1 Challenge
 
-Save the ``Statistics by category`` layer to the ``karnataka.gpkg`` as a new layer called ``national_highways_by_district``. Apply the following formatting changes before saving the table:
+Apply the following formatting changes on the ``national_highways_by_districts`` layer and save it to ``karnataka.gpkg`` as a new layer ``national_highways_by_districts_formatted``.
 
 * Rename the **DISTRICT** field to **district**.
 * Rename the **sum** field to **total_length**.
@@ -227,39 +237,11 @@ Save the ``Statistics by category`` layer to the ``karnataka.gpkg`` as a new lay
 
 Hint: You can apply an expression on a field in the *Refactor Fields* algorithm by entering it in the *Source Expression* column.
 
-## 1.3 Learn more
+## Learn more
 
 Did you know there are over 1000 tools in the Processing Toolbox that can help you do many different tasks? Click on the image to see my video where I share a few of my favorites tools.
 
 [![Video](images/advanced_qgis/processing_tour_qgisna.jpg){width="70%"}](https://www.youtube.com/watch?v=Tkqj3VCxrqI){target="_blank"}
-
-## 1.4 Running Processing Algorithms from the Locator Bar
-
-To take your processing experience to the next-level, you can use the built-in **Locator Bar**. At the bottom-left of QGIS main window, there is a universal search bar that can do keyword-search across layers, settings, processing algorithms and more. You can open the locator bar using the keyboard shortcut **Ctrl+K**. 
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/locator1.png')
-```
-
-I find that rather than clicking-around the processing toolbox, you can just use the locator bar to search and open the algorithms. Type **Ctrl+K**, followed by **a** (to restrict search to algorithms), followed by a **space** and **a few characters**. Use the arrow keys to select and press **Enter** to open the algorithm. 
-
-![[View Animated GIF &#8599;](images/advanced_qgis/locator.gif){target="_blank"}](images/advanced_qgis/locator.png)
-
-## 1.5 In-place Editing
-
-Processing algorithms are designed to take inputs and produce outputs. The default behavior is to create a new layer after each operation. This is useful for many workflows, especially in an enterprise setting, where you may not have the ability to edit the source data. If your algorithms are altering the source data, that also means that the workflows cannot be reproduced easily. So you would want a setup where the algorithms read from source data and create modified outputs.
-
-An exception to this workflow is when you are doing data editing. When your workflow involves creating new features or editing them - creating a new layer for every edit is undesirable. A recent [QGIS crowd-funding campaign](https://north-road.com/edit-features-in-place-using-qgis-spatial-operations-campaign/) added the ability for processing algorithms to modify the features in-place and this functionality is available out-of-the-box in QGIS now.
-
-1. Load the **basic_network_analysis** project from the data package. This project contains a street network for Washington DC from DCGISopendata where the arrows display the digitizing direction of the line segments. You can click the **Edit Features In-Place** button in the processing toolbox to use algorithms that support this functionality. Once this mode is activated, processing algorithms will modify the selected features in the chosen layer instead of creating a new layer.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/inplace1.png')
-```
-
-2. Select a line segment and run the **Reverse line direction** algorithm. The algorithm will enable editing on the layer, perform the operation and overwrite the existing feature with a segment in the reverse direction. You will see that the arrow rendering is now in the opposite direction.
-
-![[View Animated GIF &#8599;](images/advanced_qgis/inplace2.gif){target="_blank"}](images/advanced_qgis/inplace2.png)
 
 
 # 2. Batch Processing
@@ -350,11 +332,17 @@ knitr::include_graphics('images/advanced_qgis/batch12.png')
 knitr::include_graphics('images/advanced_qgis/batch13.png')
 ```
 
+Your output should match the contents of the `Batch_Processing_Checkpoint1.qgz` file in the `solutions` folder.
+
+### 2.1.1 Challenge
+
+Reprojected all the clipped layers to a UTM projection. You can reproject all the layers to the CRS **WGS84 / UTM zone 43N EPSG:32643**. Save the reprojected layers to the same GeoPackage ``clipped.gpkg`` 
+
 # 3. Graphical Modeler
 
 GIS Workflows typically involve many steps - with each step generating intermediate output that is used by the next step. If you change the input data or want to tweak a parameter, you will need to run through the entire process again manually. Fortunately, Processing Framework provides a graphical modeler that can help you define your workflow and run it with a single invocation. You can also run these workflows as a batch over a large number of inputs.
 
-## 3.1 Find the hotspots of piracy incidents
+## 3.1 Workflow Automation
 
 National Geospatial-Intelligence Agency’s Maritime Safety Information portal provides a shapefile of all incidents of maritime piracy in the form of Anti-shipping Activity Messages. We can create a density map by aggregating the incident points over a global hexagonal grid.
 
@@ -505,34 +493,16 @@ knitr::include_graphics('images/advanced_qgis/modeler22.png')
 knitr::include_graphics('images/advanced_qgis/modeler23.png')
 ```
 
-24. You will see a new layer ``Aggregated`` loaded as the result of the model. As you explore, you will notice the layer contains an attribute called *NUMPOINTS* containing the number of piracy incidents points contained within that grid feature. Let’s style this layer to display this information better. Click the *Open Layer Styling Panel* button from the *Layers panel.* Select **Graduated** symbology and **NUMPOINTS** as the Column. Click the dropdown next to the Color ramp and select the **Viridis** ramp. Click the dropdown again and select **Invert Color Ramp** to reverse the order of color. The Graduated symbology will divide the values in the selected column into distinct classes and assign a different color to each of the classes. Select **Natural Breaks (Jenks)** as the Mode and click **Classify**.
+24. You will see a new layer ``Aggregated`` loaded as the result of the model. As you explore, you will notice the layer contains an attribute called *NUMPOINTS* containing the number of piracy incidents points contained within that grid feature. 
 
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler24.png')
-```
-
-25. We will use a clever trick to make the visualization better. We can use QGIS variables to set the edges of the hexagon with a slightly darker shade of the fill color. Click on the **Symbol**. Click **Simple Fill**. Click the **Data defined override** button next to **Stroke color** and select **Edit**.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler25.png')
-```
+Your output should match the contents of the `Modeler_Checkpoint1.qgz` file in the `solutions` folder.
 
 
-26. Enter the following expression to set the stroke color to 30% darker than the fill color and click OK. The map rendering will change to a much smoother visualization.
+### 3.1.1 Challenge
 
-```
-darker( @symbol_color , 130)
-```
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler26.png')
-```
+Add a step to extract the grid with the highest piracy incidents. 
 
-
-## 3.2 Challenge: Improve the model
-
-Can you change the model so that instead of entering the grid size in meters, the user can enter the size in kilometers? 
-
-> Hint: The **Create Grid** algorithm expects the size in meters, so you will have to convert the input to meters.
+Hint: You can use the algorithm **Extract by Expression** with the expression ``"NUMPOINTS" = maximum("NUMPOINTS")``. This expression will match only the feature where the value of the NUMPOINTS field is the highest.
 
 
 ## Concept: Spatial Indexing
@@ -550,7 +520,7 @@ For large datasets, this approach helps reduce the processing time significantly
 
 [View the Presentation](https://docs.google.com/presentation/d/1K1lR1JfonxGbmj8rCIVln_WkbWv6-tOYTYHAEJKAiw4/edit?usp=sharing){target="_blank"}
 
-## 3.3 Add Spatial Index to the Model
+## 3.2 Using Spatial Index
 
 QGIS has built-in tools to create and use spatial indexes. Let's see how we can create a spatial index for a layer and use it in our model.
 
@@ -646,12 +616,340 @@ knitr::include_graphics('images/advanced_qgis/Index14.png')
 knitr::include_graphics('images/advanced_qgis/Index15.png')
 ```
 
+Your output should match the contents of the `Modeler_Checkpoint2.qgz` file in the `solutions` folder.
 
-## 3.4 Using Conditions 
+### 3.2.1 Challenge
+
+Can you change the model so that instead of entering the grid size in meters, the user can enter the size in kilometers? 
+
+Hint: The **Create Grid** algorithm expects the size in meters, so you will have to convert the input to meters. Instead of using *Model Input*, use *Pre-calculated Value* to enter an expression.
+
+## 3.3 Enabling Reproducible Workflows
+
+1. To ensure that you are always able to reproduce your results, it is recommended to bundle the model in your project. The modeler interface has a button **Save model in project** that will embed the model in your QGIS project file.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows01.png')
+```
+
+2. Once the model is embedded, Whenever you open the project, the model will be available to the user under the **Project models** in the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows02.png')
+```
+
+3. Now, lets save this project in ``martime_piracy.gpkg`` geopackage. Click **Project &rarr; Save To &rarr; GeoPackage...**. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows03.png')
+```
+
+4. In the *Save project to GeoPackage* dialog box, click ... to browse to martime_piracy geopackage.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows04.png')
+```
+
+5. Enter project name as ``martime_piracy`` and click **OK**. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows05.png')
+```
+
+6. Now in *Browser*, under ``martime_piracy.gpkg`` the project is saved. You now have just 1 GeoPackage file that contains all your input layers, styles, project and models. Sharing this 1 file will enable anyone to reproduce your output using the embedded model and layers.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows06.png')
+```
+
+# 4. 2D Animations
+
+Time is an important component of many spatial datasets. Along with location information, time providers another dimension for analysis and visualization of data. If you are working with a dataset that contains timestamps or have observations recorded at multiple time-steps, you can easily visualize it using the **Temporal Controller** in QGIS 3.14 or above.
+
+## 4.1 Create a GIF showing changes in piracy hotspots over time
+
+We will continue to work with the maritime piracy dataset. First, we will create a heatmap visualization and then animate the heatmap to show how the piracy hot-spots have changed over the past 2 decades.
+
+1. Open the **maritime_piracy** project from the data package. There are thousands of incidents and it is difficult to determine with more piracy. Rather than individual points, a better way to visualize this data is through a heatmap. Select the ``ASAM_events`` layers and click the **Open the layer Styling Panel** button in the Layers panel. Click the **Single symbol** drop-down. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d01.png')
+```
+
+2. In the renderer selection drop-down, select **Heatmap** renderer. Next, select the **Viridis** color ramp from the Color ramp selector. Adjust the Radius value to **5.0.** At the bottom, expand the *Layer Rendering* section and adjust the opacity to **75.0%**. This gives a nice visual effect of the hotspots with the land layer below.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d02.png')
+```
+
+3. Now let’s animate this data to show the yearly map of piracy incidents. Right click on ``ASAM_event`` layer, and choose *Properties.*
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d03.png')
+```
+
+4. In the layer properties dialog box,  select the *Temporal* tab and enable it by clicking the checkbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d04.png')
+```
+
+5. The source data contains an attribute ``dateofocc`` - representing the date on which the incident took place. This is the field that will be used to determine the points that are rendered for each time period. Select **Single Field with Data/Time** in *Configuration* Drop down menu, **dateofocc** as Field. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d05.png')
+```
+
+6. Now a *Clock symbol* will appear next to the layer name. Click on the **Temporal Control Panel** (Clock icon) from Map Navigation Toolbar. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d06.png')
+```
+
+7. Click on the *Animated Temporal Navigation* (play icon).
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d07.png')
+```
+
+8. By default,  the date range is set to the current date. Click *Set to Full Range* button to set the date range from the dataset.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d08.png')
+```
+
+9. Now the data will be set to ``2000-01-02`` to ``2018-01-01``. We want to create an animation showing yearly changes to the hotspot. Set the *Step* to **years**. Click *play* button to start rendering.  
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d09.png')
+```
+
+10. It will be useful to add a label to the animation showing the date of the animation frame being displayed. We can use the *Title Decoration* to place that label. Go to **View &rarr; Decorations &rarr; Title Label Decorations.** Click the checkbox to enable it and then the **Insert an Expression** button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d10.png')
+```
+
+11. Enter the following expression to display the year and click *OK*.
+
+```format_date(@map_start_time, 'yyyy-MM-dd')```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d11.png')
+```
+
+12. Select font size as **25**, set background color as **white.** In placement choose **Bottom Right.** Now click OK.
+
+![[View Animated GIF &#8599;](images/advanced_qgis/2d12.gif){target="_blank"}](images/advanced_qgis/2d12.png)
+
+13. Once the parameters are set accordingly, the date will displayed on the map. To export these as images and convert them as GIF select the **Export Animation** (save icon) in the Temporal controller window.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d13.png')
+```
+
+14. Choose the directory to save the images and select the ``ne_10_land`` for map extent.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d14.png')
+```
+
+15. Once the export finishes, you will see PNG images for each year in the output directory. Now let’s create an animated GIF from these images. There are many options for creating animations from individual image frames. We like ![[ezgif.com](https://ezgif.com/maker)] for an easy and online tool. Visit the site and click Choose Files and select all the .png files. You may want to sort the images by Type to allow easy bulk selection of only .png files. Once selected, click the Upload and make a GIF! button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/2d15.png')
+```
+
+Your output should match the contents of the `2DAnimation_Checkpoint1.qgz` file in the `solutions` folder.
+
+## 4.1.1 Challenge
+
+You will notice that for each frame of the animation, the year is displayed at the top-center. But instead of the full date and time, let’s change it to display the year that the map represents. Also, place the copyright info at the bottom right. The output should look something like below. 
+
+![[View Animated GIF &#8599;](images/advanced_qgis/2d16.gif){target="_blank"}](images/advanced_qgis/2d16.png)
+
+# 5. 3D Animations
+
+Recent versions of QGIS include native support for 3D data. Using this feature, you can easily view, explore and animate 3D elevation data. Note that your computer must have a supported graphics card for this feature to work.
+
+## 5.1 Create a 3D Flythrough
+
+We will work with a 5m Digital Elevation Model (DEM) of Denali peak in Alaska and create an animation showing a 3D visualization of the dataset.
+
+1. Open the **denali** project from the data package. The data contains the raw DEM layer and a hillshade layer created from the DEM.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d01.png')
+```
+
+2. Let's create a colorized hillshade. It is possible to drape an image or colorized DEM to a hillshade layer using QGIS's **Layer Blending Modes**. Click on the **Open the Layer Styling Panel** icon. In the *Layer styling* panel, choose ``denali_hillshade`` and under *Layer Rendering* choose **Multiply** as *Blending mode*. The selected layer will be blended with the bottom layer. This is a great way to visualize your elevation dataset.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d02.png')
+```
+
+3. Let's view this data in 3D. Go to **View &rarr; New 3D Map View**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d03.png')
+```
+
+4. A new map window will open containing the rendered map layers from the main canvas. Click the **Configure** button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d04.png')
+```
+
+5. In the *Terrain* section, select **DEM (Raster Layer)** as the *Type*. Select ``denali_dem`` layer as the *Elevation*. Click OK.
+
+```{r echo=FALSE, fig.align='center', out.width='50%'}
+knitr::include_graphics('images/advanced_qgis/3d05.png')
+```
+
+6. In the 3D view, you can hold the *Shift* key and drag your mouse to tilt the top-down view. You will see the map in 3D. You can also use the controls on the right-hand panel to tilt, zoom and pan the view.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d06.png')
+```
+
+7. Now we will create an animation. Click the *Animations* button in the toolbar. To animate the view, we must define certain *keyframes*. Once you define a specific view for keyframes at different times, the system will try to smoothly animate the views between them. You can use the slider to go to a specific time, use the controls to set a specific view and click the *+* button to add a keyframe. Click the *Play* button to see the animation in action.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d07.png')
+```
+
+8. Once you are satisfied, click the *Export Animation Frames* button. Choose an output directory on your computer and click OK. Individual frames will be rendered and saved as separate files.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/3d08.png')
+```
+
+Your output should match the contents of the `3DAnimation_Checkpoint1.qgz` file in the `solutions` folder.
+
+### 5.1.1 Challenge
+
+As we did in the previous section, you can use a service such as *[ezgif.com](https://ezgif.com/maker)* to create a GIF/Video from these frames. 
+
+![[View Animated GIF &#8599;](images/advanced_qgis/3d.gif){target="_blank"}](images/advanced_qgis/3d09.png)
+
+# 6. Summary Aggregate Expressions
+
+QGIS expression engine has a powerful function called 'summary aggregates' that allows evaluating a feature's geometry and attributes with those of another layer. Expressions can be used for static calculations as well as on-the-fly computations, such as labels, virtual fields, symbology etc. This enables some powerful use cases.
+
+The summary aggregate function operates on all the values from a different layer, returning a single summary value. The syntax of the aggregate function is as follows
+
+```
+aggregate(
+  layer:='layer name or id',
+  aggregate:='aggegate type',
+  expression:='expression to aggregate',
+  filter:='optional filter expression,
+  concatenator:='optional string to use to join values',
+  order_by:='optional expression to order the features'
+  )
+```  
+
+[![View Presentation](images/advanced_qgis/expressions.png){width="400px"}](https://docs.google.com/presentation/d/1F-gH729oWv4zcCecXd9BYoNdqHr7KaahgMPm_4XCgBY/edit?usp=sharing){target="_blank"}
+
+[View the Presentation](https://docs.google.com/presentation/d/1F-gH729oWv4zcCecXd9BYoNdqHr7KaahgMPm_4XCgBY/edit?usp=sharing){target="_blank"}
+
+## 6.1 Count features from another layer
+
+We will work with a land parcels data layer provided by the City of San Francisco. The goal of this exercise is to demonstrate the use of aggregate expression for on-the-fly computation when digitizing new features.
+
+1. Open the **parcels** project from the data package. Select the ``boundary`` layer and click the **Open Field Calculator** button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/aggregate1.png')
+```
+
+2. Add a new field named ``count`` with the following expression. The expression is reading the features from the ``parcels`` layer and giving an aggregate count of the features. You will notice that the the result will be displayed at the bottom of the window.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='count',
+ expression:=fid
+ )
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/aggregate2.png')
+```
+
+3. Now we can apply the same concept in a dynamic calculation. Back in the main QGIS window, select the ``polygons`` layer and right-click it. Select **Properties**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/aggregate3.png')
+```
+
+4. Switch to the **Attributes Form** tab. Select the field ``count`` and choose **Text Edit** as the *Widget Type*. At the **Default Value** field at the bottom, enter the following expression. Note that additional filter value. Here the ``$geometry`` refers to the geometry of the ``parcels`` layer and ``geometry(@parent)`` refers to the geometry of feature from the ``polygons`` layer. Click OK.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='count',
+ expression:=fid,
+ filter:=intersects($geometry, geometry(@parent))
+ )
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/aggregate4.png')
+```
+
+5. Back in QGIS, click the **Toggle Editing** button and draw a polygon using the **Add Polygon Feature** button. Right-click to finish the drawing. As soon as you finish, the count of intersecting features will be calculated by the aggregate expression and displayed in the ``count`` field.
+
+![[View Animated GIF &#8599;](images/advanced_qgis/aggregate5.gif){target="_blank"}](images/advanced_qgis/aggregate5.png)
+
+6. There are many different types of aggregates available. We can use an aggregate called **concatenate** to compute a comma-separated text of all feature ids. Go to the **Attribute Form** properties again and select the ``parcels`` field. Enter the following expression as the **Default Value**.
+
+```
+aggregate(
+ layer:= 'parcels',
+ aggregate:='concatenate',
+ concatenator:=',',
+ expression:=to_string(fid),
+ filter:=intersects($geometry, geometry(@parent))
+ )
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/aggregate6.png')
+```
+
+7. Now when to add a new feature, all the intersecting feature ids will be displayed along with the count.
+
+![[View Animated GIF &#8599;](images/advanced_qgis/aggregate7.gif){target="_blank"}](images/advanced_qgis/aggregate7.png)
+Your output should match the contents of the `Expressions_Checkpoint1.qgz` file in the `solutions` folder.
+
+### 6.1.1 Challenge
+
+Add a new field in the ``parcels`` layer called **neighbors** with the count of neighboring polygons. 
+
+Hint: You can use the `aggregate()` function on the same layer to compare each feature against all other features in the layer. The `@layer` variable contains the name of the current layer, so you can use the below expression
+
+```
+aggregate(
+	layer:=@layer,
+	aggregate:='count',
+	expression:="fid",
+	filter:=touches($geometry, geometry(@parent)))
+```
+
+## 6.2 Learn more
+
+Apart from `aggregate()`, there are other advanced functions such as `array_foreach()` and `eval()` that are very powerful. Learn about them in the following video where I explain some use cases.
+
+[![Video](images/advanced_qgis/advanced_expressions_qgisna.jpg){width="70%"}](https://www.youtube.com/watch?v=IXPCec8vgLA){target="_blank"}
+
+# Supplement
+
+## Using Conditions in Modeler
 
 A key feature introduced in QGIS 3.14 was the ability for models to have a conditional branch. This allows models to check for a condition and execute a different part of the model based on the output of the condition. This is equivalent to *If/Else statements* in a programming language.
 
-Let us develop a *Conditional branch* in the `piracy_hexbin` model. We will add a new check-box input *Use Spatial Index* - that allows the user to specify whether to use a spatial index in the model. We will add a conditional branch that takes the following actions:
+Let us develop a *Conditional branch* in the `piracy_hexbin` model covered in the previous section. We will add a new check-box input *Use Spatial Index* - that allows the user to specify whether to use a spatial index in the model. We will add a conditional branch that takes the following actions:
 
 - If the *Use Spatial Index* option is selected, the model will create a spatial index for the grid layer and use it in the subsequent steps.
 - If the option is not selected, the model will proceed without generating a spatial index.
@@ -801,304 +1099,35 @@ knitr::include_graphics('images/advanced_qgis/conditionalBranch22.png')
 knitr::include_graphics('images/advanced_qgis/conditionalBranch23.png')
 ```
 
+## Running Processing Algorithms from the Locator Bar
 
-## 3.5 Enabling Reproducible Workflows
-
-1. To ensure that you are always able to reproduce your results, it is recommended to bundle the model in your project. The modeler interface has a button **Save model in project** that will embed the model in your QGIS project file.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows01.png')
-```
-
-2. Once the model is embedded, Whenever you open the project, the model will be available to the user under the **Project models** in the Processing Toolbox.
+To take your processing experience to the next-level, you can use the built-in **Locator Bar**. At the bottom-left of QGIS main window, there is a universal search bar that can do keyword-search across layers, settings, processing algorithms and more. You can open the locator bar using the keyboard shortcut **Ctrl+K**. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows02.png')
+knitr::include_graphics('images/advanced_qgis/locator1.png')
 ```
 
-3. Now, lets save this project in ``martime_piracy.gpkg`` geopackage. Click **Project &rarr; Save To &rarr; GeoPackage...**. 
+I find that rather than clicking-around the processing toolbox, you can just use the locator bar to search and open the algorithms. Type **Ctrl+K**, followed by **a** (to restrict search to algorithms), followed by a **space** and **a few characters**. Use the arrow keys to select and press **Enter** to open the algorithm. 
+
+![[View Animated GIF &#8599;](images/advanced_qgis/locator.gif){target="_blank"}](images/advanced_qgis/locator.png)
+
+## In-place Editing
+
+Processing algorithms are designed to take inputs and produce outputs. The default behavior is to create a new layer after each operation. This is useful for many workflows, especially in an enterprise setting, where you may not have the ability to edit the source data. If your algorithms are altering the source data, that also means that the workflows cannot be reproduced easily. So you would want a setup where the algorithms read from source data and create modified outputs.
+
+An exception to this workflow is when you are doing data editing. When your workflow involves creating new features or editing them - creating a new layer for every edit is undesirable. A recent [QGIS crowd-funding campaign](https://north-road.com/edit-features-in-place-using-qgis-spatial-operations-campaign/) added the ability for processing algorithms to modify the features in-place and this functionality is available out-of-the-box in QGIS now.
+
+1. Load the **basic_network_analysis** project from the data package. This project contains a street network for Washington DC from DCGISopendata where the arrows display the digitizing direction of the line segments. You can click the **Edit Features In-Place** button in the processing toolbox to use algorithms that support this functionality. Once this mode is activated, processing algorithms will modify the selected features in the chosen layer instead of creating a new layer.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows03.png')
+knitr::include_graphics('images/advanced_qgis/inplace1.png')
 ```
 
-4. In the *Save project to GeoPackage* dialog box, click ... to browse to martime_piracy geopackage.
+2. Select a line segment and run the **Reverse line direction** algorithm. The algorithm will enable editing on the layer, perform the operation and overwrite the existing feature with a segment in the reverse direction. You will see that the arrow rendering is now in the opposite direction.
 
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows04.png')
-```
+![[View Animated GIF &#8599;](images/advanced_qgis/inplace2.gif){target="_blank"}](images/advanced_qgis/inplace2.png)
 
-5. Enter project name as ``martime_piracy`` and click **OK**. 
 
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows05.png')
-```
-
-6. Now in *Browser*, under ``martime_piracy.gpkg`` the project is saved. You now have just 1 GeoPackage file that contains all your input layers, styles, project and models. Sharing this 1 file will enable anyone to reproduce your output using the embedded model and layers.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows06.png')
-```
-
-# 4. 2D Animations
-
-Time is an important component of many spatial datasets. Along with location information, time providers another dimension for analysis and visualization of data. If you are working with a dataset that contains timestamps or have observations recorded at multiple time-steps, you can easily visualize it using the **Temporal Controller** in QGIS 3.14 or above.
-
-## 4.1 Create a GIF showing changes in piracy hotspots over time
-
-We will continue to work with the maritime piracy dataset. First, we will create a heatmap visualization and then animate the heatmap to show how the piracy hot-spots have changed over the past 2 decades.
-
-1. Open the **maritime_piracy** project from the data package. There are thousands of incidents and it is difficult to determine with more piracy. Rather than individual points, a better way to visualize this data is through a heatmap. Select the ``ASAM_events`` layers and click the **Open the layer Styling Panel** button in the Layers panel. Click the **Single symbol** drop-down. 
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d01.png')
-```
-
-2. In the renderer selection drop-down, select **Heatmap** renderer. Next, select the **Viridis** color ramp from the Color ramp selector. Adjust the Radius value to **5.0.** At the bottom, expand the *Layer Rendering* section and adjust the opacity to **75.0%**. This gives a nice visual effect of the hotspots with the land layer below.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d02.png')
-```
-
-3. Now let’s animate this data to show the yearly map of piracy incidents. Right click on ``ASAM_event`` layer, and choose *Properties.*
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d03.png')
-```
-
-4. In the layer properties dialog box,  select the *Temporal* tab and enable it by clicking the checkbox.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d04.png')
-```
-
-5. The source data contains an attribute ``dateofocc`` - representing the date on which the incident took place. This is the field that will be used to determine the points that are rendered for each time period. Select **Single Field with Data/Time** in *Configuration* Drop down menu, **dateofocc** as Field. Click *OK*.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d05.png')
-```
-
-6. Now a *Clock symbol* will appear next to the layer name. Click on the **Temporal Control Panel** (Clock icon) from Map Navigation Toolbar. 
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d06.png')
-```
-
-7. Click on the *Animated Temporal Navigation* (play icon).
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d07.png')
-```
-
-8. By default,  the date range is set to the current date. Click *Set to Full Range* button to set the date range from the dataset.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d08.png')
-```
-
-9. Now the data will be set to ``2000-01-02`` to ``2018-01-01``. We want to create an animation showing yearly changes to the hotspot. Set the *Step* to **years**. Click *play* button to start rendering.  
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d09.png')
-```
-
-10. It will be useful to add a label to the animation showing the date of the animation frame being displayed. We can use the *Title Decoration* to place that label. Go to **View &rarr; Decorations &rarr; Title Label Decorations.** Click the checkbox to enable it and then the **Insert an Expression** button.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d10.png')
-```
-
-11. Enter the following expression to display the year and click *OK*.
-
-```format_date(@map_start_time, 'yyyy-MM-dd')```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d11.png')
-```
-
-12. Select font size as **25**, set background color as **white.** In placement choose **Bottom Right.** Now click OK.
-
-![[View Animated GIF &#8599;](images/advanced_qgis/2d12.gif){target="_blank"}](images/advanced_qgis/2d12.png)
-
-13. Once the parameters are set accordingly, the date will displayed on the map. To export these as images and convert them as GIF select the **Export Animation** (save icon) in the Temporal controller window.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d13.png')
-```
-
-14. Choose the directory to save the images and select the ``ne_10_land`` for map extent.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d14.png')
-```
-
-15. Once the export finishes, you will see PNG images for each year in the output directory. Now let’s create an animated GIF from these images. There are many options for creating animations from individual image frames. We like ![[ezgif.com](https://ezgif.com/maker)] for an easy and online tool. Visit the site and click Choose Files and select all the .png files. You may want to sort the images by Type to allow easy bulk selection of only .png files. Once selected, click the Upload and make a GIF! button.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/2d15.png')
-```
-
-## 4.2 Challenge: Improve the animation
-
-You will notice that for each frame of the animation, the year is displayed at the top-center. But instead of the full date and time, let’s change it to display the year that the map represents. Also, place the copyright info at the bottom right. The output should look something like below. 
-
-![[View Animated GIF &#8599;](images/advanced_qgis/2d16.gif){target="_blank"}](images/advanced_qgis/2d16.png)
-
-# 5. 3D Animations
-
-Recent versions of QGIS include native support for 3D data. Using this feature, you can easily view, explore and animate 3D elevation data. Note that your computer must have a supported graphics card for this feature to work.
-
-## 5.1 Create a 3D Flythrough
-
-We will work with a 5m Digital Elevation Model (DEM) of Denali peak in Alaska and create an animation showing a 3D visualization of the dataset.
-
-1. Open the **denali** project from the data package. The data contains the raw DEM layer and a hillshade layer created from the DEM.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d01.png')
-```
-
-2. Let's create a colorized hillshade. It is possible to drape an image or colorized DEM to a hillshade layer using QGIS's **Layer Blending Modes**. Click on the **Open the Layer Styling Panel** icon. In the *Layer styling* panel, choose ``denali_hillshade`` and under *Layer Rendering* choose **Multiply** as *Blending mode*. The selected layer will be blended with the bottom layer. This is a great way to visualize your elevation dataset.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d02.png')
-```
-
-3. Let's view this data in 3D. Go to **View &rarr; New 3D Map View**.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d03.png')
-```
-
-4. A new map window will open containing the rendered map layers from the main canvas. Click the **Configure** button.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d04.png')
-```
-
-5. In the *Terrain* section, select **DEM (Raster Layer)** as the *Type*. Select ``denali_dem`` layer as the *Elevation*. Click OK.
-
-```{r echo=FALSE, fig.align='center', out.width='50%'}
-knitr::include_graphics('images/advanced_qgis/3d05.png')
-```
-
-6. In the 3D view, you can hold the *Shift* key and drag your mouse to tilt the top-down view. You will see the map in 3D. You can also use the controls on the right-hand panel to tilt, zoom and pan the view.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d06.png')
-```
-
-7. Now we will create an animation. Click the *Animations* button in the toolbar. To animate the view, we must define certain *keyframes*. Once you define a specific view for keyframes at different times, the system will try to smoothly animate the views between them. You can use the slider to go to a specific time, use the controls to set a specific view and click the *+* button to add a keyframe. Click the *Play* button to see the animation in action.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d07.png')
-```
-
-8. Once you are satisfied, click the *Export Animation Frames* button. Choose an output directory on your computer and click OK. Individual frames will be rendered and saved as separate files.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3d08.png')
-```
-
-9. As we did in the previous section, you can use a service such as *[ezgif.com](https://ezgif.com/maker)* to create a GIF/Video from these frames. 
-
-![[View Animated GIF &#8599;](images/advanced_qgis/3d.gif){target="_blank"}](images/advanced_qgis/3d09.png)
-
-# 6. Summary Aggregate Expressions
-
-QGIS expression engine has a powerful function called 'summary aggregates' that allows evaluating a feature's geometry and attributes with those of another layer. Expressions can be used for static calculations as well as on-the-fly computations, such as labels, virtual fields, symbology etc. This enables some powerful use cases.
-
-The summary aggregate function operates on all the values from a different layer, returning a single summary value. The syntax of the aggregate function is as follows
-
-```
-aggregate(
-  layer:='layer name or id',
-  aggregate:='aggegate type',
-  expression:='expression to aggregate',
-  filter:='optional filter expression,
-  concatenator:='optional string to use to join values',
-  order_by:='optional expression to order the features'
-  )
-```  
-
-[![View Presentation](images/advanced_qgis/expressions.png){width="400px"}](https://docs.google.com/presentation/d/1F-gH729oWv4zcCecXd9BYoNdqHr7KaahgMPm_4XCgBY/edit?usp=sharing){target="_blank"}
-
-[View the Presentation](https://docs.google.com/presentation/d/1F-gH729oWv4zcCecXd9BYoNdqHr7KaahgMPm_4XCgBY/edit?usp=sharing){target="_blank"}
-
-## 6.1 Count features from another layer
-
-We will work with a land parcels data layer provided by the City of San Francisco. The goal of this exercise is to demonstrate the use of aggregate expression for on-the-fly computation when digitizing new features.
-
-1. Open the **parcels** project from the data package. Select the ``boundary`` layer and click the **Open Field Calculator** button.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/aggregate1.png')
-```
-
-2. Add a new field named ``count`` with the following expression. The expression is reading the features from the ``parcels`` layer and giving an aggregate count of the features. You will notice that the the result will be displayed at the bottom of the window.
-
-```
-aggregate(
- layer:= 'parcels',
- aggregate:='count',
- expression:=fid
- )
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/aggregate2.png')
-```
-
-3. Now we can apply the same concept in a dynamic calculation. Back in the main QGIS window, select the ``polygons`` layer and right-click it. Select **Properties**.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/aggregate3.png')
-```
-
-4. Switch to the **Attributes Form** tab. Select the field ``count`` and choose **Text Edit** as the *Widget Type*. At the **Default Value** field at the bottom, enter the following expression. Note that additional filter value. Here the ``$geometry`` refers to the geometry of the ``parcels`` layer and ``geometry(@parent)`` refers to the geometry of feature from the ``polygons`` layer. Click OK.
-
-```
-aggregate(
- layer:= 'parcels',
- aggregate:='count',
- expression:=fid,
- filter:=intersects($geometry, geometry(@parent))
- )
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/aggregate4.png')
-```
-
-5. Back in QGIS, click the **Toggle Editing** button and draw a polygon using the **Add Polygon Feature** button. Right-click to finish the drawing. As soon as you finish, the count of intersecting features will be calculated by the aggregate expression and displayed in the ``count`` field.
-
-![[View Animated GIF &#8599;](images/advanced_qgis/aggregate5.gif){target="_blank"}](images/advanced_qgis/aggregate5.png)
-
-6. There are many different types of aggregates available. We can use an aggregate called **concatenate** to compute a comma-separated text of all feature ids. Go to the **Attribute Form** properties again and select the ``parcels`` field. Enter the following expression as the **Default Value**.
-
-```
-aggregate(
- layer:= 'parcels',
- aggregate:='concatenate',
- concatenator:=',',
- expression:=to_string(fid),
- filter:=intersects($geometry, geometry(@parent))
- )
-```
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/aggregate6.png')
-```
-
-7. Now when to add a new feature, all the intersecting feature ids will be displayed along with the count.
-
-![[View Animated GIF &#8599;](images/advanced_qgis/aggregate7.gif){target="_blank"}](images/advanced_qgis/aggregate7.png)
-
-## 6.2 Learn more
-
-Apart from `aggregate()`, there are other advanced functions such as `array_foreach()` and `eval()` that are very powerful. Learn about them in the following video where I explain some use cases.
-
-[![Video](images/advanced_qgis/advanced_expressions_qgisna.jpg){width="70%"}](https://www.youtube.com/watch?v=IXPCec8vgLA){target="_blank"}
 
 # Data Credits
 * OpenStreetMap (osm) data layers: Data/Maps Copyright 2019 Geofabrik GmbH and OpenStreetMap Contributors. [OSM India free extract](https://download.geofabrik.de/asia/india.html) downloaded from Geofabrik.
