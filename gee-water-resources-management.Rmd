@@ -41,6 +41,14 @@ knitr::include_graphics('images/spatial_thoughts_logo.png')
 
 GIS and Remote Sensing plays a critical role in the management of water resources. Many practitioners in this field are constrained by the availability of tools and computing resources to use these techniques effectively. Recent advances in cloud computing technology have given rise to platforms such as Google Earth Engine, which provide free access to a large pool of computational resources and datasets. The course is designed for researchers in the water sector, academicians, water managers, and stakeholders with basic knowledge of Remote Sensing. It will enable them to leverage this platform for water resource management applications.
 
+You will learn Google Earth Engine programming by building the following 5 complete applications:
+
+1. Surface Water Mapping
+2. Precipitation Time Series Analysis
+3. Land Use Land Cover Classification
+4. Flood Mapping
+5. Drought Monitoring
+
 [![View Presentation](images/gee_water_resources_management/course_overview.png){width="400px"}](https://docs.google.com/presentation/d/1-PqksKb2QB8YJTQic5M80ZAsKh1Ld6OxOoO6BG77Uhg/edit?usp=sharing){target="_blank"}
 
 [View the Presentation &#8599;](https://docs.google.com/presentation/d/1-PqksKb2QB8YJTQic5M80ZAsKh1Ld6OxOoO6BG77Uhg/edit?usp=sharing){target="_blank"}
@@ -84,7 +92,7 @@ knitr::include_graphics('images/gee_water_resources_management/repository.png')
 
 # Module 1: Google Earth Engine Fundamentals
 
-In Module 1, you will gain the essential skills to find datasets, filter them to your region, clip them to your boundary, calculate remote sensing indices, extract water-bodies using binary thresholding, and export raster data.
+In Module 1, you will gain the essential skills to find datasets, filter them to your region, clip them to your boundary, calculate remote sensing indices, extract water-bodies using thresholding techniques and export raster data.
 
 ## 01. Hello World
 
@@ -213,10 +221,9 @@ knitr::include_graphics('images/gee_water_resources_management/mosaic_median.png
 
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F04c_Mosaics_and_Composites_(exercise)){target="_blank"}
 
-## 05. Feature Collection
+## 05. Feature Collections
 
-
-Feature Collections are similar to Image Collections - but they contain *Features*, not images. They are equivalent to Vector Layers in a GIS. We can load, filter and display Feature Collections using similar techniques that we have learned so far. 
+Feature Collections are similar to Image Collections - but they contain *Features*, not images. They are equivalent to a Vector Layers in a GIS. We can load, filter and display Feature Collections using similar techniques that we have learned so far. 
 
 Search for *GAUL Second Level Administrative Boundaries* and load the collection. This is a global collection that contains all Admin2 boundaries. We can apply a filter using the `ADM1_NAME` property to get all Admin2 boundaries (i.e. Districts) from a state.
 
@@ -244,7 +251,7 @@ knitr::include_graphics('images/gee_water_resources_management/feature_collectio
 
 It is often desirable to clip the images to your area of interest. You can use the `clip()` function to mask an image using geometry.
 
-> While in Desktop softwares, clipping is used to remove the unnecessary portion of a large image to save computation time, but in the Earth Engine, clipping can <span style="color:red">increase the computation time.</span> As described in the [Earth Engine Coding Best Practices](https://developers.google.com/earth-engine/guides/best_practices?hl=en#if-you-dont-need-to-clip,-dont-use-clip) guide, avoid clipping or do it at the very end of your process.
+> While in Desktop softwares, clipping is used to remove the unnecessary portion of a large image to save computation time, but in the Earth Engine, clipping can *increase* the computation time. As described in the [Earth Engine Coding Best Practices](https://developers.google.com/earth-engine/guides/best_practices?hl=en#if-you-dont-need-to-clip,-dont-use-clip) guide, avoid clipping or do it at the very end of your process.
 
 
 ```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Full Image vs. Clipped Image'}
@@ -268,10 +275,9 @@ knitr::include_graphics('images/gee_water_resources_management/clipping.png')
 
 ## 07. Calculating Indices
 
-Spectral Indices are central to many aspects of remote sensing. For almost all research/work, you will need to compute a pixel-wise ratio of 2 or more bands. The most commonly used formula for calculating an index is computing the *Normalized Difference* between 2 bands. Earth Engine provides a helper function `normalizedDifference()` to help calculate normalized indices, such as Modified Normalized Difference Water Index (MNDWI). 
+Spectral Indices are central to many aspects of remote sensing. For almost all research/work, you will need to compute one spectral indices. The most commonly used formula for calculating an index is computing the *Normalized Difference* between 2 bands. Earth Engine provides a helper function `normalizedDifference()` to help calculate normalized indices, such as Normalized Difference Vegetation Index (NDVI) or Modified Normalized Difference Water Index (MNDWI). 
 
-For more complex formulae such as Automated Water Extraction Index (AWEI), you can use the `expression()` function to describe the calculation. AWEI is a moden technique to do surface water mapping with high accuracy. [Learn more about AWEI](https://www.sciencedirect.com/science/article/abs/pii/S0034425713002873)
-
+Some indices - such as the Automated Water Extraction Index (AWEI) - require calculation using a more complex formula.In such cases, you can use the `expression()` function which allow you to to construct formula with common arithmatic operators. The script below shows how to implement common water-related indices in Earth Engine. Note that the AWEI formula expects the pixel values to be reflectances, so we need to apply a scaling factor of 0.0001 to convert the Sentinel-2 band values to reflectances.
 
 ```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='RGB, MNDWI, NDVI and AWEI images'}
 knitr::include_graphics('images/gee_water_resources_management/indices.png')
@@ -281,19 +287,21 @@ knitr::include_graphics('images/gee_water_resources_management/indices.png')
 ```
 [Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F07b_Calculating_Indices_(complete)){target="_blank"}
 
-
-
 ### Exercise
 
-```{js eval=FALSE, code=readLines('code/gee_water_resources_management/01-Earth_Engine_Basics/07c_Calculating_Indices_(exercise)')}
-```
+There is another version of AWEI called AWEIsh. This index is useful where there are mountain or building shadows. This works best where there are shadows but no bright reflective surfaces (snow, roof). The expression for AWEI (sh) is as follows
+
+```AWEI (sh) = BLUE + 2.5*GREEN - 1.5*(NIR + SWIR1) - 0.25*SWIR2```
+
+We have implemented both versions of AWEI in the script. Add them to the map and visualize both of them.
+
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F07c_Calculating_Indices_(exercise)){target="_blank"}
 
 ## 08. Computation on Images
 
-A standard method to extract information from an image is to threshold the image. We can write conditions for thresholding. The result will be a binary image with pixel values 1 or 0. For all pixel matching, the condition value will be 1, and for other pixels where the condition fails value will be 0. The conditions can be written using the *logical operators* like greater than `.gt()`, lesser than `.lt()`, equal to `.eq()`, greater than or equal to `.gte()`, etc. We can also combine multiple layers to create a condition using the *boolean operators* like AND `.and()`, OR `.or()` functions.  
+Inspecting the MNDWI or AWEI index images, you will see that water pixels have a higher value than other pixels. If we wanted to extract those pixels, we can apply a threshold value to select all pixels above a certain value. The result will be a binary image with pixel values 1 or 0. For all the pixels that matched the condition, the resulting value will be 1, and for other pixels it will be 0. The conditions can be written using the *logical operators* like greater than `.gt()`, lesser than `.lt()`, equal to `.eq()`, greater than or equal to `.gte()`, etc. We can also combine multiple layers to create a condition using the *boolean operators* like AND `.and()`, OR `.or()` functions. The script below shows how to implement static thresholding in Earth Engine.
 
-```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='RGB and Thresholded images'}
+```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Extracting Waterbodies using a Simple Threshold'}
 knitr::include_graphics('images/gee_water_resources_management/threshold.png')
 ```
 
@@ -303,6 +311,13 @@ knitr::include_graphics('images/gee_water_resources_management/threshold.png')
 
 ### Exercise
 
+Replace the selected region with the region of your choice and and adjust the MNDWI thresholds to extract the waterbodies.
+
+Try different thresholds and add images to the map to compare
+
+- Hint: Try negative thresholds -0.1 and -0.2
+- Hint: Try positive thresholds 0.1 and 0.2
+
 ```{js eval=FALSE, code=readLines('code/gee_water_resources_management/01-Earth_Engine_Basics/08c_Computation_on_Images_(exercise)')}
 ```
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F08c_Computation_on_Images_(exercise)){target="_blank"}
@@ -311,7 +326,7 @@ knitr::include_graphics('images/gee_water_resources_management/threshold.png')
 
 Earth Engine allows for exporting both vector and raster data to be used in an external program. Vector data can be exported as a `CSV` or a `Shapefile`, while Rasters can be exported as `GeoTIFF` files. We will now export the Sentinel-2 Composite as a GeoTIFF file.
 
-During the export, we can export either a raw image or visualized image. The raw image will retain the original reflectance value of each pixel. The visualized image will generate RGB or grayscale visualization of the image. The image will look like it is in the earth engine map view, but the band reflectance information will be lost. The visualized image should not use it for analysis purposes. 
+During the export, we can export either a raw image or visualized image. The raw image will retain the original pixel values and is ideal if the image needs to be used for further analysis. The visualized image will generate an RGB visualization of the image. The visualized image will look exactly like you see it in Earth Engine with the visualization parameters, but original pixel values will be lost. The visualized image should not use it for analysis purposes. 
 
 > Tip: Code Editor supports autocompletion of API functions using the combination *Ctrl+Space*. Type a few characters of a function and press *Ctrl+Space* to see autocomplete suggestions. You can also use the same key combination to fill all parameters of the function automatically.
 
@@ -325,7 +340,7 @@ Once you run this script, the *Tasks* tab will be highlighted. Switch to the tab
 knitr::include_graphics('images/gee_water_resources_management/export_task.png')
 ```
 
-Once the Export finishes, a GeoTiff file for each export task will be added to your Google Drive in the specified folder. You can download them and use it in a GIS software.
+Once the Export finishes, a GeoTiff file for each export task will be added to your Google Drive in the specified folder. You can download them and use it any program that reads GeoTiff files.
 
 ```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Visualized vs Raw'}
 knitr::include_graphics('images/gee_water_resources_management/export_image.png')
@@ -333,10 +348,8 @@ knitr::include_graphics('images/gee_water_resources_management/export_image.png'
 
 ### Exercise
 
-```{js eval=FALSE}
-// Export the waterMndwi image to your drive 
+Export the ```waterMndwi``` image to your drive.
 
-```
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F09c_Export_(exercise)){target="_blank"}
 
 
@@ -724,7 +737,7 @@ The trend analysis is done for a particular season. Change the filter dates to c
 
 
 
-# Module 4: Land Use Land CoverClassification
+# Module 4: Land Use Land Cover Classification
 
 ## Introduction to Machine Learning and Supervised Classification
 
@@ -1447,10 +1460,6 @@ The code (scripts, Jupyter notebooks) is licensed under the MIT License. For a c
 Kindly give appropriate credit to the original author as below:
 
 Copyright &copy; 2021 Ujaval Gandhi [www.spatialthoughts.com](https://spatialthoughts.com)
-
-If you would like to white-label these materials as part of a commercial offering, you can purchase a *Trainer License* for a small fee. 
-
-Please [contact us](https://spatialthoughts.com/contact/) for pricing and terms.
 
 
 # Citing and Referencing

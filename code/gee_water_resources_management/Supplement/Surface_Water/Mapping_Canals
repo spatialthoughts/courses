@@ -1,0 +1,61 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[72.40688960505607, 23.253796352237057],
+          [72.40688960505607, 23.13450945634788],
+          [72.60739009333732, 23.13450945634788],
+          [72.60739009333732, 23.253796352237057]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Detecting Canals (Work-in-Progress)
+
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
+
+function maskCloudAndShadowsSR(image) {
+  var cloudProb = image.select('MSK_CLDPRB');
+  var snowProb = image.select('MSK_SNWPRB');
+  var cloud = cloudProb.lt(10);
+  var scl = image.select('SCL'); 
+  var shadow = scl.eq(3); // 3 = cloud shadow
+  var cirrus = scl.eq(10); // 10 = cirrus
+  // Cloud probability less than 10% or cloud shadow classification
+  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+  return image.updateMask(mask);
+}
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskCloudAndShadowsSR);
+  
+var image = filtered.median(); 
+
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']}
+
+//Map.centerObject(geometry)
+Map.addLayer(image.clip(geometry), rgbVis, 'Image', false);
+Map.addLayer(mndwi.clip(geometry), ndwiVis, 'mndwi', false)
+
+
+var canny = ee.Algorithms.CannyEdgeDetector({
+  image: mndwi, threshold: 0.7, sigma:0.5
+});
+Map.addLayer(canny.clip(geometry), {}, 'Edges', false)
+
+var edges = canny.gt(0);
+
+var canals = edges//.updateMask(mask);
+Map.centerObject(geometry)
+Map.addLayer(canals.selfMask(), {palette: ['blue']}, 'Canals')

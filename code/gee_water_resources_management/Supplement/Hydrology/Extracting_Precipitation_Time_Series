@@ -1,0 +1,48 @@
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY');
+var year = 2019;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var dateFilter = ee.Filter.date(startDate, endDate);
+var yearFiltered = chirps.filter(dateFilter);
+
+print(yearFiltered)
+
+// Convert the collection to a stacked image
+// This converts each image to a band
+var stackedImage = yearFiltered.toBands();
+print(stackedImage)
+
+// Select a region
+// If you want your own region, upload a shapefile
+// and use the resulting asset instead
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry();
+
+// We want to extract a time-series at each pixel
+
+// Add lat and lon bands
+// This will give us the lat and lon of each pixel
+var imageWithLonLat = stackedImage.addBands(ee.Image.pixelLonLat())
+// Use sample() to extract values at each pixel
+// Use native projection and resolution of CHIRPS
+var projection = ee.Image(chirps.first()).projection();
+var scale = projection.nominalScale();
+var extracted = imageWithLonLat.sample({
+  region: geometry,
+  scale: scale,
+  projection: projection,
+  geometries: true});
+
+Map.centerObject(geometry)
+Map.addLayer(extracted, {color: 'red'}, 'Extracted Time-Series');
+
+print('Time Series', extracted)
+// Export the results as CSV
+Export.table.toDrive({
+  collection: extracted,
+  description: 'Precipitation_Time_Series_Export',
+  folder: 'earthengine',
+  fileNamePrefix: 'time_series',
+  fileFormat: 'CSV'})
