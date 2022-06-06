@@ -441,6 +441,7 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#supplement">15. Supplement</a>
 <ul>
+<li><a href="#create-a-geodesic-line">Create a Geodesic Line</a></li>
 <li><a href="#save-map-rendering-as-an-image">Save Map Rendering as an Image</a></li>
 <li><a href="#get-all-layers">Get all Layers</a></li>
 <li><a href="#get-only-checked-visible-layers">Get only checked (visible) Layers</a></li>
@@ -1523,100 +1524,136 @@ $(document).ready(function () {
 <span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>project_name <span class="op">=</span> <span class="st">&#39;sf.qgz&#39;</span></span>
 <span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>project_path <span class="op">=</span> os.path.join(data_dir, project_name)</span>
 <span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>project.read(project_path)</span></code></pre></div>
+<div id="create-a-geodesic-line" class="section level2">
+<h2>Create a Geodesic Line</h2>
+<p>Connects 2 points using the great circle arc along an ellipsoid. Uses the <code>geodesicLine()</code> method provided by the <code>QgsDistanceArea()</code> class for the computation.</p>
+<p><img src="images/pyqgis/geodesic_line.png" width="75%" style="display: block; margin: auto;" /></p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsDistanceArea</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>new_york <span class="op">=</span> (<span class="fl">40.661</span>, <span class="op">-</span><span class="fl">73.944</span>)</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>london <span class="op">=</span> (<span class="fl">51.5072</span>, <span class="fl">0.1276</span>)</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>lat1, lon1 <span class="op">=</span> new_york</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>lat2, lon2 <span class="op">=</span> london</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Remember the order is X,Y</span></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>point1 <span class="op">=</span> QgsPointXY(lon1, lat1)</span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>point2 <span class="op">=</span> QgsPointXY(lon2, lat2)</span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> QgsDistanceArea()</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>d.setEllipsoid(<span class="st">&#39;WGS84&#39;</span>)</span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a geodesic line with vertices every 100km</span></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>vertices <span class="op">=</span> d.geodesicLine(point1, point2, <span class="dv">100000</span>)</span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a polyline from the vertices</span></span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a><span class="co"># The method returns 1 geometry unless the line crosses antimeridien</span></span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>geodesic_line <span class="op">=</span> QgsGeometry.fromPolylineXY(vertices[<span class="dv">0</span>])</span>
+<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a line layer to display the route</span></span>
+<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a>vlayer <span class="op">=</span> QgsVectorLayer(<span class="st">&#39;LineString?crs=EPSG:4326&#39;</span>, <span class="st">&#39;route&#39;</span>, <span class="st">&#39;memory&#39;</span>)</span>
+<span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a>provider <span class="op">=</span> vlayer.dataProvider()</span>
+<span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-27"><a href="#cb50-27" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> QgsFeature()</span>
+<span id="cb50-28"><a href="#cb50-28" aria-hidden="true" tabindex="-1"></a>f.setGeometry(geodesic_line)</span>
+<span id="cb50-29"><a href="#cb50-29" aria-hidden="true" tabindex="-1"></a>provider.addFeature(f)</span>
+<span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a>vlayer.updateExtents() </span>
+<span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a>QgsProject.instance().addMapLayer(vlayer)</span></code></pre></div>
+</div>
 <div id="save-map-rendering-as-an-image" class="section level2">
 <h2>Save Map Rendering as an Image</h2>
 <p><code>saveAsImage()</code> method is quick and easy, but you do not have much control over the resulting image. You can’t control the resolution, size or how each layer will be rendered. There is another way to achieve this. You can look at the code for exporting map as an image in QGIS and you will discover 2 classes <code>QgsMapRendererParallelJob</code> and <code>QgsMapRendererSequentialJob</code> that lets you achieve a better result. The code snippet below exports a hi-resolution image of the project. <a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></p>
-<div class="sourceCode" id="cb50"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>image_name <span class="op">=</span> <span class="st">&#39;sf_hires.png&#39;</span></span>
-<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>image_path <span class="op">=</span> os.path.join(data_dir, image_name)</span>
-<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>settings <span class="op">=</span> iface.mapCanvas().mapSettings()</span>
-<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>settings.setOutputSize(QSize(<span class="dv">1000</span>,<span class="dv">1000</span>))</span>
-<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>settings.setFlag(QgsMapSettings.DrawLabeling, <span class="va">False</span>)</span>
-<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>settings.setFlag(QgsMapSettings.Antialiasing, <span class="va">True</span>)</span>
-<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>job <span class="op">=</span> QgsMapRendererSequentialJob(settings)</span>
-<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>job.start()</span>
-<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>job.waitForFinished()</span>
-<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>image <span class="op">=</span> job.renderedImage()</span>
-<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>image.save(image_path)</span></code></pre></div>
+<div class="sourceCode" id="cb51"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>image_name <span class="op">=</span> <span class="st">&#39;sf_hires.png&#39;</span></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>image_path <span class="op">=</span> os.path.join(data_dir, image_name)</span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>settings <span class="op">=</span> iface.mapCanvas().mapSettings()</span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a>settings.setOutputSize(QSize(<span class="dv">1000</span>,<span class="dv">1000</span>))</span>
+<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>settings.setFlag(QgsMapSettings.DrawLabeling, <span class="va">False</span>)</span>
+<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>settings.setFlag(QgsMapSettings.Antialiasing, <span class="va">True</span>)</span>
+<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a>job <span class="op">=</span> QgsMapRendererSequentialJob(settings)</span>
+<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a>job.start()</span>
+<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a>job.waitForFinished()</span>
+<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a>image <span class="op">=</span> job.renderedImage()</span>
+<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>image.save(image_path)</span></code></pre></div>
 <p><img src="images/pyqgis/sf_hires.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="get-all-layers" class="section level2">
 <h2>Get all Layers</h2>
-<div class="sourceCode" id="cb51"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> QgsProject.instance().mapLayers().values():</span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(layer.name())</span></code></pre></div>
+<div class="sourceCode" id="cb52"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> QgsProject.instance().mapLayers().values():</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(layer.name())</span></code></pre></div>
 </div>
 <div id="get-only-checked-visible-layers" class="section level2">
 <h2>Get only checked (visible) Layers</h2>
-<div class="sourceCode" id="cb52"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> iface.mapCanvas().layers():</span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(layer.name())</span></code></pre></div>
+<div class="sourceCode" id="cb53"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> iface.mapCanvas().layers():</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(layer.name())</span></code></pre></div>
 </div>
 <div id="get-only-selected-layers" class="section level2">
 <h2>Get only selected Layers</h2>
-<div class="sourceCode" id="cb53"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> iface.layerTreeView().selectedLayers():</span>
-<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(layer.name())</span></code></pre></div>
+<div class="sourceCode" id="cb54"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> layer <span class="kw">in</span> iface.layerTreeView().selectedLayers():</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(layer.name())</span></code></pre></div>
 </div>
 <div id="set-canvas-extent-to-a-layer-extent" class="section level2">
 <h2>Set Canvas Extent to a Layer Extent</h2>
 <p>Select one of the layers in the <em>Layers</em> panel and run the following code.</p>
-<div class="sourceCode" id="cb54"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> iface.activeLayer()</span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>mc <span class="op">=</span> iface.mapCanvas()</span>
-<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>mc.setExtent(layer.extent())</span>
-<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>mc.refresh()</span></code></pre></div>
+<div class="sourceCode" id="cb55"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> iface.activeLayer()</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>mc <span class="op">=</span> iface.mapCanvas()</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>mc.setExtent(layer.extent())</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>mc.refresh()</span></code></pre></div>
 </div>
 <div id="get-layers-with-hierarchy" class="section level2">
 <h2>Get Layers with Hierarchy</h2>
 <p>This code snippet is taken from the <a href="https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/cheat_sheet.html">Cheat Sheet for PyQGIS</a> , but contains an important modification. If you notice carefully, the function <code>getGroupLayers</code> is called recursively from within <code>getGroupLayers</code>. This allows one to even get layers that have sub-groups within layer groups.</p>
-<div class="sourceCode" id="cb55"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> getGroupLayers(group):</span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;- group:&#39;</span> <span class="op">+</span> group.name())</span>
-<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> child <span class="kw">in</span> group.children():</span>
-<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(child, QgsLayerTreeGroup):</span>
-<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>            getGroupLayers(child)</span>
-<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
-<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&#39;  - layer:&#39;</span> <span class="op">+</span> child.name())</span>
-<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> QgsProject.instance().layerTreeRoot()</span>
-<span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> child <span class="kw">in</span> root.children():</span>
-<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(child, QgsLayerTreeGroup):</span>
-<span id="cb55-13"><a href="#cb55-13" aria-hidden="true" tabindex="-1"></a>        getGroupLayers(child)</span>
-<span id="cb55-14"><a href="#cb55-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> <span class="bu">isinstance</span>(child, QgsLayerTreeLayer):</span>
-<span id="cb55-15"><a href="#cb55-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span> (<span class="st">&quot;- layer: &quot;</span> <span class="op">+</span> child.name())</span></code></pre></div>
+<div class="sourceCode" id="cb56"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> getGroupLayers(group):</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;- group:&#39;</span> <span class="op">+</span> group.name())</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> child <span class="kw">in</span> group.children():</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(child, QgsLayerTreeGroup):</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>            getGroupLayers(child)</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&#39;  - layer:&#39;</span> <span class="op">+</span> child.name())</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> QgsProject.instance().layerTreeRoot()</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> child <span class="kw">in</span> root.children():</span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(child, QgsLayerTreeGroup):</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>        getGroupLayers(child)</span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> <span class="bu">isinstance</span>(child, QgsLayerTreeLayer):</span>
+<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span> (<span class="st">&quot;- layer: &quot;</span> <span class="op">+</span> child.name())</span></code></pre></div>
 <p><img src="images/pyqgis/layergroup.png" width="50%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="remove-a-specific-button-from-a-toolbar" class="section level2">
 <h2>Remove a Specific Button from a Toolbar</h2>
 <p>The following code snippet shows how once can find names of different widget in the QGIS Application and locate specific toolbars and button. The following code will disable to <em>Deselect All Features from Layers</em> button from the <em>Selection Toolbar</em>.</p>
-<div class="sourceCode" id="cb56"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find all child objects of the mainWindow that are type QToolbar</span></span>
-<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> iface.mainWindow().findChildren(QToolBar): </span>
-<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
-<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a><span class="co"># In the printed list, we observe that </span></span>
-<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a><span class="co"># the selection toolbar is named mSelectionToolBar</span></span>
-<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Get a reference to it by name</span></span>
-<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>selectionToolbar <span class="op">=</span> iface.mainWindow().findChild(QToolBar,<span class="st">&#39;mSelectionToolBar&#39;</span>)</span>
-<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the buttons on the toolbar</span></span>
-<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> selectionToolbar.findChildren(QAction):</span>
-<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
-<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternatively, you can also use the following</span></span>
-<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> selectionToolbar.actions():</span>
-<span id="cb56-16"><a href="#cb56-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
-<span id="cb56-17"><a href="#cb56-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-18"><a href="#cb56-18" aria-hidden="true" tabindex="-1"></a><span class="co"># If the toolbar button is not an action, you</span></span>
-<span id="cb56-19"><a href="#cb56-19" aria-hidden="true" tabindex="-1"></a><span class="co"># We know the name of the deselection button </span></span>
-<span id="cb56-20"><a href="#cb56-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Get a reference to it by name</span></span>
-<span id="cb56-21"><a href="#cb56-21" aria-hidden="true" tabindex="-1"></a>deselection <span class="op">=</span> selectionToolbar.findChild(QAction,<span class="st">&#39;ActionDeselection&#39;</span>)</span>
-<span id="cb56-22"><a href="#cb56-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-23"><a href="#cb56-23" aria-hidden="true" tabindex="-1"></a><span class="co"># We can disable a widget by calling setEnabled(False)</span></span>
-<span id="cb56-24"><a href="#cb56-24" aria-hidden="true" tabindex="-1"></a>deselection.setEnabled(<span class="va">False</span>)</span>
-<span id="cb56-25"><a href="#cb56-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-26"><a href="#cb56-26" aria-hidden="true" tabindex="-1"></a><span class="co"># We can remove it completely by calling removeAction()</span></span>
-<span id="cb56-27"><a href="#cb56-27" aria-hidden="true" tabindex="-1"></a>selectionToolbar.removeAction(deselection)</span></code></pre></div>
+<div class="sourceCode" id="cb57"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find all child objects of the mainWindow that are type QToolbar</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> iface.mainWindow().findChildren(QToolBar): </span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a><span class="co"># In the printed list, we observe that </span></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a><span class="co"># the selection toolbar is named mSelectionToolBar</span></span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Get a reference to it by name</span></span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>selectionToolbar <span class="op">=</span> iface.mainWindow().findChild(QToolBar,<span class="st">&#39;mSelectionToolBar&#39;</span>)</span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the buttons on the toolbar</span></span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> selectionToolbar.findChildren(QAction):</span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternatively, you can also use the following</span></span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x <span class="kw">in</span> selectionToolbar.actions():</span>
+<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(x.objectName())</span>
+<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a><span class="co"># If the toolbar button is not an action, you</span></span>
+<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a><span class="co"># We know the name of the deselection button </span></span>
+<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Get a reference to it by name</span></span>
+<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a>deselection <span class="op">=</span> selectionToolbar.findChild(QAction,<span class="st">&#39;ActionDeselection&#39;</span>)</span>
+<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a><span class="co"># We can disable a widget by calling setEnabled(False)</span></span>
+<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a>deselection.setEnabled(<span class="va">False</span>)</span>
+<span id="cb57-25"><a href="#cb57-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-26"><a href="#cb57-26" aria-hidden="true" tabindex="-1"></a><span class="co"># We can remove it completely by calling removeAction()</span></span>
+<span id="cb57-27"><a href="#cb57-27" aria-hidden="true" tabindex="-1"></a>selectionToolbar.removeAction(deselection)</span></code></pre></div>
 </div>
 <div id="add-a-drop-down-menu-to-toolbar" class="section level2">
 <h2>Add a Drop-down Menu to Toolbar</h2>
@@ -1624,214 +1661,214 @@ $(document).ready(function () {
 <blockquote>
 <p>You must have a layer with an attribute called <strong>NAME</strong> for this example to work. Tested with the <a href="https://www.naturalearthdata.com/downloads/10m-cultural-vectors/">Natural Earth Admin 0 - Countries</a> layer.</p>
 </blockquote>
-<div class="sourceCode" id="cb57"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>toolBar <span class="op">=</span> iface.addToolBar(<span class="st">&quot;My Toolbar&quot;</span>)</span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>toolBar.setObjectName(<span class="st">&quot;My Toolbar&quot;</span>)</span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>countryCombo <span class="op">=</span> QComboBox(toolBar)</span>
-<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(countryCombo)</span>
-<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>countryCombo.setToolTip(<span class="st">&quot;Select a country&quot;</span>)</span>
-<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>filterButton <span class="op">=</span> QPushButton(<span class="st">&#39;Filter&#39;</span>)</span>
-<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>filterButton.setToolTip(<span class="st">&#39;Filter&#39;</span>)</span>
-<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(filterButton)</span>
-<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>resetButton <span class="op">=</span> QPushButton(<span class="st">&#39;Reset&#39;</span>)</span>
-<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>resetButton.setToolTip(<span class="st">&#39;Reset&#39;</span>)</span>
-<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(resetButton)</span>
-<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a><span class="co"># We want to sort the layer by country names</span></span>
-<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a><span class="co"># configure QgsFeatureRequest and use it with getFeatures()</span></span>
-<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a>request <span class="op">=</span> QgsFeatureRequest()</span>
-<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a>clause <span class="op">=</span> QgsFeatureRequest.OrderByClause(<span class="st">&#39;NAME&#39;</span>)</span>
-<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a>orderby <span class="op">=</span> QgsFeatureRequest.OrderBy([clause])</span>
-<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a>request.setOrderBy(orderby)</span>
-<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> iface.activeLayer()</span>
-<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-25"><a href="#cb57-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the country names and save in a list</span></span>
-<span id="cb57-26"><a href="#cb57-26" aria-hidden="true" tabindex="-1"></a>countries <span class="op">=</span> []</span>
-<span id="cb57-27"><a href="#cb57-27" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> layer.getFeatures(request):</span>
-<span id="cb57-28"><a href="#cb57-28" aria-hidden="true" tabindex="-1"></a>  countries.append(f[<span class="st">&#39;NAME&#39;</span>])</span>
-<span id="cb57-29"><a href="#cb57-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-30"><a href="#cb57-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Add items to the combobox</span></span>
-<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> country <span class="kw">in</span> countries:</span>
-<span id="cb57-32"><a href="#cb57-32" aria-hidden="true" tabindex="-1"></a>    countryCombo.addItem(country)</span>
-<span id="cb57-33"><a href="#cb57-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Define functions to apply and reset filters</span></span>
-<span id="cb57-35"><a href="#cb57-35" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> filter_layer():</span>
-<span id="cb57-36"><a href="#cb57-36" aria-hidden="true" tabindex="-1"></a>    layer <span class="op">=</span> iface.activeLayer()</span>
-<span id="cb57-37"><a href="#cb57-37" aria-hidden="true" tabindex="-1"></a>    country <span class="op">=</span> countryCombo.currentText()</span>
-<span id="cb57-38"><a href="#cb57-38" aria-hidden="true" tabindex="-1"></a>    expression <span class="op">=</span> <span class="st">&#39;</span><span class="ch">\&quot;</span><span class="st">NAME</span><span class="ch">\&quot;</span><span class="st"> = </span><span class="ch">\&#39;</span><span class="sc">{}</span><span class="ch">\&#39;</span><span class="st">&#39;</span>.<span class="bu">format</span>(country)</span>
-<span id="cb57-39"><a href="#cb57-39" aria-hidden="true" tabindex="-1"></a>    layer.setSubsetString(expression)</span>
-<span id="cb57-40"><a href="#cb57-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-41"><a href="#cb57-41" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> reset_layer():</span>
-<span id="cb57-42"><a href="#cb57-42" aria-hidden="true" tabindex="-1"></a>    layer <span class="op">=</span> iface.activeLayer()</span>
-<span id="cb57-43"><a href="#cb57-43" aria-hidden="true" tabindex="-1"></a>    layer.setSubsetString(<span class="st">&#39;&#39;</span>)</span>
-<span id="cb57-44"><a href="#cb57-44" aria-hidden="true" tabindex="-1"></a>    countryCombo.clear()</span>
-<span id="cb57-45"><a href="#cb57-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> country <span class="kw">in</span> countries:</span>
-<span id="cb57-46"><a href="#cb57-46" aria-hidden="true" tabindex="-1"></a>      countryCombo.addItem(country)</span>
-<span id="cb57-47"><a href="#cb57-47" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb57-48"><a href="#cb57-48" aria-hidden="true" tabindex="-1"></a>filterButton.clicked.<span class="ex">connect</span>(filter_layer)</span>
-<span id="cb57-49"><a href="#cb57-49" aria-hidden="true" tabindex="-1"></a>resetButton.clicked.<span class="ex">connect</span>(reset_layer)</span></code></pre></div>
+<div class="sourceCode" id="cb58"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>toolBar <span class="op">=</span> iface.addToolBar(<span class="st">&quot;My Toolbar&quot;</span>)</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>toolBar.setObjectName(<span class="st">&quot;My Toolbar&quot;</span>)</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>countryCombo <span class="op">=</span> QComboBox(toolBar)</span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(countryCombo)</span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>countryCombo.setToolTip(<span class="st">&quot;Select a country&quot;</span>)</span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>filterButton <span class="op">=</span> QPushButton(<span class="st">&#39;Filter&#39;</span>)</span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>filterButton.setToolTip(<span class="st">&#39;Filter&#39;</span>)</span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(filterButton)</span>
+<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>resetButton <span class="op">=</span> QPushButton(<span class="st">&#39;Reset&#39;</span>)</span>
+<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>resetButton.setToolTip(<span class="st">&#39;Reset&#39;</span>)</span>
+<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a>toolBar.addWidget(resetButton)</span>
+<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a><span class="co"># We want to sort the layer by country names</span></span>
+<span id="cb58-18"><a href="#cb58-18" aria-hidden="true" tabindex="-1"></a><span class="co"># configure QgsFeatureRequest and use it with getFeatures()</span></span>
+<span id="cb58-19"><a href="#cb58-19" aria-hidden="true" tabindex="-1"></a>request <span class="op">=</span> QgsFeatureRequest()</span>
+<span id="cb58-20"><a href="#cb58-20" aria-hidden="true" tabindex="-1"></a>clause <span class="op">=</span> QgsFeatureRequest.OrderByClause(<span class="st">&#39;NAME&#39;</span>)</span>
+<span id="cb58-21"><a href="#cb58-21" aria-hidden="true" tabindex="-1"></a>orderby <span class="op">=</span> QgsFeatureRequest.OrderBy([clause])</span>
+<span id="cb58-22"><a href="#cb58-22" aria-hidden="true" tabindex="-1"></a>request.setOrderBy(orderby)</span>
+<span id="cb58-23"><a href="#cb58-23" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> iface.activeLayer()</span>
+<span id="cb58-24"><a href="#cb58-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-25"><a href="#cb58-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the country names and save in a list</span></span>
+<span id="cb58-26"><a href="#cb58-26" aria-hidden="true" tabindex="-1"></a>countries <span class="op">=</span> []</span>
+<span id="cb58-27"><a href="#cb58-27" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> layer.getFeatures(request):</span>
+<span id="cb58-28"><a href="#cb58-28" aria-hidden="true" tabindex="-1"></a>  countries.append(f[<span class="st">&#39;NAME&#39;</span>])</span>
+<span id="cb58-29"><a href="#cb58-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-30"><a href="#cb58-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Add items to the combobox</span></span>
+<span id="cb58-31"><a href="#cb58-31" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> country <span class="kw">in</span> countries:</span>
+<span id="cb58-32"><a href="#cb58-32" aria-hidden="true" tabindex="-1"></a>    countryCombo.addItem(country)</span>
+<span id="cb58-33"><a href="#cb58-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-34"><a href="#cb58-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Define functions to apply and reset filters</span></span>
+<span id="cb58-35"><a href="#cb58-35" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> filter_layer():</span>
+<span id="cb58-36"><a href="#cb58-36" aria-hidden="true" tabindex="-1"></a>    layer <span class="op">=</span> iface.activeLayer()</span>
+<span id="cb58-37"><a href="#cb58-37" aria-hidden="true" tabindex="-1"></a>    country <span class="op">=</span> countryCombo.currentText()</span>
+<span id="cb58-38"><a href="#cb58-38" aria-hidden="true" tabindex="-1"></a>    expression <span class="op">=</span> <span class="st">&#39;</span><span class="ch">\&quot;</span><span class="st">NAME</span><span class="ch">\&quot;</span><span class="st"> = </span><span class="ch">\&#39;</span><span class="sc">{}</span><span class="ch">\&#39;</span><span class="st">&#39;</span>.<span class="bu">format</span>(country)</span>
+<span id="cb58-39"><a href="#cb58-39" aria-hidden="true" tabindex="-1"></a>    layer.setSubsetString(expression)</span>
+<span id="cb58-40"><a href="#cb58-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-41"><a href="#cb58-41" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> reset_layer():</span>
+<span id="cb58-42"><a href="#cb58-42" aria-hidden="true" tabindex="-1"></a>    layer <span class="op">=</span> iface.activeLayer()</span>
+<span id="cb58-43"><a href="#cb58-43" aria-hidden="true" tabindex="-1"></a>    layer.setSubsetString(<span class="st">&#39;&#39;</span>)</span>
+<span id="cb58-44"><a href="#cb58-44" aria-hidden="true" tabindex="-1"></a>    countryCombo.clear()</span>
+<span id="cb58-45"><a href="#cb58-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> country <span class="kw">in</span> countries:</span>
+<span id="cb58-46"><a href="#cb58-46" aria-hidden="true" tabindex="-1"></a>      countryCombo.addItem(country)</span>
+<span id="cb58-47"><a href="#cb58-47" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb58-48"><a href="#cb58-48" aria-hidden="true" tabindex="-1"></a>filterButton.clicked.<span class="ex">connect</span>(filter_layer)</span>
+<span id="cb58-49"><a href="#cb58-49" aria-hidden="true" tabindex="-1"></a>resetButton.clicked.<span class="ex">connect</span>(reset_layer)</span></code></pre></div>
 </div>
 <div id="adding-csv-layers" class="section level2">
 <h2>Adding CSV Layers</h2>
-<div class="sourceCode" id="cb58"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;trees.csv&#39;</span></span>
-<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>csvpath <span class="op">=</span> <span class="st">&#39;file:///&#39;</span> <span class="op">+</span> data_dir <span class="op">+</span> filename</span>
-<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> <span class="st">&#39;</span><span class="sc">{}</span><span class="st">?type=csv&amp;xField=</span><span class="sc">{}</span><span class="st">&amp;yField=</span><span class="sc">{}</span><span class="st">&amp;crs=</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(</span>
-<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>  csvpath, <span class="st">&#39;Longitude&#39;</span>, <span class="st">&#39;Latitude&#39;</span>, <span class="st">&#39;EPSG:4326&#39;</span>)</span>
-<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>iface.addVectorLayer(uri, <span class="st">&#39;trees&#39;</span>, <span class="st">&#39;delimitedtext&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb59"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;trees.csv&#39;</span></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>csvpath <span class="op">=</span> <span class="st">&#39;file:///&#39;</span> <span class="op">+</span> data_dir <span class="op">+</span> filename</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> <span class="st">&#39;</span><span class="sc">{}</span><span class="st">?type=csv&amp;xField=</span><span class="sc">{}</span><span class="st">&amp;yField=</span><span class="sc">{}</span><span class="st">&amp;crs=</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>  csvpath, <span class="st">&#39;Longitude&#39;</span>, <span class="st">&#39;Latitude&#39;</span>, <span class="st">&#39;EPSG:4326&#39;</span>)</span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>iface.addVectorLayer(uri, <span class="st">&#39;trees&#39;</span>, <span class="st">&#39;delimitedtext&#39;</span>)</span></code></pre></div>
 </div>
 <div id="inserting-layers-in-the-layer-tree" class="section level2">
 <h2>Inserting Layers in the Layer Tree</h2>
 <p>We can use the <code>QgsLayerTree</code> class to insert the layer at an appropriate place.</p>
-<div class="sourceCode" id="cb59"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;srtm.tif&#39;</span></span>
-<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
-<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>rlayer <span class="op">=</span> QgsRasterLayer(uri, <span class="st">&#39;srtm&#39;</span>, <span class="st">&#39;gdal&#39;</span>)</span>
-<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>rastergroup <span class="op">=</span> QgsLayerTreeGroup(<span class="st">&#39;raster layers&#39;</span>)</span>
-<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>treelayer <span class="op">=</span> QgsLayerTreeLayer(rlayer)</span>
-<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>rastergroup.insertChildNode(<span class="dv">0</span>, treelayer)</span>
-<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> QgsProject.instance().layerTreeRoot()</span>
-<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a>root.insertChildNode(<span class="dv">1</span>, rastergroup)</span></code></pre></div>
+<div class="sourceCode" id="cb60"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;srtm.tif&#39;</span></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>rlayer <span class="op">=</span> QgsRasterLayer(uri, <span class="st">&#39;srtm&#39;</span>, <span class="st">&#39;gdal&#39;</span>)</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>rastergroup <span class="op">=</span> QgsLayerTreeGroup(<span class="st">&#39;raster layers&#39;</span>)</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>treelayer <span class="op">=</span> QgsLayerTreeLayer(rlayer)</span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>rastergroup.insertChildNode(<span class="dv">0</span>, treelayer)</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> QgsProject.instance().layerTreeRoot()</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a>root.insertChildNode(<span class="dv">1</span>, rastergroup)</span></code></pre></div>
 <p><img src="images/pyqgis/rasterlayer.png" width="50%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="create-a-new-vector-layer" class="section level2">
 <h2>Create a New Vector Layer</h2>
 <p>A simple example showing how to create a point layer with 1 feature and 1 attribute. <a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a></p>
-<div class="sourceCode" id="cb60"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>vlayer <span class="op">=</span> QgsVectorLayer(<span class="st">&#39;Point?crs=EPSG:4326&#39;</span>, <span class="st">&#39;point&#39;</span>, <span class="st">&#39;memory&#39;</span>)</span>
-<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>provider <span class="op">=</span> vlayer.dataProvider()</span>
-<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>provider.addAttributes([QgsField(<span class="st">&#39;name&#39;</span>, QVariant.String)])</span>
-<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>vlayer.updateFields() </span>
-<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> QgsFeature()</span>
-<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>f.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(<span class="op">-</span><span class="fl">122.41</span>, <span class="fl">37.77</span>)))</span>
-<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>f.setAttributes([<span class="st">&#39;San Francisco&#39;</span>])</span>
-<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>provider.addFeature(f)</span>
-<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>vlayer.updateExtents() </span>
-<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>QgsProject.instance().addMapLayer(vlayer)</span></code></pre></div>
+<div class="sourceCode" id="cb61"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>vlayer <span class="op">=</span> QgsVectorLayer(<span class="st">&#39;Point?crs=EPSG:4326&#39;</span>, <span class="st">&#39;point&#39;</span>, <span class="st">&#39;memory&#39;</span>)</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>provider <span class="op">=</span> vlayer.dataProvider()</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>provider.addAttributes([QgsField(<span class="st">&#39;name&#39;</span>, QVariant.String)])</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>vlayer.updateFields() </span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> QgsFeature()</span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>f.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(<span class="op">-</span><span class="fl">122.41</span>, <span class="fl">37.77</span>)))</span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>f.setAttributes([<span class="st">&#39;San Francisco&#39;</span>])</span>
+<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>provider.addFeature(f)</span>
+<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a>vlayer.updateExtents() </span>
+<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a>QgsProject.instance().addMapLayer(vlayer)</span></code></pre></div>
 </div>
 <div id="saving-layers-to-disk" class="section level2">
 <h2>Saving Layers to Disk</h2>
 <p>Use the <code>QgsRasterFileWriter</code> or <code>QgsVectorFileWriter</code> classes for writing layers to disk. <a href="#fn6" class="footnote-ref" id="fnref6"><sup>6</sup></a></p>
-<div class="sourceCode" id="cb61"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
-<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>options.actionOnExistingFile <span class="op">=</span> QgsVectorFileWriter.CreateOrOverwriteLayer </span>
-<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>options.layerName <span class="op">=</span> <span class="st">&#39;point&#39;</span></span>
-<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg&#39;</span></span>
-<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> os.path.join(data_dir, filename)</span>
-<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a>QgsVectorFileWriter.writeAsVectorFormat(vlayer, path, options)</span></code></pre></div>
+<div class="sourceCode" id="cb62"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>options.actionOnExistingFile <span class="op">=</span> QgsVectorFileWriter.CreateOrOverwriteLayer </span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>options.layerName <span class="op">=</span> <span class="st">&#39;point&#39;</span></span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg&#39;</span></span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> os.path.join(data_dir, filename)</span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>QgsVectorFileWriter.writeAsVectorFormat(vlayer, path, options)</span></code></pre></div>
 </div>
 <div id="displaying-a-label-with-a-background-color" class="section level2">
 <h2>Displaying a label with a background color</h2>
 <p>This is a vast topic, but you can get a taste of the flexibility offered by the API to control all aspects of labeling. Notice the class name <code>QgsPalLayerSettings</code> - this is because QGIS uses a labeling library called <a href="http://pal.heig-vd.ch/index.php?page=about-pal">PAL</a> for labels. The code snippet below shows how to create a label for a point layer with a background color. <a href="#fn7" class="footnote-ref" id="fnref7"><sup>7</sup></a></p>
-<div class="sourceCode" id="cb62"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>vlayer <span class="op">=</span> QgsProject.instance().mapLayersByName(<span class="st">&#39;point&#39;</span>)[<span class="dv">0</span>]</span>
-<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>symbol <span class="op">=</span> QgsMarkerSymbol.createSimple({<span class="st">&#39;name&#39;</span>: <span class="st">&#39;square&#39;</span>, <span class="st">&#39;color&#39;</span>: <span class="st">&#39;red&#39;</span>})</span>
-<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>vlayer.renderer().setSymbol(symbol)</span>
-<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>label_settings <span class="op">=</span> QgsPalLayerSettings()</span>
-<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a><span class="co">#label_settings.drawBackground = True</span></span>
-<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a>label_settings.fieldName <span class="op">=</span> <span class="st">&#39;name&#39;</span></span>
-<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>text_format <span class="op">=</span> QgsTextFormat()</span>
-<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>background_color <span class="op">=</span> QgsTextBackgroundSettings()</span>
-<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>background_color.setFillColor(QColor(<span class="st">&#39;white&#39;</span>))</span>
-<span id="cb62-12"><a href="#cb62-12" aria-hidden="true" tabindex="-1"></a>background_color.setEnabled(<span class="va">True</span>)</span>
-<span id="cb62-13"><a href="#cb62-13" aria-hidden="true" tabindex="-1"></a>text_format.setBackground(background_color )</span>
-<span id="cb62-14"><a href="#cb62-14" aria-hidden="true" tabindex="-1"></a>label_settings.setFormat(text_format)</span>
-<span id="cb62-15"><a href="#cb62-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb62-16"><a href="#cb62-16" aria-hidden="true" tabindex="-1"></a>vlayer.setLabeling(QgsVectorLayerSimpleLabeling(label_settings))</span>
-<span id="cb62-17"><a href="#cb62-17" aria-hidden="true" tabindex="-1"></a>vlayer.setLabelsEnabled(<span class="va">True</span>)</span>
-<span id="cb62-18"><a href="#cb62-18" aria-hidden="true" tabindex="-1"></a>vlayer.triggerRepaint()</span></code></pre></div>
+<div class="sourceCode" id="cb63"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>vlayer <span class="op">=</span> QgsProject.instance().mapLayersByName(<span class="st">&#39;point&#39;</span>)[<span class="dv">0</span>]</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>symbol <span class="op">=</span> QgsMarkerSymbol.createSimple({<span class="st">&#39;name&#39;</span>: <span class="st">&#39;square&#39;</span>, <span class="st">&#39;color&#39;</span>: <span class="st">&#39;red&#39;</span>})</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>vlayer.renderer().setSymbol(symbol)</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>label_settings <span class="op">=</span> QgsPalLayerSettings()</span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a><span class="co">#label_settings.drawBackground = True</span></span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>label_settings.fieldName <span class="op">=</span> <span class="st">&#39;name&#39;</span></span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>text_format <span class="op">=</span> QgsTextFormat()</span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>background_color <span class="op">=</span> QgsTextBackgroundSettings()</span>
+<span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a>background_color.setFillColor(QColor(<span class="st">&#39;white&#39;</span>))</span>
+<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a>background_color.setEnabled(<span class="va">True</span>)</span>
+<span id="cb63-13"><a href="#cb63-13" aria-hidden="true" tabindex="-1"></a>text_format.setBackground(background_color )</span>
+<span id="cb63-14"><a href="#cb63-14" aria-hidden="true" tabindex="-1"></a>label_settings.setFormat(text_format)</span>
+<span id="cb63-15"><a href="#cb63-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-16"><a href="#cb63-16" aria-hidden="true" tabindex="-1"></a>vlayer.setLabeling(QgsVectorLayerSimpleLabeling(label_settings))</span>
+<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a>vlayer.setLabelsEnabled(<span class="va">True</span>)</span>
+<span id="cb63-18"><a href="#cb63-18" aria-hidden="true" tabindex="-1"></a>vlayer.triggerRepaint()</span></code></pre></div>
 <p><img src="images/pyqgis/label.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="edit-attribute-table-of-a-vector-layer" class="section level2">
 <h2>Edit Attribute Table of a Vector Layer</h2>
 <p>When you use processing, a new layer is created by each algorithm. This example shows, how to use processing to overwrite the original layer with the results of processing.</p>
-<div class="sourceCode" id="cb63"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg|layername=blocks&#39;</span></span>
-<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
-<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>blocks <span class="op">=</span> QgsVectorLayer(uri, <span class="st">&#39;blocks&#39;</span>, <span class="st">&#39;ogr&#39;</span>)</span>
-<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> processing.run(</span>
-<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;qgis:deletecolumn&quot;</span>, </span>
-<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&#39;INPUT&#39;</span>: blocks,<span class="st">&#39;COLUMN&#39;</span>:[<span class="st">&#39;multigeom&#39;</span>],<span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;memory:&#39;</span>})</span>
-<span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a>outputlayer <span class="op">=</span> output[<span class="st">&#39;OUTPUT&#39;</span>]</span>
-<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-13"><a href="#cb63-13" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> processing.run(<span class="st">&quot;qgis:fieldcalculator&quot;</span>,</span>
-<span id="cb63-14"><a href="#cb63-14" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&#39;INPUT&#39;</span>:outputlayer,</span>
-<span id="cb63-15"><a href="#cb63-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_NAME&#39;</span>:<span class="st">&#39;area&#39;</span>,</span>
-<span id="cb63-16"><a href="#cb63-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_TYPE&#39;</span>:<span class="dv">0</span>,</span>
-<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_LENGTH&#39;</span>:<span class="dv">10</span>,</span>
-<span id="cb63-18"><a href="#cb63-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_PRECISION&#39;</span>:<span class="dv">3</span>,</span>
-<span id="cb63-19"><a href="#cb63-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;NEW_FIELD&#39;</span>:<span class="va">True</span>,</span>
-<span id="cb63-20"><a href="#cb63-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FORMULA&#39;</span>:<span class="st">&#39;$area&#39;</span>,</span>
-<span id="cb63-21"><a href="#cb63-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;memory:&#39;</span>})</span>
-<span id="cb63-22"><a href="#cb63-22" aria-hidden="true" tabindex="-1"></a>finallayer <span class="op">=</span> final[<span class="st">&#39;OUTPUT&#39;</span>]</span>
-<span id="cb63-23"><a href="#cb63-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-24"><a href="#cb63-24" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
-<span id="cb63-25"><a href="#cb63-25" aria-hidden="true" tabindex="-1"></a><span class="co"># We overwrite the original layer</span></span>
-<span id="cb63-26"><a href="#cb63-26" aria-hidden="true" tabindex="-1"></a>options.layerName <span class="op">=</span> <span class="st">&#39;blocks&#39;</span></span>
-<span id="cb63-27"><a href="#cb63-27" aria-hidden="true" tabindex="-1"></a>options.actionOnExistingFile <span class="op">=</span> QgsVectorFileWriter.CreateOrOverwriteLayer </span>
-<span id="cb63-28"><a href="#cb63-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-29"><a href="#cb63-29" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;sf.gpkg&#39;</span></span>
-<span id="cb63-30"><a href="#cb63-30" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_file)</span>
-<span id="cb63-31"><a href="#cb63-31" aria-hidden="true" tabindex="-1"></a>QgsVectorFileWriter.writeAsVectorFormat(finallayer, output_path, options)</span>
-<span id="cb63-32"><a href="#cb63-32" aria-hidden="true" tabindex="-1"></a>QgsProject.instance().reloadAllLayers()</span></code></pre></div>
+<div class="sourceCode" id="cb64"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg|layername=blocks&#39;</span></span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a>blocks <span class="op">=</span> QgsVectorLayer(uri, <span class="st">&#39;blocks&#39;</span>, <span class="st">&#39;ogr&#39;</span>)</span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> processing.run(</span>
+<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;qgis:deletecolumn&quot;</span>, </span>
+<span id="cb64-10"><a href="#cb64-10" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&#39;INPUT&#39;</span>: blocks,<span class="st">&#39;COLUMN&#39;</span>:[<span class="st">&#39;multigeom&#39;</span>],<span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;memory:&#39;</span>})</span>
+<span id="cb64-11"><a href="#cb64-11" aria-hidden="true" tabindex="-1"></a>outputlayer <span class="op">=</span> output[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb64-12"><a href="#cb64-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-13"><a href="#cb64-13" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> processing.run(<span class="st">&quot;qgis:fieldcalculator&quot;</span>,</span>
+<span id="cb64-14"><a href="#cb64-14" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&#39;INPUT&#39;</span>:outputlayer,</span>
+<span id="cb64-15"><a href="#cb64-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_NAME&#39;</span>:<span class="st">&#39;area&#39;</span>,</span>
+<span id="cb64-16"><a href="#cb64-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_TYPE&#39;</span>:<span class="dv">0</span>,</span>
+<span id="cb64-17"><a href="#cb64-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_LENGTH&#39;</span>:<span class="dv">10</span>,</span>
+<span id="cb64-18"><a href="#cb64-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELD_PRECISION&#39;</span>:<span class="dv">3</span>,</span>
+<span id="cb64-19"><a href="#cb64-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;NEW_FIELD&#39;</span>:<span class="va">True</span>,</span>
+<span id="cb64-20"><a href="#cb64-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FORMULA&#39;</span>:<span class="st">&#39;$area&#39;</span>,</span>
+<span id="cb64-21"><a href="#cb64-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;memory:&#39;</span>})</span>
+<span id="cb64-22"><a href="#cb64-22" aria-hidden="true" tabindex="-1"></a>finallayer <span class="op">=</span> final[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb64-23"><a href="#cb64-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-24"><a href="#cb64-24" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
+<span id="cb64-25"><a href="#cb64-25" aria-hidden="true" tabindex="-1"></a><span class="co"># We overwrite the original layer</span></span>
+<span id="cb64-26"><a href="#cb64-26" aria-hidden="true" tabindex="-1"></a>options.layerName <span class="op">=</span> <span class="st">&#39;blocks&#39;</span></span>
+<span id="cb64-27"><a href="#cb64-27" aria-hidden="true" tabindex="-1"></a>options.actionOnExistingFile <span class="op">=</span> QgsVectorFileWriter.CreateOrOverwriteLayer </span>
+<span id="cb64-28"><a href="#cb64-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-29"><a href="#cb64-29" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;sf.gpkg&#39;</span></span>
+<span id="cb64-30"><a href="#cb64-30" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_file)</span>
+<span id="cb64-31"><a href="#cb64-31" aria-hidden="true" tabindex="-1"></a>QgsVectorFileWriter.writeAsVectorFormat(finallayer, output_path, options)</span>
+<span id="cb64-32"><a href="#cb64-32" aria-hidden="true" tabindex="-1"></a>QgsProject.instance().reloadAllLayers()</span></code></pre></div>
 </div>
 <div id="creating-a-pdf-with-title" class="section level2">
 <h2>Creating a PDF with Title</h2>
 <p><img src="images/pyqgis/layout.png" width="75%" style="display: block; margin: auto;" /></p>
-<div class="sourceCode" id="cb64"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>project <span class="op">=</span> QgsProject.instance()</span>
-<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>extent <span class="op">=</span> QgsRectangle(<span class="op">-</span><span class="fl">122.52</span>, <span class="fl">37.71</span>, <span class="op">-</span><span class="fl">122.35</span>, <span class="fl">37.83</span>)</span>
-<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>layout <span class="op">=</span> QgsPrintLayout(project)</span>
-<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>layout.initializeDefaults()</span>
-<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-10"><a href="#cb64-10" aria-hidden="true" tabindex="-1"></a>pages <span class="op">=</span> layout.pageCollection()</span>
-<span id="cb64-11"><a href="#cb64-11" aria-hidden="true" tabindex="-1"></a>pages.beginPageSizeChange()</span>
-<span id="cb64-12"><a href="#cb64-12" aria-hidden="true" tabindex="-1"></a>page <span class="op">=</span> pages.page(<span class="dv">0</span>)</span>
-<span id="cb64-13"><a href="#cb64-13" aria-hidden="true" tabindex="-1"></a>page.setPageSize(<span class="st">&#39;A4&#39;</span>,  QgsLayoutItemPage.Landscape)</span>
-<span id="cb64-14"><a href="#cb64-14" aria-hidden="true" tabindex="-1"></a>pages.endPageSizeChange()</span>
-<span id="cb64-15"><a href="#cb64-15" aria-hidden="true" tabindex="-1"></a>page_center <span class="op">=</span> page.pageSize().width() <span class="op">/</span> <span class="dv">2</span></span>
-<span id="cb64-16"><a href="#cb64-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-17"><a href="#cb64-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-18"><a href="#cb64-18" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span> <span class="op">=</span> QgsLayoutItemMap(layout)</span>
-<span id="cb64-19"><a href="#cb64-19" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.setRect(QRectF(<span class="op">-</span><span class="fl">122.52</span>, <span class="fl">37.71</span>, <span class="op">-</span><span class="fl">122.35</span>, <span class="fl">37.83</span>))</span>
-<span id="cb64-20"><a href="#cb64-20" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.setExtent(extent)</span>
-<span id="cb64-21"><a href="#cb64-21" aria-hidden="true" tabindex="-1"></a>a4 <span class="op">=</span> QPageSize().size(QPageSize.A4, QPageSize.Millimeter)</span>
-<span id="cb64-22"><a href="#cb64-22" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.attemptResize(QgsLayoutSize(a4.height(),  a4.width()))</span>
-<span id="cb64-23"><a href="#cb64-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-24"><a href="#cb64-24" aria-hidden="true" tabindex="-1"></a>layout.addItem(<span class="bu">map</span>)</span>
-<span id="cb64-25"><a href="#cb64-25" aria-hidden="true" tabindex="-1"></a>title <span class="op">=</span> QgsLayoutItemLabel(layout)</span>
-<span id="cb64-26"><a href="#cb64-26" aria-hidden="true" tabindex="-1"></a>title.setText(<span class="st">&#39;San Francisco&#39;</span>)</span>
-<span id="cb64-27"><a href="#cb64-27" aria-hidden="true" tabindex="-1"></a>title.setFont(QFont(<span class="st">&#39;Arial&#39;</span>, <span class="dv">36</span>))</span>
-<span id="cb64-28"><a href="#cb64-28" aria-hidden="true" tabindex="-1"></a>title.adjustSizeToText()</span>
-<span id="cb64-29"><a href="#cb64-29" aria-hidden="true" tabindex="-1"></a>title.setReferencePoint(QgsLayoutItem.UpperMiddle)</span>
-<span id="cb64-30"><a href="#cb64-30" aria-hidden="true" tabindex="-1"></a>title.attemptMove(QgsLayoutPoint(page_center, <span class="dv">10</span>))</span>
-<span id="cb64-31"><a href="#cb64-31" aria-hidden="true" tabindex="-1"></a>layout.addItem(title)</span>
-<span id="cb64-32"><a href="#cb64-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-33"><a href="#cb64-33" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;sf.pdf&#39;</span></span>
-<span id="cb64-34"><a href="#cb64-34" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_file)</span>
-<span id="cb64-35"><a href="#cb64-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-36"><a href="#cb64-36" aria-hidden="true" tabindex="-1"></a>exporter <span class="op">=</span> QgsLayoutExporter(layout)</span>
-<span id="cb64-37"><a href="#cb64-37" aria-hidden="true" tabindex="-1"></a>exporter.exportToPdf(</span>
-<span id="cb64-38"><a href="#cb64-38" aria-hidden="true" tabindex="-1"></a>    output_path, QgsLayoutExporter.PdfExportSettings())</span></code></pre></div>
+<div class="sourceCode" id="cb65"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>project <span class="op">=</span> QgsProject.instance()</span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>extent <span class="op">=</span> QgsRectangle(<span class="op">-</span><span class="fl">122.52</span>, <span class="fl">37.71</span>, <span class="op">-</span><span class="fl">122.35</span>, <span class="fl">37.83</span>)</span>
+<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-7"><a href="#cb65-7" aria-hidden="true" tabindex="-1"></a>layout <span class="op">=</span> QgsPrintLayout(project)</span>
+<span id="cb65-8"><a href="#cb65-8" aria-hidden="true" tabindex="-1"></a>layout.initializeDefaults()</span>
+<span id="cb65-9"><a href="#cb65-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-10"><a href="#cb65-10" aria-hidden="true" tabindex="-1"></a>pages <span class="op">=</span> layout.pageCollection()</span>
+<span id="cb65-11"><a href="#cb65-11" aria-hidden="true" tabindex="-1"></a>pages.beginPageSizeChange()</span>
+<span id="cb65-12"><a href="#cb65-12" aria-hidden="true" tabindex="-1"></a>page <span class="op">=</span> pages.page(<span class="dv">0</span>)</span>
+<span id="cb65-13"><a href="#cb65-13" aria-hidden="true" tabindex="-1"></a>page.setPageSize(<span class="st">&#39;A4&#39;</span>,  QgsLayoutItemPage.Landscape)</span>
+<span id="cb65-14"><a href="#cb65-14" aria-hidden="true" tabindex="-1"></a>pages.endPageSizeChange()</span>
+<span id="cb65-15"><a href="#cb65-15" aria-hidden="true" tabindex="-1"></a>page_center <span class="op">=</span> page.pageSize().width() <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb65-16"><a href="#cb65-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-17"><a href="#cb65-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-18"><a href="#cb65-18" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span> <span class="op">=</span> QgsLayoutItemMap(layout)</span>
+<span id="cb65-19"><a href="#cb65-19" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.setRect(QRectF(<span class="op">-</span><span class="fl">122.52</span>, <span class="fl">37.71</span>, <span class="op">-</span><span class="fl">122.35</span>, <span class="fl">37.83</span>))</span>
+<span id="cb65-20"><a href="#cb65-20" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.setExtent(extent)</span>
+<span id="cb65-21"><a href="#cb65-21" aria-hidden="true" tabindex="-1"></a>a4 <span class="op">=</span> QPageSize().size(QPageSize.A4, QPageSize.Millimeter)</span>
+<span id="cb65-22"><a href="#cb65-22" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>.attemptResize(QgsLayoutSize(a4.height(),  a4.width()))</span>
+<span id="cb65-23"><a href="#cb65-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-24"><a href="#cb65-24" aria-hidden="true" tabindex="-1"></a>layout.addItem(<span class="bu">map</span>)</span>
+<span id="cb65-25"><a href="#cb65-25" aria-hidden="true" tabindex="-1"></a>title <span class="op">=</span> QgsLayoutItemLabel(layout)</span>
+<span id="cb65-26"><a href="#cb65-26" aria-hidden="true" tabindex="-1"></a>title.setText(<span class="st">&#39;San Francisco&#39;</span>)</span>
+<span id="cb65-27"><a href="#cb65-27" aria-hidden="true" tabindex="-1"></a>title.setFont(QFont(<span class="st">&#39;Arial&#39;</span>, <span class="dv">36</span>))</span>
+<span id="cb65-28"><a href="#cb65-28" aria-hidden="true" tabindex="-1"></a>title.adjustSizeToText()</span>
+<span id="cb65-29"><a href="#cb65-29" aria-hidden="true" tabindex="-1"></a>title.setReferencePoint(QgsLayoutItem.UpperMiddle)</span>
+<span id="cb65-30"><a href="#cb65-30" aria-hidden="true" tabindex="-1"></a>title.attemptMove(QgsLayoutPoint(page_center, <span class="dv">10</span>))</span>
+<span id="cb65-31"><a href="#cb65-31" aria-hidden="true" tabindex="-1"></a>layout.addItem(title)</span>
+<span id="cb65-32"><a href="#cb65-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-33"><a href="#cb65-33" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;sf.pdf&#39;</span></span>
+<span id="cb65-34"><a href="#cb65-34" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_file)</span>
+<span id="cb65-35"><a href="#cb65-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-36"><a href="#cb65-36" aria-hidden="true" tabindex="-1"></a>exporter <span class="op">=</span> QgsLayoutExporter(layout)</span>
+<span id="cb65-37"><a href="#cb65-37" aria-hidden="true" tabindex="-1"></a>exporter.exportToPdf(</span>
+<span id="cb65-38"><a href="#cb65-38" aria-hidden="true" tabindex="-1"></a>    output_path, QgsLayoutExporter.PdfExportSettings())</span></code></pre></div>
 <p><img src="images/pyqgis/layoutpdf.png" width="75%" style="display: block; margin: auto;" /></p>
 <p><em><a href="#" style="float:right">Back to Top</a></em></p>
 </div>
