@@ -23,7 +23,13 @@ print('Total Distance {} meters'.format(distance))
 # We can conver the distance to miles
 distance_miles = d.convertLengthMeasurement(distance, QgsUnitTypes.DistanceMiles)
 
-print('Total Distance {:.2f} miles'.format(distance_miles))
+print('Total Distance {} miles'.format(distance_miles))
+
+# We can also format the distance by rounding to 2 decimals
+distance_formatted = QgsDistanceArea.formatDistance(
+  distance_miles, 2, QgsUnitTypes.DistanceKilometers)
+  
+print('Total Distance {}'.format(distance_formatted))
 
 # Create a line layer to display the route
 vlayer = QgsVectorLayer('LineString?crs=EPSG:4326', 'route', 'memory')

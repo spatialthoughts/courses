@@ -3,7 +3,7 @@ from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
 qgs = QgsApplication([], False)
 qgs.initQgis()
 
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads/pyqgis_in_a_day/')
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
 
 filename = 'sf.gpkg|layername=zoning'
 uri = os.path.join(data_dir, filename)
