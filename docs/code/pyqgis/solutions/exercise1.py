@@ -37,9 +37,15 @@ provider = vlayer.dataProvider()
 provider.addAttributes([QgsField('distance', QVariant.Double)])
 vlayer.updateFields() 
 f = QgsFeature()
-f.setGeometry(QgsGeometry.fromPolylineXY([point1, point3, point2]))
+
+# Line 1
+vertices1 = d.geodesicLine(point1, point3, 100000)
+vertices2 = d.geodesicLine(point3, point2, 100000)
+geodesic_line = QgsGeometry.fromPolylineXY(vertices1[0] + vertices2[0])
+f.setGeometry(geodesic_line)
 f.setAttributes([distance_miles])
 provider.addFeature(f)
+
 vlayer.updateExtents() 
 QgsProject.instance().addMapLayer(vlayer)
 
