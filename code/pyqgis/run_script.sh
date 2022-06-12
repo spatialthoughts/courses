@@ -4,7 +4,7 @@ OLD_PYTHONPATH=$PYTHONPATH
 QGIS_VERSION="QGIS-LTR"
 
 export PATH=/Applications/$QGIS_VERSION.app/Contents/MacOS/bin:$PATH
-export PYTHONPATH=/Applications/$QGIS_VERSION.app/Contents/Resources/python
+export PYTHONPATH=/Applications/$QGIS_VERSION.app/Contents/Resources/python/:/Applications/$QGIS_VERSION.app/Contents/Resources/python/plugins
 export QGIS_PREFIX_PATH=/Applications/$QGIS_VERSION.app/Contents/MacOS
 export QT_QPA_PLATFORM_PLUGIN_PATH=/Applications/$QGIS_VERSION.app/Contents/PlugIns/platforms/
 export DYLD_INSERT_LIBRARIES=/Applications/$QGIS_VERSION.app/Contents/MacOS/lib/libsqlite3.dylib
