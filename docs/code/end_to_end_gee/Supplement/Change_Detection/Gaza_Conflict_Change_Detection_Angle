@@ -1,0 +1,107 @@
+// Gaza bomb damage analysis
+// Israeli–Palestinian conflict escalated from 10-15 May 2021
+// resulting in airstrikes in the Gaza Strip.
+
+// This script shows how to detect potential damaged sites
+// using Spectral Distance change method.
+
+
+var gaul = ee.FeatureCollection("FAO/GAUL/2015/level0");
+var gaza = gaul.filter(ee.Filter.eq('ADM0_NAME', 'Gaza Strip'))
+var geometry = gaza.geometry()
+Map.setCenter(34.45, 31.5, 14)
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).copyProperties(image, ['system:time_start']);
+}
+
+
+var s2 = ee.ImageCollection('COPERNICUS/S2')
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds);
+
+var beforeDate  = ee.Date('2021-05-10')
+var afterDate = ee.Date('2021-05-15')
+
+var before = s2.filter(ee.Filter.date(beforeDate, beforeDate.advance(1, 'day')))
+var beforeImage = before.first()
+
+var after = s2.filter(ee.Filter.date(afterDate, afterDate.advance(1, 'day')))
+
+var afterImage = after.first()
+
+var rgbVis = {min: 0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+var nrgVis = {min: 0, max: 0.3, bands: ['B8', 'B4', 'B3']};
+
+Map.addLayer(beforeImage.clip(geometry), {min: 0, max: 3000, bands: ['B4', 'B3', 'B2']}, 'Before')
+Map.addLayer(afterImage.clip(geometry), {min: 0, max: 3000, bands: ['B4', 'B3', 'B2']}, 'After')
+
+// Calculate Spectral Angle
+var magnitude = function(image) {
+  return image.pow(2).reduce(ee.Reducer.sum()).sqrt();
+};
+
+var dot = beforeImage.multiply(afterImage).reduce(ee.Reducer.sum());
+
+var angle = dot.divide(magnitude(afterImage))
+              .divide(magnitude(beforeImage))
+              .acos()
+              .rename('angle')
+              
+var angleThreshold = 0.15
+var change = angle.gt(angleThreshold).clip(geometry);
+
+// Select only built-up pixels
+var classification = ee.ImageCollection("ESA/WorldCover/v100").first();
+
+var urban = classification.eq(50)
+var change = change.updateMask(urban)
+Map.addLayer(change.selfMask(), {min:0, max: 1, palette: ['red']} , 'Detected Change')
+
+// Remove small and very large areas detected as change
+var minArea = 300
+var maxArea = 50000
+// S2 resolution is 10m
+var minPixels = ee.Number(minArea).divide(100)
+var maxPixels = ee.Number(maxArea).divide(100)
+
+var change = change
+var connections = change.connectedPixelCount(maxPixels.add(10))
+
+var masked = change
+  .updateMask(connections.gt(minPixels).and(connections.lte(maxPixels)))
+
+var vectors = masked.selfMask().reduceToVectors({
+  scale: 10,
+  eightConnected: false,
+  tileScale: 16,
+  maxPixels: 1e10})
+
+// Paint all the polygon edges with the same number and width, display.
+var colored = ee.Image().byte().paint({
+  featureCollection: vectors,
+  color: 1,
+});
+Map.addLayer(colored, {max:1, palette:['red']} , 'Detected Change (Filtered)', false)
+
+var centroids = vectors.map(function(f) {
+  return f.centroid({maxError: 1})
+})
+Map.addLayer(centroids, {max:1, color: 'cyan'} , 'Detected Site Centroids')
+
+Export.table.toDrive({
+  collection: centroids,
+  description: 'Detected_Site_Centroids',
+  folder: 'earthengine',
+  fileNamePrefix: 'change_sites',
+  fileFormat: 'SHP'})

@@ -1,0 +1,84 @@
+// On 21st February 2019, massive forest fires broke out in
+// numerous places across the Bandipur National Park of
+// the Karnataka state in India.
+// By 25 February 2019 most fire was brought under control
+// This script shows how to do damage assessment using
+// spectral index change detection technique.
+
+// Define the area of interest
+var geometry = ee.Geometry.Polygon([[
+  [76.37639666685044, 11.766523239445169],
+  [76.37639666685044, 11.519036946599561],
+  [76.78426409849106, 11.519036946599561],
+  [76.78426409849106, 11.766523239445169]
+]]);
+var fireStart = ee.Date('2019-02-20');
+var fireEnd = ee.Date('2019-02-25');
+
+Map.centerObject(geometry, 10)
+
+var s2 = ee.ImageCollection("COPERNICUS/S2")
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+} 
+
+// Apply filters and cloud mask
+var filtered = s2
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*')
+
+// Create Before and After composites
+var before = filtered
+  .filter(ee.Filter.date(
+    fireStart.advance(-2, 'month'), fireStart))
+  .median()
+
+var after = filtered
+  .filter(ee.Filter.date(
+    fireEnd, fireEnd.advance(1, 'month')))
+  .median()
+
+// Freshly burnt regions appeat bright in SWIR-bands
+// Use a False Color Visualization
+var swirVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B12', 'B8', 'B4'],
+};
+Map.addLayer(before, swirVis, 'Before')
+Map.addLayer(after, swirVis, 'After')
+
+// Write a function to calculate  Normalized Burn Ratio (NBR)
+// 'NIR' (B8) and 'SWIR-2' (B12)
+var addNBR = function(image) {
+  var ndbi = image.normalizedDifference(['B8', 'B12']).rename(['nbr']);
+  return image.addBands(ndbi)
+}
+
+var beforeNbr = addNBR(before).select('nbr');
+var afterNbr = addNBR(after).select('nbr');
+
+var nbrVis = {min: -0.5, max: 0.5, palette: ['white', 'black']}
+
+Map.addLayer(beforeNbr, nbrVis, 'Prefire NBR');
+Map.addLayer(afterNbr, nbrVis, 'Postfire NBR');
+
+// Calculate Change in NBR (dNBR)
+var change = beforeNbr.subtract(afterNbr)
+
+// Apply a threshold
+var threshold = 0.3
+
+// Display Burned Areas
+var burned = change.gt(threshold)
+Map.addLayer(burned, {min:0, max:1, palette: ['white', 'red']}, 'Burned', false) 

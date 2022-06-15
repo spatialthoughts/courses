@@ -14,7 +14,7 @@ var rgbVis = {
 };
 
 var filtered = s2
-  .filter(ee.Filter.date('2019-01-01', '2019-01-31'))
+  .filter(ee.Filter.date('2019-01-01', '2019-02-01'))
   .filter(ee.Filter.bounds(bangalore))
   .select('B.*')
 
@@ -47,7 +47,7 @@ Map.addLayer(beforeClassified,
 
 // 2020 Jan
 var after = s2
-  .filter(ee.Filter.date('2020-01-01', '2020-01-31'))
+  .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
   .filter(ee.Filter.bounds(bangalore))
   .select('B.*')
   .median()
@@ -82,4 +82,34 @@ var transitionMatrix = merged.reduceRegion({
   tileScale: 16
 })
 // This prints number of pixels for each class transition
-print(transitionMatrix.get('transitions'))              
+print(transitionMatrix.get('transitions'))
+
+// If we want to calculate the area of each class transition
+// we can use a grouped reducer
+
+// Divide by 1e6 to get the area in sq.km.
+var areaImage = ee.Image.pixelArea().divide(1e6).addBands(merged);
+// Calculate Area by each Transition Class
+// using a Grouped Reducer
+var areas = areaImage.reduceRegion({
+      reducer: ee.Reducer.sum().group({
+      groupField: 1,
+      groupName: 'transitions',
+    }),
+    geometry: bangalore,
+    scale: 100,
+    tileScale: 4,
+    maxPixels: 1e10
+    }); 
+
+// Post-process the result to generate a clean output
+var classAreas = ee.List(areas.get('groups'))
+var classAreaLists = classAreas.map(function(item) {
+      var areaDict = ee.Dictionary(item)
+      var classNumber = ee.Number(areaDict.get('transitions')).format()
+      var area = ee.Number(areaDict.get('sum')).round()
+      return ee.List([classNumber, area])
+    })
+var classTransitionsAreaDict = ee.Dictionary(classAreaLists.flatten())
+print(classTransitionsAreaDict)
+

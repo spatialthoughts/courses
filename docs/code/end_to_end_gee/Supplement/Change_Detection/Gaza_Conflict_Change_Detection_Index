@@ -1,0 +1,88 @@
+// Gaza bomb damage analysis
+// Adapted from https://jamonvdh.users.earthengine.app/view/gaza-bomb-damage-analysis
+// Original app by: Jamon Van Den Hoek
+// Adapted code by: Ujaval Gandhi 
+
+var gaul = ee.FeatureCollection("FAO/GAUL/2015/level0");
+var gaza = gaul.filter(ee.Filter.eq('ADM0_NAME', 'Gaza Strip'))
+var geometry = gaza.geometry()
+Map.setCenter(34.45, 31.5, 14)
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000).copyProperties(image, ['system:time_start']);
+}
+
+
+var s2 = ee.ImageCollection("COPERNICUS/S2")
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds);
+
+var beforeDate  = ee.Date('2021-05-10')
+var afterDate = ee.Date('2021-05-15')
+
+var before = s2.filter(ee.Filter.date(beforeDate, beforeDate.advance(1, 'day')))
+var beforeComposite = before.median()
+
+var after = s2.filter(ee.Filter.date(afterDate, afterDate.advance(1, 'day')))
+
+var afterComposite = after.median()
+
+var rgbVis = {min: 0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+var nrgVis = {min: 0, max: 0.3, bands: ['B8', 'B4', 'B3']};
+
+Map.addLayer(beforeComposite.clip(geometry), {min: 0, max: 0.3, bands: ['B4', 'B3', 'B2']}, 'Before')
+Map.addLayer(afterComposite.clip(geometry), {min: 0, max: 0.4, bands: ['B4', 'B3', 'B2']}, 'After')
+
+var ndviBefore = beforeComposite.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+var ndviAfter = afterComposite.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+
+// Loss of NDVI
+var difference = ndviBefore.subtract(ndviAfter).clip(geometry)
+
+var indexThreshold = 0.12;
+var change = difference.gt(indexThreshold)
+
+// Mask Waterbodies using WorldCover
+var classification = ee.ImageCollection("ESA/WorldCover/v100").first();
+var water = classification.eq(80)
+var change = change.updateMask(water.not())
+Map.addLayer(change.selfMask(), {min:0, max: 1, palette: ['orange']} , 'Detected Change')
+
+var minArea = 300
+var maxArea = 50000
+// S2 resolution is 10m
+var minPixels = ee.Number(minArea).divide(100)
+var maxPixels = ee.Number(maxArea).divide(100)
+
+var change = change
+var connections = change.connectedPixelCount(maxPixels.add(10))
+
+var masked = change
+  .updateMask(connections.gt(minPixels).and(connections.lte(maxPixels)))
+
+var vectors = masked.selfMask().reduceToVectors({
+  scale: 10,
+  eightConnected: false,
+  maxPixels: 1e10})
+
+// Paint all the polygon edges with the same number and width, display.
+var colored = ee.Image().byte().paint({
+  featureCollection: vectors,
+  color: 1,
+});
+Map.addLayer(colored, {max:1, palette:['red']} , 'Detected Change (Filtered)')
+
+var centroids = vectors.map(function(f) {
+  return f.centroid()
+})
+Map.addLayer(centroids, {max:1, color: 'cyan'} , 'Detected Site Centroids')

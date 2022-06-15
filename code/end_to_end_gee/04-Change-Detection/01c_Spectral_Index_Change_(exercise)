@@ -1,0 +1,101 @@
+// Define the area of interest
+var geometry = ee.Geometry.Polygon([[
+  [76.37639666685044, 11.766523239445169],
+  [76.37639666685044, 11.519036946599561],
+  [76.78426409849106, 11.519036946599561],
+  [76.78426409849106, 11.766523239445169]
+]]);
+var fireStart = ee.Date('2019-02-20');
+var fireEnd = ee.Date('2019-02-25');
+
+Map.centerObject(geometry, 10)
+
+var s2 = ee.ImageCollection("COPERNICUS/S2")
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+} 
+
+// Apply filters and cloud mask
+var filtered = s2
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*')
+
+// Create Before and After composites
+var before = filtered
+  .filter(ee.Filter.date(
+    fireStart.advance(-2, 'month'), fireStart))
+  .median()
+
+var after = filtered
+  .filter(ee.Filter.date(
+    fireEnd, fireEnd.advance(1, 'month')))
+  .median()
+
+
+// Write a function to calculate  Normalized Burn Ratio (NBR)
+// 'NIR' (B8) and 'SWIR-2' (B12)
+var addNBR = function(image) {
+  var ndbi = image.normalizedDifference(['B8', 'B12']).rename(['nbr']);
+  return image.addBands(ndbi)
+}
+
+var beforeNbr = addNBR(before).select('nbr');
+var afterNbr = addNBR(after).select('nbr');
+
+// Calculate Change in NBR (dNBR)
+var change = beforeNbr.subtract(afterNbr)
+
+var dnbrPalette = ['#ffffb2','#fecc5c','#fd8d3c','#f03b20','#bd0026'];
+// Display the change image
+Map.addLayer(change, {min:0.1, max: 0.7, palette: dnbrPalette},
+  'Change in NBR')
+
+// We can also classify the change image according to
+// burn severity
+
+// United States Geological Survey (USGS) proposed
+// a classification table to interpret the burn severity
+// We will assign a discrete class value and visualize it
+// | Severity     | dNBR Range         | Class |
+// |--------------|--------------------|-------|
+// | Unburned     | < 0.1              | 0     |
+// | Low Severity | >= 0.10 and <0.27  | 1     |
+// | Moderate-Low | >= 0.27 and <0.44  | 2     |
+// | Moderate-High| >= 0.44 and< 0.66  | 3     |
+// | High         | >= 0.66            | 4     |
+
+// Classification of continuous values can be done
+// using the .where() function
+var severity = change
+  .where(change.lt(0.10), 0)
+  .where(change.gte(0.10).and(change.lt(0.27)), 1)
+  .where(change.gte(0.27).and(change.lt(0.44)), 2)
+  .where(change.gte(0.44).and(change.lt(0.66)), 3)
+  .where(change.gt(0.66), 4)
+
+
+// Exercise
+
+// The resulting image 'severiy' is a discrete image with 
+// pixel values from 0-4 representing the severity class
+
+// Display the image according to the following color table
+
+// | Severity     | Class | Color   |
+// |--------------|-------|---------|
+// | Unburned     | 0     | green   |
+// | Low Severity | 1     | yellow  |
+// | Moderate-Low | 2     | organge |
+// | Moderate-High| 3     | red     |
+// | High         | 4     | magenta |
+
