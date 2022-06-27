@@ -36,18 +36,41 @@ function addNDVI(image) {
 // Map the function over the collection
 var withNdvi = filtered.map(addNDVI);
 
+var exportCol = withNdvi.select('ndvi');
 
-// Display a time-series chart
-var chart = ui.Chart.image.series({
-  imageCollection: withNdvi.select('ndvi'),
-  region: geometry,
-  reducer: ee.Reducer.mean(),
-  scale: 10
-}).setOptions({
-      lineWidth: 1,
-      title: 'NDVI Time Series',
-      interpolateNulls: true,
-      vAxis: {title: 'NDVI'},
-      hAxis: {title: '', format: 'YYYY-MMM'}
-    })
-print(chart);
+// The function below exports the collection
+// The key is to use 'evaluate()' to asynchronously get a list
+// if image ids and start an export task for each image
+
+var doExport = function() {
+  print('Working')
+  var ids = exportCol.aggregate_array('system:index');
+  // evaluate() will not block the UI and once the result is available
+  // will be passed-on to the callback function where we will call
+  // Export.image.toDrive()
+  ids.evaluate(function(imageIds) {
+    print('Total number of images', imageIds.length)
+    print('Exporting now... (see Tasks tab)')
+    print('Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.')
+    for(var i = 0; i < imageIds.length; i++) {
+      
+      // Filter using the image id
+      var image = ee.Image(exportCol.toList(1, i).get(0));
+
+      Export.image.toDrive({
+        image: image,
+        region: geometry,
+        scale: 10,
+        fileNamePrefix: imageIds[i],
+        folder: 'earthengine',
+        description: 'Export_' + i + '_' + imageIds[i],
+      })
+      }
+  })
+  
+}
+
+print('Click button below to start export')
+var button = ui.Button({label: 'Export', onClick: doExport})
+print(button)
+Map.centerObject(geometry);

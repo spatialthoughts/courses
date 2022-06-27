@@ -1,0 +1,83 @@
+// Panels are the main container widgets
+var mainPanel = ui.Panel({
+  style: {width: '300px'}
+});
+
+
+var title = ui.Label({
+  value: 'Night Lights Explorer',
+  style: {'fontSize': '24px'}
+});
+// You can add widgets to the panel
+mainPanel.add(title)
+
+// You can even add panels to other panels
+var dropdownPanel = ui.Panel({
+  layout: ui.Panel.Layout.flow('horizontal'),
+});
+mainPanel.add(dropdownPanel);
+
+var yearSelector = ui.Select({
+  placeholder: 'please wait..',
+  })
+
+var monthSelector = ui.Select({
+  placeholder: 'please wait..',
+  })
+
+var button = ui.Button('Load')
+dropdownPanel.add(yearSelector)
+dropdownPanel.add(monthSelector)
+dropdownPanel.add(button)
+
+
+// Let's add a dropdown with the years
+var years = ee.List.sequence(2014, 2020)
+var months = ee.List.sequence(1, 12)
+
+// Dropdown items need to be strings
+var yearStrings = years.map(function(year){
+  return ee.Number(year).format('%04d')
+})
+var monthStrings = months.map(function(month){
+  return ee.Number(month).format('%02d')
+})
+
+// Evaluate the results and populate the dropdown
+yearStrings.evaluate(function(yearList) {
+  yearSelector.items().reset(yearList)
+  yearSelector.setPlaceholder('select a year')
+})
+
+monthStrings.evaluate(function(monthList) {
+  monthSelector.items().reset(monthList)
+  monthSelector.setPlaceholder('select a month')
+
+})
+
+// Define a function that triggers when any value is changed
+var loadComposite = function() {
+  var col = ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG");
+  var year = yearSelector.getValue()
+  var month = monthSelector.getValue()
+  var startDate = ee.Date.fromYMD(
+    ee.Number.parse(year), ee.Number.parse(month), 1)
+  var endDate = startDate.advance(1, 'month')
+  var filtered = col.filter(ee.Filter.date(startDate, endDate))
+
+  var image = ee.Image(filtered.first()).select('avg_rad')
+  var nighttimeVis = {min: 0.0, max: 60.0}
+  var layerName = 'Night Lights ' + year + '-' + month
+  Map.addLayer(image, nighttimeVis, layerName)
+}
+button.onClick(loadComposite)
+
+// Exercise
+// Set the map center to your area of interst
+// Replace the author label with your name
+// Publish the app.
+Map.setCenter(76.43, 12.41, 8)
+var authorLabel = ui.Label('App by: Ujaval Gandhi');
+mainPanel.add(authorLabel);
+
+ui.root.add(mainPanel);

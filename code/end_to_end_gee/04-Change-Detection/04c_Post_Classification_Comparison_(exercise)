@@ -14,6 +14,7 @@ var rgbVis = {
 
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(bangalore))
   .select('B.*')
 
@@ -47,6 +48,7 @@ Map.addLayer(beforeClassified,
 // 2020 Jan
 var after = s2
   .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(bangalore))
   .select('B.*')
   .median()
@@ -63,10 +65,11 @@ Map.addLayer(afterClassified,
 var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
 var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
 
-// Show all changed areas
-var changed = afterClasses.subtract(beforeClasses).neq(0)
+var merged = beforeClasses.multiply(100).add(afterClasses)
+  .rename('transitions')
 
 // Exercise
 // Show all areas where water became other classes and display the result
-// Hint1: Select class 3 pixels from before image and NOT class 3 pixels from after image
-// Hint2: use the .and() operation to select pixels matching both conditions
+// Hint1: Water is class 3. To select areas that became other class,
+//        select pixel values 301, 302, and 304 from the merged image
+// Hint2: Use the .or() operation to select pixels matching multiple conditions

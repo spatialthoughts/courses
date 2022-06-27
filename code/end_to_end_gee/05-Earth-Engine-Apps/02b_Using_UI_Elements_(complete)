@@ -1,0 +1,29 @@
+// You can add any widgets from the ui.* module to the map
+var years = ['2014', '2015', '2016', '2017'];
+
+// Let's create a ui.Select() dropdown with the above values
+var yearSelector = ui.Select({
+  items: years,
+  value: '2014',
+  placeholder: 'Select a year',
+  })
+Map.add(yearSelector);
+
+var loadImage = function() {
+  var year = yearSelector.getValue();
+  var col = ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG");
+  var startDate = ee.Date.fromYMD(
+    ee.Number.parse(year), 1, 1);
+  var endDate = startDate.advance(1, 'year');
+  var filtered = col.filter(ee.Filter.date(startDate, endDate));
+  var composite = filtered.mean().select('avg_rad');
+  var layerName = 'Night Lights ' + year;
+  var nighttimeVis = {min: 0.0, max: 60.0};
+  Map.addLayer(composite, nighttimeVis, layerName);
+};
+
+var button = ui.Button({
+  label: 'Click to Load Image',
+  onClick: loadImage,
+  });
+Map.add(button);

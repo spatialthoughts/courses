@@ -1,0 +1,148 @@
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var selected = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry();
+Map.centerObject(geometry)
+
+var s2 = ee.ImageCollection("COPERNICUS/S2");
+
+// Write a function for Cloud masking
+var maskS2clouds = function(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+}
+
+// Write a function to scale the bands
+var scaleImage = function(image) {
+  return image
+    .multiply(0.0001)
+    .copyProperties(image, ["system:time_start"])
+}
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .map(scaleImage);
+  
+// Create a median composite for 2020
+var composite =  filtered.median();
+
+// Load ESA WorldCover 2020 Classification
+var worldcover = ee.ImageCollection("ESA/WorldCover/v100")
+var filtered = worldcover
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'));
+var classification = ee.Image(filtered.first());
+
+// Create a Split Panel App
+
+// Set a center and zoom level.
+var center = {lon: 77.58, lat: 12.97, zoom: 12};
+
+// Create two maps.
+var leftMap = ui.Map(center);
+var rightMap = ui.Map(center);
+
+// Link them together.
+var linker = new ui.Map.Linker([leftMap, rightMap]);
+
+// Create a split panel with the two maps.
+var splitPanel = ui.SplitPanel({
+  firstPanel: leftMap,
+  secondPanel: rightMap,
+  orientation: 'horizontal',
+  wipe: true
+});
+
+// Remove the default map from the root panel.
+ui.root.clear();
+
+// Add our split panel to the root panel.
+ui.root.add(splitPanel);
+
+// Add the layers to the maps
+// Composite goes to the leftMap
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+leftMap.addLayer(composite.clip(geometry), rgbVis, '2020 Composite');
+
+// Classification foes to the rightMap
+rightMap.addLayer(classification.clip(geometry), {}, 'WorldCover Classification');
+
+// Adding a Legend
+// The following code creates a legend with class names and colors
+
+// Create the panel for the legend items.
+var legend = ui.Panel({
+  style: {
+    position: 'middle-right',
+    padding: '8px 15px'
+  }
+});
+
+// Create and add the legend title.
+var legendTitle = ui.Label({
+  value: 'ESA WorldCover Classes',
+  style: {
+    fontWeight: 'bold',
+    fontSize: '18px',
+    margin: '0 0 4px 0',
+    padding: '0'
+  }
+});
+legend.add(legendTitle);
+
+var loading = ui.Label('Loading legend...', {margin: '2px 0 4px 0'});
+legend.add(loading);
+
+// Creates and styles 1 row of the legend.
+var makeRow = function(color, name) {
+  // Create the label that is actually the colored box.
+  var colorBox = ui.Label({
+    style: {
+      backgroundColor: '#' + color,
+      // Use padding to give the box height and width.
+      padding: '8px',
+      margin: '0 0 4px 0'
+    }
+  });
+
+  // Create the label filled with the description text.
+  var description = ui.Label({
+    value: name,
+    style: {margin: '0 0 4px 6px'}
+  });
+
+  return ui.Panel({
+    widgets: [colorBox, description],
+    layout: ui.Panel.Layout.Flow('horizontal')
+  });
+};
+
+var BAND_NAME = 'Map';
+// Get the list of palette colors and class names from the image.
+classification.toDictionary().select([BAND_NAME + ".*"]).evaluate(function(result) {
+  var palette = result[BAND_NAME + "_class_palette"];
+  var names = result[BAND_NAME + "_class_names"];
+  loading.style().set('shown', false);
+
+  for (var i = 0; i < names.length; i++) {
+    legend.add(makeRow(palette[i], names[i]));
+  }
+});
+
+// Print the panel containing the legend
+print(legend);
+
+// Exercise
+
+// The 'legend' panel contains the legend for the classification
+// Add the legend to the map below
+
+// Hint: The classification image is shown in the right-hand map

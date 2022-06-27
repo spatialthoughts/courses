@@ -1,0 +1,103 @@
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var selected = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry();
+Map.centerObject(geometry)
+
+var s2 = ee.ImageCollection("COPERNICUS/S2");
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry));
+
+// Write a function for Cloud masking
+var maskS2clouds = function(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)//.divide(10000)
+      .select("B.*")
+      .copyProperties(image, ["system:time_start"])
+}
+
+// Write a function to scale the bands
+var scaleImage = function(image) {
+  return image
+    .multiply(0.0001)
+    .copyProperties(image, ["system:time_start"])
+}
+
+var processedCol = filtered
+  .map(maskS2clouds)
+  .map(scaleImage)
+
+// Aggregate it to yearly composites
+var years = ee.List.sequence(2017, 2021);
+
+// Write a function to create yearly composites
+var createYearlyComposite = function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate = startDate.advance(1, 'year');
+  var yearImages = processedCol.filter(
+      ee.Filter.date(startDate, endDate));
+  var yearComposite = yearImages.median();
+  return yearComposite.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': ee.Number(year).format('%04d')})
+}
+
+// map() the function to create composite for all years
+var yearComposites = years.map(createYearlyComposite)
+
+// Create an ImageCollection from yearly composites
+var yearlyCol = ee.ImageCollection.fromImages(yearComposites)
+print(yearlyCol);
+
+// Visualize the collection
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+
+// A simple way to visualize is to use ui.Select()
+// Our collection has a unique 'year' property
+// Use that to create a dropdown
+
+// Display the image with the given year.
+var display = function(year) {
+  var filtered = yearlyCol.filter(ee.Filter.eq('year', year))
+  var image = ee.Image(filtered.first());
+  Map.addLayer(image.clip(geometry), rgbVis, 'RGB_Composite_' + year)
+}
+
+// Get the list of IDs and put them into a select
+yearlyCol.aggregate_array('year').evaluate(function(years) {
+  Map.add(ui.Select({
+    placeholder: 'Select a year',
+    items: years,
+    onChange: display
+  }))
+});
+
+// Another way is to create an animation
+
+// Define a function to convert an image to an RGB visualization
+// Clip the image and copy the system:time_start property
+var visualizeImage = function(image) {
+  return image.visualize(rgbVis).clip(geometry)
+    .copyProperties(image,
+      ['system:time_start', 'system:time_end', 'year'])
+};
+
+var visCol = yearlyCol.map(visualizeImage)
+
+// Define arguments for animation function parameters.
+var videoArgs = {
+  dimensions: 768,
+  region: geometry,
+  framesPerSecond: 1,
+  crs: 'EPSG:3857',
+};
+print(ui.Thumbnail(visCol, videoArgs));
+

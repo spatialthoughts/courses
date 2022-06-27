@@ -1,0 +1,71 @@
+// Script showing how to obtain a Landsat LST Time-Series
+// It also shows how to plot the time-series over multiple 
+// landcover types to see how they impact LST.
+
+var metal = ee.Geometry.Point([72.86078866122195, 19.0450671881717]);
+var concrete = ee.Geometry.Point([72.85416252571059, 19.024935510891645]);
+var vegetation = ee.Geometry.Point([72.83713618635834, 18.978660294058244]);
+var mumbai_wards = ee.FeatureCollection('users/ujavalgandhi/public/mumbai_bmc_wards_datameet');
+
+// Use Mumbai city boundary
+var geometry = mumbai_wards.geometry();
+Map.centerObject(geometry, 10);
+
+// LST Computation code by Sofia Ermida (sofia.ermida@ipma.pt; @ermida_sofia)
+
+// Ermida, S.L., Soares, P., Mantas, V., Göttsche, F.-M., Trigo, I.F., 2020. 
+//     Google Earth Engine open-source code for Land Surface Temperature estimation from the Landsat series.
+//     Remote Sensing, 12 (9), 1471; https://doi.org/10.3390/rs12091471
+var LandsatLST = require('users/sofiaermida/landsat_smw_lst:modules/Landsat_LST.js')
+
+// Set parameters to get Landsat 8 data
+var satellite = 'L8';
+var date_start = '2015-01-01';
+var date_end = '2016-01-01';
+var use_ndvi = true;
+
+// get landsat collection with added variables: NDVI, FVC, TPW, EM, LST
+var LandsatColl = LandsatLST.collection(satellite, date_start, date_end, geometry, use_ndvi)
+
+// Select LST band
+var lstK = LandsatColl.select('LST')
+
+// Convert to celsius
+var lstC = lstK.map(function(image){
+  return image.subtract(273.15).copyProperties(image, image.propertyNames())
+})
+
+print(lstC, 'lst celsius')
+
+// Filter to May month image to visualize in map. 
+var lstMay  = lstC.filter(ee.Filter.date('2015-04-01', '2015-05-01')).mean()
+
+Map.addLayer(lstMay.clip(geometry),{min:30, max:45, palette:['green','yellow','red']}, 'Mumbai - LST')
+
+// Create the LSt time series chart. 
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection:lstC,  
+  regions: [metal, concrete, vegetation],
+  reducer:ee.Reducer.mean(),
+  band:['LST'],
+  scale:30,  
+  xProperty:'system:time_start',
+}).setOptions({
+      lineWidth: 1,
+      title: 'LST Time-Series (C)',
+      interpolateNulls: true,
+      viewWindowMode:'explicit',
+        viewWindow: {
+            max:50,
+            min:25
+        },
+      vAxis: {title: 'LST (C)'},
+      hAxis: {title: '', format: 'YYYY-MMM'},
+      series: {
+      0: {color: 'red', labelInLegend: 'Steel Roof'}, 
+      1: {color: 'grey', labelInLegend: 'Concrete Roof'},
+      2: {color: 'green', labelInLegend: 'Vegetation'}
+    } 
+    })
+  
+print('2014 LST Time-Series (C)', chart)
