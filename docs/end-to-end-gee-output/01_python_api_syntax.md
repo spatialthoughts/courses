@@ -25,6 +25,7 @@ ee.Initialize()
 
 Python code doesn't use the 'var' keyword
 
+javascript code:
 ```
 var city = 'San Fransico'
 var state = 'California'
@@ -44,22 +45,39 @@ population = 881549
 print(population)
 ```
 
-#### Line Continuation
+#### Earth Engine Objects
 
-Python doesn't use a semi-colon for line ending. To indicate line-continuation you need to use the \\ character
-
-```
-var s2 = ee.ImageCollection('COPERNICUS/S2');
-var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31'));
-```
+You can create Earth Engine objects using the ``ee`` functions the same way.
 
 
 ```python
 s2 = ee.ImageCollection('COPERNICUS/S2')
+geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]])
+```
+
+#### Line Continuation
+
+Python doesn't use a semi-colon for line ending. To indicate line-continuation you need to use the \\ character
+
+javascript code:
+```
+var s2 = ee.ImageCollection('COPERNICUS/S2');
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-02-01', '2019-03-01'))
+  .filter(ee.Filter.bounds(geometry));
+```
+
+
+```python
 filtered = s2 \
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
-    .filter(ee.Filter.date('2019-01-01', '2019-12-31')) 
+    .filter(ee.Filter.date('2019-02-01', '2019-03-01')) \
+    .filter(ee.Filter.bounds(geometry))
 ```
 
 #### Functions
@@ -68,6 +86,7 @@ Instead of the `function` keyword, Python uses the `def` keyword. Also the in-li
 
 In the example below, also now the `and` operator - which is capitalized as `And` in Python version to avoid conflict with the built-in `and` operator. The same applies to `Or` and `Not` operators. `true`, `false`, `null` in Python are also spelled as `True`, `False` and `None`.
 
+javascript code:
 ```
 function maskS2clouds(image) {
   var qa = image.select('QA60')
@@ -78,6 +97,11 @@ function maskS2clouds(image) {
   return image.updateMask(mask)//.divide(10000)
       .select("B.*")
       .copyProperties(image, ["system:time_start"])
+}
+
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
 }
 ```
 
@@ -92,60 +116,77 @@ def maskS2clouds(image):
   return image.updateMask(mask) \
       .select("B.*") \
       .copyProperties(image, ["system:time_start"])
+
+def addNDVI(image):
+  ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi')
+  return image.addBands(ndvi)
+
+withNdvi = filtered \
+    .map(maskS2clouds) \
+    .map(addNDVI)
 ```
 
 #### Function Arguments
 
 Named arguments to Earth Engine functions need to be in quotes. Also when passing the named arguments as a dictionary, it needs to be passed using the `**` keyword.
 
+javascript code:
 ```
-var gaul = ee.FeatureCollection("FAO/GAUL/2015/level1");
-var gfsad = ee.Image("USGS/GFSAD1000_V0");
-var wheatrice = gfsad.select('landcover').eq(1)
-var uttarpradesh = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Uttar Pradesh'))
-var points = wheatrice.selfMask().stratifiedSample(
-    {numPoints:100, region:uttarpradesh, geometries: true})
-```
+var composite = withNdvi.median();
+var ndvi = composite.select('ndvi');
 
-
-
-```python
-gaul = ee.FeatureCollection("FAO/GAUL/2015/level1")
-gfsad = ee.Image("USGS/GFSAD1000_V0")
-wheatrice = gfsad.select('landcover').eq(1)
-uttarpradesh = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Uttar Pradesh'))
-points = wheatrice.selfMask().stratifiedSample(**
-    {'numPoints':100, 'region':uttarpradesh, 'geometries': True})
-print(points.getInfo())
-
-```
-
-#### In-line functions
-
-The syntax for defining in-line functions is also slightly different. You need to use the `lambda` keyword
-
-```
-var points = points.map(function(feature) {
-  return ee.Feature(feature.geometry(), {'id': feature.id()})
-})
+var stats = ndvi.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 10,
+    maxPixels: 1e10
+})    
 ```
 
 
 ```python
-points = points.map(lambda feature: ee.Feature(feature.geometry(), {'id': feature.id()} ))
+composite = withNdvi.median()
+ndvi = composite.select('ndvi')
+
+stats = ndvi.reduceRegion(**{
+  'reducer': ee.Reducer.mean(),
+  'geometry': geometry,
+  'scale': 10,
+  'maxPixels': 1e10
+  })
 ```
 
 #### Printing Values
 
 The `print()` function syntax is the same. But you must remember that in the Code Editor when you cann `print`, the value of the server object is fetched and then printed. You must do that explicitely by calling `getInfo()` on any server-side object.
 
+javascript code:
 ```
-print(points.first()
+print(stats.get('ndvi')
 ```
 
 
 ```python
-print(points.first().getInfo())
+print(stats.get('ndvi').getInfo())
+```
+
+#### In-line functions
+
+The syntax for defining in-line functions is also slightly different. You need to use the `lambda` keyword.
+
+javascript code:
+```
+var myList = ee.List.sequence(1, 10);
+var newList = myList.map(function(number) {
+    return ee.Number(number).pow(2);
+print(newList);
+```
+
+
+```python
+myList = ee.List.sequence(1, 10)
+newList = myList.map(lambda number: ee.Number(number).pow(2))
+print(newList.getInfo())
 ```
 
 ### Exercise
