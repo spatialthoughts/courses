@@ -145,8 +145,3 @@ Map.centerObject(karnataka)
 Map.addLayer(karnataka, visParams, 'Karnataka Districts')
 ```
 ---
-
-
-```python
-
-```

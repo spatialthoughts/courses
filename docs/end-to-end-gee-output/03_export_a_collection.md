@@ -113,6 +113,7 @@ for task in tasks:
 The code below uses the TerraClimate data and creates an ImageCollection with 12 monthly images of maximum temperature. It also extract the geometry for Australia from the LSIB collection. Add the code to start an export task for each image in the collection for australia.
 
 - **Hint1**: TerraClimate images have a scale of 4638.3m
+- **Hint2**: You need to export the image contained in the clippedImage variable
 
 
 ```python

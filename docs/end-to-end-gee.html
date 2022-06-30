@@ -3921,125 +3921,125 @@ var visParams = {color: &#39;red&#39;}
 Map.centerObject(karnataka)
 Map.addLayer(karnataka, visParams, &#39;Karnataka Districts&#39;)</code></pre>
 <hr />
-<div class="sourceCode" id="cb82"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
 </div>
 </div>
 <div id="batch-exports" class="section level2">
 <h2>03. Batch Exports</h2>
 <p><a href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/end_to_end_gee/03_export_a_collection.ipynb" target="_blank">Open in Google Colab ↗</a></p>
 <p>One of the most commonly asked questions by Earth Engine users is - <em>How do I download all images in a collection</em>? The Earth Engine Python API comes with a <code>ee.batch</code> module that allows you to launch batch exports and manage tasks. The recommended way to do batch exports like this is to use the Python API’s <code>ee.batch.Export</code> functions and use a Python for-loop to iterate and export each image. The <code>ee.batch</code> module also gives you ability to control <em>Tasks</em> - allowing you to automate exports.</p>
-<div class="sourceCode" id="cb83"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
-<div class="sourceCode" id="cb84"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
-<div class="sourceCode" id="cb85"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
+<div class="sourceCode" id="cb82"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
+<div class="sourceCode" id="cb83"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
+<div class="sourceCode" id="cb84"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
 <div id="create-a-collection" class="section level4">
 <h4>Create a Collection</h4>
-<div class="sourceCode" id="cb86"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
-<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
-<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
-<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
-<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
-<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
-<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function for Cloud masking</span></span>
-<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> maskS2clouds(image):</span>
-<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a>  qa <span class="op">=</span> image.select(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a>  cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span></span>
-<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>  cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span></span>
-<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a>  mask <span class="op">=</span> qa.bitwiseAnd(cloudBitMask).eq(<span class="dv">0</span>).And(</span>
-<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a>             qa.bitwiseAnd(cirrusBitMask).eq(<span class="dv">0</span>))</span>
-<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask) <span class="op">\</span></span>
-<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a>      .select(<span class="st">&quot;B.*&quot;</span>) <span class="op">\</span></span>
-<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a>      .copyProperties(image, [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
-<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
-<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry)) <span class="op">\</span></span>
-<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">map</span>(maskS2clouds)</span>
-<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
-<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
-<span id="cb86-29"><a href="#cb86-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
-<span id="cb86-30"><a href="#cb86-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb86-31"><a href="#cb86-31" aria-hidden="true" tabindex="-1"></a>withNdvi <span class="op">=</span> filtered.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
+<div class="sourceCode" id="cb85"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
+<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
+<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
+<span id="cb85-5"><a href="#cb85-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
+<span id="cb85-6"><a href="#cb85-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
+<span id="cb85-7"><a href="#cb85-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb85-8"><a href="#cb85-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-9"><a href="#cb85-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function for Cloud masking</span></span>
+<span id="cb85-10"><a href="#cb85-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> maskS2clouds(image):</span>
+<span id="cb85-11"><a href="#cb85-11" aria-hidden="true" tabindex="-1"></a>  qa <span class="op">=</span> image.select(<span class="st">&#39;QA60&#39;</span>)</span>
+<span id="cb85-12"><a href="#cb85-12" aria-hidden="true" tabindex="-1"></a>  cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span></span>
+<span id="cb85-13"><a href="#cb85-13" aria-hidden="true" tabindex="-1"></a>  cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span></span>
+<span id="cb85-14"><a href="#cb85-14" aria-hidden="true" tabindex="-1"></a>  mask <span class="op">=</span> qa.bitwiseAnd(cloudBitMask).eq(<span class="dv">0</span>).And(</span>
+<span id="cb85-15"><a href="#cb85-15" aria-hidden="true" tabindex="-1"></a>             qa.bitwiseAnd(cirrusBitMask).eq(<span class="dv">0</span>))</span>
+<span id="cb85-16"><a href="#cb85-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask) <span class="op">\</span></span>
+<span id="cb85-17"><a href="#cb85-17" aria-hidden="true" tabindex="-1"></a>      .select(<span class="st">&quot;B.*&quot;</span>) <span class="op">\</span></span>
+<span id="cb85-18"><a href="#cb85-18" aria-hidden="true" tabindex="-1"></a>      .copyProperties(image, [<span class="st">&quot;system:time_start&quot;</span>])</span>
+<span id="cb85-19"><a href="#cb85-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-20"><a href="#cb85-20" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb85-21"><a href="#cb85-21" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb85-22"><a href="#cb85-22" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb85-23"><a href="#cb85-23" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry)) <span class="op">\</span></span>
+<span id="cb85-24"><a href="#cb85-24" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">map</span>(maskS2clouds)</span>
+<span id="cb85-25"><a href="#cb85-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-26"><a href="#cb85-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb85-27"><a href="#cb85-27" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb85-28"><a href="#cb85-28" aria-hidden="true" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb85-29"><a href="#cb85-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
+<span id="cb85-30"><a href="#cb85-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-31"><a href="#cb85-31" aria-hidden="true" tabindex="-1"></a>withNdvi <span class="op">=</span> filtered.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
 </div>
 <div id="export-all-images" class="section level4">
 <h4>Export All Images</h4>
 <p>Exports are done via the <code>ee.batch</code> module. A key difference between javascript and Python version is that the <code>region</code> parameter needs to be supplied with actual geometry coordinates.</p>
-<div class="sourceCode" id="cb87"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
-<div class="sourceCode" id="cb88"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
-<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
-<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>),</span>
-<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
-<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image.<span class="bu">id</span>().getInfo(),</span>
-<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
-<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
-<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: image.geometry().bounds().getInfo()[<span class="st">&#39;coordinates&#39;</span>],</span>
-<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
-<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a>  task.start()</span>
-<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb86"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
+<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>),</span>
+<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
+<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image.<span class="bu">id</span>().getInfo(),</span>
+<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
+<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
+<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: image.geometry().bounds().getInfo()[<span class="st">&#39;coordinates&#39;</span>],</span>
+<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
+<span id="cb87-12"><a href="#cb87-12" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb87-13"><a href="#cb87-13" aria-hidden="true" tabindex="-1"></a>  task.start()</span>
+<span id="cb87-14"><a href="#cb87-14" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
 </div>
 <div id="manage-runningwaiting-tasks" class="section level4">
 <h4>Manage Running/Waiting Tasks</h4>
 <p>You can manage tasks as well. Get a list of tasks and get state information on them</p>
+<div class="sourceCode" id="cb88"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
+<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
+<p>You can cancel tasks as well</p>
 <div class="sourceCode" id="cb89"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
 <span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
-<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
-<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
-<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
-<p>You can cancel tasks as well</p>
-<div class="sourceCode" id="cb90"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
-<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
-<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a>    task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
-<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a>    task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
-<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
-<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a>        task.cancel()</span>
-<span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
-<span id="cb90-8"><a href="#cb90-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb90-9"><a href="#cb90-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>    task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a>    task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a>        task.cancel()</span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
 </div>
 <div id="exercise-30" class="section level3">
 <h3>Exercise</h3>
 <p>The code below uses the TerraClimate data and creates an ImageCollection with 12 monthly images of maximum temperature. It also extract the geometry for Australia from the LSIB collection. Add the code to start an export task for each image in the collection for australia.</p>
 <ul>
 <li><strong>Hint1</strong>: TerraClimate images have a scale of 4638.3m</li>
+<li><strong>Hint2</strong>: You need to export the image contained in the clippedImage variable</li>
 </ul>
-<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
-<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
-<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
-<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
-<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span>
-<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
-<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
-<span id="cb91-12"><a href="#cb91-12" aria-hidden="true" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb91-13"><a href="#cb91-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-14"><a href="#cb91-14" aria-hidden="true" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
-<span id="cb91-15"><a href="#cb91-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-16"><a href="#cb91-16" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
-<span id="cb91-17"><a href="#cb91-17" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2020-01-01&#39;</span>, <span class="st">&#39;2021-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb91-18"><a href="#cb91-18" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
-<span id="cb91-19"><a href="#cb91-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb91-20"><a href="#cb91-20" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb91-21"><a href="#cb91-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
+<div class="sourceCode" id="cb90"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
+<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
+<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
+<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
+<span id="cb90-8"><a href="#cb90-8" aria-hidden="true" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span>
+<span id="cb90-9"><a href="#cb90-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-10"><a href="#cb90-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
+<span id="cb90-11"><a href="#cb90-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
+<span id="cb90-12"><a href="#cb90-12" aria-hidden="true" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb90-13"><a href="#cb90-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-14"><a href="#cb90-14" aria-hidden="true" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
+<span id="cb90-15"><a href="#cb90-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-16"><a href="#cb90-16" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
+<span id="cb90-17"><a href="#cb90-17" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2020-01-01&#39;</span>, <span class="st">&#39;2021-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb90-18"><a href="#cb90-18" aria-hidden="true" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb90-19"><a href="#cb90-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-20"><a href="#cb90-20" aria-hidden="true" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb90-21"><a href="#cb90-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
 <p>Replace the comments with your code.</p>
-<div class="sourceCode" id="cb92"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb92-3"><a href="#cb92-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clip the image to the region geometry</span></span>
-<span id="cb92-4"><a href="#cb92-4" aria-hidden="true" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
-<span id="cb92-5"><a href="#cb92-5" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb92-6"><a href="#cb92-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">## Create the export task using ee.batch.Export.image.toDrive()</span></span>
-<span id="cb92-7"><a href="#cb92-7" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb92-8"><a href="#cb92-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">## Start the task</span></span></code></pre></div>
+<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clip the image to the region geometry</span></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">## Create the export task using ee.batch.Export.image.toDrive()</span></span>
+<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">## Start the task</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/exporting_a_collection.png" alt="Launching multiple tasks using the  Python API" width="100%" />
 <p class="caption">
@@ -4058,64 +4058,66 @@ Launching multiple tasks using the Python API
 <li>geemap <a href="https://geemap.org/chart/">Chart module</a></li>
 <li>geemap <a href="https://geemap.org/notebooks/63_charts/">Example notebook</a></li>
 </ul>
-<div class="sourceCode" id="cb93"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
-<div class="sourceCode" id="cb94"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
-<span id="cb94-2"><a href="#cb94-2" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> geemap</span>
-<span id="cb94-3"><a href="#cb94-3" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> ModuleNotFoundError:</span>
-<span id="cb94-4"><a href="#cb94-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb94-5"><a href="#cb94-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;geemap not found, installing via pip in Google Colab...&#39;</span>)</span>
-<span id="cb94-6"><a href="#cb94-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">!</span>pip install geemap <span class="op">--</span>quiet</span>
-<span id="cb94-7"><a href="#cb94-7" aria-hidden="true" tabindex="-1"></a>        <span class="im">import</span> geemap</span>
-<span id="cb94-8"><a href="#cb94-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb94-9"><a href="#cb94-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;geemap not found, please install via conda in your environment&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb95"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
-<div class="sourceCode" id="cb96"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
+<div class="sourceCode" id="cb92"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ee</span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb93-2"><a href="#cb93-2" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> geemap</span>
+<span id="cb93-3"><a href="#cb93-3" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> ModuleNotFoundError:</span>
+<span id="cb93-4"><a href="#cb93-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb93-5"><a href="#cb93-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;geemap not found, installing via pip in Google Colab...&#39;</span>)</span>
+<span id="cb93-6"><a href="#cb93-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">!</span>pip install geemap <span class="op">--</span>quiet</span>
+<span id="cb93-7"><a href="#cb93-7" aria-hidden="true" tabindex="-1"></a>        <span class="im">import</span> geemap</span>
+<span id="cb93-8"><a href="#cb93-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb93-9"><a href="#cb93-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;geemap not found, please install via conda in your environment&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb94"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a>ee.Authenticate()</span></code></pre></div>
+<div class="sourceCode" id="cb95"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span></code></pre></div>
 <p>Load the TerraClimate collection and select the ‘tmmx’ band.</p>
-<div class="sourceCode" id="cb97"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;IDAHO_EPSCOR/TERRACLIMATE&quot;</span>)</span>
-<span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb96"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;IDAHO_EPSCOR/TERRACLIMATE&quot;</span>)</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span></code></pre></div>
 <p>Define a point location for the chart.</p>
-<div class="sourceCode" id="cb98"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">77.57738128916243</span>, <span class="fl">12.964758918835752</span>])</span></code></pre></div>
+<div class="sourceCode" id="cb97"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">77.57738128916243</span>, <span class="fl">12.964758918835752</span>])</span></code></pre></div>
 <p>Scale the band values so they are in Degree Celcius.</p>
-<div class="sourceCode" id="cb99"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scale_image(image):</span>
-<span id="cb99-2"><a href="#cb99-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee.Image(image).multiply(<span class="fl">0.1</span>)<span class="op">\</span></span>
-<span id="cb99-3"><a href="#cb99-3" aria-hidden="true" tabindex="-1"></a>    .copyProperties(image, [<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb99-4"><a href="#cb99-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb99-5"><a href="#cb99-5" aria-hidden="true" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale_image)</span></code></pre></div>
+<div class="sourceCode" id="cb98"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scale_image(image):</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee.Image(image).multiply(<span class="fl">0.1</span>)<span class="op">\</span></span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>    .copyProperties(image, [<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale_image)</span></code></pre></div>
 <p>Filter the collection.</p>
-<div class="sourceCode" id="cb100"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled.<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>                     .<span class="bu">filter</span>(ee.Filter.intersects(<span class="st">&#39;.geo&#39;</span>, geometry))</span></code></pre></div>
+<div class="sourceCode" id="cb99"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled.<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb99-2"><a href="#cb99-2" aria-hidden="true" tabindex="-1"></a>                     .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span></code></pre></div>
 <p>To chart an image series in Python, we must first extract the values from each image and create a FeatureCollection.</p>
-<div class="sourceCode" id="cb101"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> extract_data(image):</span>
-<span id="cb101-2"><a href="#cb101-2" aria-hidden="true" tabindex="-1"></a>    stats <span class="op">=</span> image.reduceRegion(<span class="op">**</span>{ </span>
-<span id="cb101-3"><a href="#cb101-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;reducer&#39;</span>:ee.Reducer.mean(),</span>
-<span id="cb101-4"><a href="#cb101-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;geometry&#39;</span>:geometry,</span>
-<span id="cb101-5"><a href="#cb101-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>:<span class="dv">5000</span></span>
-<span id="cb101-6"><a href="#cb101-6" aria-hidden="true" tabindex="-1"></a>    })</span>
-<span id="cb101-7"><a href="#cb101-7" aria-hidden="true" tabindex="-1"></a>    properties <span class="op">=</span> {</span>
-<span id="cb101-8"><a href="#cb101-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;month&#39;</span>: image.get(<span class="st">&#39;system:index&#39;</span>),</span>
-<span id="cb101-9"><a href="#cb101-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;tmmx&#39;</span>: stats.get(<span class="st">&#39;tmmx&#39;</span>)</span>
-<span id="cb101-10"><a href="#cb101-10" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb101-11"><a href="#cb101-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ee.Feature(<span class="va">None</span>, properties)</span>
-<span id="cb101-12"><a href="#cb101-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb101-13"><a href="#cb101-13" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> ee.FeatureCollection(filtered.<span class="bu">map</span>(extract_data))</span></code></pre></div>
-<div class="sourceCode" id="cb102"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(data.first().getInfo())</span></code></pre></div>
+<div class="sourceCode" id="cb100"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> extract_data(image):</span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>    stats <span class="op">=</span> image.reduceRegion(<span class="op">**</span>{ </span>
+<span id="cb100-3"><a href="#cb100-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;reducer&#39;</span>:ee.Reducer.mean(),</span>
+<span id="cb100-4"><a href="#cb100-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;geometry&#39;</span>:geometry,</span>
+<span id="cb100-5"><a href="#cb100-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>:<span class="dv">5000</span></span>
+<span id="cb100-6"><a href="#cb100-6" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb100-7"><a href="#cb100-7" aria-hidden="true" tabindex="-1"></a>    properties <span class="op">=</span> {</span>
+<span id="cb100-8"><a href="#cb100-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;month&#39;</span>: image.get(<span class="st">&#39;system:index&#39;</span>),</span>
+<span id="cb100-9"><a href="#cb100-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;tmmx&#39;</span>: stats.get(<span class="st">&#39;tmmx&#39;</span>)</span>
+<span id="cb100-10"><a href="#cb100-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb100-11"><a href="#cb100-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ee.Feature(<span class="va">None</span>, properties)</span>
+<span id="cb100-12"><a href="#cb100-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-13"><a href="#cb100-13" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> ee.FeatureCollection(filtered.<span class="bu">map</span>(extract_data))</span></code></pre></div>
+<div class="sourceCode" id="cb101"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(data.first().getInfo())</span></code></pre></div>
 <div id="create-an-interactive-chart-using-geemap" class="section level3">
 <h3>Create an Interactive Chart using geemap</h3>
-<div class="sourceCode" id="cb103"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> geemap <span class="im">import</span> chart</span></code></pre></div>
-<div class="sourceCode" id="cb104"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> {</span>
-<span id="cb104-2"><a href="#cb104-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;title&#39;</span>: <span class="st">&#39;Max Monthly Temperature at Bangalore&#39;</span>, </span>
-<span id="cb104-3"><a href="#cb104-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;legend_location&#39;</span>: <span class="st">&#39;top-right&#39;</span>,</span>
-<span id="cb104-4"><a href="#cb104-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;height&#39;</span>: <span class="st">&#39;500px&#39;</span>,</span>
-<span id="cb104-5"><a href="#cb104-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;ylabel&#39;</span>: <span class="st">&#39;Temperature (C)&#39;</span>,</span>
-<span id="cb104-6"><a href="#cb104-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;xlabel&#39;</span>: <span class="st">&#39;Date&#39;</span></span>
-<span id="cb104-7"><a href="#cb104-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<div class="sourceCode" id="cb105"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a>chart.feature_byFeature(data, <span class="st">&#39;month&#39;</span>, [<span class="st">&#39;tmmx&#39;</span>], <span class="op">**</span>options)</span></code></pre></div>
+<div class="sourceCode" id="cb102"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> geemap <span class="im">import</span> chart</span></code></pre></div>
+<div class="sourceCode" id="cb103"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a>options <span class="op">=</span> {</span>
+<span id="cb103-2"><a href="#cb103-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;title&#39;</span>: <span class="st">&#39;Max Monthly Temperature at Bangalore&#39;</span>, </span>
+<span id="cb103-3"><a href="#cb103-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;legend_location&#39;</span>: <span class="st">&#39;top-right&#39;</span>,</span>
+<span id="cb103-4"><a href="#cb103-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;height&#39;</span>: <span class="st">&#39;500px&#39;</span>,</span>
+<span id="cb103-5"><a href="#cb103-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;ylabel&#39;</span>: <span class="st">&#39;Temperature (C)&#39;</span>,</span>
+<span id="cb103-6"><a href="#cb103-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;xlabel&#39;</span>: <span class="st">&#39;Date&#39;</span>,</span>
+<span id="cb103-7"><a href="#cb103-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;colors&#39;</span>: [<span class="st">&#39;blue&#39;</span>]</span>
+<span id="cb103-8"><a href="#cb103-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb104"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a>chart.feature_byFeature(data, <span class="st">&#39;month&#39;</span>, [<span class="st">&#39;tmmx&#39;</span>], <span class="op">**</span>options)</span></code></pre></div>
 </div>
 <div id="create-a-chart-using-matplotlib" class="section level3">
 <h3>Create a chart using Matplotlib</h3>
 <p>We can convert a FeatureCollection to a DataFrame using <code>geemap</code> helper function <code>ee_to_pandas</code>.</p>
-<div class="sourceCode" id="cb106"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geemap</span>
-<span id="cb106-2"><a href="#cb106-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> geemap.ee_to_pandas(data)</span></code></pre></div>
+<div class="sourceCode" id="cb105"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geemap</span>
+<span id="cb105-2"><a href="#cb105-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> geemap.ee_to_pandas(data)</span></code></pre></div>
+<div class="sourceCode" id="cb106"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div>
 <p>Now we have a regular Pandas dataframe that can be plotted with <code>matplotlib</code>.</p>
 <div class="sourceCode" id="cb107"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
 <span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
@@ -4127,7 +4129,7 @@ Launching multiple tasks using the Python API
 <span id="cb108-6"><a href="#cb108-6" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">&#39;Max Monthly Temperature at Bangalore&#39;</span>,</span>
 <span id="cb108-7"><a href="#cb108-7" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span><span class="st">&#39;month&#39;</span>,</span>
 <span id="cb108-8"><a href="#cb108-8" aria-hidden="true" tabindex="-1"></a>        ylabel<span class="op">=</span><span class="st">&#39;Temperature (C)&#39;</span>,</span>
-<span id="cb108-9"><a href="#cb108-9" aria-hidden="true" tabindex="-1"></a>        kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>)</span>
+<span id="cb108-9"><a href="#cb108-9" aria-hidden="true" tabindex="-1"></a>        kind<span class="op">=</span><span class="st">&#39;line&#39;</span>)</span>
 <span id="cb108-10"><a href="#cb108-10" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span></code></pre></div>
 </div>
 <div id="exercise-31" class="section level3">

@@ -67,7 +67,7 @@ Filter the collection.
 
 ```python
 filtered = tmaxScaled.filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
-                     .filter(ee.Filter.intersects('.geo', geometry))
+                     .filter(ee.Filter.bounds(geometry))
 ```
 
 To chart an image series in Python, we must first extract the values from each image and create a FeatureCollection.
@@ -108,7 +108,8 @@ options = {
     'legend_location': 'top-right',
     'height': '500px',
     'ylabel': 'Temperature (C)',
-    'xlabel': 'Date'
+    'xlabel': 'Date',
+    'colors': ['blue']
 }
 ```
 
@@ -125,6 +126,11 @@ We can convert a FeatureCollection to a DataFrame using `geemap` helper function
 ```python
 import geemap
 df = geemap.ee_to_pandas(data)
+```
+
+
+```python
+df
 ```
 
 Now we have a regular Pandas dataframe that can be plotted with `matplotlib`.
@@ -145,7 +151,7 @@ df.plot(ax=ax,
         title='Max Monthly Temperature at Bangalore',
         x='month',
         ylabel='Temperature (C)',
-        kind='bar')
+        kind='line')
 plt.tight_layout()
 ```
 
