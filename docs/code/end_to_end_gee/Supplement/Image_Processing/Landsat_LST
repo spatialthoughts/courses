@@ -1,16 +1,34 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var metalroof = 
+    /* color: #f738ff */
+    /* shown: false */
+    ee.Geometry.Point([72.8550936937685, 19.044646120301234]),
+    concreteroof = 
+    /* color: #a09e94 */
+    /* shown: false */
+    ee.Geometry.Point([72.85441764267667, 19.028290540890772]),
+    airport = 
+    /* color: #992718 */
+    /* shown: false */
+    ee.Geometry.Point([72.86249644714638, 19.09355985643176]),
+    water = 
+    /* color: #273d99 */
+    /* shown: false */
+    ee.Geometry.Point([72.91107782264197, 19.152799035509638]),
+    mangrove = 
+    /* color: #568155 */
+    /* shown: false */
+    ee.Geometry.Point([72.8115905761819, 19.152316393168405]),
+    mumbai_wards = ee.FeatureCollection("users/ujavalgandhi/public/mumbai_bmc_wards_datameet");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
 // Script showing how to obtain a Landsat LST Time-Series
-// It also shows how to plot the time-series over multiple 
-// landcover types to see how they impact LST.
-
-var metal = ee.Geometry.Point([72.86078866122195, 19.0450671881717]);
-var concrete = ee.Geometry.Point([72.85416252571059, 19.024935510891645]);
-var vegetation = ee.Geometry.Point([72.83713618635834, 18.978660294058244]);
-var mumbai_wards = ee.FeatureCollection('users/ujavalgandhi/public/mumbai_bmc_wards_datameet');
+// over different land surfaces
 
 // Use Mumbai city boundary
 var geometry = mumbai_wards.geometry();
-Map.centerObject(geometry, 10);
+Map.centerObject(geometry, 12);
 
+// Method 1
 // LST Computation code by Sofia Ermida (sofia.ermida@ipma.pt; @ermida_sofia)
 
 // Ermida, S.L., Soares, P., Mantas, V., Göttsche, F.-M., Trigo, I.F., 2020. 
@@ -35,37 +53,122 @@ var lstC = lstK.map(function(image){
   return image.subtract(273.15).copyProperties(image, image.propertyNames())
 })
 
-print(lstC, 'lst celsius')
 
 // Filter to May month image to visualize in map. 
-var lstMay  = lstC.filter(ee.Filter.date('2015-04-01', '2015-05-01')).mean()
+var lstMay  = lstC
+  .filter(ee.Filter.date('2015-04-01', '2015-05-01'))
+  .mean()
 
-Map.addLayer(lstMay.clip(geometry),{min:30, max:45, palette:['green','yellow','red']}, 'Mumbai - LST')
+Map.addLayer(lstMay.clip(geometry), 
+  {min:25, max:45, palette:['green','yellow','red']}, 
+  'Landsat-LST (Ermida, S.L)')
 
 // Create the LSt time series chart. 
 var chart = ui.Chart.image.seriesByRegion({
   imageCollection:lstC,  
-  regions: [metal, concrete, vegetation],
+  regions: [airport, metalroof, concreteroof, mangrove, water],
   reducer:ee.Reducer.mean(),
   band:['LST'],
   scale:30,  
   xProperty:'system:time_start',
 }).setOptions({
       lineWidth: 1,
-      title: 'LST Time-Series (C)',
+      title: 'Land Surface Temperature Time-Series (Ermida, S.L)',
       interpolateNulls: true,
       viewWindowMode:'explicit',
         viewWindow: {
             max:50,
             min:25
         },
-      vAxis: {title: 'LST (C)'},
+      vAxis: {title: 'LST (°C)'},
       hAxis: {title: '', format: 'YYYY-MMM'},
       series: {
-      0: {color: 'red', labelInLegend: 'Steel Roof'}, 
-      1: {color: 'grey', labelInLegend: 'Concrete Roof'},
-      2: {color: 'green', labelInLegend: 'Vegetation'}
+      0: {color: 'red', labelInLegend: 'Airport Tarmac'}, 
+      1: {color: 'pink', labelInLegend: 'Residential-Slum (Metal Roof)'}, 
+      2: {color: 'grey', labelInLegend: 'Residential (Concrete Roof)'},
+      3: {color: 'green', labelInLegend: 'Mangrove'},
+      4: {color: 'blue', labelInLegend: 'Water'}
     } 
     })
   
-print('2014 LST Time-Series (C)', chart)
+print(chart);
+
+// Method 2
+// Landsat Collection 2 Level 2 LST
+
+var date_start = '2015-01-01';
+var date_end = '2016-01-01';
+
+var dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+    .filterDate(date_start, date_end)
+    .filter(ee.Filter.bounds(geometry))
+    
+function maskL8sr(image) {
+  // Bit 0 - Fill
+  // Bit 1 - Dilated Cloud
+  // Bit 2 - Cirrus
+  // Bit 3 - Cloud
+  // Bit 4 - Cloud Shadow
+  var qaMask = image.select('QA_PIXEL').bitwiseAnd(parseInt('11111', 2)).eq(0);
+  var saturationMask = image.select('QA_RADSAT').eq(0);
+
+  // Apply the scaling factors to the appropriate bands.
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+
+  // Replace the original bands with the scaled ones and apply the masks.
+  return image.addBands(opticalBands, null, true)
+      .addBands(thermalBands, null, true)
+      .updateMask(qaMask)
+      .updateMask(saturationMask);
+}
+
+
+dataset = dataset.map(maskL8sr)
+
+// Select B10 band and rename it to LST
+var lstK = dataset.select(['ST_B10'], ['LST'])
+
+// Convert to celsius
+var lstC = lstK.map(function(image){
+  return image.subtract(273.15).copyProperties(image, image.propertyNames())
+})
+
+
+// Filter to May month image to visualize in map. 
+var lstMay  = lstC
+  .filter(ee.Filter.date('2015-04-01', '2015-05-01')).mean()
+
+Map.addLayer(lstMay.clip(geometry),
+  {min:25, max:45, palette:['green','yellow','red']},
+  'Landsat-LST (Landsat Collection 2)')
+
+// Create the LSt time series chart. 
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection:lstC,  
+  regions: [airport, metalroof, concreteroof, mangrove, water],
+  reducer:ee.Reducer.mean(),
+  band:['LST'],
+  scale:30,  
+  xProperty:'system:time_start',
+}).setOptions({
+      lineWidth: 1,
+      title: 'Land Surface Temperature Time-Series (Landsat Collection 2)',
+      interpolateNulls: true,
+      viewWindowMode:'explicit',
+        viewWindow: {
+            max:50,
+            min:25
+        },
+      vAxis: {title: 'LST (°C)'},
+      hAxis: {title: '', format: 'YYYY-MMM'},
+      series: {
+      0: {color: 'red', labelInLegend: 'Airport Tarmac'}, 
+      1: {color: 'pink', labelInLegend: 'Residential-Slum (Metal Roof)'}, 
+      2: {color: 'grey', labelInLegend: 'Residential (Concrete Roof)'},
+      3: {color: 'green', labelInLegend: 'Mangrove'},
+      4: {color: 'blue', labelInLegend: 'Water'}
+    } 
+    })
+  
+print(chart);
