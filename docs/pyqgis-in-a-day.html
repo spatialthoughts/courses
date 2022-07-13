@@ -458,7 +458,6 @@ $(document).ready(function () {
 <li><a href="#creating-a-pdf-with-title">Creating a PDF with Title</a></li>
 <li><a href="#create-a-new-toolbar-with-dropdown-menu">Create a New Toolbar with Dropdown Menu</a></li>
 <li><a href="#simplifying-processing-scripts">Simplifying Processing Scripts</a></li>
-<li><a href="#standalone-scripts-with-processing-algorithms">Standalone Scripts with Processing Algorithms</a></li>
 </ul></li>
 <li><a href="#what-next">What next?</a></li>
 <li><a href="#resources">Resources</a></li>
@@ -1414,43 +1413,55 @@ $(document).ready(function () {
 </div>
 <div id="writing-standalone-python-scripts" class="section level1">
 <h1>14. Writing Standalone Python Scripts</h1>
-<p>Having the python script run within QGIS is useful and desired most of the time. But there is a way to write python scripts that run on your system without QGIS being open. Ability to run PyQGIS scripts in a headless mode allows you to automate your workflow and run it on a server without human intervention. Let’s convert the script from the previous section to a standalone pyqgis script.</p>
-<p>Create a new file with the code below and save it as <code>save_attributes_standalone.py</code>.</p>
+<p>Having the python script run within QGIS is useful and desired most of the time. But there is a way to write python scripts that run on your system without QGIS being open. Ability to run PyQGIS scripts in a headless mode allows you to automate your workflow and run it on a server without human intervention. Let’s use some QGIS processing algorithms to carry out zonal statistics using a standalone python script.</p>
+<p>Create a new file with the code below and save it as <code>zonal_stats.py</code>.</p>
 <div class="sourceCode" id="cb45"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsApplication, QgsVectorLayer, QgsProject</span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>qgs <span class="op">=</span> QgsApplication([], <span class="va">False</span>)</span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>qgs.initQgis()</span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg|layername=zoning&#39;</span></span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
-<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsVectorLayer(uri, <span class="st">&#39;zoning&#39;</span>, <span class="st">&#39;ogr&#39;</span>)</span>
-<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>output_name <span class="op">=</span> <span class="st">&#39;output.csv&#39;</span></span>
-<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_name)</span>
-<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> output_file:</span>
-<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>    fieldnames <span class="op">=</span> [field.name() <span class="cf">for</span> field <span class="kw">in</span> layer.fields()]</span>
-<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>    line <span class="op">=</span> <span class="st">&#39;,&#39;</span>.join(name <span class="cf">for</span> name <span class="kw">in</span> fieldnames) <span class="op">+</span> <span class="st">&#39;</span><span class="ch">\n</span><span class="st">&#39;</span></span>
-<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>    output_file.write(line)</span>
-<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> f <span class="kw">in</span> layer.getFeatures():</span>
-<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> <span class="st">&#39;,&#39;</span>.join(<span class="bu">str</span>(f[name]) <span class="cf">for</span> name <span class="kw">in</span> fieldnames) <span class="op">+</span> <span class="st">&#39;</span><span class="ch">\n</span><span class="st">&#39;</span></span>
-<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>        output_file.write(line)</span>
-<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Success: &#39;</span>, <span class="st">&#39;Output file written at&#39;</span> <span class="op">+</span> output_path)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsApplication</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>qgs <span class="op">=</span> QgsApplication([], <span class="va">False</span>)</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>qgs.initQgis()</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> processing</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> processing.core.Processing <span class="im">import</span> Processing</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>Processing.initialize()</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>vector_layer <span class="op">=</span> <span class="st">&#39;seismic_zones.shp&#39;</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>vector_layer_path <span class="op">=</span> os.path.join(data_dir, vector_layer)</span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>raster_layer <span class="op">=</span> <span class="st">&#39;srtm.tif&#39;</span></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>raster_layer_path <span class="op">=</span> os.path.join(data_dir, raster_layer)</span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Input vector has invalid geometries</span></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Fix them first</span></span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> processing.run(<span class="st">&quot;native:fixgeometries&quot;</span>, {</span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>:vector_layer_path,</span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span>})</span>
 <span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Delete the layer object from memory</span></span>
-<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Without this you may get a Segmentation Fault on exit</span></span>
-<span id="cb45-27"><a href="#cb45-27" aria-hidden="true" tabindex="-1"></a><span class="co"># when the exitQgis() method will try clearning the layer registry</span></span>
-<span id="cb45-28"><a href="#cb45-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternatively, you can add the layer so it is present in the registry</span></span>
-<span id="cb45-29"><a href="#cb45-29" aria-hidden="true" tabindex="-1"></a><span class="co"># QgsProject.instance().addMapLayer(layer, False)</span></span>
-<span id="cb45-30"><a href="#cb45-30" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span>(layer)</span>
-<span id="cb45-31"><a href="#cb45-31" aria-hidden="true" tabindex="-1"></a>qgs.exitQgis()</span></code></pre></div>
-<p>You will notice that the script is almost exactly the same, but with a few notable changes. First there is the import statement at the top, to explicitly import the required modules. Next, we create an instance of the <code>QgsApplication</code> class and run <code>initQis()</code> method to load the QGIS data providers and layer registry. Finally we call <code>exitQgis()</code> to remove them from memory. Here we don’t have a way to take user input, so we hard-code the path to the input layer. Also we don’t have the QGIS GUI, we have no way of displaying the messages, so we remove those statements.</p>
-<p>When you run the script within QGIS environment, all the paths to QGIS libraries and environment variables are already set and python is able to find and use it. But when you run the script outside of QGIS, you need to set them yourself. The way to run the script depends on the platform.</p>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a>fixed_vector_layer <span class="op">=</span> results[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-27"><a href="#cb45-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Run Zonal Statistics</span></span>
+<span id="cb45-28"><a href="#cb45-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-29"><a href="#cb45-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Save output to a geopackage</span></span>
+<span id="cb45-30"><a href="#cb45-30" aria-hidden="true" tabindex="-1"></a>output_name <span class="op">=</span> <span class="st">&#39;seismic_zones_with_elevation.gpkg&#39;</span></span>
+<span id="cb45-31"><a href="#cb45-31" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_name)</span>
+<span id="cb45-32"><a href="#cb45-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-33"><a href="#cb45-33" aria-hidden="true" tabindex="-1"></a>processing.run(<span class="st">&quot;native:zonalstatisticsfb&quot;</span>, {</span>
+<span id="cb45-34"><a href="#cb45-34" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>: fixed_vector_layer,</span>
+<span id="cb45-35"><a href="#cb45-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;INPUT_RASTER&#39;</span>: raster_layer_path,</span>
+<span id="cb45-36"><a href="#cb45-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;RASTER_BAND&#39;</span>:<span class="dv">1</span>,</span>
+<span id="cb45-37"><a href="#cb45-37" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;COLUMN_PREFIX&#39;</span>:<span class="st">&#39;elevation_&#39;</span>,</span>
+<span id="cb45-38"><a href="#cb45-38" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;STATISTICS&#39;</span>:[<span class="dv">2</span>],</span>
+<span id="cb45-39"><a href="#cb45-39" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:output_path})</span>
+<span id="cb45-40"><a href="#cb45-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-41"><a href="#cb45-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Output Layer Created&#39;</span>, output_path)</span>
+<span id="cb45-42"><a href="#cb45-42" aria-hidden="true" tabindex="-1"></a>qgs.exitQgis()</span></code></pre></div>
+<p>You will notice that the script has a few notable parts. First there is the import statement at the top, to explicitly import the required modules. Next, we create an instance of the <code>QgsApplication</code> class and run <code>initQis()</code> method to load the QGIS data providers and layer registry. We also import the <code>Processing</code> module and initialize it. Finally we call <code>exitQgis()</code> to remove them from memory. We have hard-coded the path to the input layers but they can easily be taken as command-line flags using Python’s <a href="https://docs.python.org/3/library/argparse.html">argparse</a> module. Also we don’t have the QGIS GUI, we have no way of displaying the messages, so we remove those statements.</p>
+<p>When you run the script within QGIS, all the paths to QGIS libraries and environment variables are already set and python is able to find and use it. But when you run the script outside of QGIS, you need to set them yourself. Also if you are using Processing Algorithms, you need to make sure the path to core plugin folder is included in the PYTHONPATH environment variable.</p>
+<p>Our recommended environment setup takes care of all the requirements and allows you to run PyQGIS scripts easily. The next sections describe this seup and show youhow to run the script on various platforms.</p>
 <blockquote>
-<p>You may need to change these paths slightly based on where QGIS is installed. The following scripts assume you are running QGIS 3.16 LTR installed at the default location.</p>
+<p>You may need to change these paths slightly based on where QGIS is installed. The following scripts assume you are running QGIS-LTR installed at the default location.</p>
 </blockquote>
 <div id="windows-configuration" class="section level2">
 <h2>Windows Configuration</h2>
@@ -1468,7 +1479,7 @@ $(document).ready(function () {
 <span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> QGIS_PREFIX_PATH<span class="op">=%</span>OSGEO4W_ROOT<span class="op">%\</span>apps<span class="op">\</span>qgis<span class="op">-</span>ltr</span>
 <span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> QT_QPA_PLATFORM_PLUGIN_PATH<span class="op">=%</span>OSGEO4W_ROOT<span class="op">%\</span>apps<span class="op">\</span>Qt5<span class="op">\</span>plugins</span>
 <span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>python3 save_attributes_standalone.py</span></code></pre></div>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>python3 zonal_stats.py</span></code></pre></div>
 <p>Open the command prompt, browse to the directory with the above files, type <code>run_script.bat</code> and press Enter.</p>
 <blockquote>
 <p>You can also just double-click the <code>run_script.bat</code> to run it, but you will not see any error or success messages. So it is always a good idea to run the script from the shell.</p>
@@ -1491,7 +1502,7 @@ $(document).ready(function () {
 <span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a>export DYLD_INSERT_LIBRARIES<span class="op">=/</span>Applications<span class="op">/</span>$QGIS_VERSION.app<span class="op">/</span>Contents<span class="op">/</span>MacOS<span class="op">/</span>lib<span class="op">/</span>libsqlite3.dylib</span>
 <span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a>echo <span class="st">&quot;Using python3 from $(which python3)&quot;</span></span>
 <span id="cb47-12"><a href="#cb47-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a>python3 save_attributes_standalone.py</span>
+<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a>python3 zonal_stats.py</span>
 <span id="cb47-14"><a href="#cb47-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a><span class="co"># restore and clean up</span></span>
 <span id="cb47-16"><a href="#cb47-16" aria-hidden="true" tabindex="-1"></a>export PATH<span class="op">=</span>$OLD_PATH</span>
@@ -1930,44 +1941,6 @@ $(document).ready(function () {
 <span id="cb67-35"><a href="#cb67-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: csv}</span></code></pre></div>
 <p>You can run the script and see that the behavior is almost identical but the code is much simpler. The code uses the <code>@alg</code> decorator for defining algorithm name, group, inputs and outputs in a more concise way.</p>
 <p>Another important thing to note is that to create a processing algorithm, one must create a class that inherits from <code>QgsProcessingAlgorithm</code>. When you write a class, you refer to the current instance of the class with the keyword <code>self</code>. Here you are just writing a function, and the decorator will create a class for you. So we are using a parameter named <code>instance</code>. When the decorator will create a class, the reference to the instance will be passed on to our function as this parameter.</p>
-</div>
-<div id="standalone-scripts-with-processing-algorithms" class="section level2">
-<h2>Standalone Scripts with Processing Algorithms</h2>
-<p>You can access all processing algorithms from standalone PyQGIS scripts. Processing is implemented as a core <strong>plugin</strong> in QGIS. So you need to make sure the path to core plugin folder is included in the PYTHONPATH environment variable. Our recommended <a href="#windows-configuration">Windows</a> and <a href="#macos-configuration">Mac</a> configurations described in the previous sections already include this. So all you need to do is to import the <code>processing</code> module and initialize it.</p>
-<p>The script below shows how to use the <code>qgis:listuniquevalues</code> algorithm to get unique values in one of the fields of a vector layer. You can save it as <code>unique_values_processing.py</code> and run it via a Windows Batch file or Shell script as described earlier.</p>
-<div class="sourceCode" id="cb68"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsApplication, QgsVectorLayer, QgsProject</span>
-<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>qgs <span class="op">=</span> QgsApplication([], <span class="va">False</span>)</span>
-<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>qgs.initQgis()</span>
-<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> processing</span>
-<span id="cb68-7"><a href="#cb68-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> processing.core.Processing <span class="im">import</span> Processing</span>
-<span id="cb68-8"><a href="#cb68-8" aria-hidden="true" tabindex="-1"></a>Processing.initialize()</span>
-<span id="cb68-9"><a href="#cb68-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-10"><a href="#cb68-10" aria-hidden="true" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_in_a_day&#39;</span>)</span>
-<span id="cb68-11"><a href="#cb68-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-12"><a href="#cb68-12" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;sf.gpkg|layername=zoning&#39;</span></span>
-<span id="cb68-13"><a href="#cb68-13" aria-hidden="true" tabindex="-1"></a>uri <span class="op">=</span> os.path.join(data_dir, filename)</span>
-<span id="cb68-14"><a href="#cb68-14" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsVectorLayer(uri, <span class="st">&#39;zoning&#39;</span>, <span class="st">&#39;ogr&#39;</span>)</span>
-<span id="cb68-15"><a href="#cb68-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-16"><a href="#cb68-16" aria-hidden="true" tabindex="-1"></a>output_name <span class="op">=</span> <span class="st">&#39;unique_values.csv&#39;</span></span>
-<span id="cb68-17"><a href="#cb68-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-18"><a href="#cb68-18" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> processing.run(<span class="st">&quot;qgis:listuniquevalues&quot;</span>, {</span>
-<span id="cb68-19"><a href="#cb68-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;INPUT&#39;</span>: layer,</span>
-<span id="cb68-20"><a href="#cb68-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;FIELDS&#39;</span>: [<span class="st">&#39;zoning&#39;</span>]</span>
-<span id="cb68-21"><a href="#cb68-21" aria-hidden="true" tabindex="-1"></a>    })</span>
-<span id="cb68-22"><a href="#cb68-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-23"><a href="#cb68-23" aria-hidden="true" tabindex="-1"></a>unique_values <span class="op">=</span> results[<span class="st">&#39;UNIQUE_VALUES&#39;</span>]</span>
-<span id="cb68-24"><a href="#cb68-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-25"><a href="#cb68-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Unique values in the zoning field&#39;</span>, unique_values)</span>
-<span id="cb68-26"><a href="#cb68-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb68-27"><a href="#cb68-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Delete the layer object from memory</span></span>
-<span id="cb68-28"><a href="#cb68-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Without this you may get a Segmentation Fault on exit</span></span>
-<span id="cb68-29"><a href="#cb68-29" aria-hidden="true" tabindex="-1"></a><span class="co"># when the exitQgis() method will try clearning the layer registry</span></span>
-<span id="cb68-30"><a href="#cb68-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternatively, you can add the layer so it is present in the registry</span></span>
-<span id="cb68-31"><a href="#cb68-31" aria-hidden="true" tabindex="-1"></a><span class="co"># QgsProject.instance().addMapLayer(layer, False)</span></span>
-<span id="cb68-32"><a href="#cb68-32" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span>(layer)</span>
-<span id="cb68-33"><a href="#cb68-33" aria-hidden="true" tabindex="-1"></a>qgs.exitQgis()</span></code></pre></div>
 <p><em><a href="#" style="float:right">Back to Top</a></em></p>
 </div>
 </div>

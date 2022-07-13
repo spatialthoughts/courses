@@ -11,5 +11,5 @@ set PYTHONPATH=%OSGEO4W_ROOT%\apps\qgis-ltr\python;%OSGEO4W_ROOT%\apps\qgis-ltr\
 set QGIS_PREFIX_PATH=%OSGEO4W_ROOT%\apps\qgis-ltr
 set QT_QPA_PLATFORM_PLUGIN_PATH=%OSGEO4W_ROOT%\apps\Qt5\plugins
 
-python3 save_attributes_standalone.py
+python3 zonal_stats.py
 

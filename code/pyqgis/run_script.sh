@@ -10,7 +10,7 @@ export QT_QPA_PLATFORM_PLUGIN_PATH=/Applications/$QGIS_VERSION.app/Contents/Plug
 export DYLD_INSERT_LIBRARIES=/Applications/$QGIS_VERSION.app/Contents/MacOS/lib/libsqlite3.dylib
 echo "Using python3 from $(which python3)"
 
-python3 save_attributes_standalone.py
+python3 zonal_stats.py
 
 # restore and clean up
 export PATH=$OLD_PATH

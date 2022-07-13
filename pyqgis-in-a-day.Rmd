@@ -904,18 +904,20 @@ knitr::include_graphics('images/pyqgis/pluginprocessingrun.png')
 
 # 14. Writing Standalone Python Scripts
 
-Having the python script run within QGIS is useful and desired most of the time. But there is a way to write python scripts that run on your system without QGIS being open. Ability to run PyQGIS scripts in a headless mode allows you to automate your workflow and run it on a server without human intervention. Let's convert the script from the previous section to a standalone pyqgis script. 
+Having the python script run within QGIS is useful and desired most of the time. But there is a way to write python scripts that run on your system without QGIS being open. Ability to run PyQGIS scripts in a headless mode allows you to automate your workflow and run it on a server without human intervention. Let's use some QGIS processing algorithms to carry out zonal statistics using a standalone python script.
 
-Create a new file with the code below and save it as `save_attributes_standalone.py`.
+Create a new file with the code below and save it as `zonal_stats.py`.
 
-```{python eval=FALSE, code=readLines('code/pyqgis/save_attributes_standalone.py')}
+```{python eval=FALSE, code=readLines('code/pyqgis/zonal_stats.py')}
 ```
 
-You will notice that the script is almost exactly the same, but with a few notable changes. First there is the import statement at the top, to explicitly import the required modules. Next, we create an instance of the `QgsApplication` class and run `initQis()` method to load the QGIS data providers and layer registry. Finally we call `exitQgis()` to remove them from memory. Here we don't have a way to take user input, so we hard-code the path to the input layer. Also we don't have the QGIS GUI, we have no way of displaying the messages, so we remove those statements.
+You will notice that the script has a few notable parts. First there is the import statement at the top, to explicitly import the required modules. Next, we create an instance of the `QgsApplication` class and run `initQis()` method to load the QGIS data providers and layer registry. We also import the `Processing` module and initialize it. Finally we call `exitQgis()` to remove them from memory. We have hard-coded the path to the input layers but they can easily be taken as command-line flags using Python's [argparse](https://docs.python.org/3/library/argparse.html) module. Also we don't have the QGIS GUI, we have no way of displaying the messages, so we remove those statements.
 
-When you run the script within QGIS environment, all the paths to QGIS libraries and environment variables are already set and python is able to find and use it. But when you run the script outside of QGIS, you need to set them yourself. The way to run the script depends on the platform.
+When you run the script within QGIS, all the paths to QGIS libraries and environment variables are already set and python is able to find and use it. But when you run the script outside of QGIS, you need to set them yourself. Also if you are using Processing Algorithms, you need to make sure the path to core plugin folder is included in the PYTHONPATH environment variable.
 
-> You may need to change these paths slightly based on where QGIS is installed. The following scripts assume you are running QGIS 3.16 LTR installed at the default location.
+Our recommended environment setup takes care of all the requirements and allows you to run PyQGIS scripts easily. The next sections describe this seup and show youhow to run the script on various platforms.
+
+> You may need to change these paths slightly based on where QGIS is installed. The following scripts assume you are running QGIS-LTR installed at the default location.
 
 ## Windows Configuration
 
@@ -1378,16 +1380,6 @@ Let's modify the `save_attributes_algorithm.py` script covered in the [previous 
 You can run the script and see that the behavior is almost identical but the code is much simpler. The code uses the ``@alg`` decorator for defining algorithm name, group, inputs and outputs in a more concise way. 
 
 Another important thing to note is that to create a processing algorithm, one must create a class that inherits from ``QgsProcessingAlgorithm``. When you write a class, you refer to the current instance of the class with the keyword ``self``. Here you are just writing a function, and the decorator will create a class for you. So we are using a parameter named ``instance``. When the decorator will create a class, the reference to the instance will be passed on to our function as this parameter.
-
-## Standalone Scripts with Processing Algorithms
-
-You can access all processing algorithms from standalone PyQGIS scripts. Processing is implemented as a core **plugin** in QGIS. So you need to make sure the path to core plugin folder is included in the PYTHONPATH environment variable. Our recommended [Windows](#windows-configuration) and [Mac](#macos-configuration) configurations described in the previous sections already include this. So all you need to do is to import the `processing` module and initialize it.
-
-The script below shows how to use the `qgis:listuniquevalues` algorithm to get unique values in one of the fields of a vector layer. You can save it as `unique_values_processing.py` and run it via a Windows Batch file or Shell script as described earlier.
-
-
-```{python eval=FALSE, code=readLines('code/pyqgis/unique_values_processing.py')}
-```
 
 
 *[Back to Top](#){style="float:right"}*
