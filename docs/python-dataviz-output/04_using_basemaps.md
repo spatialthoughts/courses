@@ -34,7 +34,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/04_using_basemaps_files/04_using_basemaps_5_0.png)
+![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_5_0.png)
     
 
 
@@ -59,7 +59,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/04_using_basemaps_files/04_using_basemaps_9_0.png)
+![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_9_0.png)
     
 
 
@@ -84,7 +84,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/04_using_basemaps_files/04_using_basemaps_11_0.png)
+![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_11_0.png)
     
 
 
@@ -104,6 +104,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/04_using_basemaps_files/04_using_basemaps_13_0.png)
+![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_13_0.png)
     
 
