@@ -185,7 +185,7 @@ for index, dataset in enumerate(datasets):
 
 
     
-![](python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_32_0.png)
+![](python-dataviz-output/python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_32_0.png)
     
 
 
@@ -202,7 +202,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_34_0.png)
+![](python-dataviz-output/python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_34_0.png)
     
 
 
@@ -638,6 +638,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_38_0.png)
+![](python-dataviz-output/python-dataviz-output/06_visualizing_rasters_files/06_visualizing_rasters_38_0.png)
     
 

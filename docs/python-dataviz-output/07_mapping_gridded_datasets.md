@@ -972,7 +972,7 @@ imshow(anomaly2021)
 
 
     
-![](python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_11_1.png)
+![](python-dataviz-output/python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_11_1.png)
     
 
 
@@ -991,7 +991,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_13_0.png)
+![](python-dataviz-output/python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_13_0.png)
     
 
 
@@ -1013,7 +1013,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_15_0.png)
+![](python-dataviz-output/python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_15_0.png)
     
 
 
@@ -1052,7 +1052,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_17_0.png)
+![](python-dataviz-output/python-dataviz-output/07_mapping_gridded_datasets_files/07_mapping_gridded_datasets_17_0.png)
     
 
 

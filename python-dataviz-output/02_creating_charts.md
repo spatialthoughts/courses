@@ -104,7 +104,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_9_0.png)
+![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_9_0.png)
     
 
 
@@ -121,7 +121,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_10_0.png)
+![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_10_0.png)
     
 
 
@@ -163,7 +163,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_13_0.png)
+![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_13_0.png)
     
 
 
@@ -178,7 +178,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_14_0.png)
+![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/02_creating_charts_files/02_creating_charts_14_0.png)
     
 
 
