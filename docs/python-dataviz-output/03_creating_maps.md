@@ -29,17 +29,19 @@ The `plot()` method will render the data to a plot.
 
 Reference: [geopandas.GeoDataFrame.plot](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html)
 
+You can supply additional style options to change the appearance of the map.
+
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10,10)
-tracts.plot(ax=ax)
+tracts.plot(ax=ax, facecolor='grey', edgecolor='red', linewidth=0.5, alpha=0.3)
 plt.show()
 ```
 
 
     
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_6_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_7_0.png)
     
 
 
@@ -88,6 +90,21 @@ References:
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10,10)
+gdf.plot(ax=ax, column='density', scheme='quantiles')
+ax.set_axis_off()
+plt.show()
+```
+
+
+    
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_17_0.png)
+    
+
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(10,10)
 gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='quantiles', k=10, legend=True)
 ax.set_axis_off()
 plt.show()
@@ -95,7 +112,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_16_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_18_0.png)
     
 
 
@@ -118,7 +135,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_18_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_20_0.png)
     
 
 
@@ -138,6 +155,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_20_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_22_0.png)
     
 

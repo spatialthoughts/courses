@@ -1,14 +1,10 @@
 # Matplotlib Basics
 
-Before we start using `matplotlib` inside a Jupyter notebook, it is useful to set the matplotlib backend to `inline`. This setting makes the matplotlib graphs included in your notebook, next to the code. [Learn more](https://ipython.readthedocs.io/en/stable/interactive/plotting.html) about different plotting backends.
-
-We use the [magic function](https://ipython.readthedocs.io/en/stable/interactive/tutorial.html#magics-explained) `%matplotlib` to achieve this.
+Most of the Matplotlib functionality is available in the `pyplot` submodule, and by convention is imported as `plt`
 
 
 ```python
 import os
-
-%matplotlib inline
 import matplotlib.pyplot as plt
 ```
 
@@ -85,13 +81,13 @@ print(y)
     (0.5, 0.5, 0.5)
 
 
-Now these can be plotted using the `plot()` method. We specify the 3rd argument to the function is the `fmt` string - specifying the **format** of the symbols. It can be used to specify a string describing the symbol as `[marker][line][color]` sequence. In the following example, we specify it as `og` - meaning *[round markers][no line][green color]*
+Now these can be plotted using the `plot()` method. We specify keyword arguments `color` and `marker`.
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-ax.plot(x, y, 'og')
+ax.plot(x, y, color='green', marker='o')
 plt.show()
 ```
 
@@ -101,13 +97,27 @@ plt.show()
     
 
 
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+ax.plot(x, y, color='green', marker='o', linestyle='None')
+plt.show()
+```
+
+
+    
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_17_0.png)
+    
+
+
 You can save the figure using the `savefig()` method. Remember to save the figure *before* calling `plt.show()` otherwise the figure would be empty.
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-ax.plot(x, y, 'og')
+ax.plot(x, y, color='green', marker='o', linestyle='None')
 
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'simple.png')
@@ -118,7 +128,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_18_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_19_0.png)
     
 
 
@@ -128,23 +138,20 @@ Matplotlib provides many specialized functions for different types of plots. `sc
 
 Change the plot below to display the markers in a triangle shape.
 
-*Run all previous cells before attempting the exercise.*
+Reference: [matplotlib.pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html)
 
 
 ```python
+import matplotlib.pyplot as plt
+
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-ax.plot(x, y, 'og')
+ax.plot(x, y, color='green', marker='o', linestyle='None')
 plt.show()
 ```
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_21_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_22_0.png)
     
 
-
-
-```python
-
-```
