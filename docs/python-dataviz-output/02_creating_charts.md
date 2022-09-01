@@ -4,7 +4,7 @@ Pandas allows you to read structured datasets and visualize them using the `plot
 
 In this notebook, we will take work with open dataset of crime in London.
 
-## Setup
+## Setup and Data Download
 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
@@ -58,7 +58,7 @@ files = [
 data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/'
 
 for f in files:
-  url = os.path.join(data_url, f)
+  url = os.path.join(data_url + f)
   download(url)
 
 ```
