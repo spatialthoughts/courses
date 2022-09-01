@@ -1,0 +1,76 @@
+// Script showing how to use the S2 Cloudless algorithm to mask clouds
+// This script shows how to run this on a single image and export the results
+
+// If you want to run this on a collection, see the full example at
+// https://code.earthengine.google.com/?scriptPath=Examples%3ACloud%20Masking%2FSentinel2%20Cloud%20And%20Shadow
+var imageId = '20190703T050701_20190703T052312_T43PGP';
+
+
+// S2 Cloudless Algorithm
+// This algorithm requires different bands from 3 different datasets
+var s2Bands = ee.Image('COPERNICUS/S2/'+ imageId)
+    .select(['B7', 'B8', 'B8A', 'B10']);
+var s2SrBands = ee.Image('COPERNICUS/S2_SR/' + imageId)
+    .select(['B2', 'B3', 'B4', 'B5']);
+var s2CloudBands = ee.Image('COPERNICUS/S2_CLOUD_PROBABILITY/'+ imageId)
+    .select(['probability'])
+    
+var image = s2Bands.addBands(s2SrBands).addBands(s2CloudBands)
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.centerObject(image)
+Map.addLayer(image, rgbVis, 'SR Image')
+
+// s2Cloudless function defined at the end of the script
+var imageCloudless = ee.Image(s2Cloudless(image));
+
+// The S2 cloudless algorithm has a reproject() call that requires
+// computation at 10m resolution, so the results cannot be viewed interactively
+// Export the results instead.
+Export.image.toDrive({
+  image: imageCloudless.visualize(rgbVis),
+  description: 'Cloud_Probability_Masked_Image',
+  folder: 'earthengine',
+  fileNamePrefix: 'image_masked',
+  region: image.geometry(),
+  scale: 10,
+  maxPixels: 1e10})
+
+Export.image.toDrive({
+  image: image.visualize(rgbVis),
+  description: 'Original_Image',
+  folder: 'earthengine',
+  fileNamePrefix: 'image',
+  region: image.geometry(),
+  scale: 10,
+  maxPixels: 1e10})
+  
+// s2Cloudless function
+function s2Cloudless(image) {
+  // Compute the cloud displacement index from the L1C bands.
+  var cdi = ee.Algorithms.Sentinel2.CDI(image);
+  var s2c = image.select('probability');
+  var cirrus = image.select('B10').multiply(0.0001);
+
+  // Assume low-to-mid atmospheric clouds to be pixels where probability
+  // is greater than 65%, and CDI is less than -0.5. For higher atmosphere
+  // cirrus clouds, assume the cirrus band is greater than 0.01.
+  // The final cloud mask is one or both of these conditions.
+  var isCloud = s2c.gt(65).and(cdi.lt(-0.5)).or(cirrus.gt(0.01));
+
+  // Reproject is required to perform spatial operations at 20m scale.
+  // 20m scale is for speed, and assumes clouds don't require 10m precision.
+  isCloud = isCloud.focal_min(3).focal_max(16);
+  isCloud = isCloud.reproject({crs: cdi.projection(), scale: 20});
+
+  // Project shadows from clouds we found in the last step. This assumes we're working in
+  // a UTM projection.
+  var shadowAzimuth = ee.Number(90)
+      .subtract(ee.Number(image.get('MEAN_SOLAR_AZIMUTH_ANGLE')));
+  // With the following reproject, the shadows are projected 5km.
+  isCloud = isCloud.directionalDistanceTransform(shadowAzimuth, 50);
+  isCloud = isCloud.reproject({crs: cdi.projection(), scale: 100});
+
+  isCloud = isCloud.select('distance').mask();
+  return image.select('B2', 'B3', 'B4').updateMask(isCloud.not());
+}

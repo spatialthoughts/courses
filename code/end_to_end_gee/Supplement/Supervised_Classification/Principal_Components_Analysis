@@ -1,6 +1,40 @@
+// Script showing how to do Principal Component Analysis on images
 var composite = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
-var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary")
+var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary");
+
+Map.centerObject(composite)
 Map.addLayer(composite, {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2}, 'RGB');
+
+// Define the geometry and scale parameters
+var geometry = boundary.geometry();
+var scale = 20;
+
+// Run the PCA function
+var pca = PCA(composite)
+
+// Extract the properties of the pca image
+var variance = pca.toDictionary()
+print('Variance of Principal Components', variance)
+
+// As you see from the printed results, ~97% of the variance
+// from the original image is captured in the first 3 principal components
+// We select those and discard others
+var pca = PCA(composite).select(['pc1', 'pc2', 'pc3'])
+
+// PCA computation is expensive and can time out when displaying on the map
+// Export the results and import them back
+Export.image.toAsset({
+  image: pca,
+  description: 'Principal_Components_Image',
+  assetId: 'users/ujavalgandhi/e2e/arkavathy_pca',
+  region: geometry,
+  scale: scale,
+  maxPixels: 1e10})
+// Once the export finishes, import the asset and display
+var pcaImported = ee.Image('users/ujavalgandhi/e2e/arkavathy_pca')
+var pcaVisParams = {bands: ['pc1', 'pc2', 'pc3'], min: -2, max: 2};
+
+Map.addLayer(pcaImported, pcaVisParams, 'Principal Components');
 
 
 //************************************************************************** 
@@ -9,8 +43,8 @@ Map.addLayer(composite, {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2
 //************************************************************************** 
 function PCA(maskedImage){
   var image = maskedImage.unmask()
-  var scale = 20;
-  var region = boundary;
+  var scale = scale;
+  var region = geometry;
   var bandNames = image.bandNames();
   // Mean center the data to enable a faster covariance reducer
   // and an SD stretch of the principal components.
@@ -18,8 +52,7 @@ function PCA(maskedImage){
     reducer: ee.Reducer.mean(),
     geometry: region,
     scale: scale,
-    maxPixels: 1e9,
-    bestEffort: true,
+    maxPixels: 1e13,
     tileScale: 16
   });
   var means = ee.Image.constant(meanDict.values(bandNames));
@@ -43,8 +76,7 @@ function PCA(maskedImage){
       reducer: ee.Reducer.centeredCovariance(),
       geometry: region,
       scale: scale,
-      maxPixels: 1e9,
-      bestEffort: true,
+      maxPixels: 1e13,
       tileScale: 16
     });
 
@@ -59,14 +91,18 @@ function PCA(maskedImage){
     var eigenValues = eigens.slice(1, 0, 1);
     
     // Compute Percentage Variance of each component
-    var eigenValuesList = eigenValues.toList().flatten()
-    var total = eigenValuesList.reduce(ee.Reducer.sum())
-    var percentageVariance = eigenValuesList.map(function(item) {
-      return (ee.Number(item).divide(total)).multiply(100).format('%.2f')
-    })
     // This will allow us to decide how many components capture
     // most of the variance in the input
-    print('Percentage Variance of Each Component', percentageVariance)
+    var eigenValuesList = eigenValues.toList().flatten()
+    var total = eigenValuesList.reduce(ee.Reducer.sum())
+
+    var percentageVariance = eigenValuesList.map(function(item) {
+      var component = eigenValuesList.indexOf(item).add(1).format('%02d')
+      var variance = ee.Number(item).divide(total).multiply(100).format('%.2f')
+      return ee.List([component, variance])
+    })
+    // Create a dictionary that will be used to set properties on final image
+    var varianceDict = ee.Dictionary(percentageVariance.flatten())
     // This is a PxP matrix with eigenvectors in rows.
     var eigenVectors = eigens.slice(1, 1);
     // Convert the array image to 2D arrays for matrix computations.
@@ -76,7 +112,9 @@ function PCA(maskedImage){
     var principalComponents = ee.Image(eigenVectors).matrixMultiply(arrayImage);
 
     // Turn the square roots of the Eigenvalues into a P-band image.
-    var sdImage = ee.Image(eigenValues.sqrt())
+    // Call abs() to turn negative eigenvalues to positive before
+    // taking the square root
+    var sdImage = ee.Image(eigenValues.abs().sqrt())
       .arrayProject([0]).arrayFlatten([getNewBandNames('sd')]);
 
     // Turn the PCs into a P-band image, normalized by SD.
@@ -86,34 +124,9 @@ function PCA(maskedImage){
       // Make the one band array image a multi-band image, [] -> image.
       .arrayFlatten([getNewBandNames('pc')])
       // Normalize the PCs by their SDs.
-      .divide(sdImage);
+      .divide(sdImage)
+      .set(varianceDict);
   };
   var pcImage = getPrincipalComponents(centered, scale, region);
   return pcImage.mask(maskedImage.mask());
 }
-
-// As you see from the printed results, ~97% of the variance
-// from the original image is captured in the first 3 principal components
-// We select those and discard others
-var pca = PCA(composite).select(['pc1', 'pc2', 'pc3'])
-
-// Add the 3 PCA bands to the original image
-// Use this image for sampling training points for
-// supervised classification
-var composite = composite.addBands(pca)  
-
-
-// PCA computation is expensive and can time out when displaying on the map
-// Export the results and import them back
-Export.image.toAsset({
-  image: pca,
-  description: 'Principal_Components_Image',
-  assetId: 'users/ujavalgandhi/e2e/arkavathy_pca',
-  region: boundary,
-  scale: 20,
-  maxPixels: 1e10})
-// Once the export finishes, import the asset and display
-var pcaImported = ee.Image('users/ujavalgandhi/e2e/arkavathy_pca')
-var pcaVisParams = {bands: ['pc1', 'pc2', 'pc3'], min: -2, max: 2};
-
-Map.addLayer(pcaImported, pcaVisParams, 'Principal Components');
