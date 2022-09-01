@@ -2,18 +2,21 @@
 var gpm = ee.ImageCollection("NASA/GPM_L3/IMERG_V06");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 // Display GPM Precipitation Time Series
-var startDate = ee.Date.fromYMD(2021, 8, 4)
+
+// Use IANA timezone name
+var startDate = ee.Date.fromYMD(2021, 8, 4,'Asia/Kolkata')
 var endDate = startDate.advance(1, 'day')
 
 // Select the Calibrated Precipitation Band
 var collection = gpm.select('precipitationCal');
 
 var filtered = collection.filter(ee.Filter.date(startDate, endDate))
-
+print(filtered)
 // GPM units are mm/hour but image represents 30 mins
 // Divide by 2 to get the total precipitation within 30 mins
 var filtered = filtered.map(function(image) {
-  return image.divide(2).copyProperties(image, ['system:time_start'])
+  return image.divide(2)
+    .copyProperties(image, ['system:time_start'])
 })
 
 var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
@@ -24,13 +27,12 @@ var chart = ui.Chart.image.series({
   imageCollection: filtered,
   region: geometry,
   reducer: ee.Reducer.mean(),
-  scale: 20
+  scale: 11132
 }).setOptions({
       lineWidth: 1,
       title: 'Precipitation Time Series',
       interpolateNulls: true,
-      vAxis: {title: '30-min Precipitation (mm)'},
-      hAxis: {title: '', format: 'HH:mm'}
+      vAxis: {title: '30-min Precipitation (mm)'}
     })
 print(chart);
 
