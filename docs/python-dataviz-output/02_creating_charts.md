@@ -29,24 +29,6 @@ for file in glob.glob(file_path_pattern):
 file_list
 ```
 
-
-
-
-    ['data/crime/2020-05-metropolitan-street.csv',
-     'data/crime/2020-12-metropolitan-street.csv',
-     'data/crime/2020-01-metropolitan-street.csv',
-     'data/crime/2020-02-metropolitan-street.csv',
-     'data/crime/2020-11-metropolitan-street.csv',
-     'data/crime/2020-06-metropolitan-street.csv',
-     'data/crime/2020-09-metropolitan-street.csv',
-     'data/crime/2020-04-metropolitan-street.csv',
-     'data/crime/2020-08-metropolitan-street.csv',
-     'data/crime/2020-07-metropolitan-street.csv',
-     'data/crime/2020-10-metropolitan-street.csv',
-     'data/crime/2020-03-metropolitan-street.csv']
-
-
-
 It will be helpful to merge all these files into a single dataframe. We can use `pd.concat()` to merge a list of dataframes.
 
 
@@ -68,28 +50,6 @@ type_counts = merged_df.groupby('Crime type').size()
 type_counts
 ```
 
-
-
-
-    Crime type
-    Anti-social behaviour           415105
-    Bicycle theft                    23517
-    Burglary                         61044
-    Criminal damage and arson        50923
-    Drugs                            51629
-    Other crime                      10066
-    Other theft                      81924
-    Possession of weapons             5763
-    Public order                     53458
-    Robbery                          27269
-    Shoplifting                      34588
-    Theft from the person            31084
-    Vehicle crime                   108344
-    Violence and sexual offences    227208
-    dtype: int64
-
-
-
 We now uses the `plot()` method to create the chart. This method is a wrapper around `matplotlib` and can accept supported arguments from it. 
 
 Reference: [pandas.DataFrame.plot](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.plot.html)
@@ -103,12 +63,6 @@ plt.show()
 ```
 
 
-    
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_9_0.png)
-    
-
-
-
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
@@ -119,12 +73,6 @@ plt.title('Crime Types', fontsize = 18)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_10_0.png)
-    
-
-
 We can also chart the trend of crime over the year. For this, let's group the data by month.
 
 
@@ -134,38 +82,12 @@ monthly_counts
 ```
 
 
-
-
-    Month
-    2020-01     90979
-    2020-02     86984
-    2020-03     87409
-    2020-04    109951
-    2020-05    114008
-    2020-06    100198
-    2020-07    103657
-    2020-08    104782
-    2020-09     99633
-    2020-10     99471
-    2020-11     96914
-    2020-12     87936
-    dtype: int64
-
-
-
-
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
 monthly_counts.plot(kind='bar', ax=ax)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_13_0.png)
-    
-
 
 
 ```python
@@ -175,12 +97,6 @@ monthly_counts.plot(kind='bar', ax=ax)
 monthly_counts.plot(kind='line', ax=ax, color='red', marker='o')
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_14_0.png)
-    
-
 
 ## Exercise
 

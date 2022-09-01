@@ -1,4 +1,6 @@
-# Matplotlib Basics
+This notebook introduces the [Matplotlib](https://matplotlib.org/) library. This is one of the core Python packages for data visualization and is used by many spatial and non-spatial packages to create charts and maps.
+
+## Setup
 
 Most of the Matplotlib functionality is available in the `pyplot` submodule, and by convention is imported as `plt`
 
@@ -7,6 +9,8 @@ Most of the Matplotlib functionality is available in the `pyplot` submodule, and
 import os
 import matplotlib.pyplot as plt
 ```
+
+## Concepts
 
 It is important to understand the 2 matplotlib objects
 
@@ -25,7 +29,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_5_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_7_0.png)
     
 
 
@@ -51,7 +55,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_9_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_11_0.png)
     
 
 
@@ -93,7 +97,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_16_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_18_0.png)
     
 
 
@@ -107,7 +111,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_17_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_19_0.png)
     
 
 
@@ -126,32 +130,23 @@ plt.savefig(output_path)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_19_0.png)
-    
-
-
 Matplotlib provides many specialized functions for different types of plots. `scatter()` for Scatter Charts, `bar()` for Bar Charts and so on. You can use them directly, but in practice they are used via higher-level libraries like `pandas`. In the next section, we will see how to create such charts.
 
 ## Exercise
 
-Change the plot below to display the markers in a triangle shape.
+Create a plot that displays the 2 given points with their x,y coordinates with different sumbology.
+
+* `point1`: Plot it with green color and a triangle marker.
+* `point2`: Plot it with red color and a circle marker.
 
 Reference: [matplotlib.pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html)
+
+> Hint: You can call `plot()` multiple times to add new data to the same Axes.
 
 
 ```python
 import matplotlib.pyplot as plt
 
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(5,5)
-ax.plot(x, y, color='green', marker='o', linestyle='None')
-plt.show()
+point1 = (4, 1)
+point2 = (3, 4)
 ```
-
-
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_22_0.png)
-    
-

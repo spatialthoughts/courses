@@ -32,12 +32,6 @@ path_gdf.plot(ax=ax)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_5_0.png)
-    
-
-
 The visualization is not useful as it is missing context. We want to overlay this on a basemap to understand where the eclipse was visible from. We can choose from a variety of basemap tiles. There are over 200 basemap styles included in the library. Let's see them using the `providers` property.
 
 
@@ -56,12 +50,6 @@ path_gdf.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
 cx.add_basemap(ax, crs=path_gdf.crs, source=cx.providers.OpenTopoMap)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_9_0.png)
-    
-
 
 The web tiles for the basemap are in the Web Mercator CRS (EPSG:3857). When you request them in a different CRS, they are warped to the requested CRS. This may cause the labels to not be legible in some cases. Instead, we can request the tiles in their original CRS and reproject our data layer to its CRS.
 
@@ -82,12 +70,6 @@ plt.savefig(output_path, dpi=300)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_11_0.png)
-    
-
-
 ## Exercise
 
 Instead of the OpenTopoMap, create a visualization using the *Toner* basemap from *Stamen*.
@@ -101,9 +83,3 @@ path_gdf.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
 cx.add_basemap(ax, crs=path_gdf.crs, source=cx.providers.OpenTopoMap)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_13_0.png)
-    
-

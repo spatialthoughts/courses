@@ -39,12 +39,6 @@ tracts.plot(ax=ax, facecolor='grey', edgecolor='red', linewidth=0.5, alpha=0.3)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_7_0.png)
-    
-
-
 The shapefile does not have any demographic data columns. But we have a CSV file containing a variety of population statistics for each tract. We read this file as a Pandas DataFrame.
 
 
@@ -96,12 +90,6 @@ plt.show()
 ```
 
 
-    
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_17_0.png)
-    
-
-
-
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10,10)
@@ -109,12 +97,6 @@ gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='quantiles', k=10, leg
 ax.set_axis_off()
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_18_0.png)
-    
-
 
 Instead of the class breaks being determined by the classification scheme, we can manually specify the ranges. 
 
@@ -133,12 +115,6 @@ plt.savefig(output_path, dpi=300)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_20_0.png)
-    
-
-
 ## Exercise
 
 Plot the census tracts geodataframe `tracts` with just outlines and no fill color.
@@ -152,9 +128,3 @@ fig.set_size_inches(10,10)
 tracts.plot(ax=ax)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_22_0.png)
-    
-
