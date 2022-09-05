@@ -1,14 +1,37 @@
-# Creating Interactive Maps with Folium
+## Overview
 
 [Folium](https://python-visualization.github.io/folium/) is a Python library that allows you to create interactive maps based on the popular [Leaflet](https://leafletjs.com/) javascript library.
 
 In this section, we will learn how to create an interactive map showing driving directions between two locations.
+
+## Setup
+
 
 
 ```python
 import os
 import folium
 ```
+
+
+```python
+data_folder = 'data'
+output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
+
+We will be using [OpenRouteService API](https://openrouteservice.org/) to calculate the directions. Please sign-up for a free account and create an API key. If you already have an account, the API key is obtained from the [OpenRouteService Dashboard](https://openrouteservice.org/dev/#/home). Enter your API key below.
+
+
+```python
+ORS_API_KEY = ''
+```
+
+## Folium Basics
 
 
 ```python
@@ -24,8 +47,10 @@ m
 
 
 ```python
+from folium import Figure
+fig = Figure(width=800, height=400)
 m = folium.Map(location=[39.83, -98.58], zoom_start=4)
-m
+fig.add_child(m)
 ```
 
 
@@ -43,6 +68,8 @@ m
 
 
 ```python
+from folium import Figure
+fig = Figure(width=800, height=400)
 m = folium.Map(location=[39.83, -98.58], zoom_start=4)
 folium.Marker(san_francisco, popup='San Francisco',
               icon=folium.Icon(
@@ -51,25 +78,8 @@ folium.Marker(san_francisco, popup='San Francisco',
 folium.Marker(new_york, popup='New York', 
               icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
              ).add_to(m)
-m
-```
+fig.add_child(m)
 
-Enter your API key in the followig variable. The API key is obtained from the [OpenRouteService Dashboard](https://openrouteservice.org/dev/#/home)
-
-
-```python
-ORS_API_KEY = ''
-```
-
-While running this notebook in production, we load the `ORS_API_KEY` from a `.env` file in the local environment. 
-> Users of this notebook can skip running this cell.
-
-
-```python
-if not ORS_API_KEY:
-    from dotenv import dotenv_values
-    config = dotenv_values('.env')
-    ORS_API_KEY = config['ORS_API_KEY']
 ```
 
 
@@ -135,14 +145,6 @@ tooltip = 'Driving Distance: {}km'.format(distance)
 
 
 ```python
-m = folium.Map(location=[39.83, -98.58], zoom_start=4)
-folium.Marker(san_francisco, popup='San Francisco',
-              icon=folium.Icon(
-                  color='green', icon='crosshairs', prefix='fa')
-             ).add_to(m)
-folium.Marker(new_york, popup='New York', 
-              icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
-             ).add_to(m)
 folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
 m
 ```
@@ -150,7 +152,6 @@ m
 
 ```python
 output_folder = 'output'
-
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 output_path = os.path.join(output_folder, 'directions.html')
@@ -166,13 +167,16 @@ Below is the complete code to create an interactive map with the driving directi
 import folium
 import requests
 
+###############################
+### Replace Variables Below ###
+###############################
 origin = (37.7749, -122.4194)
 origin_name = 'San Francisco'
 destination = (40.661, -73.944)
 destination_name = 'New York'
-
-ORS_API_KEY = '5b3ce3597851110001cf6248ed43ece522584866b5deb4ac3732a19f'
-
+map_center = (39.83, -98.58)
+ORS_API_KEY = ''
+###############################
 parameters = {
     'api_key': ORS_API_KEY,
     'start' : '{},{}'.format(origin[1], origin[0]),
@@ -194,7 +198,11 @@ summary = data['features'][0]['properties']['summary']
 route_xy = [(y, x) for x, y in route]
 distance = round(summary['distance']/1000)
 tooltip = 'Driving Distance: {}km'.format(distance)
-m = folium.Map(location=[39.83, -98.58], zoom_start=4)
+
+from folium import Figure
+fig = Figure(width=800, height=400)
+
+m = folium.Map(location=map_center, zoom_start=4)
 folium.Marker(origin, popup=origin_name,
               icon=folium.Icon(
                   color='green', icon='crosshairs', prefix='fa')
@@ -203,7 +211,7 @@ folium.Marker(destination, popup=destination_name,
               icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
              ).add_to(m)
 folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
-m
+fig.add_child(m)
 ```
 
 ----
