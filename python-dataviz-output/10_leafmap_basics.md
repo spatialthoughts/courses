@@ -55,6 +55,8 @@ for f in json_file, gpkg_file:
 
 ## Leafmap Basics
 
+Reference: [Leafmap Key Features](https://leafmap.org/notebooks/00_key_features/)
+
 
 ```python
 m = leafmap.Map(width=800, height=500)
