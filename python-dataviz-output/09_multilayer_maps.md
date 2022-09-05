@@ -1,8 +1,10 @@
-# Creating Multi-layer Interactive Maps
+## Overview
 
 [Folium](https://python-visualization.github.io/folium/) supports creating maps with multiple layers. Recent versions of GeoPandas have built-in support to create interactive folium maps from a GeoDataFrame. 
 
 In this section, we will create a multi-layer interactive map using 2 vector datasets.
+
+## Setup and Data Download
 
 
 ```python
@@ -11,12 +13,6 @@ if 'google.colab' in str(get_ipython()):
   !apt install libspatialindex-dev
   !pip install fiona shapely pyproj rtree mapclassify
   !pip install geopandas
-```
-
-
-```python
-import geopandas
-geopandas.__version__
 ```
 
 
@@ -53,7 +49,7 @@ download(data_url + filename)
 
 ```
 
-## Interactive Folium Maps with GeoPandas
+## Using GeoPandas explore()
 
 
 ```python
@@ -66,18 +62,23 @@ state_gdf = gpd.read_file(path, layer='karnataka')
 
 ```
 
-We can use the [explore()](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.explore.html) method to create an interactive folium map from the GeoDataFrame.
+We can use the [explore()](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.explore.html) method to create an interactive folium map from the GeoDataFrame. When you call `explore()` a folium object is created. You can save that object and use it to display or add more layers to the map.
 
 
 ```python
-districts_gdf.explore()
+m = districts_gdf.explore()
+m
 ```
+
+The default output of the `explore()` method is a full-width folium map. If you need more control, a better approach is to create a `follium.Figure` object and add the map to it. For this approach we need to first compute the extent of the map.
 
 
 ```python
 bounds = districts_gdf.total_bounds
 bounds
 ```
+
+Now we can create a figure of the required size, and add a folium map to it. The `explore()` function takes a `m` agrument where we can supply an existing folium map to which to render the GeoDataFrame.
 
 
 ```python
@@ -95,14 +96,13 @@ fig.add_child(m)
 ```python
 fig = Figure(width=800, height=400)
 
-m = folium.Map()
+m = folium.Map(tiles='Stamen Terrain')
 m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
 
 districts_gdf.explore(
     m=m,
     color='black', 
     style_kwds={'fillOpacity': 0.3, 'weight': 0.5},
-    tiles='Stamen Terrain'
   )
 
 fig.add_child(m)
@@ -145,54 +145,23 @@ roads_gdf.explore(
 fig.add_child(m)
 ```
 
-You can have fine-grained control over how each feature is styled on the map. The `explore()` function takes a `style_function` parameter where you can specify a function that returns style properties using any of the supported parameters. The function is passed on each feature as a GeoJSON object and you can use any columns values to create your style. 
-
-The function below will stlye all features of 'NH' category with thicker lines.
-
-
-```python
-def style(feature):
-    if feature['properties']['category'] == 'NH':
-        return {'weight': 2}
-    else:
-        return {'weight': 0.5}
-
-m = roads_gdf.explore(
-    column='category', 
-    categories=['NH', 'SH'], 
-    cmap=['#1f78b4', '#e31a1c'],
-    categorical=True,
-    style_kwds={
-                "style_function": lambda x: {
-                    "fillColor": "red"
-                    if x["properties"]["gdp_md_est"] < 10**6
-                    else "green",
-                    "color": "black"
-                    if x["properties"]["gdp_md_est"] < 10**6
-                    else "white",
-                }
-            }
-)
-m
-```
+## Create Multi-layer Maps
 
 When you call `explore()` a folium object is created. You can save that object and add more layers to the same object.
 
 
 ```python
-m = districts_gdf.explore(
+fig = Figure(width=800, height=400)
+
+m = folium.Map(tiles='Stamen Terrain')
+m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
+
+districts_gdf.explore(
+    m=m,
     color='black', 
     style_kwds={'fillOpacity': 0.3, 'weight':0.5},
     name='districts',
-    tooltip=False,
-    tiles='Stamen Terrain')
-
-
-def style(feature):
-    if feature['properties']['category'] == 'NH':
-        return {'weight': 2}
-    else:
-        return {'weight': 0.5}
+    tooltip=False)
 
 roads_gdf.explore(
     m=m,
@@ -200,41 +169,17 @@ roads_gdf.explore(
     categories=['NH', 'SH'], 
     cmap=['#1f78b4', '#e31a1c'],
     categorical=True,
-    style_function=style
+    name='highways'
 )
 
-m
+fig.add_child(m)
 ```
 
-To make our map easier to explore, we also add a *Layer Control* that displays the list of layers on the top-right corner and also allows the users to turn them on or off. We need to add the `name` parameter to the `explore()` function with the name that will be displayed in the layer control.
+To make our map easier to explore, we also add a *Layer Control* that displays the list of layers on the top-right corner and also allows the users to turn them on or off. The `name` parameter to the `explore()` function controls the name that will be displayed in the layer control.
 
 
 ```python
-m = districts_gdf.explore(
-    color='black', 
-    style_kwds={'fillOpacity': 0.3, 'weight':0.5},
-    tooltip=False,
-    tiles='Stamen Terrain',
-    name='Districts')
-
-
-def style(feature):
-    if feature['properties']['category'] == 'NH':
-        return {'weight': 2}
-    else:
-        return {'weight': 0.5}
-
-filtered.explore(
-    m=m,
-    column='category', 
-    categories=['NH', 'SH'], 
-    cmap=['#1f78b4', '#e31a1c'],
-    categorical=True,
-    style_kwds={'style_function':style},
-    name='Highways')
-
 folium.LayerControl().add_to(m)
-
 m
 ```
 
@@ -243,3 +188,32 @@ m
 Add the `state_gdf` layer to the folium map below with a thick blue border and no fill. Save the resulting map as a HTML file on your computer.
 
 Hint: Use the `style_kwds` with *'fill'* and *'weight'* options.
+
+
+```python
+fig = Figure(width=800, height=400)
+
+m = folium.Map(tiles='Stamen Terrain')
+m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
+
+districts_gdf.explore(
+    m=m,
+    color='black', 
+    style_kwds={'fillOpacity': 0.3, 'weight':0.5},
+    name='districts',
+    tooltip=False)
+
+roads_gdf.explore(
+    m=m,
+    column='category', 
+    categories=['NH', 'SH'], 
+    cmap=['#1f78b4', '#e31a1c'],
+    categorical=True,
+    name='highways'
+)
+
+fig.add_child(m)
+folium.LayerControl().add_to(m)
+m
+
+```
