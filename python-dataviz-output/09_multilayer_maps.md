@@ -56,7 +56,7 @@ download(data_url + filename)
 data_pkg_path = 'data'
 filename = 'karnataka.gpkg'
 path = os.path.join(data_pkg_path, filename)
-roads_gdf = gpd.read_file(path, layer='karntaka_highways')
+roads_gdf = gpd.read_file(path, layer='karnataka_highways')
 districts_gdf = gpd.read_file(path, layer='karnataka_districts')
 state_gdf = gpd.read_file(path, layer='karnataka')
 

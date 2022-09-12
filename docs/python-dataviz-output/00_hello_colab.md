@@ -7,9 +7,6 @@ You can click the `+Code` button to create a new cell and enter a block of code.
 print('Hello World')
 ```
 
-    Hello World
-
-
 ### Package Management
 
 Colab comes pre-installed with many Python packages. You can use a package by simply importing it.
