@@ -10,6 +10,17 @@ import os
 import matplotlib.pyplot as plt
 ```
 
+
+```python
+data_folder = 'data'
+output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
+
 ## Concepts
 
 It is important to understand the 2 matplotlib objects
@@ -17,7 +28,7 @@ It is important to understand the 2 matplotlib objects
 * Figure: This is the main container of the plot. A figure can contain multiple plots inside it
 * Axes:  Axes refers to an individual plot or graph. A figure contains 1 or more axes.
 
-We create a figure and a single subplot. Specifying 1 row and 1 column for the `subplots()` function create a figure and an axes within it. Even if we have a single plot in the figure, it is useful to use tthis logic of intialization so it is consistent across different scripts.
+We create a figure and a single subplot. Specifying 1 row and 1 column for the `subplots()` function create a figure and an axes within it. Even if we have a single plot in the figure, it is useful to use this logic of intialization so it is consistent across different scripts.
 
 
 
@@ -26,12 +37,6 @@ fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_7_0.png)
-    
-
 
 First, let's learn how to plot a single point using matplotlib. Let's say we want to display a point at the coordinate (0.5, 0.5). 
 
@@ -53,13 +58,7 @@ ax.plot(point[0], point[1], color='green', marker='o')
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_11_0.png)
-    
-
-
-**Note: Understanding `*args` and `**kwargs`**
+Note: Understanding `*args` and `**kwargs`
 
 Python functions accept 2 types of arguments.
 - *Non Keyword Arguments*: These are referred as `*args`. When the number of arguments that a function takes is not fixed, it is specified as `*args`. In the function `plot()` above, you can specify 1 argument, 2 arguments or even 6 arguments and the function will respond accordingly.
@@ -81,10 +80,6 @@ print(x)
 print(y)
 ```
 
-    (0.1, 0.5, 0.9)
-    (0.5, 0.5, 0.5)
-
-
 Now these can be plotted using the `plot()` method. We specify keyword arguments `color` and `marker`.
 
 
@@ -96,24 +91,12 @@ plt.show()
 ```
 
 
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_18_0.png)
-    
-
-
-
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
 ax.plot(x, y, color='green', marker='o', linestyle='None')
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_19_0.png)
-    
-
 
 You can save the figure using the `savefig()` method. Remember to save the figure *before* calling `plt.show()` otherwise the figure would be empty.
 
@@ -129,6 +112,12 @@ plt.savefig(output_path)
 
 plt.show()
 ```
+
+
+    
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_22_0.png)
+    
+
 
 Matplotlib provides many specialized functions for different types of plots. `scatter()` for Scatter Charts, `bar()` for Bar Charts and so on. You can use them directly, but in practice they are used via higher-level libraries like `pandas`. In the next section, we will see how to create such charts.
 

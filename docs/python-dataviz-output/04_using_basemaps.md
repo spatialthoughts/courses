@@ -57,16 +57,6 @@ for shapefile in [path_shapefile, umbra_shapefile]:
     download(url)
 ```
 
-    Downloaded data/upath17.shp
-    Downloaded data/upath17.shx
-    Downloaded data/upath17.dbf
-    Downloaded data/upath17.prj
-    Downloaded data/umbra17.shp
-    Downloaded data/umbra17.shx
-    Downloaded data/umbra17.dbf
-    Downloaded data/umbra17.prj
-
-
 ## Data Pre-Processing
 
 
@@ -95,12 +85,6 @@ path_gdf.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_12_0.png)
-    
-
-
 To add another layer to our plot, we can simply render another GeoDataFrame on the same Axes.
 
 
@@ -111,12 +95,6 @@ path_gdf.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
 umbra_gdf.plot(ax=ax, facecolor='#636363', edgecolor='none')
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_14_0.png)
-    
-
 
 ## Add A BaseMap
 
@@ -141,12 +119,6 @@ umbra_gdf.plot(ax=ax, facecolor='#636363', edgecolor='none')
 cx.add_basemap(ax, crs=path_gdf.crs, source=cx.providers.OpenTopoMap)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_19_0.png)
-    
-
 
 The web tiles for the basemap are in the Web Mercator CRS (EPSG:3857). When you request them in a different CRS, they are warped to the requested CRS. This may cause the labels to not be legible in some cases. Instead, we can request the tiles in their original CRS and reproject our data layer to its CRS.
 
