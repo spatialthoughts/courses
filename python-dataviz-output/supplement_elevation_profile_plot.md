@@ -1,20 +1,64 @@
 ### Elevation Profile Plot from a GPS Track
 
+We will take a GPS track recorded from Strava app and create an elevation profile plot.
+
+#### Setup and Data Download
+
+The following blocks of code will install the required packages and download the datasets to your Colab environment.
+
 
 ```python
-import pandas as pd
-import geopandas as gpd
-import os
-
-%matplotlib inline
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+%%capture
+if 'google.colab' in str(get_ipython()):
+  !apt install libspatialindex-dev
+  !pip install fiona shapely pyproj rtree mapclassify
+  !pip install geopandas
 ```
 
 
 ```python
-data_pkg_path = 'data'
-gpx_path = os.path.join(data_pkg_path, 'gps', 'summit.gpx')
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import os
+import pandas as pd
+
+```
+
+
+```python
+data_folder = 'data'
+output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
+
+
+```python
+def download(url):
+    filename = os.path.join(data_folder, os.path.basename(url))
+    if not os.path.exists(filename):
+        from urllib.request import urlretrieve
+        local, _ = urlretrieve(url, filename)
+        print('Downloaded ' + local)
+```
+
+
+```python
+filename = 'summit.gpx'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gps/'
+
+download(data_url + filename)
+```
+
+#### Data Pre-Processing
+
+
+```python
+gpx_path = os.path.join(data_folder, filename)
 # GPX files contain many layers. Read the 'track_points' layer
 gdf = gpd.read_file(gpx_path, layer='track_points')
 gdf = gdf[['track_fid','ele', 'time', 'geometry']]
@@ -35,7 +79,7 @@ Using time as index allows us to filter the data as follows
 
 
 ```python
-gdf_subset = gdf['2022-04-04T09:00:00':'2022-04-04T09:30:00']
+gdf_subset = gdf['2022-04-04T06:15:00':'2022-04-04T10:45:00']
 gdf_subset
 ```
 
@@ -54,7 +98,7 @@ plt.style.use('ggplot')
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
-gdf['ele'].plot(kind='line', ax=ax, color='#2b8cbe')
+gdf_subset['ele'].plot(kind='line', ax=ax, color='#2b8cbe')
 plt.tight_layout()
 plt.title('Elevation Profile', fontsize = 18)
 plt.ylabel('Elevation (meters)', size = 15)
@@ -73,7 +117,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_10_0.png)
+![](python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_16_0.png)
     
 
 

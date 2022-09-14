@@ -1,52 +1,87 @@
 ### Creating A Stacked Bar Chart
 
+This example shows how to create a stacked chart with information about crime type in each bar. This visualization can plot 2 variables in a single plot.
+
+#### Setup and Data Download
+
+The following blocks of code will install the required packages and download the datasets to your Colab environment.
+
 
 ```python
 import pandas as pd
 import os
-import glob
 import matplotlib.pyplot as plt
 ```
 
-We have 12 different CSV files containing crime data for each month of 2020. We can use the `glob` module to find all files matching a pattern.
+
+```python
+data_folder = 'data'
+output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
 
 
 ```python
-data_pkg_path = 'data'
-folder = 'crime'
-file_pattern = '2020-*.csv'
-file_path_pattern = os.path.join(data_pkg_path, folder, file_pattern)
-
-dataframe_list = [pd.read_csv(f) for f in glob.glob(file_path_pattern)]
-merged_df = pd.concat(dataframe_list)
+def download(url):
+    filename = os.path.join(data_folder, os.path.basename(url))
+    if not os.path.exists(filename):
+        from urllib.request import urlretrieve
+        local, _ = urlretrieve(url, filename)
+        print('Downloaded ' + local)
 ```
 
-We want to chart a stacked chart with information about crime type in each bar. 
+We have 12 different CSV files containing crime data for each month of 2020. We download each of them to the data folder.
+
+
+```python
+files = [
+  '2020-01-metropolitan-street.csv',
+  '2020-02-metropolitan-street.csv',
+  '2020-03-metropolitan-street.csv',
+  '2020-04-metropolitan-street.csv',
+  '2020-05-metropolitan-street.csv',
+  '2020-06-metropolitan-street.csv',
+  '2020-07-metropolitan-street.csv',
+  '2020-08-metropolitan-street.csv',
+  '2020-09-metropolitan-street.csv',
+  '2020-10-metropolitan-street.csv',
+  '2020-11-metropolitan-street.csv',
+  '2020-12-metropolitan-street.csv'
+]
+
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/'
+
+for f in files:
+  url = os.path.join(data_url + f)
+  download(url)
+
+```
+
+#### Data Pre-Processing
+
+It will be helpful to merge all 12 CSV files into a single dataframe. We can use `pd.concat()` to merge a list of dataframes.
+
+
+```python
+dataframe_list = []
+
+for f in files:
+    filepath = os.path.join(data_folder, f)
+    df = pd.read_csv(filepath)
+    dataframe_list.append(df)
+
+merged_df = pd.concat(dataframe_list)
+```
 
 
 ```python
 counts_by_type = merged_df.groupby(['Month', 'Crime type']).size()
 counts_by_type
 ```
-
-
-
-
-    Month    Crime type                  
-    2020-01  Anti-social behaviour           17548
-             Bicycle theft                    1172
-             Burglary                         6889
-             Criminal damage and arson        4374
-             Drugs                            4282
-                                             ...  
-    2020-12  Robbery                          2021
-             Shoplifting                      2690
-             Theft from the person            3075
-             Vehicle crime                    7758
-             Violence and sexual offences    17836
-    Length: 168, dtype: int64
-
-
 
 The result is not in a suitable format for plotting. We call `unstack()` to create a dataframe. 
 
@@ -55,6 +90,8 @@ The result is not in a suitable format for plotting. We call `unstack()` to crea
 counts_df = counts_by_type.unstack()
 counts_df
 ```
+
+#### Creating a Chart
 
 Now we can create the stacked bar chart. Instead of the default legend, we create a horizontal legend with a frame using the `legend()` function.
 
@@ -77,6 +114,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_stacked_barcharts_files/supplement_stacked_barcharts_9_0.png)
+![](python-dataviz-output/supplement_stacked_barcharts_files/supplement_stacked_barcharts_15_0.png)
     
 

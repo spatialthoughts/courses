@@ -1995,100 +1995,158 @@ conda install -c conda-forge streamlit leafmap geopandas -y</code></pre>
 <p><a href="https://colab.research.google.com/github/spatialthoughts/python-dataviz-web/blob/main/supplement_elevation_profile_plot.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" /></a></p>
 <div id="elevation-profile-plot-from-a-gps-track" class="section level3">
 <h3>Elevation Profile Plot from a GPS Track</h3>
-<div class="sourceCode" id="cb172"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb172-1"><a href="#cb172-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb172-2"><a href="#cb172-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb172-3"><a href="#cb172-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb172-4"><a href="#cb172-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb172-5"><a href="#cb172-5" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
-<span id="cb172-6"><a href="#cb172-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb172-7"><a href="#cb172-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span></code></pre></div>
-<div class="sourceCode" id="cb173"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a>data_pkg_path <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a>gpx_path <span class="op">=</span> os.path.join(data_pkg_path, <span class="st">&#39;gps&#39;</span>, <span class="st">&#39;summit.gpx&#39;</span>)</span>
-<span id="cb173-3"><a href="#cb173-3" aria-hidden="true" tabindex="-1"></a><span class="co"># GPX files contain many layers. Read the &#39;track_points&#39; layer</span></span>
-<span id="cb173-4"><a href="#cb173-4" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gpd.read_file(gpx_path, layer<span class="op">=</span><span class="st">&#39;track_points&#39;</span>)</span>
-<span id="cb173-5"><a href="#cb173-5" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf[[<span class="st">&#39;track_fid&#39;</span>,<span class="st">&#39;ele&#39;</span>, <span class="st">&#39;time&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
-<span id="cb173-6"><a href="#cb173-6" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
+<p>We will take a GPS track recorded from Strava app and create an elevation profile plot.</p>
+<div id="setup-and-data-download-8" class="section level4">
+<h4>Setup and Data Download</h4>
+<p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb172"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb172-1"><a href="#cb172-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb172-2"><a href="#cb172-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb172-3"><a href="#cb172-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
+<span id="cb172-4"><a href="#cb172-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree mapclassify</span>
+<span id="cb172-5"><a href="#cb172-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span></code></pre></div>
+<div class="sourceCode" id="cb173"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb173-3"><a href="#cb173-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb173-4"><a href="#cb173-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb173-5"><a href="#cb173-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span></code></pre></div>
+<div class="sourceCode" id="cb174"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb174-1"><a href="#cb174-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb174-2"><a href="#cb174-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb174-3"><a href="#cb174-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-4"><a href="#cb174-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb174-5"><a href="#cb174-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb174-6"><a href="#cb174-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb174-7"><a href="#cb174-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb175"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb175-2"><a href="#cb175-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb175-3"><a href="#cb175-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb175-4"><a href="#cb175-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb175-5"><a href="#cb175-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb175-6"><a href="#cb175-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
+<div class="sourceCode" id="cb176"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;summit.gpx&#39;</span></span>
+<span id="cb176-2"><a href="#cb176-2" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gps/&#39;</span></span>
+<span id="cb176-3"><a href="#cb176-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-4"><a href="#cb176-4" aria-hidden="true" tabindex="-1"></a>download(data_url <span class="op">+</span> filename)</span></code></pre></div>
+</div>
+<div id="data-pre-processing-4" class="section level4">
+<h4>Data Pre-Processing</h4>
+<div class="sourceCode" id="cb177"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a>gpx_path <span class="op">=</span> os.path.join(data_folder, filename)</span>
+<span id="cb177-2"><a href="#cb177-2" aria-hidden="true" tabindex="-1"></a><span class="co"># GPX files contain many layers. Read the &#39;track_points&#39; layer</span></span>
+<span id="cb177-3"><a href="#cb177-3" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gpd.read_file(gpx_path, layer<span class="op">=</span><span class="st">&#39;track_points&#39;</span>)</span>
+<span id="cb177-4"><a href="#cb177-4" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf[[<span class="st">&#39;track_fid&#39;</span>,<span class="st">&#39;ele&#39;</span>, <span class="st">&#39;time&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
+<span id="cb177-5"><a href="#cb177-5" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
 <p>Let’s use the timestamp contained in the ‘time’ column as the index. This will allow us to filter and plot the time-series data easily. We must first convert the time column to datetime type with an appropriate timezone.</p>
-<div class="sourceCode" id="cb174"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb174-1"><a href="#cb174-1" aria-hidden="true" tabindex="-1"></a>gdf[<span class="st">&#39;time&#39;</span>] <span class="op">=</span> pd.to_datetime(gdf[<span class="st">&#39;time&#39;</span>])</span>
-<span id="cb174-2"><a href="#cb174-2" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf.set_index(<span class="st">&#39;time&#39;</span>)</span>
-<span id="cb174-3"><a href="#cb174-3" aria-hidden="true" tabindex="-1"></a>gdf.index <span class="op">=</span> gdf.index.tz_convert(<span class="st">&#39;Asia/Kolkata&#39;</span>)</span>
-<span id="cb174-4"><a href="#cb174-4" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
+<div class="sourceCode" id="cb178"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>gdf[<span class="st">&#39;time&#39;</span>] <span class="op">=</span> pd.to_datetime(gdf[<span class="st">&#39;time&#39;</span>])</span>
+<span id="cb178-2"><a href="#cb178-2" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf.set_index(<span class="st">&#39;time&#39;</span>)</span>
+<span id="cb178-3"><a href="#cb178-3" aria-hidden="true" tabindex="-1"></a>gdf.index <span class="op">=</span> gdf.index.tz_convert(<span class="st">&#39;Asia/Kolkata&#39;</span>)</span>
+<span id="cb178-4"><a href="#cb178-4" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
 <p>Using time as index allows us to filter the data as follows</p>
-<div class="sourceCode" id="cb175"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a>gdf_subset <span class="op">=</span> gdf[<span class="st">&#39;2022-04-04T09:00:00&#39;</span>:<span class="st">&#39;2022-04-04T09:30:00&#39;</span>]</span>
-<span id="cb175-2"><a href="#cb175-2" aria-hidden="true" tabindex="-1"></a>gdf_subset</span></code></pre></div>
+<div class="sourceCode" id="cb179"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb179-1"><a href="#cb179-1" aria-hidden="true" tabindex="-1"></a>gdf_subset <span class="op">=</span> gdf[<span class="st">&#39;2022-04-04T06:15:00&#39;</span>:<span class="st">&#39;2022-04-04T10:45:00&#39;</span>]</span>
+<span id="cb179-2"><a href="#cb179-2" aria-hidden="true" tabindex="-1"></a>gdf_subset</span></code></pre></div>
 <p>We can now plot the elevation against the timestamp using Matplotlib. Since we have a large number of timestamps, we can use <code>set_major_locator()</code> to define what labels will be present on the axis.</p>
 <p>Since our timestamps are timezone aware, we can also plot a timezone name (i.e. IST) along with the label.</p>
 <p>We can also use a different style for our plot. You can run <code>plt.style.available</code> to see all available styles.</p>
-<div class="sourceCode" id="cb176"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;ggplot&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb177"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb177-2"><a href="#cb177-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb177-3"><a href="#cb177-3" aria-hidden="true" tabindex="-1"></a>gdf[<span class="st">&#39;ele&#39;</span>].plot(kind<span class="op">=</span><span class="st">&#39;line&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
-<span id="cb177-4"><a href="#cb177-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb177-5"><a href="#cb177-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Elevation Profile&#39;</span>, fontsize <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb177-6"><a href="#cb177-6" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Elevation (meters)&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb177-7"><a href="#cb177-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="va">None</span>)</span>
-<span id="cb177-8"><a href="#cb177-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Show a tick every 30 minute</span></span>
-<span id="cb177-9"><a href="#cb177-9" aria-hidden="true" tabindex="-1"></a>xlocator <span class="op">=</span> mdates.MinuteLocator(interval<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb177-10"><a href="#cb177-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb177-11"><a href="#cb177-11" aria-hidden="true" tabindex="-1"></a>xformat <span class="op">=</span> mdates.DateFormatter(<span class="st">&#39;%H:%M %Z&#39;</span>, tz<span class="op">=</span>gdf.index.tz)  <span class="co"># adds some extra formatting, but not required</span></span>
-<span id="cb177-12"><a href="#cb177-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb177-13"><a href="#cb177-13" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_locator(xlocator)</span>
-<span id="cb177-14"><a href="#cb177-14" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_formatter(xformat)</span>
-<span id="cb177-15"><a href="#cb177-15" aria-hidden="true" tabindex="-1"></a>ax.set_ylim([<span class="dv">3200</span>, <span class="dv">3700</span>])</span>
-<span id="cb177-16"><a href="#cb177-16" aria-hidden="true" tabindex="-1"></a>ax.fill_between(gdf.index, gdf[<span class="st">&#39;ele&#39;</span>].values, color<span class="op">=</span><span class="st">&#39;grey&#39;</span>, alpha<span class="op">=</span><span class="fl">0.3</span>)</span>
-<span id="cb177-17"><a href="#cb177-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img src="python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_10_0.png" /></p>
-<div class="sourceCode" id="cb178"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;default&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb180"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;ggplot&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb181"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb181-3"><a href="#cb181-3" aria-hidden="true" tabindex="-1"></a>gdf_subset[<span class="st">&#39;ele&#39;</span>].plot(kind<span class="op">=</span><span class="st">&#39;line&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
+<span id="cb181-4"><a href="#cb181-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb181-5"><a href="#cb181-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Elevation Profile&#39;</span>, fontsize <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb181-6"><a href="#cb181-6" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Elevation (meters)&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb181-7"><a href="#cb181-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="va">None</span>)</span>
+<span id="cb181-8"><a href="#cb181-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Show a tick every 30 minute</span></span>
+<span id="cb181-9"><a href="#cb181-9" aria-hidden="true" tabindex="-1"></a>xlocator <span class="op">=</span> mdates.MinuteLocator(interval<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb181-10"><a href="#cb181-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb181-11"><a href="#cb181-11" aria-hidden="true" tabindex="-1"></a>xformat <span class="op">=</span> mdates.DateFormatter(<span class="st">&#39;%H:%M %Z&#39;</span>, tz<span class="op">=</span>gdf.index.tz)  <span class="co"># adds some extra formatting, but not required</span></span>
+<span id="cb181-12"><a href="#cb181-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb181-13"><a href="#cb181-13" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_locator(xlocator)</span>
+<span id="cb181-14"><a href="#cb181-14" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_formatter(xformat)</span>
+<span id="cb181-15"><a href="#cb181-15" aria-hidden="true" tabindex="-1"></a>ax.set_ylim([<span class="dv">3200</span>, <span class="dv">3700</span>])</span>
+<span id="cb181-16"><a href="#cb181-16" aria-hidden="true" tabindex="-1"></a>ax.fill_between(gdf.index, gdf[<span class="st">&#39;ele&#39;</span>].values, color<span class="op">=</span><span class="st">&#39;grey&#39;</span>, alpha<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb181-17"><a href="#cb181-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img src="python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_16_0.png" /></p>
+<div class="sourceCode" id="cb182"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb182-1"><a href="#cb182-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;default&#39;</span>)</span></code></pre></div>
 <p><a href="https://colab.research.google.com/github/spatialthoughts/python-dataviz-web/blob/main/supplement_stacked_barcharts.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" /></a></p>
+</div>
 </div>
 <div id="creating-a-stacked-bar-chart" class="section level3">
 <h3>Creating A Stacked Bar Chart</h3>
-<div class="sourceCode" id="cb179"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb179-1"><a href="#cb179-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb179-2"><a href="#cb179-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb179-3"><a href="#cb179-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
-<span id="cb179-4"><a href="#cb179-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
-<p>We have 12 different CSV files containing crime data for each month of 2020. We can use the <code>glob</code> module to find all files matching a pattern.</p>
-<div class="sourceCode" id="cb180"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a>data_pkg_path <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a>folder <span class="op">=</span> <span class="st">&#39;crime&#39;</span></span>
-<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>file_pattern <span class="op">=</span> <span class="st">&#39;2020-*.csv&#39;</span></span>
-<span id="cb180-4"><a href="#cb180-4" aria-hidden="true" tabindex="-1"></a>file_path_pattern <span class="op">=</span> os.path.join(data_pkg_path, folder, file_pattern)</span>
-<span id="cb180-5"><a href="#cb180-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb180-6"><a href="#cb180-6" aria-hidden="true" tabindex="-1"></a>dataframe_list <span class="op">=</span> [pd.read_csv(f) <span class="cf">for</span> f <span class="kw">in</span> glob.glob(file_path_pattern)]</span>
-<span id="cb180-7"><a href="#cb180-7" aria-hidden="true" tabindex="-1"></a>merged_df <span class="op">=</span> pd.concat(dataframe_list)</span></code></pre></div>
-<p>We want to chart a stacked chart with information about crime type in each bar.</p>
-<div class="sourceCode" id="cb181"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a>counts_by_type <span class="op">=</span> merged_df.groupby([<span class="st">&#39;Month&#39;</span>, <span class="st">&#39;Crime type&#39;</span>]).size()</span>
-<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a>counts_by_type</span></code></pre></div>
-<pre><code>Month    Crime type                  
-2020-01  Anti-social behaviour           17548
-         Bicycle theft                    1172
-         Burglary                         6889
-         Criminal damage and arson        4374
-         Drugs                            4282
-                                         ...  
-2020-12  Robbery                          2021
-         Shoplifting                      2690
-         Theft from the person            3075
-         Vehicle crime                    7758
-         Violence and sexual offences    17836
-Length: 168, dtype: int64</code></pre>
+<p>This example shows how to create a stacked chart with information about crime type in each bar. This visualization can plot 2 variables in a single plot.</p>
+<div id="setup-and-data-download-9" class="section level4">
+<h4>Setup and Data Download</h4>
+<p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb183"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb183-2"><a href="#cb183-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb183-3"><a href="#cb183-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
+<div class="sourceCode" id="cb184"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb184-2"><a href="#cb184-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb184-3"><a href="#cb184-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb184-4"><a href="#cb184-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb184-5"><a href="#cb184-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb184-6"><a href="#cb184-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb184-7"><a href="#cb184-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb185"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb185-2"><a href="#cb185-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb185-3"><a href="#cb185-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb185-4"><a href="#cb185-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb185-5"><a href="#cb185-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb185-6"><a href="#cb185-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
+<p>We have 12 different CSV files containing crime data for each month of 2020. We download each of them to the data folder.</p>
+<div class="sourceCode" id="cb186"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb186-1"><a href="#cb186-1" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [</span>
+<span id="cb186-2"><a href="#cb186-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-01-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-3"><a href="#cb186-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-02-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-4"><a href="#cb186-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-03-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-5"><a href="#cb186-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-04-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-6"><a href="#cb186-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-05-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-7"><a href="#cb186-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-06-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-8"><a href="#cb186-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-07-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-9"><a href="#cb186-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-08-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-10"><a href="#cb186-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-09-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-11"><a href="#cb186-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-10-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-12"><a href="#cb186-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-11-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb186-13"><a href="#cb186-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-12-metropolitan-street.csv&#39;</span></span>
+<span id="cb186-14"><a href="#cb186-14" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb186-15"><a href="#cb186-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb186-16"><a href="#cb186-16" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/&#39;</span></span>
+<span id="cb186-17"><a href="#cb186-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb186-18"><a href="#cb186-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
+<span id="cb186-19"><a href="#cb186-19" aria-hidden="true" tabindex="-1"></a>  url <span class="op">=</span> os.path.join(data_url <span class="op">+</span> f)</span>
+<span id="cb186-20"><a href="#cb186-20" aria-hidden="true" tabindex="-1"></a>  download(url)</span></code></pre></div>
+</div>
+<div id="data-pre-processing-5" class="section level4">
+<h4>Data Pre-Processing</h4>
+<p>It will be helpful to merge all 12 CSV files into a single dataframe. We can use <code>pd.concat()</code> to merge a list of dataframes.</p>
+<div class="sourceCode" id="cb187"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>dataframe_list <span class="op">=</span> []</span>
+<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb187-3"><a href="#cb187-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
+<span id="cb187-4"><a href="#cb187-4" aria-hidden="true" tabindex="-1"></a>    filepath <span class="op">=</span> os.path.join(data_folder, f)</span>
+<span id="cb187-5"><a href="#cb187-5" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(filepath)</span>
+<span id="cb187-6"><a href="#cb187-6" aria-hidden="true" tabindex="-1"></a>    dataframe_list.append(df)</span>
+<span id="cb187-7"><a href="#cb187-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb187-8"><a href="#cb187-8" aria-hidden="true" tabindex="-1"></a>merged_df <span class="op">=</span> pd.concat(dataframe_list)</span></code></pre></div>
+<div class="sourceCode" id="cb188"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb188-1"><a href="#cb188-1" aria-hidden="true" tabindex="-1"></a>counts_by_type <span class="op">=</span> merged_df.groupby([<span class="st">&#39;Month&#39;</span>, <span class="st">&#39;Crime type&#39;</span>]).size()</span>
+<span id="cb188-2"><a href="#cb188-2" aria-hidden="true" tabindex="-1"></a>counts_by_type</span></code></pre></div>
 <p>The result is not in a suitable format for plotting. We call <code>unstack()</code> to create a dataframe.</p>
-<div class="sourceCode" id="cb183"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a>counts_df <span class="op">=</span> counts_by_type.unstack()</span>
-<span id="cb183-2"><a href="#cb183-2" aria-hidden="true" tabindex="-1"></a>counts_df</span></code></pre></div>
+<div class="sourceCode" id="cb189"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a>counts_df <span class="op">=</span> counts_by_type.unstack()</span>
+<span id="cb189-2"><a href="#cb189-2" aria-hidden="true" tabindex="-1"></a>counts_df</span></code></pre></div>
+</div>
+<div id="creating-a-chart" class="section level4">
+<h4>Creating a Chart</h4>
 <p>Now we can create the stacked bar chart. Instead of the default legend, we create a horizontal legend with a frame using the <code>legend()</code> function.</p>
-<div class="sourceCode" id="cb184"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb184-2"><a href="#cb184-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">20</span>,<span class="dv">10</span>)</span>
-<span id="cb184-3"><a href="#cb184-3" aria-hidden="true" tabindex="-1"></a>counts_df.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, stacked<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax, colormap<span class="op">=</span><span class="st">&#39;tab20&#39;</span>)</span>
-<span id="cb184-4"><a href="#cb184-4" aria-hidden="true" tabindex="-1"></a>plt.legend(loc<span class="op">=</span><span class="st">&#39;upper center&#39;</span>, ncol<span class="op">=</span><span class="dv">5</span>, frameon<span class="op">=</span><span class="va">True</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.1</span>), fancybox<span class="op">=</span><span class="va">True</span>, shadow<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb184-5"><a href="#cb184-5" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;right&#39;</span>].set_visible(<span class="va">False</span>)</span>
-<span id="cb184-6"><a href="#cb184-6" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;top&#39;</span>].set_visible(<span class="va">False</span>)</span>
-<span id="cb184-7"><a href="#cb184-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Year&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb184-8"><a href="#cb184-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Number of Incidents&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb184-9"><a href="#cb184-9" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Crime in London (2020)&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>, y<span class="op">=</span><span class="fl">1.1</span>)</span>
-<span id="cb184-10"><a href="#cb184-10" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb184-11"><a href="#cb184-11" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;stacked_chart.jpg&#39;</span>)</span>
-<span id="cb184-12"><a href="#cb184-12" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path)</span>
-<span id="cb184-13"><a href="#cb184-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img src="python-dataviz-output/supplement_stacked_barcharts_files/supplement_stacked_barcharts_9_0.png" /></p>
+<div class="sourceCode" id="cb190"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">20</span>,<span class="dv">10</span>)</span>
+<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a>counts_df.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, stacked<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax, colormap<span class="op">=</span><span class="st">&#39;tab20&#39;</span>)</span>
+<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a>plt.legend(loc<span class="op">=</span><span class="st">&#39;upper center&#39;</span>, ncol<span class="op">=</span><span class="dv">5</span>, frameon<span class="op">=</span><span class="va">True</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.1</span>), fancybox<span class="op">=</span><span class="va">True</span>, shadow<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;right&#39;</span>].set_visible(<span class="va">False</span>)</span>
+<span id="cb190-6"><a href="#cb190-6" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;top&#39;</span>].set_visible(<span class="va">False</span>)</span>
+<span id="cb190-7"><a href="#cb190-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Year&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb190-8"><a href="#cb190-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Number of Incidents&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb190-9"><a href="#cb190-9" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Crime in London (2020)&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>, y<span class="op">=</span><span class="fl">1.1</span>)</span>
+<span id="cb190-10"><a href="#cb190-10" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb190-11"><a href="#cb190-11" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;stacked_chart.jpg&#39;</span>)</span>
+<span id="cb190-12"><a href="#cb190-12" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path)</span>
+<span id="cb190-13"><a href="#cb190-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img src="python-dataviz-output/supplement_stacked_barcharts_files/supplement_stacked_barcharts_15_0.png" /></p>
+</div>
 </div>
 </div>
 <div id="animation" class="section level2">
@@ -2097,73 +2155,73 @@ Length: 168, dtype: int64</code></pre>
 <div id="creating-animated-maps" class="section level3">
 <h3>Creating Animated Maps</h3>
 <p>We take the dataset for 2017 solar eclipse and animate the path of the solar eclipse.</p>
-<div class="sourceCode" id="cb185"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
-<span id="cb185-2"><a href="#cb185-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb185-3"><a href="#cb185-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb185-4"><a href="#cb185-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb185-5"><a href="#cb185-5" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
-<span id="cb185-6"><a href="#cb185-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb185-7"><a href="#cb185-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib.animation <span class="im">import</span> FuncAnimation, PillowWriter</span></code></pre></div>
-<div class="sourceCode" id="cb186"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb186-1"><a href="#cb186-1" aria-hidden="true" tabindex="-1"></a>data_pkg_path <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb186-2"><a href="#cb186-2" aria-hidden="true" tabindex="-1"></a>folder <span class="op">=</span> <span class="st">&#39;eclipse&#39;</span></span>
-<span id="cb186-3"><a href="#cb186-3" aria-hidden="true" tabindex="-1"></a>upath_file <span class="op">=</span> os.path.join(data_pkg_path, folder, <span class="st">&#39;upath17.shp&#39;</span>)</span>
-<span id="cb186-4"><a href="#cb186-4" aria-hidden="true" tabindex="-1"></a>path_gdf <span class="op">=</span> gpd.read_file(upath_file)</span>
-<span id="cb186-5"><a href="#cb186-5" aria-hidden="true" tabindex="-1"></a>umbra_file <span class="op">=</span> os.path.join(data_pkg_path, folder, <span class="st">&#39;w_umbra17_1m.shp&#39;</span>)</span>
-<span id="cb186-6"><a href="#cb186-6" aria-hidden="true" tabindex="-1"></a>umbra_gdf <span class="op">=</span> gpd.read_file(umbra_file)</span></code></pre></div>
-<div class="sourceCode" id="cb187"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>path_reprojected <span class="op">=</span> path_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span>
-<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a>umbra_reprojected <span class="op">=</span> umbra_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb188"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb188-1"><a href="#cb188-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb188-2"><a href="#cb188-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb188-3"><a href="#cb188-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb188-4"><a href="#cb188-4" aria-hidden="true" tabindex="-1"></a>umbra_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb188-5"><a href="#cb188-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb188-6"><a href="#cb188-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb188-7"><a href="#cb188-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb188-8"><a href="#cb188-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb188-9"><a href="#cb188-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb188-10"><a href="#cb188-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<div class="sourceCode" id="cb189"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a>path_boundary <span class="op">=</span> path_reprojected.geometry.unary_union</span>
-<span id="cb189-2"><a href="#cb189-2" aria-hidden="true" tabindex="-1"></a>umbra_subset <span class="op">=</span> umbra_reprojected[umbra_reprojected.geometry.intersects(path_boundary)]</span></code></pre></div>
-<div class="sourceCode" id="cb190"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a>umbra_subset.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb190-6"><a href="#cb190-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb190-7"><a href="#cb190-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb190-8"><a href="#cb190-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb190-9"><a href="#cb190-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb190-10"><a href="#cb190-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<div class="sourceCode" id="cb191"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb191-1"><a href="#cb191-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb191-2"><a href="#cb191-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb191-3"><a href="#cb191-3" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<div class="sourceCode" id="cb191"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb191-1"><a href="#cb191-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
+<span id="cb191-2"><a href="#cb191-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb191-3"><a href="#cb191-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb191-4"><a href="#cb191-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb191-5"><a href="#cb191-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> animate(i):</span>
-<span id="cb191-6"><a href="#cb191-6" aria-hidden="true" tabindex="-1"></a>    ax.clear()</span>
-<span id="cb191-7"><a href="#cb191-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the point from the points list at index i</span></span>
-<span id="cb191-8"><a href="#cb191-8" aria-hidden="true" tabindex="-1"></a>    umbra_filtered <span class="op">=</span> umbra_subset.iloc[i:i<span class="op">+</span><span class="dv">1</span>]</span>
-<span id="cb191-9"><a href="#cb191-9" aria-hidden="true" tabindex="-1"></a>    path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb191-10"><a href="#cb191-10" aria-hidden="true" tabindex="-1"></a>    cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb191-11"><a href="#cb191-11" aria-hidden="true" tabindex="-1"></a>    umbra_filtered.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb191-12"><a href="#cb191-12" aria-hidden="true" tabindex="-1"></a>    ax.set_axis_off()</span>
-<span id="cb191-13"><a href="#cb191-13" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> <span class="bu">dict</span>(boxstyle<span class="op">=</span><span class="st">&#39;round&#39;</span>, facecolor<span class="op">=</span><span class="st">&#39;wheat&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb191-14"><a href="#cb191-14" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> umbra_filtered.iloc[<span class="dv">0</span>].UTCTime</span>
-<span id="cb191-15"><a href="#cb191-15" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> <span class="st">&#39;Time: </span><span class="sc">{}</span><span class="st"> UTC&#39;</span>.<span class="bu">format</span>(time)</span>
-<span id="cb191-16"><a href="#cb191-16" aria-hidden="true" tabindex="-1"></a>    ax.text(<span class="fl">0.05</span>, <span class="fl">0.20</span>, text, transform<span class="op">=</span>ax.transAxes, fontsize<span class="op">=</span><span class="dv">16</span>,</span>
-<span id="cb191-17"><a href="#cb191-17" aria-hidden="true" tabindex="-1"></a>            verticalalignment<span class="op">=</span><span class="st">&#39;top&#39;</span>, bbox<span class="op">=</span>props)</span>
-<span id="cb191-18"><a href="#cb191-18" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb191-19"><a href="#cb191-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb191-20"><a href="#cb191-20" aria-hidden="true" tabindex="-1"></a>ani <span class="op">=</span> FuncAnimation(fig, animate, frames<span class="op">=</span><span class="bu">len</span>(umbra_subset),</span>
-<span id="cb191-21"><a href="#cb191-21" aria-hidden="true" tabindex="-1"></a>                    interval<span class="op">=</span><span class="dv">500</span>, repeat<span class="op">=</span><span class="va">True</span>, cache_frame_data<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb191-22"><a href="#cb191-22" aria-hidden="true" tabindex="-1"></a>plt.close()</span></code></pre></div>
-<div class="sourceCode" id="cb192"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb192-1"><a href="#cb192-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib <span class="im">as</span> mpl</span>
-<span id="cb192-2"><a href="#cb192-2" aria-hidden="true" tabindex="-1"></a>mpl.rcParams[<span class="st">&#39;animation.embed_limit&#39;</span>] <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">128</span></span>
-<span id="cb192-3"><a href="#cb192-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> HTML</span>
-<span id="cb192-4"><a href="#cb192-4" aria-hidden="true" tabindex="-1"></a><span class="co">#HTML(ani.to_jshtml())</span></span></code></pre></div>
-<div class="sourceCode" id="cb193"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;solar_eclipse.gif&#39;</span>)</span>
-<span id="cb193-3"><a href="#cb193-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb193-4"><a href="#cb193-4" aria-hidden="true" tabindex="-1"></a><span class="co">#ani.save(output_path, writer=PillowWriter(fps=5))</span></span></code></pre></div>
+<span id="cb191-5"><a href="#cb191-5" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>matplotlib inline</span>
+<span id="cb191-6"><a href="#cb191-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb191-7"><a href="#cb191-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib.animation <span class="im">import</span> FuncAnimation, PillowWriter</span></code></pre></div>
+<div class="sourceCode" id="cb192"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb192-1"><a href="#cb192-1" aria-hidden="true" tabindex="-1"></a>data_pkg_path <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb192-2"><a href="#cb192-2" aria-hidden="true" tabindex="-1"></a>folder <span class="op">=</span> <span class="st">&#39;eclipse&#39;</span></span>
+<span id="cb192-3"><a href="#cb192-3" aria-hidden="true" tabindex="-1"></a>upath_file <span class="op">=</span> os.path.join(data_pkg_path, folder, <span class="st">&#39;upath17.shp&#39;</span>)</span>
+<span id="cb192-4"><a href="#cb192-4" aria-hidden="true" tabindex="-1"></a>path_gdf <span class="op">=</span> gpd.read_file(upath_file)</span>
+<span id="cb192-5"><a href="#cb192-5" aria-hidden="true" tabindex="-1"></a>umbra_file <span class="op">=</span> os.path.join(data_pkg_path, folder, <span class="st">&#39;w_umbra17_1m.shp&#39;</span>)</span>
+<span id="cb192-6"><a href="#cb192-6" aria-hidden="true" tabindex="-1"></a>umbra_gdf <span class="op">=</span> gpd.read_file(umbra_file)</span></code></pre></div>
+<div class="sourceCode" id="cb193"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a>path_reprojected <span class="op">=</span> path_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span>
+<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>umbra_reprojected <span class="op">=</span> umbra_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb194"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb194-1"><a href="#cb194-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb194-2"><a href="#cb194-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb194-3"><a href="#cb194-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb194-4"><a href="#cb194-4" aria-hidden="true" tabindex="-1"></a>umbra_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb194-5"><a href="#cb194-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb194-6"><a href="#cb194-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb194-7"><a href="#cb194-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb194-8"><a href="#cb194-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb194-9"><a href="#cb194-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb194-10"><a href="#cb194-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb195"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb195-1"><a href="#cb195-1" aria-hidden="true" tabindex="-1"></a>path_boundary <span class="op">=</span> path_reprojected.geometry.unary_union</span>
+<span id="cb195-2"><a href="#cb195-2" aria-hidden="true" tabindex="-1"></a>umbra_subset <span class="op">=</span> umbra_reprojected[umbra_reprojected.geometry.intersects(path_boundary)]</span></code></pre></div>
+<div class="sourceCode" id="cb196"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb196-1"><a href="#cb196-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb196-2"><a href="#cb196-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb196-3"><a href="#cb196-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb196-4"><a href="#cb196-4" aria-hidden="true" tabindex="-1"></a>umbra_subset.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb196-5"><a href="#cb196-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb196-6"><a href="#cb196-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb196-7"><a href="#cb196-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb196-8"><a href="#cb196-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb196-9"><a href="#cb196-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb196-10"><a href="#cb196-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb197"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb197-1"><a href="#cb197-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb197-2"><a href="#cb197-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb197-3"><a href="#cb197-3" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb197-4"><a href="#cb197-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb197-5"><a href="#cb197-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> animate(i):</span>
+<span id="cb197-6"><a href="#cb197-6" aria-hidden="true" tabindex="-1"></a>    ax.clear()</span>
+<span id="cb197-7"><a href="#cb197-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the point from the points list at index i</span></span>
+<span id="cb197-8"><a href="#cb197-8" aria-hidden="true" tabindex="-1"></a>    umbra_filtered <span class="op">=</span> umbra_subset.iloc[i:i<span class="op">+</span><span class="dv">1</span>]</span>
+<span id="cb197-9"><a href="#cb197-9" aria-hidden="true" tabindex="-1"></a>    path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb197-10"><a href="#cb197-10" aria-hidden="true" tabindex="-1"></a>    cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb197-11"><a href="#cb197-11" aria-hidden="true" tabindex="-1"></a>    umbra_filtered.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb197-12"><a href="#cb197-12" aria-hidden="true" tabindex="-1"></a>    ax.set_axis_off()</span>
+<span id="cb197-13"><a href="#cb197-13" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> <span class="bu">dict</span>(boxstyle<span class="op">=</span><span class="st">&#39;round&#39;</span>, facecolor<span class="op">=</span><span class="st">&#39;wheat&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb197-14"><a href="#cb197-14" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> umbra_filtered.iloc[<span class="dv">0</span>].UTCTime</span>
+<span id="cb197-15"><a href="#cb197-15" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> <span class="st">&#39;Time: </span><span class="sc">{}</span><span class="st"> UTC&#39;</span>.<span class="bu">format</span>(time)</span>
+<span id="cb197-16"><a href="#cb197-16" aria-hidden="true" tabindex="-1"></a>    ax.text(<span class="fl">0.05</span>, <span class="fl">0.20</span>, text, transform<span class="op">=</span>ax.transAxes, fontsize<span class="op">=</span><span class="dv">16</span>,</span>
+<span id="cb197-17"><a href="#cb197-17" aria-hidden="true" tabindex="-1"></a>            verticalalignment<span class="op">=</span><span class="st">&#39;top&#39;</span>, bbox<span class="op">=</span>props)</span>
+<span id="cb197-18"><a href="#cb197-18" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb197-19"><a href="#cb197-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb197-20"><a href="#cb197-20" aria-hidden="true" tabindex="-1"></a>ani <span class="op">=</span> FuncAnimation(fig, animate, frames<span class="op">=</span><span class="bu">len</span>(umbra_subset),</span>
+<span id="cb197-21"><a href="#cb197-21" aria-hidden="true" tabindex="-1"></a>                    interval<span class="op">=</span><span class="dv">500</span>, repeat<span class="op">=</span><span class="va">True</span>, cache_frame_data<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb197-22"><a href="#cb197-22" aria-hidden="true" tabindex="-1"></a>plt.close()</span></code></pre></div>
+<div class="sourceCode" id="cb198"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb198-1"><a href="#cb198-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib <span class="im">as</span> mpl</span>
+<span id="cb198-2"><a href="#cb198-2" aria-hidden="true" tabindex="-1"></a>mpl.rcParams[<span class="st">&#39;animation.embed_limit&#39;</span>] <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">128</span></span>
+<span id="cb198-3"><a href="#cb198-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> HTML</span>
+<span id="cb198-4"><a href="#cb198-4" aria-hidden="true" tabindex="-1"></a><span class="co">#HTML(ani.to_jshtml())</span></span></code></pre></div>
+<div class="sourceCode" id="cb199"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb199-2"><a href="#cb199-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;solar_eclipse.gif&#39;</span>)</span>
+<span id="cb199-3"><a href="#cb199-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb199-4"><a href="#cb199-4" aria-hidden="true" tabindex="-1"></a><span class="co">#ani.save(output_path, writer=PillowWriter(fps=5))</span></span></code></pre></div>
 </div>
 </div>
 </div>
