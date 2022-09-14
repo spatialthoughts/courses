@@ -52,20 +52,17 @@ By convention, XArray is imported as `xr`. We use Xarray's `open_dataset()` meth
 ```python
 file_path = os.path.join(data_folder, filename)
 ds = xr.open_dataset(file_path)
+ds
 ```
 
 The NetCDF file contains a grid of values for each month from 1880-2021 at a spatial resolution of 2 degrees. Let's understand what is contained in a Dataset.
 
-* *Variables*: This is similar to a band in a raster dataset. We have 2 variables in this dataset: `tempanomany` and `time_bnds`. Each variable contains an array of values.
-* *Dimensions*: This is similar to number of array axes. We have a 4-dimensional dataset. A 2D grid of pixels (`lat` and `lon`) at multiple time intervals `time` with multiple variables `nv`. 
-* *Coordinates*: These are the labels for values in each dimension. We have labels for `lat`, `lon` and `time`.
+* *Variables*: This is similar to a band in a raster dataset. Each variable contains an array of values.
+* *Dimensions*: This is similar to number of array axes.
+* *Coordinates*: These are the labels for values in each dimension. 
 * *Attributes*: This is the metadata associated with the dataset.
 
-
-
-```python
-ds
-```
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/xarray_terminology.png' width=800/>
 
 A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset.variable_name` syntax.
 

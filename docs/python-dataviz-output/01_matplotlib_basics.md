@@ -28,6 +28,8 @@ It is important to understand the 2 matplotlib objects
 * Figure: This is the main container of the plot. A figure can contain multiple plots inside it
 * Axes:  Axes refers to an individual plot or graph. A figure contains 1 or more axes.
 
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/matplotlib_terminology.png' width=800/>
+
 We create a figure and a single subplot. Specifying 1 row and 1 column for the `subplots()` function create a figure and an axes within it. Even if we have a single plot in the figure, it is useful to use this logic of intialization so it is consistent across different scripts.
 
 
