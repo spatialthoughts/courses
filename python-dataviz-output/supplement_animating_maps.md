@@ -1,6 +1,6 @@
-# Creating Animated Maps
+### Creating Animated Maps
 
-We can now apply the same technique to animate the path of the solar eclipse.
+We take the dataset for 2017 solar eclipse and animate the path of the solar eclipse.
 
 
 ```python
