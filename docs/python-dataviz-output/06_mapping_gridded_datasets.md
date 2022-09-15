@@ -9,10 +9,10 @@ The following blocks of code will install the required packages and download the
 
 ```python
 %%capture
-!apt-get -qq remove python-shapely python3-shapely
-
-!pip install --no-binary shapely shapely --force
-!pip install --no-binary cartopy cartopy==0.19.0.post1
+if 'google.colab' in str(get_ipython()):
+  !apt-get -qq remove python-shapely python3-shapely
+  !pip install --no-binary shapely shapely --force
+  !pip install --no-binary cartopy cartopy==0.19.0.post1
 ```
 
 
@@ -110,7 +110,7 @@ fig.set_size_inches(15, 7)
 anomaly2021.plot.imshow(ax=ax,
     vmin=-3, vmax=3, add_labels=False, cmap='coolwarm')
 
-ax.set_title('Temprature Anomaly in 2021 (°C)', fontsize = 14)
+ax.set_title('Temperature Anomaly in 2021 (°C)', fontsize = 14)
 
 plt.show()
 ```
@@ -159,7 +159,7 @@ anomaly2021.plot.imshow(
 
 fig = plt.gcf()
 fig.set_size_inches(10,10)
-plt.title('Temprature Anomaly in 2021 (°C)', fontsize = 14)
+plt.title('Temperature Anomaly in 2021 (°C)', fontsize = 14)
 
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'anomaly.jpg')

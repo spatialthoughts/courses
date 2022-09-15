@@ -1,4 +1,10 @@
-### Setup 
+### Creating an Artistic Rendering of a City
+
+Contextily provides an easy way to render tiles for a location using the OpenStreetMap's Nominatim API. Any location name from OpenStreetMap can be geocoded and displayed using the [Contextily Place API](https://contextily.readthedocs.io/en/latest/places_guide.html). 
+
+We can use it to quickly create a high-resolution rendering of any city using any supported basemap with exact dimensions.
+
+#### Setup 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -27,36 +33,40 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-### Rendering Basemap for a City
+#### Procedure
 
-Contextily provides an easy way to render tiles for a location using the OpenStreetMap's Nominatim API. Any location name from OpenStreetMap can be geocoded and displayed using the [Contextily Place API](https://contextily.readthedocs.io/en/latest/places_guide.html). 
-
-We can use it to quickly create a high-resolution rendering of any city using any supported basemap.
+Replace the `place_name` below with the name of your chosen city, region or neighborhood and run it to query for its coordinates and bounding box for OpenStreetMap. If your query fails, you can visit [OpenStreetMap](https://www.openstreetmap.org/) and search for it to find the exact spelling of the place.
 
 
 ```python
-place = Place('Bangalore', zoom=13)
+place_name = 'Bangalore'
+place = Place(place_name, zoom=13)
+```
 
+
+```python
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(11.7, 8.3) # A4 paper
 place.plot(ax=ax)
 ax.set_axis_off()
 plt.tight_layout()
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/supplement_contextily_files/supplement_contextily_5_0.png)
-    
-
+You can choose from over 200 basemap styles created by different providers. Check the available styles using `contextile.providers`.
 
 
 ```python
-place = Place('Bangalore', zoom=15, source=cx.providers.Stamen.Toner)
+providers = cx.providers
+providers
+```
+
+Let's try the `Stamen.Toner` style.
+
+
+```python
+place = Place(place_name, zoom=13, source=cx.providers.Stamen.Toner)
 
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(11.7, 8.3) # A4 paper
 place.plot(ax=ax)
 ax.set_axis_off()
 plt.tight_layout()
@@ -67,36 +77,42 @@ The Place API returns the rendering of the city based on its boundng box.
 
 
 ```python
-place = Place('Bangalore')
+place = Place(place_name)
 x_min, x_max, y_min, y_max = place.bbox_map
 print('Original BBOX', x_min, x_max, y_min, y_max)
 ```
 
-    Original BBOX 8619650.805662755 8668570.503765268 1438239.1242138757 1477374.882695885
-
-
-IF we wanted to create a rendering for exact dimensions, we have to adjust the default bounding box. Here we want to create a rendering that will fit A4 size paper (11.69 in x 8.27 in). We compute the required ratio and adjust the bounds so the resulting ratio matches our paper size.
+If we wanted to create a rendering for exact dimensions, we have to adjust the default bounding box. Here we want to create a rendering that will fit exactly to the chosen paper size. We compute the required ratio and adjust the bounds so the resulting ratio matches our paper size.
 
 
 ```python
+# Here we are using A4 paper size in Landscape orientation
+# Swap width and height for Portrait orientation
+# or choose any other dimensions
 paper_width = 11.69
 paper_height = 8.27
 
 ratio = paper_width/paper_height
 
 x_size = x_max - x_min
-x_size_required = ratio*(y_max - y_min)
+y_size = y_max - y_min
 
-difference =  x_size_required - x_size
-x_min = x_min - difference/2
-x_max = x_max + difference/2
+if ratio > 0:
+  # adjust width
+  x_size_required = ratio*(y_max - y_min)
+  difference =  x_size_required - x_size
+  x_min = x_min - difference/2
+  x_max = x_max + difference/2
+else:
+  # adjust height
+  y_size_required = ratio*(x_max - x_min)
+  difference =  y_size_required - y_size
+  y_min = y_min - difference/2
+  y_max = y_max + difference/2
 print('Adjusted BBOX', x_min, x_max, y_min, y_max)
 ```
 
-    Adjusted BBOX 8616450.617431382 8671770.691996641 1438239.1242138757 1477374.882695885
-
-
-Now we have the bounding box cooridnates, we can use the `bounds2img` method to fetch the tiles and create a map.
+Now we have the bounding box cooridnates, we can use the `bounds2img` method to fetch the tiles and create a map. The final rendering is saved as a PNG file in the Colab localstorage. You can open the **Files** tab from the left-hand panel in Colab and browse to the output folder. Locate the `basemap.png` file and click the **⋮** button and select Download to download the file locally.
 
 
 ```python
@@ -116,45 +132,12 @@ plt.tight_layout(pad=0)
 
 output_file = 'basemap.png'
 output_path = os.path.join(output_folder, output_file)
-plt.savefig(output_path, dpi=300,bbox_inches='tight', pad=0)
+plt.savefig(output_path, dpi=300, bbox_inches='tight', pad=0)
 plt.show()
 ```
 
 
     
-![](python-dataviz-output/supplement_contextily_files/supplement_contextily_12_0.png)
+![](python-dataviz-output/supplement_contextily_files/supplement_contextily_18_0.png)
     
 
-
-### Managing Tile Cache
-
-Contextily fetches map tiles from the specified service and caches them locally. This allowed you to re-use these tiles without having to download them again. The default location is a temporary directory that is stored as `contextily.tile.memory` variable.
-
-
-```python
-cx.tile.memory
-```
-
-
-
-
-    Memory(location=/tmp/tmpsbiqduxy/joblib)
-
-
-
-We can also set a different folder for caching tiles. Let's use `set_cache_dir()` function to use a folder named `tiles` on the current directory.
-
-
-```python
-cache_folder = 'tiles'
-if not os.path.exists(cache_folder):
-    os.mkdir(cache_folder)
-cx.set_cache_dir(cache_folder)
-```
-
-Now whenever new tiles are fetched, they will be stored in the specified cache folder.
-
-
-```python
-place = Place('Bangalore', zoom=15, source=cx.providers.Stamen.Toner)
-```
