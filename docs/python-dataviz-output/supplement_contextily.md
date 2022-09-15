@@ -60,11 +60,17 @@ providers = cx.providers
 providers
 ```
 
-Let's try the `Stamen.Toner` style.
+Let's try the `Stamen.Toner` style. Some basemaps are available only upto a certain zoom level. If you get an error adjust the zoom level as well.
 
 
 ```python
-place = Place(place_name, zoom=13, source=cx.providers.Stamen.Toner)
+source = cx.providers.Stamen.Toner
+zoom = 13
+```
+
+
+```python
+place = Place(place_name, zoom=zoom, source=source)
 
 fig, ax = plt.subplots(1, 1)
 place.plot(ax=ax)
@@ -119,7 +125,7 @@ Now we have the bounding box cooridnates, we can use the `bounds2img` method to 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(paper_width, paper_height)
 
-basemap, extent = cx.bounds2img(x_min, y_min, x_max, y_max, zoom=13, source=cx.providers.Stamen.Toner)
+basemap, extent = cx.bounds2img(x_min, y_min, x_max, y_max, zoom=zoom, source=source)
 ax.imshow(basemap, extent=extent)
 
 ax.set_xlim(x_min, x_max)
@@ -138,6 +144,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_contextily_files/supplement_contextily_18_0.png)
+![](python-dataviz-output/supplement_contextily_files/supplement_contextily_19_0.png)
     
 
