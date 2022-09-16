@@ -52,7 +52,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-You can choose from over 200 basemap styles created by different providers. Check the available styles using `contextile.providers`.
+You can choose from over 200 basemap styles created by different providers. Check the available styles using `contextily.providers`.
 
 
 ```python
