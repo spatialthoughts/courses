@@ -28,8 +28,9 @@ Most courses are written using pure MarkDown in the corresponding `.Rmd` file. Y
 
 ### Mapping and Data Visualization with Python
 
-1. Update the `.ipynb` files in the `code/python_dataviz/` directory.
-2. Run `python-dataviz-package.sh` to generate `.md` files for each notebook
+1. Update the `.ipynb` and `.py` files in the `code/python_dataviz/` directory.
+2. Run `python-dataviz-package.sh` to generate `.md` files for each notebook.
+3. The script will also copy updated code to spatialthoughts/python-dataviz-web. Commit and push changes there.
 
 ### End-to-End Google Earth Engine
 
