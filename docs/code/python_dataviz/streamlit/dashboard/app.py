@@ -5,7 +5,6 @@ import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 st.set_page_config(page_title="Dashboard", layout="wide")
 
 st.title('National Highway Dashboard')

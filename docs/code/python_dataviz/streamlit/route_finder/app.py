@@ -4,6 +4,20 @@ from streamlit_folium import st_folium
 from streamlit_folium import folium_static
 import requests
 
+st.set_page_config(page_title='Route Finder')
+st.title('Route Finder')
+
+st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) to geocode and get directions between the specified origin and destination. [[view source code](https://github.com/spatialthoughts/streamlit/tree/main/route_finder)]')
+st.text('Enter any city name or address below.')
+origin = st.text_input('Origin (Example: San Francisco, CA)')
+destination = st.text_input('Destination (Example: San Jose, CA)')
+mode = st.selectbox('Travel Mode', ['Car', 'Walk', 'Bike'])
+button = st.button('Get Directions')
+
+# Define a placeholder to display the distance and download button once computed.    
+placeholder = st.empty()
+
+
 ORS_API_KEY = st.secrets['ORS_API_KEY']
 
 @st.cache
@@ -53,16 +67,7 @@ def get_directions(origin_name, destination_name):
     tooltip = 'Distance by {}: {}km'.format(mode, distance)
     return route_xy, tooltip
     
-st.title('Route Finder')
-st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) to geocode and get directions between the specified origin and destination. [[view source code](https://github.com/spatialthoughts/streamlit/tree/main/route_finder)]')
-st.text('Enter any city name or address below.')
-origin = st.text_input('Origin (Example: San Francisco, CA)')
-destination = st.text_input('Destination (Example: San Jose, CA)')
-mode = st.selectbox('Travel Mode', ['Car', 'Walk', 'Bike'])
-button = st.button('Get Directions')
 
-    
-placeholder = st.empty()
 
 m = folium.Map(location=[39.949610, -75.150282], zoom_start=5)
 if origin:
@@ -92,5 +97,8 @@ if button:
     folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
     placeholder.text(tooltip)
     
+    m.save('directions.html')
+    with open('directions.html') as file:
+        placeholder.download_button('Download Directions', data=file, file_name='directions.html')
+    
 folium_static(m, width=800)
-
