@@ -4,6 +4,8 @@ from streamlit_folium import st_folium
 from streamlit_folium import folium_static
 import requests
 
+st.set_page_config(page_title='Route Finder')
+
 ORS_API_KEY = st.secrets['ORS_API_KEY']
 
 @st.cache
@@ -54,6 +56,7 @@ def get_directions(origin_name, destination_name):
     return route_xy, tooltip
     
 st.title('Route Finder')
+
 st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) to geocode and get directions between the specified origin and destination. [[view source code](https://github.com/spatialthoughts/streamlit/tree/main/route_finder)]')
 st.text('Enter any city name or address below.')
 origin = st.text_input('Origin (Example: San Francisco, CA)')
