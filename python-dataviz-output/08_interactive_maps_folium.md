@@ -33,17 +33,23 @@ ORS_API_KEY = ''
 
 ## Folium Basics
 
+We will learn the basics of folium by creating an interactive map showing the driving directions between two chosen locations. Let's start by defining the coordinates of two cities.
+
 
 ```python
 san_francisco = (37.7749, -122.4194)
 new_york = (40.661, -73.944)
 ```
 
+To create a map, we initialize the `folium.Map()` class which creates a map object with the default basemap. To display the map a Jupyter notebook, we can simply enter the name of the map object.
+
 
 ```python
 m = folium.Map()
 m
 ```
+
+The default map spans the full width of the Jupyter notebook - making it difficult to navigate. The `Map()` constructor supports `width` and `height` parameters that control the size of the leaflet map, but you still end up with a lot of extra empty space below the map. The preferred way to get a map of exact size is to create a *Figure* first and add the map object to it.
 
 
 ```python
@@ -53,6 +59,8 @@ m = folium.Map(location=[39.83, -98.58], zoom_start=4)
 fig.add_child(m)
 ```
 
+The map object `m` can be manipulated by adding different elements to it. Contrary to how Matplotlib objects work, the map object does not get emptied when displayed. So you are able to visualize and incrementally add elements to it. Let's add some markers to the map using [`folium.map.Marker`](https://python-visualization.github.io/folium/modules.html#folium.map.Marker) class.
+
 
 ```python
 folium.Marker(san_francisco, popup='San Francisco').add_to(m)
@@ -61,10 +69,7 @@ folium.Marker(new_york, popup='New York').add_to(m)
 m
 ```
 
-* [folium.map.Marker](https://python-visualization.github.io/folium/modules.html#folium.map.Marker)
-* [folium.map.Icon](https://python-visualization.github.io/folium/modules.html#folium.map.Icon)
-* [fontawesome icons](https://fontawesome.com/search?m=free&c=maps)
-* [bootstrap icons](https://getbootstrap.com/docs/3.3/components/)
+The markers can be customized to have a different color or icons. You can check the [`folium.map.Icon`](https://python-visualization.github.io/folium/modules.html#folium.map.Icon) class for options for creating icons. This class supports a vast range of icons from the [fontawesome icons](https://fontawesome.com/search?m=free&c=maps) and [bootstrap icons](https://getbootstrap.com/docs/3.3/components/) libraries. You can choose the name of the icon from there to use it in your Folium map. The `prefix` parameter can be *fa* for FontAwesome icons or *glyphicon* for Bootstrap3.
 
 
 ```python
@@ -136,6 +141,8 @@ route_xy = [(y, x) for x, y in route]
 route_xy[:5]
 ```
 
+We extract the route summary returned by the API which contains the total driving distance in meters.
+
 
 ```python
 summary = data['features'][0]['properties']['summary']
@@ -143,11 +150,15 @@ distance = round(summary['distance']/1000)
 tooltip = 'Driving Distance: {}km'.format(distance)
 ```
 
+We can use the [`folium.vector_layers.Polyline`](https://python-visualization.github.io/folium/modules.html#folium.vector_layers.PolyLine) class to add a line to the map. The class has a `smooth_factor` parameter which can be used to simplify the line displayed when zoomed-out. Setting a higher number results in better performance.
+
 
 ```python
-folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
+folium.PolyLine(route_xy, tooltip=tooltip, smooth_factor=1).add_to(m)
 m
 ```
+
+Folium maps can be saved to a HTML file by calling `save()` on the map object.
 
 
 ```python
@@ -168,7 +179,7 @@ import folium
 import requests
 
 ###############################
-### Replace Variables Below ###
+###  Replace Variables Below 
 ###############################
 origin = (37.7749, -122.4194)
 origin_name = 'San Francisco'

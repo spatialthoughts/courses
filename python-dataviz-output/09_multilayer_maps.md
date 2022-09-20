@@ -92,6 +92,8 @@ districts_gdf.explore(m=m)
 fig.add_child(m)
 ```
 
+Folium supports a variety of basemaps. Let's change the basemap to use *Stamen Terrain* tiles. Additionally, we can change the styling using the `color` and `style_kwds` parameters.
+
 
 ```python
 fig = Figure(width=800, height=400)
@@ -108,10 +110,14 @@ districts_gdf.explore(
 fig.add_child(m)
 ```
 
+Let's add the `roads_gdf` layer to the map.
+
 
 ```python
 roads_gdf
 ```
+
+The GeoDataFrame contains roads of different categories as given in the `ref` column. Let's add a category column so we can use it to apply different styles to each category of the road.
 
 
 ```python
@@ -125,6 +131,7 @@ def get_category(row):
         return 'NA'
     
 roads_gdf['category'] = roads_gdf.apply(get_category, axis=1)
+roads_gdf
 ```
 
 
