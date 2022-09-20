@@ -2,7 +2,7 @@
 
 [Leafmap](https://leafmap.org/) comes with handy utilities to work with OpenStreetMap data. Using the popular package OSMNx in the background, it provides utility functions to download and visualize data from the OSM database.
 
-* [OpenStreetMap Features](https://leafmap.org/notebooks/15_openstreetmap/)
+* [Leafmap OpenStreetMap Features](https://leafmap.org/notebooks/15_openstreetmap/)
 * [`leafmap.osm` module](https://leafmap.org/osm/)
 
 #### Setup and Data Download
@@ -22,6 +22,7 @@ if 'google.colab' in str(get_ipython()):
 ```python
 import os
 import geopandas as gpd
+import folium
 import leafmap.foliumap as leafmap
 ```
 
@@ -46,37 +47,44 @@ Reference: [`leafmap.osm_gdf_from_place`](https://leafmap.org/osm/#leafmap.osm.o
 
 
 ```python
-parking_gdf = leafmap.osm_gdf_from_place('Bangalore', tags={'amenity': ['parking', 'parking_space', 'parking_entrance']})
-```
-
-The results contains points, lines and polygon features. Let's filter to only features with Polygon geometry.
-
-
-```python
-parking_zones = parking_gdf[parking_gdf['geometry'].apply(lambda x : x.type == 'Polygon' )]
+parking_gdf = leafmap.osm_gdf_from_place(
+    'Bangalore', 
+    tags={'amenity': ['parking', 'parking_space', 'parking_entrance']}
+  )
 ```
 
 The GeoDataFrame has a hierarchical MultiIndex. Let's flatten it using `reset_index()`
 
 
 ```python
-parking_zones = parking_zones.reset_index(level=[0,1])
+parking_gdf = parking_gdf.reset_index(level=[0,1])
 ```
 
 The result has many columns. Let's filter to required columns.
 
 
 ```python
-parking_zones = parking_zones[['amenity','parking', 'access', 'geometry']]
+parking_gdf_subset = parking_gdf[['amenity','parking', 'access', 'geometry']]
+```
+
+The results contains both points and polygon features. Let's separate them out.
+
+
+```python
+parking_zones = parking_gdf_subset[
+    parking_gdf_subset['geometry'].apply(lambda x : x.type == 'Polygon' )]
+parking_locations = parking_gdf_subset[
+    parking_gdf_subset['geometry'].apply(lambda x : x.type == 'Point' )]
 ```
 
 We can save the resulting GeoDataFrame to a GeoPackage.
 
 
 ```python
-output_file = 'parking_zones.gpkg'
+output_file = 'parking.gpkg'
 output_path = os.path.join(output_folder, output_file)
-parking_zones.to_file(driver='GPKG', filename=output_path)
+parking_zones.to_file(driver='GPKG', filename=output_path, layer='zones')
+parking_locations.to_file(driver='GPKG', filename=output_path, layer='locations')
 ```
 
 ### Visualizing OSM Data
@@ -91,13 +99,23 @@ m.add_osm_from_geocode('Bangalore', layer_name='Bangalore', info_mode=None)
 m
 ```
 
-We can add the `parking_zones` GeoDataFrame to the map as well.
+We can add the GeoDataFrame to the map as well using GeoPanda's `explore()` function which allows us to customize the marker's shape, size for the point layer.
 
 
 ```python
 m = leafmap.Map(width=800, height=500)
 m.add_basemap('CartoDB.DarkMatter')
 m.add_osm_from_geocode('Bangalore', layer_name='Bangalore', info_mode=None)
-m.add_gdf(parking_zones, layer_name='parking', info_mode='on_click',style={'color':'yellow', 'weight':0.5})
+parking_zones.explore(
+    style_kwds={'fillOpacity': 0.3, 'weight': 0.5},
+    color='orange',
+    name='parking zones',
+    m=m)
+parking_locations.explore(
+    marker_type='circle',
+    marker_kwds={'radius': 1},
+    color='yellow',
+    name='parking locations',
+    m=m)
 m
 ```

@@ -64,8 +64,9 @@ m
 You can change the basemap to a Google basemap and set the center of the map. `leafmap.Map()` supports many arguments to customize the map and available controls.
 
 References: 
-* [leafmap.leafmap.Map](https://leafmap.org/leafmap/#leafmap.leafmap.Map)
-* [ipyleaflet.leaflet.Map](https://ipyleaflet.readthedocs.io/en/latest/api_reference/index.html#ipyleaflet.leaflet.Map)
+
+* [`leafmap.leafmap.Map`](https://leafmap.org/leafmap/#leafmap.leafmap.Map)
+* [`ipyleaflet.leaflet.Map`](https://ipyleaflet.readthedocs.io/en/latest/api_reference/index.html#ipyleaflet.leaflet.Map)
 
 
 ```python
@@ -106,6 +107,8 @@ m
 ```
 
 A very useful feature of LeafMap is the ability to load a Cloud-Optimized GeoTIFF (COG) file directly from a URL without the need of a server. The file is streamed directly and high-resolution tiles are automatically fetched as you zoom in. 
+
+Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer)
 
 
 ```python
@@ -169,16 +172,17 @@ m.to_html(output_path)
 
 ## Exercise
 
-The code below contains a basic leafmap map. We want to load 2 raster layers of VIIRS Nighttime Lights over India. The URL of two different Cloud-Optimized GeoTIFF files for the year 2015 and 2022 are given below. Add both of them to the map and display the results.
+The code below contains a basic leafmap map. We want to a raster layers of VIIRS Nighttime Lights over India. The URL to a Cloud Optmized GeoTiff (COG) file hosted on Google Cloud Storage is given below.
+
+Add the data to the map and visualize it using a the **viridis** color ramp.
+
+Hint: Use the `colormap_name` parameter.
+
+Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer)
 
 
 ```python
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/nightlights/'
-ntl2015_file = 'india_ntl_viirs_201505.tif'
-ntl2022_file = 'india_ntl_viirs_202205.tif'
-
-ntl2015_url = data_url + ntl2015_file
-ntl2022_url = data_url + ntl2022_file
+data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/viirs_ntl_2021_india.tif'
 ```
 
 
