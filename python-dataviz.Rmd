@@ -213,17 +213,16 @@ Your installation is now complete. You can close the terminal window to stop the
 
 Let's create a simple interactive dashboard by loading a CSV file and displaying a chart with some statistics. We will get familiar with the streamlit app development workflow and explore different widgets and layout elements.
 
-1. Create a folder named **dashboard** on your Desktop.
+1. Create a folder named **simple_dashboard** on your Desktop.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/python_dataviz/dashboard1.png')
 ```
 
-2. Open your favorite text editor and create a file with the following content. By convention, we import `streamlit as st`. Then we can use the `st.title()` to display the title of our dashboard and `st.write()` to add a paragraph of text. Save the file in the **dashboard** folder on your desktop as `app.py`
+2. Open your favorite text editor and create a file with the following content. By convention, we import `streamlit as st`. Then we can use the `st.title()` to display the title of our dashboard and `st.write()` to add a paragraph of text. Save the file in the **simple_dashboard** folder on your desktop as `app.py`
 
 ```{python eval=FALSE}
 import streamlit as st
-
 
 st.title('A Simple Dashboard')
 st.write('This dashboard displays a chart for the selected region.')
@@ -340,7 +339,7 @@ filtered = df[df['DISTRICT'] == district]
 
 fig, ax = plt.subplots(1, 1)
 
-filtered.plot(kind='bar', ax=ax, color=[nh_color, sh_color],
+filtered.plot(kind='bar', ax=ax, color=['#0000FF', '#FF0000'],
     ylabel='Kilometers', xlabel='Category')
 ax.get_xaxis().set_ticklabels([])
 stats = st.pyplot(fig)
@@ -373,6 +372,97 @@ Add a radio-button to the app that allows the user to select the units for lengt
 knitr::include_graphics('images/python_dataviz/dashboard_exercise.png')
 ```
 
+## Create a Simple App
+
+Let's create a simple app that geocodes a user query and displays the results on a map. We will use [OpenRouteService Geocoding API](https://openrouteservice.org/dev/#/api-docs/geocode) for geocoding and Folium to display the results on a map.
+
+1. We start with a basic layout with a title, a description and a text input for the address.
+
+```{python eval=FALSE}
+import folium
+import requests
+import streamlit as st
+
+st.title('A Simple Geocoder')
+st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) '
+    'to geocode the input address and siplay the results on a map.')
+    
+address = st.text_input('Enter an address.')
+```
+
+
+2. We need an API Key for OpenRouteService for our app. It is not a good practice to store the key in the code as it can be seen by others and can be misused. Streamlit provides an easy way to store such *secrets*. You create a folder named `.streamlit` in the app directory and store any key=value pairs in a file named `secrets.toml`. In the app, you can read any value using `st.secrets` with the stored key. Create a new file `secrets.toml` in the `.streamlit` directory with the following content. Replace `<your api key>` with the actual key. Once done, update the app to read the key from secrets.
+
+```
+'ORS_API_KEY' = '<your api key>'
+```
+
+```{python eval=FALSE}
+import folium
+import requests
+import streamlit as st
+
+st.title('A Simple Geocoder')
+st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) '
+    'to geocode the input address and siplay the results on a map.')
+    
+address = st.text_input('Enter an address.')
+
+ORS_API_KEY = st.secrets['ORS_API_KEY']
+
+```
+
+3. Now we add a `geocode()` function that will take an address and geocode it using OpenRouteService API.
+
+```{python eval=FALSE}
+import folium
+import requests
+import streamlit as st
+
+st.title('A Simple Geocoder')
+st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) '
+  'to geocode the input address and siplay the results on a map.')
+
+address = st.text_input('Enter an address.')
+
+ORS_API_KEY = st.secrets['ORS_API_KEY']
+
+@st.cache
+def geocode(query):
+    parameters = {
+        'api_key': ORS_API_KEY,
+        'text' : query
+    }
+
+    response = requests.get(
+         'https://api.openrouteservice.org/geocode/search',
+         params=parameters)
+    if response.status_code == 200:
+        data = response.json()
+        if data['features']:
+            x, y = data['features'][0]['geometry']['coordinates']
+            return (y, x)
+    
+if address:
+    results = geocode(address)
+    if results:
+        st.write('Geocoded Coordinates: {}, {}'.format(results[0], results[1]))
+    else:
+        st.error('Request failed. No results.')
+```
+
+4. Now that we have coordinates, we can display it on a map.
+
+```{python eval=FALSE, code=readLines('code/python_dataviz/streamlit/simple_app/app.py')}
+```
+
+## Exercise
+
+Add a dropdown menu to give the users an option to change the default basemap of the Folium map. 
+
+* Hint: Add a `st.selectbox()` with basemap strings. `st.selectbox('Select a basemap', ['OpenStreetMap', 'Stamen Terrain', 'Stamen Toner'])`
+
+Reference: [`folium.folium.Map`](https://python-visualization.github.io/folium/modules.html#module-folium.folium)
 
 # Building Mapping Apps with Leafmap and Streamlit
 
