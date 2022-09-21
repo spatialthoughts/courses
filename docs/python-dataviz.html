@@ -2174,82 +2174,270 @@ conda install -c conda-forge streamlit leafmap geopandas streamlit-folium -y</co
 </div>
 <div id="building-mapping-apps-with-leafmap-and-streamlit" class="section level1">
 <h1>Building Mapping Apps with Leafmap and Streamlit</h1>
+<p>We can leverag <code>leafmap</code> to create an interactive mapping dashboard that gives us the flexibility of using many different mapping backends and way to read a wide-variety of spatial data formats.</p>
 <div id="create-a-mapping-dashboard" class="section level2">
 <h2>Create a Mapping Dashboard</h2>
 <p>The code below creates an interactive mapping dashboard that displays the statistics of the selected region.</p>
+<ol style="list-style-type: decimal">
+<li>We create a layout with a sidebar using <code>st.sidebar()</code>. We can add any widget inside the sidebar using <code>st.sidebar</code> notation.</li>
+</ol>
 <div class="sourceCode" id="cb173"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
-<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> folium</span>
-<span id="cb173-3"><a href="#cb173-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
-<span id="cb173-4"><a href="#cb173-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb173-5"><a href="#cb173-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb173-6"><a href="#cb173-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb173-7"><a href="#cb173-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-8"><a href="#cb173-8" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&quot;Dashboard&quot;</span>, layout<span class="op">=</span><span class="st">&quot;wide&quot;</span>)</span>
-<span id="cb173-9"><a href="#cb173-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-10"><a href="#cb173-10" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
-<span id="cb173-11"><a href="#cb173-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-12"><a href="#cb173-12" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&quot;About&quot;</span>)</span>
-<span id="cb173-13"><a href="#cb173-13" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Roads&#39;</span>)</span>
-<span id="cb173-14"><a href="#cb173-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-15"><a href="#cb173-15" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/&#39;</span></span>
-<span id="cb173-16"><a href="#cb173-16" aria-hidden="true" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
-<span id="cb173-17"><a href="#cb173-17" aria-hidden="true" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
-<span id="cb173-18"><a href="#cb173-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-19"><a href="#cb173-19" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
-<span id="cb173-20"><a href="#cb173-20" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
-<span id="cb173-21"><a href="#cb173-21" aria-hidden="true" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
-<span id="cb173-22"><a href="#cb173-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
-<span id="cb173-23"><a href="#cb173-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-24"><a href="#cb173-24" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
-<span id="cb173-25"><a href="#cb173-25" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
-<span id="cb173-26"><a href="#cb173-26" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb173-27"><a href="#cb173-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
-<span id="cb173-28"><a href="#cb173-28" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb173-29"><a href="#cb173-29" aria-hidden="true" tabindex="-1"></a>   </span>
-<span id="cb173-30"><a href="#cb173-30" aria-hidden="true" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
-<span id="cb173-31"><a href="#cb173-31" aria-hidden="true" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
-<span id="cb173-32"><a href="#cb173-32" aria-hidden="true" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
-<span id="cb173-33"><a href="#cb173-33" aria-hidden="true" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
-<span id="cb173-34"><a href="#cb173-34" aria-hidden="true" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
-<span id="cb173-35"><a href="#cb173-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-36"><a href="#cb173-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-37"><a href="#cb173-37" aria-hidden="true" tabindex="-1"></a>districts <span class="op">=</span> districts_gdf.DISTRICT.values</span>
-<span id="cb173-38"><a href="#cb173-38" aria-hidden="true" tabindex="-1"></a>district <span class="op">=</span> st.sidebar.selectbox(<span class="st">&#39;Select a District&#39;</span>, districts)</span>
-<span id="cb173-39"><a href="#cb173-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-40"><a href="#cb173-40" aria-hidden="true" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
-<span id="cb173-41"><a href="#cb173-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-42"><a href="#cb173-42" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb173-43"><a href="#cb173-43" aria-hidden="true" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
-<span id="cb173-44"><a href="#cb173-44" aria-hidden="true" tabindex="-1"></a>    ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
-<span id="cb173-45"><a href="#cb173-45" aria-hidden="true" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
-<span id="cb173-46"><a href="#cb173-46" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span>
-<span id="cb173-47"><a href="#cb173-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-48"><a href="#cb173-48" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(</span>
-<span id="cb173-49"><a href="#cb173-49" aria-hidden="true" tabindex="-1"></a>    layers_control<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb173-50"><a href="#cb173-50" aria-hidden="true" tabindex="-1"></a>    draw_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb173-51"><a href="#cb173-51" aria-hidden="true" tabindex="-1"></a>    measure_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb173-52"><a href="#cb173-52" aria-hidden="true" tabindex="-1"></a>    fullscreen_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb173-53"><a href="#cb173-53" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb173-54"><a href="#cb173-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-55"><a href="#cb173-55" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
-<span id="cb173-56"><a href="#cb173-56" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>districts_gdf,</span>
-<span id="cb173-57"><a href="#cb173-57" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;districts&#39;</span>,</span>
-<span id="cb173-58"><a href="#cb173-58" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb173-59"><a href="#cb173-59" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="st">&#39;on_click&#39;</span>,</span>
-<span id="cb173-60"><a href="#cb173-60" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;black&#39;</span>, <span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
-<span id="cb173-61"><a href="#cb173-61" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb173-62"><a href="#cb173-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-63"><a href="#cb173-63" aria-hidden="true" tabindex="-1"></a>selected_gdf <span class="op">=</span> districts_gdf[districts_gdf[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
-<span id="cb173-64"><a href="#cb173-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-65"><a href="#cb173-65" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
-<span id="cb173-66"><a href="#cb173-66" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>selected_gdf,</span>
-<span id="cb173-67"><a href="#cb173-67" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;selected&#39;</span>,</span>
-<span id="cb173-68"><a href="#cb173-68" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb173-69"><a href="#cb173-69" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb173-70"><a href="#cb173-70" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;yellow&#39;</span>, <span class="st">&#39;fill&#39;</span>: <span class="va">None</span>, <span class="st">&#39;weight&#39;</span>: <span class="dv">2</span>}</span>
-<span id="cb173-71"><a href="#cb173-71" aria-hidden="true" tabindex="-1"></a> )</span>
-<span id="cb173-72"><a href="#cb173-72" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb173-73"><a href="#cb173-73" aria-hidden="true" tabindex="-1"></a>m_streamlit <span class="op">=</span> m.to_streamlit(<span class="dv">500</span>, <span class="dv">500</span>)</span></code></pre></div>
+<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb173-3"><a href="#cb173-3" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&#39;Dashboard&#39;</span>, layout<span class="op">=</span><span class="st">&#39;wide&#39;</span>)</span>
+<span id="cb173-4"><a href="#cb173-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb173-5"><a href="#cb173-5" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
+<span id="cb173-6"><a href="#cb173-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb173-7"><a href="#cb173-7" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&#39;About&#39;</span>)</span>
+<span id="cb173-8"><a href="#cb173-8" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Highway Statistics&#39;</span>)</span></code></pre></div>
+<ol start="2" style="list-style-type: decimal">
+<li>We now use <code>geopandas</code> to read 2 vector layers from a geopackage and <code>pandas</code> to read a CSV file containing road statistics. We put the code for data fetching inside a function and cache it using <code>@st.cache</code></li>
+</ol>
+<div class="sourceCode" id="cb174"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb174-1"><a href="#cb174-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb174-2"><a href="#cb174-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb174-3"><a href="#cb174-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb174-4"><a href="#cb174-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-5"><a href="#cb174-5" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&#39;Dashboard&#39;</span>, layout<span class="op">=</span><span class="st">&#39;wide&#39;</span>)</span>
+<span id="cb174-6"><a href="#cb174-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-7"><a href="#cb174-7" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
+<span id="cb174-8"><a href="#cb174-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-9"><a href="#cb174-9" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&#39;About&#39;</span>)</span>
+<span id="cb174-10"><a href="#cb174-10" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Highway Statistics&#39;</span>)</span>
+<span id="cb174-11"><a href="#cb174-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-12"><a href="#cb174-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-13"><a href="#cb174-13" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/&#39;</span></span>
+<span id="cb174-14"><a href="#cb174-14" aria-hidden="true" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
+<span id="cb174-15"><a href="#cb174-15" aria-hidden="true" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
+<span id="cb174-16"><a href="#cb174-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-17"><a href="#cb174-17" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb174-18"><a href="#cb174-18" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
+<span id="cb174-19"><a href="#cb174-19" aria-hidden="true" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
+<span id="cb174-20"><a href="#cb174-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
+<span id="cb174-21"><a href="#cb174-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-22"><a href="#cb174-22" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb174-23"><a href="#cb174-23" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
+<span id="cb174-24"><a href="#cb174-24" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb174-25"><a href="#cb174-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb174-26"><a href="#cb174-26" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb174-27"><a href="#cb174-27" aria-hidden="true" tabindex="-1"></a>data_load_state <span class="op">=</span> st.text(<span class="st">&#39;Loading data...&#39;</span>)   </span>
+<span id="cb174-28"><a href="#cb174-28" aria-hidden="true" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
+<span id="cb174-29"><a href="#cb174-29" aria-hidden="true" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
+<span id="cb174-30"><a href="#cb174-30" aria-hidden="true" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
+<span id="cb174-31"><a href="#cb174-31" aria-hidden="true" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
+<span id="cb174-32"><a href="#cb174-32" aria-hidden="true" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
+<span id="cb174-33"><a href="#cb174-33" aria-hidden="true" tabindex="-1"></a>data_load_state.text(<span class="st">&#39;Loading data... done!&#39;</span>)</span></code></pre></div>
+<ol start="3" style="list-style-type: decimal">
+<li>Now we use the information in the CSV file to display a chart in the sidebar.</li>
+</ol>
+<div class="sourceCode" id="cb175"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb175-2"><a href="#cb175-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb175-3"><a href="#cb175-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb175-4"><a href="#cb175-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb175-5"><a href="#cb175-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-6"><a href="#cb175-6" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&#39;Dashboard&#39;</span>, layout<span class="op">=</span><span class="st">&#39;wide&#39;</span>)</span>
+<span id="cb175-7"><a href="#cb175-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-8"><a href="#cb175-8" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
+<span id="cb175-9"><a href="#cb175-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-10"><a href="#cb175-10" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&#39;About&#39;</span>)</span>
+<span id="cb175-11"><a href="#cb175-11" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Highway Statistics&#39;</span>)</span>
+<span id="cb175-12"><a href="#cb175-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-13"><a href="#cb175-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-14"><a href="#cb175-14" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/&#39;</span></span>
+<span id="cb175-15"><a href="#cb175-15" aria-hidden="true" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
+<span id="cb175-16"><a href="#cb175-16" aria-hidden="true" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
+<span id="cb175-17"><a href="#cb175-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-18"><a href="#cb175-18" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb175-19"><a href="#cb175-19" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
+<span id="cb175-20"><a href="#cb175-20" aria-hidden="true" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
+<span id="cb175-21"><a href="#cb175-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
+<span id="cb175-22"><a href="#cb175-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-23"><a href="#cb175-23" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb175-24"><a href="#cb175-24" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
+<span id="cb175-25"><a href="#cb175-25" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb175-26"><a href="#cb175-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb175-27"><a href="#cb175-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-28"><a href="#cb175-28" aria-hidden="true" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
+<span id="cb175-29"><a href="#cb175-29" aria-hidden="true" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
+<span id="cb175-30"><a href="#cb175-30" aria-hidden="true" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
+<span id="cb175-31"><a href="#cb175-31" aria-hidden="true" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
+<span id="cb175-32"><a href="#cb175-32" aria-hidden="true" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
+<span id="cb175-33"><a href="#cb175-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-34"><a href="#cb175-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the chart</span></span>
+<span id="cb175-35"><a href="#cb175-35" aria-hidden="true" tabindex="-1"></a>districts <span class="op">=</span> districts_gdf.DISTRICT.values</span>
+<span id="cb175-36"><a href="#cb175-36" aria-hidden="true" tabindex="-1"></a>district <span class="op">=</span> st.sidebar.selectbox(<span class="st">&#39;Select a District&#39;</span>, districts)</span>
+<span id="cb175-37"><a href="#cb175-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-38"><a href="#cb175-38" aria-hidden="true" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
+<span id="cb175-39"><a href="#cb175-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb175-40"><a href="#cb175-40" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb175-41"><a href="#cb175-41" aria-hidden="true" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
+<span id="cb175-42"><a href="#cb175-42" aria-hidden="true" tabindex="-1"></a>    ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
+<span id="cb175-43"><a href="#cb175-43" aria-hidden="true" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
+<span id="cb175-44"><a href="#cb175-44" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span></code></pre></div>
+<ol start="4" style="list-style-type: decimal">
+<li>Now we create a folium map using <code>leafmap.Map()</code> and render the vector layers. We also add a third layer with the boundary of the selected district to highlight the selection.</li>
+</ol>
+<div class="sourceCode" id="cb176"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb176-2"><a href="#cb176-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb176-3"><a href="#cb176-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb176-4"><a href="#cb176-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb176-5"><a href="#cb176-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
+<span id="cb176-6"><a href="#cb176-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-7"><a href="#cb176-7" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&#39;Dashboard&#39;</span>, layout<span class="op">=</span><span class="st">&#39;wide&#39;</span>)</span>
+<span id="cb176-8"><a href="#cb176-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-9"><a href="#cb176-9" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
+<span id="cb176-10"><a href="#cb176-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-11"><a href="#cb176-11" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&#39;About&#39;</span>)</span>
+<span id="cb176-12"><a href="#cb176-12" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Highway Statistics&#39;</span>)</span>
+<span id="cb176-13"><a href="#cb176-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-14"><a href="#cb176-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-15"><a href="#cb176-15" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/&#39;</span></span>
+<span id="cb176-16"><a href="#cb176-16" aria-hidden="true" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
+<span id="cb176-17"><a href="#cb176-17" aria-hidden="true" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
+<span id="cb176-18"><a href="#cb176-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-19"><a href="#cb176-19" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb176-20"><a href="#cb176-20" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
+<span id="cb176-21"><a href="#cb176-21" aria-hidden="true" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
+<span id="cb176-22"><a href="#cb176-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
+<span id="cb176-23"><a href="#cb176-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-24"><a href="#cb176-24" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb176-25"><a href="#cb176-25" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
+<span id="cb176-26"><a href="#cb176-26" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb176-27"><a href="#cb176-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb176-28"><a href="#cb176-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-29"><a href="#cb176-29" aria-hidden="true" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
+<span id="cb176-30"><a href="#cb176-30" aria-hidden="true" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
+<span id="cb176-31"><a href="#cb176-31" aria-hidden="true" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
+<span id="cb176-32"><a href="#cb176-32" aria-hidden="true" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
+<span id="cb176-33"><a href="#cb176-33" aria-hidden="true" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
+<span id="cb176-34"><a href="#cb176-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-35"><a href="#cb176-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the chart</span></span>
+<span id="cb176-36"><a href="#cb176-36" aria-hidden="true" tabindex="-1"></a>districts <span class="op">=</span> districts_gdf.DISTRICT.values</span>
+<span id="cb176-37"><a href="#cb176-37" aria-hidden="true" tabindex="-1"></a>district <span class="op">=</span> st.sidebar.selectbox(<span class="st">&#39;Select a District&#39;</span>, districts)</span>
+<span id="cb176-38"><a href="#cb176-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-39"><a href="#cb176-39" aria-hidden="true" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
+<span id="cb176-40"><a href="#cb176-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-41"><a href="#cb176-41" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb176-42"><a href="#cb176-42" aria-hidden="true" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
+<span id="cb176-43"><a href="#cb176-43" aria-hidden="true" tabindex="-1"></a>    ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
+<span id="cb176-44"><a href="#cb176-44" aria-hidden="true" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
+<span id="cb176-45"><a href="#cb176-45" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span>
+<span id="cb176-46"><a href="#cb176-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-47"><a href="#cb176-47" aria-hidden="true" tabindex="-1"></a><span class="co">## Create the map</span></span>
+<span id="cb176-48"><a href="#cb176-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-49"><a href="#cb176-49" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(</span>
+<span id="cb176-50"><a href="#cb176-50" aria-hidden="true" tabindex="-1"></a>    layers_control<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb176-51"><a href="#cb176-51" aria-hidden="true" tabindex="-1"></a>    draw_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb176-52"><a href="#cb176-52" aria-hidden="true" tabindex="-1"></a>    measure_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb176-53"><a href="#cb176-53" aria-hidden="true" tabindex="-1"></a>    fullscreen_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb176-54"><a href="#cb176-54" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb176-55"><a href="#cb176-55" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
+<span id="cb176-56"><a href="#cb176-56" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
+<span id="cb176-57"><a href="#cb176-57" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>districts_gdf,</span>
+<span id="cb176-58"><a href="#cb176-58" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb176-59"><a href="#cb176-59" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;districts&#39;</span>,</span>
+<span id="cb176-60"><a href="#cb176-60" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="st">&#39;on_click&#39;</span>,</span>
+<span id="cb176-61"><a href="#cb176-61" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;#7fcdbb&#39;</span>, <span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
+<span id="cb176-62"><a href="#cb176-62" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb176-63"><a href="#cb176-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-64"><a href="#cb176-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-65"><a href="#cb176-65" aria-hidden="true" tabindex="-1"></a>selected_gdf <span class="op">=</span> districts_gdf[districts_gdf[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
+<span id="cb176-66"><a href="#cb176-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-67"><a href="#cb176-67" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
+<span id="cb176-68"><a href="#cb176-68" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>selected_gdf,</span>
+<span id="cb176-69"><a href="#cb176-69" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;selected&#39;</span>,</span>
+<span id="cb176-70"><a href="#cb176-70" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb176-71"><a href="#cb176-71" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb176-72"><a href="#cb176-72" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;yellow&#39;</span>, <span class="st">&#39;fill&#39;</span>: <span class="va">None</span>, <span class="st">&#39;weight&#39;</span>: <span class="dv">2</span>}</span>
+<span id="cb176-73"><a href="#cb176-73" aria-hidden="true" tabindex="-1"></a> )</span>
+<span id="cb176-74"><a href="#cb176-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-75"><a href="#cb176-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb176-76"><a href="#cb176-76" aria-hidden="true" tabindex="-1"></a>m_streamlit <span class="op">=</span> m.to_streamlit(<span class="dv">600</span>, <span class="dv">600</span>)</span></code></pre></div>
+<ol start="5" style="list-style-type: decimal">
+<li>We can selectively load certain layers on the map using a user-input widget. Let’s add a checkbox that allows the user to overlay the roads on the map.</li>
+</ol>
+<div class="sourceCode" id="cb177"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb177-2"><a href="#cb177-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb177-3"><a href="#cb177-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb177-4"><a href="#cb177-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb177-5"><a href="#cb177-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
+<span id="cb177-6"><a href="#cb177-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-7"><a href="#cb177-7" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&#39;Dashboard&#39;</span>, layout<span class="op">=</span><span class="st">&#39;wide&#39;</span>)</span>
+<span id="cb177-8"><a href="#cb177-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-9"><a href="#cb177-9" aria-hidden="true" tabindex="-1"></a>st.title(<span class="st">&#39;National Highway Dashboard&#39;</span>)</span>
+<span id="cb177-10"><a href="#cb177-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-11"><a href="#cb177-11" aria-hidden="true" tabindex="-1"></a>st.sidebar.title(<span class="st">&#39;About&#39;</span>)</span>
+<span id="cb177-12"><a href="#cb177-12" aria-hidden="true" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Highway Statistics&#39;</span>)</span>
+<span id="cb177-13"><a href="#cb177-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-14"><a href="#cb177-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-15"><a href="#cb177-15" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/&#39;</span></span>
+<span id="cb177-16"><a href="#cb177-16" aria-hidden="true" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
+<span id="cb177-17"><a href="#cb177-17" aria-hidden="true" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
+<span id="cb177-18"><a href="#cb177-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-19"><a href="#cb177-19" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb177-20"><a href="#cb177-20" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
+<span id="cb177-21"><a href="#cb177-21" aria-hidden="true" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
+<span id="cb177-22"><a href="#cb177-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
+<span id="cb177-23"><a href="#cb177-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-24"><a href="#cb177-24" aria-hidden="true" tabindex="-1"></a><span class="at">@st.cache</span></span>
+<span id="cb177-25"><a href="#cb177-25" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
+<span id="cb177-26"><a href="#cb177-26" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb177-27"><a href="#cb177-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb177-28"><a href="#cb177-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-29"><a href="#cb177-29" aria-hidden="true" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
+<span id="cb177-30"><a href="#cb177-30" aria-hidden="true" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
+<span id="cb177-31"><a href="#cb177-31" aria-hidden="true" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
+<span id="cb177-32"><a href="#cb177-32" aria-hidden="true" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
+<span id="cb177-33"><a href="#cb177-33" aria-hidden="true" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
+<span id="cb177-34"><a href="#cb177-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-35"><a href="#cb177-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the chart</span></span>
+<span id="cb177-36"><a href="#cb177-36" aria-hidden="true" tabindex="-1"></a>districts <span class="op">=</span> districts_gdf.DISTRICT.values</span>
+<span id="cb177-37"><a href="#cb177-37" aria-hidden="true" tabindex="-1"></a>district <span class="op">=</span> st.sidebar.selectbox(<span class="st">&#39;Select a District&#39;</span>, districts)</span>
+<span id="cb177-38"><a href="#cb177-38" aria-hidden="true" tabindex="-1"></a>overlay <span class="op">=</span> st.sidebar.checkbox(<span class="st">&#39;Overlay roads&#39;</span>)</span>
+<span id="cb177-39"><a href="#cb177-39" aria-hidden="true" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
+<span id="cb177-40"><a href="#cb177-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-41"><a href="#cb177-41" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb177-42"><a href="#cb177-42" aria-hidden="true" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
+<span id="cb177-43"><a href="#cb177-43" aria-hidden="true" tabindex="-1"></a>    ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
+<span id="cb177-44"><a href="#cb177-44" aria-hidden="true" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
+<span id="cb177-45"><a href="#cb177-45" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span>
+<span id="cb177-46"><a href="#cb177-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-47"><a href="#cb177-47" aria-hidden="true" tabindex="-1"></a><span class="co">## Create the map</span></span>
+<span id="cb177-48"><a href="#cb177-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-49"><a href="#cb177-49" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(</span>
+<span id="cb177-50"><a href="#cb177-50" aria-hidden="true" tabindex="-1"></a>    layers_control<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb177-51"><a href="#cb177-51" aria-hidden="true" tabindex="-1"></a>    draw_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb177-52"><a href="#cb177-52" aria-hidden="true" tabindex="-1"></a>    measure_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb177-53"><a href="#cb177-53" aria-hidden="true" tabindex="-1"></a>    fullscreen_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb177-54"><a href="#cb177-54" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb177-55"><a href="#cb177-55" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
+<span id="cb177-56"><a href="#cb177-56" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
+<span id="cb177-57"><a href="#cb177-57" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>districts_gdf,</span>
+<span id="cb177-58"><a href="#cb177-58" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb177-59"><a href="#cb177-59" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;districts&#39;</span>,</span>
+<span id="cb177-60"><a href="#cb177-60" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="st">&#39;on_click&#39;</span>,</span>
+<span id="cb177-61"><a href="#cb177-61" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;#7fcdbb&#39;</span>, <span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
+<span id="cb177-62"><a href="#cb177-62" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb177-63"><a href="#cb177-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-64"><a href="#cb177-64" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> overlay:</span>
+<span id="cb177-65"><a href="#cb177-65" aria-hidden="true" tabindex="-1"></a>    m.add_gdf(</span>
+<span id="cb177-66"><a href="#cb177-66" aria-hidden="true" tabindex="-1"></a>        gdf<span class="op">=</span>roads_gdf,</span>
+<span id="cb177-67"><a href="#cb177-67" aria-hidden="true" tabindex="-1"></a>        zoom_to_layer<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb177-68"><a href="#cb177-68" aria-hidden="true" tabindex="-1"></a>        layer_name<span class="op">=</span><span class="st">&#39;highways&#39;</span>,</span>
+<span id="cb177-69"><a href="#cb177-69" aria-hidden="true" tabindex="-1"></a>        info_mode<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb177-70"><a href="#cb177-70" aria-hidden="true" tabindex="-1"></a>        style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;#225ea8&#39;</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">1.5</span>},</span>
+<span id="cb177-71"><a href="#cb177-71" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb177-72"><a href="#cb177-72" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb177-73"><a href="#cb177-73" aria-hidden="true" tabindex="-1"></a>selected_gdf <span class="op">=</span> districts_gdf[districts_gdf[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> district]</span>
+<span id="cb177-74"><a href="#cb177-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-75"><a href="#cb177-75" aria-hidden="true" tabindex="-1"></a>m.add_gdf(</span>
+<span id="cb177-76"><a href="#cb177-76" aria-hidden="true" tabindex="-1"></a>    gdf<span class="op">=</span>selected_gdf,</span>
+<span id="cb177-77"><a href="#cb177-77" aria-hidden="true" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;selected&#39;</span>,</span>
+<span id="cb177-78"><a href="#cb177-78" aria-hidden="true" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb177-79"><a href="#cb177-79" aria-hidden="true" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb177-80"><a href="#cb177-80" aria-hidden="true" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;yellow&#39;</span>, <span class="st">&#39;fill&#39;</span>: <span class="va">None</span>, <span class="st">&#39;weight&#39;</span>: <span class="dv">2</span>}</span>
+<span id="cb177-81"><a href="#cb177-81" aria-hidden="true" tabindex="-1"></a> )</span>
+<span id="cb177-82"><a href="#cb177-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-83"><a href="#cb177-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb177-84"><a href="#cb177-84" aria-hidden="true" tabindex="-1"></a>m_streamlit <span class="op">=</span> m.to_streamlit(<span class="dv">600</span>, <span class="dv">600</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="publishing-apps-with-streamlit-cloud" class="section level1">
@@ -2307,92 +2495,92 @@ streamlit-folium</code></pre>
 <div id="setup-2" class="section level4">
 <h4>Setup</h4>
 <p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
-<div class="sourceCode" id="cb176"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb176-2"><a href="#cb176-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb176-3"><a href="#cb176-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install contextily</span></code></pre></div>
-<div class="sourceCode" id="cb177"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
-<span id="cb177-2"><a href="#cb177-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextily <span class="im">import</span> Place</span>
-<span id="cb177-3"><a href="#cb177-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb177-4"><a href="#cb177-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span></code></pre></div>
-<div class="sourceCode" id="cb178"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb178-2"><a href="#cb178-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb178-3"><a href="#cb178-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb178-4"><a href="#cb178-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb178-5"><a href="#cb178-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb178-6"><a href="#cb178-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb178-7"><a href="#cb178-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb180"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install contextily</span></code></pre></div>
+<div class="sourceCode" id="cb181"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
+<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextily <span class="im">import</span> Place</span>
+<span id="cb181-3"><a href="#cb181-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb181-4"><a href="#cb181-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span></code></pre></div>
+<div class="sourceCode" id="cb182"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb182-1"><a href="#cb182-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb182-2"><a href="#cb182-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb182-3"><a href="#cb182-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb182-4"><a href="#cb182-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb182-5"><a href="#cb182-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb182-6"><a href="#cb182-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb182-7"><a href="#cb182-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
 </div>
 <div id="procedure" class="section level4">
 <h4>Procedure</h4>
 <p>Replace the <code>place_name</code> below with the name of your chosen city, region or neighborhood and run it to query for its coordinates and bounding box for OpenStreetMap. If your query fails, you can visit <a href="https://www.openstreetmap.org/">OpenStreetMap</a> and search for it to find the exact spelling of the place.</p>
-<div class="sourceCode" id="cb179"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb179-1"><a href="#cb179-1" aria-hidden="true" tabindex="-1"></a>place_name <span class="op">=</span> <span class="st">&#39;Bangalore&#39;</span></span>
-<span id="cb179-2"><a href="#cb179-2" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name, zoom<span class="op">=</span><span class="dv">13</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb180"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a>place.plot(ax<span class="op">=</span>ax)</span>
-<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb180-4"><a href="#cb180-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb180-5"><a href="#cb180-5" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb183"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a>place_name <span class="op">=</span> <span class="st">&#39;Bangalore&#39;</span></span>
+<span id="cb183-2"><a href="#cb183-2" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name, zoom<span class="op">=</span><span class="dv">13</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb184"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb184-2"><a href="#cb184-2" aria-hidden="true" tabindex="-1"></a>place.plot(ax<span class="op">=</span>ax)</span>
+<span id="cb184-3"><a href="#cb184-3" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb184-4"><a href="#cb184-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb184-5"><a href="#cb184-5" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p>You can choose from over 200 basemap styles created by different providers. Check the available styles using <code>contextily.providers</code>.</p>
-<div class="sourceCode" id="cb181"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a>providers <span class="op">=</span> cx.providers</span>
-<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a>providers</span></code></pre></div>
+<div class="sourceCode" id="cb185"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a>providers <span class="op">=</span> cx.providers</span>
+<span id="cb185-2"><a href="#cb185-2" aria-hidden="true" tabindex="-1"></a>providers</span></code></pre></div>
 <p>Let’s try the <code>Stamen.Toner</code> style. Some basemaps are available only upto a certain zoom level. If you get an error adjust the zoom level as well.</p>
-<div class="sourceCode" id="cb182"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb182-1"><a href="#cb182-1" aria-hidden="true" tabindex="-1"></a>source <span class="op">=</span> cx.providers.Stamen.Toner</span>
-<span id="cb182-2"><a href="#cb182-2" aria-hidden="true" tabindex="-1"></a>zoom <span class="op">=</span> <span class="dv">13</span></span></code></pre></div>
-<div class="sourceCode" id="cb183"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name, zoom<span class="op">=</span>zoom, source<span class="op">=</span>source)</span>
-<span id="cb183-2"><a href="#cb183-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb183-3"><a href="#cb183-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb183-4"><a href="#cb183-4" aria-hidden="true" tabindex="-1"></a>place.plot(ax<span class="op">=</span>ax)</span>
-<span id="cb183-5"><a href="#cb183-5" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb183-6"><a href="#cb183-6" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb183-7"><a href="#cb183-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb186"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb186-1"><a href="#cb186-1" aria-hidden="true" tabindex="-1"></a>source <span class="op">=</span> cx.providers.Stamen.Toner</span>
+<span id="cb186-2"><a href="#cb186-2" aria-hidden="true" tabindex="-1"></a>zoom <span class="op">=</span> <span class="dv">13</span></span></code></pre></div>
+<div class="sourceCode" id="cb187"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name, zoom<span class="op">=</span>zoom, source<span class="op">=</span>source)</span>
+<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb187-3"><a href="#cb187-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb187-4"><a href="#cb187-4" aria-hidden="true" tabindex="-1"></a>place.plot(ax<span class="op">=</span>ax)</span>
+<span id="cb187-5"><a href="#cb187-5" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb187-6"><a href="#cb187-6" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb187-7"><a href="#cb187-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p>The Place API returns the rendering of the city based on its boundng box.</p>
-<div class="sourceCode" id="cb184"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name)</span>
-<span id="cb184-2"><a href="#cb184-2" aria-hidden="true" tabindex="-1"></a>x_min, x_max, y_min, y_max <span class="op">=</span> place.bbox_map</span>
-<span id="cb184-3"><a href="#cb184-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Original BBOX&#39;</span>, x_min, x_max, y_min, y_max)</span></code></pre></div>
+<div class="sourceCode" id="cb188"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb188-1"><a href="#cb188-1" aria-hidden="true" tabindex="-1"></a>place <span class="op">=</span> Place(place_name)</span>
+<span id="cb188-2"><a href="#cb188-2" aria-hidden="true" tabindex="-1"></a>x_min, x_max, y_min, y_max <span class="op">=</span> place.bbox_map</span>
+<span id="cb188-3"><a href="#cb188-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Original BBOX&#39;</span>, x_min, x_max, y_min, y_max)</span></code></pre></div>
 <p>If we wanted to create a rendering for exact dimensions, we have to adjust the default bounding box. Here we want to create a rendering that will fit exactly to the chosen paper size. We compute the required ratio and adjust the bounds so the resulting ratio matches our paper size.</p>
-<div class="sourceCode" id="cb185"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Here we are using A4 paper size in Landscape orientation</span></span>
-<span id="cb185-2"><a href="#cb185-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Swap width and height for Portrait orientation</span></span>
-<span id="cb185-3"><a href="#cb185-3" aria-hidden="true" tabindex="-1"></a><span class="co"># or choose any other dimensions</span></span>
-<span id="cb185-4"><a href="#cb185-4" aria-hidden="true" tabindex="-1"></a>paper_width <span class="op">=</span> <span class="fl">11.69</span></span>
-<span id="cb185-5"><a href="#cb185-5" aria-hidden="true" tabindex="-1"></a>paper_height <span class="op">=</span> <span class="fl">8.27</span></span>
-<span id="cb185-6"><a href="#cb185-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb185-7"><a href="#cb185-7" aria-hidden="true" tabindex="-1"></a>ratio <span class="op">=</span> paper_width<span class="op">/</span>paper_height</span>
-<span id="cb185-8"><a href="#cb185-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb185-9"><a href="#cb185-9" aria-hidden="true" tabindex="-1"></a>x_size <span class="op">=</span> x_max <span class="op">-</span> x_min</span>
-<span id="cb185-10"><a href="#cb185-10" aria-hidden="true" tabindex="-1"></a>y_size <span class="op">=</span> y_max <span class="op">-</span> y_min</span>
-<span id="cb185-11"><a href="#cb185-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb185-12"><a href="#cb185-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> ratio <span class="op">&gt;</span> <span class="dv">0</span>:</span>
-<span id="cb185-13"><a href="#cb185-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># adjust width</span></span>
-<span id="cb185-14"><a href="#cb185-14" aria-hidden="true" tabindex="-1"></a>  x_size_required <span class="op">=</span> ratio<span class="op">*</span>(y_max <span class="op">-</span> y_min)</span>
-<span id="cb185-15"><a href="#cb185-15" aria-hidden="true" tabindex="-1"></a>  difference <span class="op">=</span>  x_size_required <span class="op">-</span> x_size</span>
-<span id="cb185-16"><a href="#cb185-16" aria-hidden="true" tabindex="-1"></a>  x_min <span class="op">=</span> x_min <span class="op">-</span> difference<span class="op">/</span><span class="dv">2</span></span>
-<span id="cb185-17"><a href="#cb185-17" aria-hidden="true" tabindex="-1"></a>  x_max <span class="op">=</span> x_max <span class="op">+</span> difference<span class="op">/</span><span class="dv">2</span></span>
-<span id="cb185-18"><a href="#cb185-18" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb185-19"><a href="#cb185-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># adjust height</span></span>
-<span id="cb185-20"><a href="#cb185-20" aria-hidden="true" tabindex="-1"></a>  y_size_required <span class="op">=</span> ratio<span class="op">*</span>(x_max <span class="op">-</span> x_min)</span>
-<span id="cb185-21"><a href="#cb185-21" aria-hidden="true" tabindex="-1"></a>  difference <span class="op">=</span>  y_size_required <span class="op">-</span> y_size</span>
-<span id="cb185-22"><a href="#cb185-22" aria-hidden="true" tabindex="-1"></a>  y_min <span class="op">=</span> y_min <span class="op">-</span> difference<span class="op">/</span><span class="dv">2</span></span>
-<span id="cb185-23"><a href="#cb185-23" aria-hidden="true" tabindex="-1"></a>  y_max <span class="op">=</span> y_max <span class="op">+</span> difference<span class="op">/</span><span class="dv">2</span></span>
-<span id="cb185-24"><a href="#cb185-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Adjusted BBOX&#39;</span>, x_min, x_max, y_min, y_max)</span></code></pre></div>
+<div class="sourceCode" id="cb189"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Here we are using A4 paper size in Landscape orientation</span></span>
+<span id="cb189-2"><a href="#cb189-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Swap width and height for Portrait orientation</span></span>
+<span id="cb189-3"><a href="#cb189-3" aria-hidden="true" tabindex="-1"></a><span class="co"># or choose any other dimensions</span></span>
+<span id="cb189-4"><a href="#cb189-4" aria-hidden="true" tabindex="-1"></a>paper_width <span class="op">=</span> <span class="fl">11.69</span></span>
+<span id="cb189-5"><a href="#cb189-5" aria-hidden="true" tabindex="-1"></a>paper_height <span class="op">=</span> <span class="fl">8.27</span></span>
+<span id="cb189-6"><a href="#cb189-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb189-7"><a href="#cb189-7" aria-hidden="true" tabindex="-1"></a>ratio <span class="op">=</span> paper_width<span class="op">/</span>paper_height</span>
+<span id="cb189-8"><a href="#cb189-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb189-9"><a href="#cb189-9" aria-hidden="true" tabindex="-1"></a>x_size <span class="op">=</span> x_max <span class="op">-</span> x_min</span>
+<span id="cb189-10"><a href="#cb189-10" aria-hidden="true" tabindex="-1"></a>y_size <span class="op">=</span> y_max <span class="op">-</span> y_min</span>
+<span id="cb189-11"><a href="#cb189-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb189-12"><a href="#cb189-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> ratio <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb189-13"><a href="#cb189-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># adjust width</span></span>
+<span id="cb189-14"><a href="#cb189-14" aria-hidden="true" tabindex="-1"></a>  x_size_required <span class="op">=</span> ratio<span class="op">*</span>(y_max <span class="op">-</span> y_min)</span>
+<span id="cb189-15"><a href="#cb189-15" aria-hidden="true" tabindex="-1"></a>  difference <span class="op">=</span>  x_size_required <span class="op">-</span> x_size</span>
+<span id="cb189-16"><a href="#cb189-16" aria-hidden="true" tabindex="-1"></a>  x_min <span class="op">=</span> x_min <span class="op">-</span> difference<span class="op">/</span><span class="dv">2</span></span>
+<span id="cb189-17"><a href="#cb189-17" aria-hidden="true" tabindex="-1"></a>  x_max <span class="op">=</span> x_max <span class="op">+</span> difference<span class="op">/</span><span class="dv">2</span></span>
+<span id="cb189-18"><a href="#cb189-18" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb189-19"><a href="#cb189-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># adjust height</span></span>
+<span id="cb189-20"><a href="#cb189-20" aria-hidden="true" tabindex="-1"></a>  y_size_required <span class="op">=</span> ratio<span class="op">*</span>(x_max <span class="op">-</span> x_min)</span>
+<span id="cb189-21"><a href="#cb189-21" aria-hidden="true" tabindex="-1"></a>  difference <span class="op">=</span>  y_size_required <span class="op">-</span> y_size</span>
+<span id="cb189-22"><a href="#cb189-22" aria-hidden="true" tabindex="-1"></a>  y_min <span class="op">=</span> y_min <span class="op">-</span> difference<span class="op">/</span><span class="dv">2</span></span>
+<span id="cb189-23"><a href="#cb189-23" aria-hidden="true" tabindex="-1"></a>  y_max <span class="op">=</span> y_max <span class="op">+</span> difference<span class="op">/</span><span class="dv">2</span></span>
+<span id="cb189-24"><a href="#cb189-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Adjusted BBOX&#39;</span>, x_min, x_max, y_min, y_max)</span></code></pre></div>
 <p>Now we have the bounding box cooridnates, we can use the <code>bounds2img</code> method to fetch the tiles and create a map. The final rendering is saved as a PNG file in the Colab localstorage. You can open the <strong>Files</strong> tab from the left-hand panel in Colab and browse to the output folder. Locate the <code>basemap.png</code> file and click the <strong>⋮</strong> button and select Download to download the file locally.</p>
-<div class="sourceCode" id="cb186"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb186-1"><a href="#cb186-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb186-2"><a href="#cb186-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(paper_width, paper_height)</span>
-<span id="cb186-3"><a href="#cb186-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb186-4"><a href="#cb186-4" aria-hidden="true" tabindex="-1"></a>basemap, extent <span class="op">=</span> cx.bounds2img(x_min, y_min, x_max, y_max, zoom<span class="op">=</span>zoom, source<span class="op">=</span>source)</span>
-<span id="cb186-5"><a href="#cb186-5" aria-hidden="true" tabindex="-1"></a>ax.imshow(basemap, extent<span class="op">=</span>extent)</span>
-<span id="cb186-6"><a href="#cb186-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb186-7"><a href="#cb186-7" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(x_min, x_max)</span>
-<span id="cb186-8"><a href="#cb186-8" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(y_min, y_max)</span>
-<span id="cb186-9"><a href="#cb186-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb186-10"><a href="#cb186-10" aria-hidden="true" tabindex="-1"></a>ax.set_xticks([])</span>
-<span id="cb186-11"><a href="#cb186-11" aria-hidden="true" tabindex="-1"></a>ax.set_yticks([])</span>
-<span id="cb186-12"><a href="#cb186-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb186-13"><a href="#cb186-13" aria-hidden="true" tabindex="-1"></a>plt.tight_layout(pad<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb186-14"><a href="#cb186-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb186-15"><a href="#cb186-15" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;basemap.png&#39;</span></span>
-<span id="cb186-16"><a href="#cb186-16" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
-<span id="cb186-17"><a href="#cb186-17" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path, dpi<span class="op">=</span><span class="dv">300</span>, bbox_inches<span class="op">=</span><span class="st">&#39;tight&#39;</span>, pad<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb186-18"><a href="#cb186-18" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb190"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(paper_width, paper_height)</span>
+<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a>basemap, extent <span class="op">=</span> cx.bounds2img(x_min, y_min, x_max, y_max, zoom<span class="op">=</span>zoom, source<span class="op">=</span>source)</span>
+<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a>ax.imshow(basemap, extent<span class="op">=</span>extent)</span>
+<span id="cb190-6"><a href="#cb190-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb190-7"><a href="#cb190-7" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(x_min, x_max)</span>
+<span id="cb190-8"><a href="#cb190-8" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(y_min, y_max)</span>
+<span id="cb190-9"><a href="#cb190-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb190-10"><a href="#cb190-10" aria-hidden="true" tabindex="-1"></a>ax.set_xticks([])</span>
+<span id="cb190-11"><a href="#cb190-11" aria-hidden="true" tabindex="-1"></a>ax.set_yticks([])</span>
+<span id="cb190-12"><a href="#cb190-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb190-13"><a href="#cb190-13" aria-hidden="true" tabindex="-1"></a>plt.tight_layout(pad<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb190-14"><a href="#cb190-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb190-15"><a href="#cb190-15" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;basemap.png&#39;</span></span>
+<span id="cb190-16"><a href="#cb190-16" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
+<span id="cb190-17"><a href="#cb190-17" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path, dpi<span class="op">=</span><span class="dv">300</span>, bbox_inches<span class="op">=</span><span class="st">&#39;tight&#39;</span>, pad<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb190-18"><a href="#cb190-18" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img src="python-dataviz-output/supplement_contextily_files/supplement_contextily_19_0.png" /></p>
 </div>
 </div>
@@ -2406,72 +2594,72 @@ streamlit-folium</code></pre>
 <div id="setup-and-data-download-8" class="section level4">
 <h4>Setup and Data Download</h4>
 <p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
-<div class="sourceCode" id="cb187"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb187-3"><a href="#cb187-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
-<span id="cb187-4"><a href="#cb187-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree mapclassify</span>
-<span id="cb187-5"><a href="#cb187-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span></code></pre></div>
-<div class="sourceCode" id="cb188"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb188-1"><a href="#cb188-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb188-2"><a href="#cb188-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb188-3"><a href="#cb188-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
-<span id="cb188-4"><a href="#cb188-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb188-5"><a href="#cb188-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span></code></pre></div>
-<div class="sourceCode" id="cb189"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb189-2"><a href="#cb189-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb189-3"><a href="#cb189-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb189-4"><a href="#cb189-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb189-5"><a href="#cb189-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb189-6"><a href="#cb189-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb189-7"><a href="#cb189-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
-<div class="sourceCode" id="cb190"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
-<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
-<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
-<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
-<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
-<span id="cb190-6"><a href="#cb190-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
-<div class="sourceCode" id="cb191"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb191-1"><a href="#cb191-1" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;summit.gpx&#39;</span></span>
-<span id="cb191-2"><a href="#cb191-2" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gps/&#39;</span></span>
-<span id="cb191-3"><a href="#cb191-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb191-4"><a href="#cb191-4" aria-hidden="true" tabindex="-1"></a>download(data_url <span class="op">+</span> filename)</span></code></pre></div>
+<div class="sourceCode" id="cb191"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb191-1"><a href="#cb191-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb191-2"><a href="#cb191-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb191-3"><a href="#cb191-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
+<span id="cb191-4"><a href="#cb191-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree mapclassify</span>
+<span id="cb191-5"><a href="#cb191-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span></code></pre></div>
+<div class="sourceCode" id="cb192"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb192-1"><a href="#cb192-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb192-2"><a href="#cb192-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb192-3"><a href="#cb192-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb192-4"><a href="#cb192-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb192-5"><a href="#cb192-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span></code></pre></div>
+<div class="sourceCode" id="cb193"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb193-3"><a href="#cb193-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb193-4"><a href="#cb193-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb193-5"><a href="#cb193-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb193-6"><a href="#cb193-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb193-7"><a href="#cb193-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb194"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb194-1"><a href="#cb194-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb194-2"><a href="#cb194-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb194-3"><a href="#cb194-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb194-4"><a href="#cb194-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb194-5"><a href="#cb194-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb194-6"><a href="#cb194-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
+<div class="sourceCode" id="cb195"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb195-1"><a href="#cb195-1" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;summit.gpx&#39;</span></span>
+<span id="cb195-2"><a href="#cb195-2" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gps/&#39;</span></span>
+<span id="cb195-3"><a href="#cb195-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb195-4"><a href="#cb195-4" aria-hidden="true" tabindex="-1"></a>download(data_url <span class="op">+</span> filename)</span></code></pre></div>
 </div>
 <div id="data-pre-processing-4" class="section level4">
 <h4>Data Pre-Processing</h4>
-<div class="sourceCode" id="cb192"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb192-1"><a href="#cb192-1" aria-hidden="true" tabindex="-1"></a>gpx_path <span class="op">=</span> os.path.join(data_folder, filename)</span>
-<span id="cb192-2"><a href="#cb192-2" aria-hidden="true" tabindex="-1"></a><span class="co"># GPX files contain many layers. Read the &#39;track_points&#39; layer</span></span>
-<span id="cb192-3"><a href="#cb192-3" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gpd.read_file(gpx_path, layer<span class="op">=</span><span class="st">&#39;track_points&#39;</span>)</span>
-<span id="cb192-4"><a href="#cb192-4" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf[[<span class="st">&#39;track_fid&#39;</span>,<span class="st">&#39;ele&#39;</span>, <span class="st">&#39;time&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
-<span id="cb192-5"><a href="#cb192-5" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
+<div class="sourceCode" id="cb196"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb196-1"><a href="#cb196-1" aria-hidden="true" tabindex="-1"></a>gpx_path <span class="op">=</span> os.path.join(data_folder, filename)</span>
+<span id="cb196-2"><a href="#cb196-2" aria-hidden="true" tabindex="-1"></a><span class="co"># GPX files contain many layers. Read the &#39;track_points&#39; layer</span></span>
+<span id="cb196-3"><a href="#cb196-3" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gpd.read_file(gpx_path, layer<span class="op">=</span><span class="st">&#39;track_points&#39;</span>)</span>
+<span id="cb196-4"><a href="#cb196-4" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf[[<span class="st">&#39;track_fid&#39;</span>,<span class="st">&#39;ele&#39;</span>, <span class="st">&#39;time&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
+<span id="cb196-5"><a href="#cb196-5" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
 <p>Let’s use the timestamp contained in the ‘time’ column as the index. This will allow us to filter and plot the time-series data easily. We must first convert the time column to datetime type with an appropriate timezone.</p>
-<div class="sourceCode" id="cb193"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a>gdf[<span class="st">&#39;time&#39;</span>] <span class="op">=</span> pd.to_datetime(gdf[<span class="st">&#39;time&#39;</span>])</span>
-<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf.set_index(<span class="st">&#39;time&#39;</span>)</span>
-<span id="cb193-3"><a href="#cb193-3" aria-hidden="true" tabindex="-1"></a>gdf.index <span class="op">=</span> gdf.index.tz_convert(<span class="st">&#39;Asia/Kolkata&#39;</span>)</span>
-<span id="cb193-4"><a href="#cb193-4" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
+<div class="sourceCode" id="cb197"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb197-1"><a href="#cb197-1" aria-hidden="true" tabindex="-1"></a>gdf[<span class="st">&#39;time&#39;</span>] <span class="op">=</span> pd.to_datetime(gdf[<span class="st">&#39;time&#39;</span>])</span>
+<span id="cb197-2"><a href="#cb197-2" aria-hidden="true" tabindex="-1"></a>gdf <span class="op">=</span> gdf.set_index(<span class="st">&#39;time&#39;</span>)</span>
+<span id="cb197-3"><a href="#cb197-3" aria-hidden="true" tabindex="-1"></a>gdf.index <span class="op">=</span> gdf.index.tz_convert(<span class="st">&#39;Asia/Kolkata&#39;</span>)</span>
+<span id="cb197-4"><a href="#cb197-4" aria-hidden="true" tabindex="-1"></a>gdf</span></code></pre></div>
 <p>Using time as index allows us to filter the data as follows</p>
-<div class="sourceCode" id="cb194"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb194-1"><a href="#cb194-1" aria-hidden="true" tabindex="-1"></a>gdf_subset <span class="op">=</span> gdf[<span class="st">&#39;2022-04-04T06:15:00&#39;</span>:<span class="st">&#39;2022-04-04T10:45:00&#39;</span>]</span>
-<span id="cb194-2"><a href="#cb194-2" aria-hidden="true" tabindex="-1"></a>gdf_subset</span></code></pre></div>
+<div class="sourceCode" id="cb198"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb198-1"><a href="#cb198-1" aria-hidden="true" tabindex="-1"></a>gdf_subset <span class="op">=</span> gdf[<span class="st">&#39;2022-04-04T06:15:00&#39;</span>:<span class="st">&#39;2022-04-04T10:45:00&#39;</span>]</span>
+<span id="cb198-2"><a href="#cb198-2" aria-hidden="true" tabindex="-1"></a>gdf_subset</span></code></pre></div>
 <p>We can now plot the elevation against the timestamp using Matplotlib. Since we have a large number of timestamps, we can use <code>set_major_locator()</code> to define what labels will be present on the axis.</p>
 <p>Since our timestamps are timezone aware, we can also plot a timezone name (i.e. IST) along with the label.</p>
 <p>We can also use a different style for our plot. You can run <code>plt.style.available</code> to see all available styles.</p>
-<div class="sourceCode" id="cb195"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb195-1"><a href="#cb195-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;ggplot&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb196"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb196-1"><a href="#cb196-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb196-2"><a href="#cb196-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb196-3"><a href="#cb196-3" aria-hidden="true" tabindex="-1"></a>gdf_subset[<span class="st">&#39;ele&#39;</span>].plot(kind<span class="op">=</span><span class="st">&#39;line&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
-<span id="cb196-4"><a href="#cb196-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb196-5"><a href="#cb196-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Elevation Profile&#39;</span>, fontsize <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb196-6"><a href="#cb196-6" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Elevation (meters)&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb196-7"><a href="#cb196-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="va">None</span>)</span>
-<span id="cb196-8"><a href="#cb196-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Show a tick every 30 minute</span></span>
-<span id="cb196-9"><a href="#cb196-9" aria-hidden="true" tabindex="-1"></a>xlocator <span class="op">=</span> mdates.MinuteLocator(interval<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb196-10"><a href="#cb196-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb196-11"><a href="#cb196-11" aria-hidden="true" tabindex="-1"></a>xformat <span class="op">=</span> mdates.DateFormatter(<span class="st">&#39;%H:%M %Z&#39;</span>, tz<span class="op">=</span>gdf.index.tz)  <span class="co"># adds some extra formatting, but not required</span></span>
-<span id="cb196-12"><a href="#cb196-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb196-13"><a href="#cb196-13" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_locator(xlocator)</span>
-<span id="cb196-14"><a href="#cb196-14" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_formatter(xformat)</span>
-<span id="cb196-15"><a href="#cb196-15" aria-hidden="true" tabindex="-1"></a>ax.set_ylim([<span class="dv">3200</span>, <span class="dv">3700</span>])</span>
-<span id="cb196-16"><a href="#cb196-16" aria-hidden="true" tabindex="-1"></a>ax.fill_between(gdf.index, gdf[<span class="st">&#39;ele&#39;</span>].values, color<span class="op">=</span><span class="st">&#39;grey&#39;</span>, alpha<span class="op">=</span><span class="fl">0.3</span>)</span>
-<span id="cb196-17"><a href="#cb196-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb199"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;ggplot&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb200"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb200-1"><a href="#cb200-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb200-2"><a href="#cb200-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb200-3"><a href="#cb200-3" aria-hidden="true" tabindex="-1"></a>gdf_subset[<span class="st">&#39;ele&#39;</span>].plot(kind<span class="op">=</span><span class="st">&#39;line&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span><span class="st">&#39;#2b8cbe&#39;</span>)</span>
+<span id="cb200-4"><a href="#cb200-4" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb200-5"><a href="#cb200-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Elevation Profile&#39;</span>, fontsize <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb200-6"><a href="#cb200-6" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Elevation (meters)&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb200-7"><a href="#cb200-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="va">None</span>)</span>
+<span id="cb200-8"><a href="#cb200-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Show a tick every 30 minute</span></span>
+<span id="cb200-9"><a href="#cb200-9" aria-hidden="true" tabindex="-1"></a>xlocator <span class="op">=</span> mdates.MinuteLocator(interval<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb200-10"><a href="#cb200-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb200-11"><a href="#cb200-11" aria-hidden="true" tabindex="-1"></a>xformat <span class="op">=</span> mdates.DateFormatter(<span class="st">&#39;%H:%M %Z&#39;</span>, tz<span class="op">=</span>gdf.index.tz)  <span class="co"># adds some extra formatting, but not required</span></span>
+<span id="cb200-12"><a href="#cb200-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb200-13"><a href="#cb200-13" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_locator(xlocator)</span>
+<span id="cb200-14"><a href="#cb200-14" aria-hidden="true" tabindex="-1"></a>ax.xaxis.set_major_formatter(xformat)</span>
+<span id="cb200-15"><a href="#cb200-15" aria-hidden="true" tabindex="-1"></a>ax.set_ylim([<span class="dv">3200</span>, <span class="dv">3700</span>])</span>
+<span id="cb200-16"><a href="#cb200-16" aria-hidden="true" tabindex="-1"></a>ax.fill_between(gdf.index, gdf[<span class="st">&#39;ele&#39;</span>].values, color<span class="op">=</span><span class="st">&#39;grey&#39;</span>, alpha<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb200-17"><a href="#cb200-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img src="python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_16_0.png" /></p>
-<div class="sourceCode" id="cb197"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb197-1"><a href="#cb197-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;default&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb201"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb201-1"><a href="#cb201-1" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">&#39;default&#39;</span>)</span></code></pre></div>
 <p><a href="https://colab.research.google.com/github/spatialthoughts/python-dataviz-web/blob/main/supplement_stacked_barcharts.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" /></a></p>
 </div>
 </div>
@@ -2481,77 +2669,77 @@ streamlit-folium</code></pre>
 <div id="setup-and-data-download-9" class="section level4">
 <h4>Setup and Data Download</h4>
 <p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
-<div class="sourceCode" id="cb198"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb198-1"><a href="#cb198-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb198-2"><a href="#cb198-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb198-3"><a href="#cb198-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
-<div class="sourceCode" id="cb199"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb199-2"><a href="#cb199-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb199-3"><a href="#cb199-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb199-4"><a href="#cb199-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb199-5"><a href="#cb199-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb199-6"><a href="#cb199-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb199-7"><a href="#cb199-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
-<div class="sourceCode" id="cb200"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb200-1"><a href="#cb200-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
-<span id="cb200-2"><a href="#cb200-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
-<span id="cb200-3"><a href="#cb200-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
-<span id="cb200-4"><a href="#cb200-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
-<span id="cb200-5"><a href="#cb200-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
-<span id="cb200-6"><a href="#cb200-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
+<div class="sourceCode" id="cb202"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb202-1"><a href="#cb202-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb202-2"><a href="#cb202-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb202-3"><a href="#cb202-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
+<div class="sourceCode" id="cb203"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb203-1"><a href="#cb203-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb203-2"><a href="#cb203-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb203-3"><a href="#cb203-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb203-4"><a href="#cb203-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb203-5"><a href="#cb203-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb203-6"><a href="#cb203-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb203-7"><a href="#cb203-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb204"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb204-1"><a href="#cb204-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb204-2"><a href="#cb204-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb204-3"><a href="#cb204-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb204-4"><a href="#cb204-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb204-5"><a href="#cb204-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb204-6"><a href="#cb204-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span></code></pre></div>
 <p>We have 12 different CSV files containing crime data for each month of 2020. We download each of them to the data folder.</p>
-<div class="sourceCode" id="cb201"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb201-1"><a href="#cb201-1" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [</span>
-<span id="cb201-2"><a href="#cb201-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-01-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-3"><a href="#cb201-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-02-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-4"><a href="#cb201-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-03-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-5"><a href="#cb201-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-04-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-6"><a href="#cb201-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-05-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-7"><a href="#cb201-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-06-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-8"><a href="#cb201-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-07-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-9"><a href="#cb201-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-08-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-10"><a href="#cb201-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-09-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-11"><a href="#cb201-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-10-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-12"><a href="#cb201-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-11-metropolitan-street.csv&#39;</span>,</span>
-<span id="cb201-13"><a href="#cb201-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-12-metropolitan-street.csv&#39;</span></span>
-<span id="cb201-14"><a href="#cb201-14" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb201-15"><a href="#cb201-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb201-16"><a href="#cb201-16" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/&#39;</span></span>
-<span id="cb201-17"><a href="#cb201-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb201-18"><a href="#cb201-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
-<span id="cb201-19"><a href="#cb201-19" aria-hidden="true" tabindex="-1"></a>  url <span class="op">=</span> os.path.join(data_url <span class="op">+</span> f)</span>
-<span id="cb201-20"><a href="#cb201-20" aria-hidden="true" tabindex="-1"></a>  download(url)</span></code></pre></div>
+<div class="sourceCode" id="cb205"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb205-1"><a href="#cb205-1" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [</span>
+<span id="cb205-2"><a href="#cb205-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-01-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-3"><a href="#cb205-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-02-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-4"><a href="#cb205-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-03-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-5"><a href="#cb205-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-04-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-6"><a href="#cb205-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-05-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-7"><a href="#cb205-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-06-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-8"><a href="#cb205-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-07-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-9"><a href="#cb205-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-08-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-10"><a href="#cb205-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-09-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-11"><a href="#cb205-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-10-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-12"><a href="#cb205-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-11-metropolitan-street.csv&#39;</span>,</span>
+<span id="cb205-13"><a href="#cb205-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2020-12-metropolitan-street.csv&#39;</span></span>
+<span id="cb205-14"><a href="#cb205-14" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb205-15"><a href="#cb205-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb205-16"><a href="#cb205-16" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/&#39;</span></span>
+<span id="cb205-17"><a href="#cb205-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb205-18"><a href="#cb205-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
+<span id="cb205-19"><a href="#cb205-19" aria-hidden="true" tabindex="-1"></a>  url <span class="op">=</span> os.path.join(data_url <span class="op">+</span> f)</span>
+<span id="cb205-20"><a href="#cb205-20" aria-hidden="true" tabindex="-1"></a>  download(url)</span></code></pre></div>
 </div>
 <div id="data-pre-processing-5" class="section level4">
 <h4>Data Pre-Processing</h4>
 <p>It will be helpful to merge all 12 CSV files into a single dataframe. We can use <code>pd.concat()</code> to merge a list of dataframes.</p>
-<div class="sourceCode" id="cb202"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb202-1"><a href="#cb202-1" aria-hidden="true" tabindex="-1"></a>dataframe_list <span class="op">=</span> []</span>
-<span id="cb202-2"><a href="#cb202-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb202-3"><a href="#cb202-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
-<span id="cb202-4"><a href="#cb202-4" aria-hidden="true" tabindex="-1"></a>    filepath <span class="op">=</span> os.path.join(data_folder, f)</span>
-<span id="cb202-5"><a href="#cb202-5" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(filepath)</span>
-<span id="cb202-6"><a href="#cb202-6" aria-hidden="true" tabindex="-1"></a>    dataframe_list.append(df)</span>
-<span id="cb202-7"><a href="#cb202-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb202-8"><a href="#cb202-8" aria-hidden="true" tabindex="-1"></a>merged_df <span class="op">=</span> pd.concat(dataframe_list)</span></code></pre></div>
-<div class="sourceCode" id="cb203"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb203-1"><a href="#cb203-1" aria-hidden="true" tabindex="-1"></a>counts_by_type <span class="op">=</span> merged_df.groupby([<span class="st">&#39;Month&#39;</span>, <span class="st">&#39;Crime type&#39;</span>]).size()</span>
-<span id="cb203-2"><a href="#cb203-2" aria-hidden="true" tabindex="-1"></a>counts_by_type</span></code></pre></div>
+<div class="sourceCode" id="cb206"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb206-1"><a href="#cb206-1" aria-hidden="true" tabindex="-1"></a>dataframe_list <span class="op">=</span> []</span>
+<span id="cb206-2"><a href="#cb206-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb206-3"><a href="#cb206-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> files:</span>
+<span id="cb206-4"><a href="#cb206-4" aria-hidden="true" tabindex="-1"></a>    filepath <span class="op">=</span> os.path.join(data_folder, f)</span>
+<span id="cb206-5"><a href="#cb206-5" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(filepath)</span>
+<span id="cb206-6"><a href="#cb206-6" aria-hidden="true" tabindex="-1"></a>    dataframe_list.append(df)</span>
+<span id="cb206-7"><a href="#cb206-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb206-8"><a href="#cb206-8" aria-hidden="true" tabindex="-1"></a>merged_df <span class="op">=</span> pd.concat(dataframe_list)</span></code></pre></div>
+<div class="sourceCode" id="cb207"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb207-1"><a href="#cb207-1" aria-hidden="true" tabindex="-1"></a>counts_by_type <span class="op">=</span> merged_df.groupby([<span class="st">&#39;Month&#39;</span>, <span class="st">&#39;Crime type&#39;</span>]).size()</span>
+<span id="cb207-2"><a href="#cb207-2" aria-hidden="true" tabindex="-1"></a>counts_by_type</span></code></pre></div>
 <p>The result is not in a suitable format for plotting. We call <code>unstack()</code> to create a dataframe.</p>
-<div class="sourceCode" id="cb204"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb204-1"><a href="#cb204-1" aria-hidden="true" tabindex="-1"></a>counts_df <span class="op">=</span> counts_by_type.unstack()</span>
-<span id="cb204-2"><a href="#cb204-2" aria-hidden="true" tabindex="-1"></a>counts_df</span></code></pre></div>
+<div class="sourceCode" id="cb208"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb208-1"><a href="#cb208-1" aria-hidden="true" tabindex="-1"></a>counts_df <span class="op">=</span> counts_by_type.unstack()</span>
+<span id="cb208-2"><a href="#cb208-2" aria-hidden="true" tabindex="-1"></a>counts_df</span></code></pre></div>
 </div>
 <div id="creating-a-chart" class="section level4">
 <h4>Creating a Chart</h4>
 <p>Now we can create the stacked bar chart. Instead of the default legend, we create a horizontal legend with a frame using the <code>legend()</code> function.</p>
-<div class="sourceCode" id="cb205"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb205-1"><a href="#cb205-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb205-2"><a href="#cb205-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">20</span>,<span class="dv">10</span>)</span>
-<span id="cb205-3"><a href="#cb205-3" aria-hidden="true" tabindex="-1"></a>counts_df.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, stacked<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax, colormap<span class="op">=</span><span class="st">&#39;tab20&#39;</span>)</span>
-<span id="cb205-4"><a href="#cb205-4" aria-hidden="true" tabindex="-1"></a>plt.legend(loc<span class="op">=</span><span class="st">&#39;upper center&#39;</span>, ncol<span class="op">=</span><span class="dv">5</span>, frameon<span class="op">=</span><span class="va">True</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.1</span>), fancybox<span class="op">=</span><span class="va">True</span>, shadow<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb205-5"><a href="#cb205-5" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;right&#39;</span>].set_visible(<span class="va">False</span>)</span>
-<span id="cb205-6"><a href="#cb205-6" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;top&#39;</span>].set_visible(<span class="va">False</span>)</span>
-<span id="cb205-7"><a href="#cb205-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Year&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb205-8"><a href="#cb205-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Number of Incidents&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
-<span id="cb205-9"><a href="#cb205-9" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Crime in London (2020)&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>, y<span class="op">=</span><span class="fl">1.1</span>)</span>
-<span id="cb205-10"><a href="#cb205-10" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb205-11"><a href="#cb205-11" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;stacked_chart.jpg&#39;</span>)</span>
-<span id="cb205-12"><a href="#cb205-12" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path)</span>
-<span id="cb205-13"><a href="#cb205-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb209"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb209-1"><a href="#cb209-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb209-2"><a href="#cb209-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">20</span>,<span class="dv">10</span>)</span>
+<span id="cb209-3"><a href="#cb209-3" aria-hidden="true" tabindex="-1"></a>counts_df.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, stacked<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax, colormap<span class="op">=</span><span class="st">&#39;tab20&#39;</span>)</span>
+<span id="cb209-4"><a href="#cb209-4" aria-hidden="true" tabindex="-1"></a>plt.legend(loc<span class="op">=</span><span class="st">&#39;upper center&#39;</span>, ncol<span class="op">=</span><span class="dv">5</span>, frameon<span class="op">=</span><span class="va">True</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.1</span>), fancybox<span class="op">=</span><span class="va">True</span>, shadow<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb209-5"><a href="#cb209-5" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;right&#39;</span>].set_visible(<span class="va">False</span>)</span>
+<span id="cb209-6"><a href="#cb209-6" aria-hidden="true" tabindex="-1"></a>ax.spines[<span class="st">&#39;top&#39;</span>].set_visible(<span class="va">False</span>)</span>
+<span id="cb209-7"><a href="#cb209-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Year&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb209-8"><a href="#cb209-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Number of Incidents&#39;</span>, size <span class="op">=</span> <span class="dv">15</span>)</span>
+<span id="cb209-9"><a href="#cb209-9" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;Crime in London (2020)&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>, y<span class="op">=</span><span class="fl">1.1</span>)</span>
+<span id="cb209-10"><a href="#cb209-10" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb209-11"><a href="#cb209-11" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;stacked_chart.jpg&#39;</span>)</span>
+<span id="cb209-12"><a href="#cb209-12" aria-hidden="true" tabindex="-1"></a>plt.savefig(output_path)</span>
+<span id="cb209-13"><a href="#cb209-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img src="python-dataviz-output/supplement_stacked_barcharts_files/supplement_stacked_barcharts_15_0.png" /></p>
 </div>
 </div>
@@ -2565,103 +2753,103 @@ streamlit-folium</code></pre>
 <div id="setup-and-data-download-10" class="section level4">
 <h4>Setup and Data Download</h4>
 <p>The following blocks of code will install the required packages and download the datasets to your Colab environment.</p>
-<div class="sourceCode" id="cb206"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb206-1"><a href="#cb206-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb206-2"><a href="#cb206-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb206-3"><a href="#cb206-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
-<span id="cb206-4"><a href="#cb206-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree</span>
-<span id="cb206-5"><a href="#cb206-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span>
-<span id="cb206-6"><a href="#cb206-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install contextily</span></code></pre></div>
-<div class="sourceCode" id="cb207"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb207-1"><a href="#cb207-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
-<span id="cb207-2"><a href="#cb207-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb207-3"><a href="#cb207-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb207-4"><a href="#cb207-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb207-5"><a href="#cb207-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib.animation <span class="im">import</span> FuncAnimation, PillowWriter</span></code></pre></div>
-<div class="sourceCode" id="cb208"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb208-1"><a href="#cb208-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb208-2"><a href="#cb208-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb208-3"><a href="#cb208-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb208-4"><a href="#cb208-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb208-5"><a href="#cb208-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb208-6"><a href="#cb208-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb208-7"><a href="#cb208-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
-<div class="sourceCode" id="cb209"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb209-1"><a href="#cb209-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
-<span id="cb209-2"><a href="#cb209-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
-<span id="cb209-3"><a href="#cb209-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
-<span id="cb209-4"><a href="#cb209-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
-<span id="cb209-5"><a href="#cb209-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
-<span id="cb209-6"><a href="#cb209-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span>
-<span id="cb209-7"><a href="#cb209-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb209-8"><a href="#cb209-8" aria-hidden="true" tabindex="-1"></a>path_shapefile <span class="op">=</span> <span class="st">&#39;upath17&#39;</span></span>
-<span id="cb209-9"><a href="#cb209-9" aria-hidden="true" tabindex="-1"></a>umbra_shapefile <span class="op">=</span> <span class="st">&#39;umbra17&#39;</span></span>
-<span id="cb209-10"><a href="#cb209-10" aria-hidden="true" tabindex="-1"></a>shapefile_exts <span class="op">=</span> [<span class="st">&#39;.shp&#39;</span>, <span class="st">&#39;.shx&#39;</span>, <span class="st">&#39;.dbf&#39;</span>, <span class="st">&#39;.prj&#39;</span>]</span>
-<span id="cb209-11"><a href="#cb209-11" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/eclipse/&#39;</span></span>
-<span id="cb209-12"><a href="#cb209-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb209-13"><a href="#cb209-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> shapefile <span class="kw">in</span> [path_shapefile, umbra_shapefile]:</span>
-<span id="cb209-14"><a href="#cb209-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> ext <span class="kw">in</span> shapefile_exts:</span>
-<span id="cb209-15"><a href="#cb209-15" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> data_url <span class="op">+</span> shapefile <span class="op">+</span> ext</span>
-<span id="cb209-16"><a href="#cb209-16" aria-hidden="true" tabindex="-1"></a>    download(url)</span></code></pre></div>
+<div class="sourceCode" id="cb210"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb210-1"><a href="#cb210-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb210-2"><a href="#cb210-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb210-3"><a href="#cb210-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
+<span id="cb210-4"><a href="#cb210-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree</span>
+<span id="cb210-5"><a href="#cb210-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span>
+<span id="cb210-6"><a href="#cb210-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install contextily</span></code></pre></div>
+<div class="sourceCode" id="cb211"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb211-1"><a href="#cb211-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> contextily <span class="im">as</span> cx</span>
+<span id="cb211-2"><a href="#cb211-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb211-3"><a href="#cb211-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb211-4"><a href="#cb211-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb211-5"><a href="#cb211-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib.animation <span class="im">import</span> FuncAnimation, PillowWriter</span></code></pre></div>
+<div class="sourceCode" id="cb212"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb212-1"><a href="#cb212-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb212-2"><a href="#cb212-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb212-3"><a href="#cb212-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb212-4"><a href="#cb212-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb212-5"><a href="#cb212-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb212-6"><a href="#cb212-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb212-7"><a href="#cb212-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb213"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb213-1"><a href="#cb213-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb213-2"><a href="#cb213-2" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb213-3"><a href="#cb213-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb213-4"><a href="#cb213-4" aria-hidden="true" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb213-5"><a href="#cb213-5" aria-hidden="true" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb213-6"><a href="#cb213-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span>
+<span id="cb213-7"><a href="#cb213-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb213-8"><a href="#cb213-8" aria-hidden="true" tabindex="-1"></a>path_shapefile <span class="op">=</span> <span class="st">&#39;upath17&#39;</span></span>
+<span id="cb213-9"><a href="#cb213-9" aria-hidden="true" tabindex="-1"></a>umbra_shapefile <span class="op">=</span> <span class="st">&#39;umbra17&#39;</span></span>
+<span id="cb213-10"><a href="#cb213-10" aria-hidden="true" tabindex="-1"></a>shapefile_exts <span class="op">=</span> [<span class="st">&#39;.shp&#39;</span>, <span class="st">&#39;.shx&#39;</span>, <span class="st">&#39;.dbf&#39;</span>, <span class="st">&#39;.prj&#39;</span>]</span>
+<span id="cb213-11"><a href="#cb213-11" aria-hidden="true" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/eclipse/&#39;</span></span>
+<span id="cb213-12"><a href="#cb213-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb213-13"><a href="#cb213-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> shapefile <span class="kw">in</span> [path_shapefile, umbra_shapefile]:</span>
+<span id="cb213-14"><a href="#cb213-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> ext <span class="kw">in</span> shapefile_exts:</span>
+<span id="cb213-15"><a href="#cb213-15" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> data_url <span class="op">+</span> shapefile <span class="op">+</span> ext</span>
+<span id="cb213-16"><a href="#cb213-16" aria-hidden="true" tabindex="-1"></a>    download(url)</span></code></pre></div>
 </div>
 </div>
 </div>
 <div id="data-pre-processing-6" class="section level2">
 <h2>Data Pre-Processing</h2>
-<div class="sourceCode" id="cb210"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb210-1"><a href="#cb210-1" aria-hidden="true" tabindex="-1"></a>path_shapefile_path <span class="op">=</span> os.path.join(data_folder, path_shapefile <span class="op">+</span> <span class="st">&#39;.shp&#39;</span>)</span>
-<span id="cb210-2"><a href="#cb210-2" aria-hidden="true" tabindex="-1"></a>path_gdf <span class="op">=</span> gpd.read_file(path_shapefile_path)</span></code></pre></div>
-<div class="sourceCode" id="cb211"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb211-1"><a href="#cb211-1" aria-hidden="true" tabindex="-1"></a>umbra_shapefile_path <span class="op">=</span> os.path.join(data_folder, umbra_shapefile <span class="op">+</span> <span class="st">&#39;.shp&#39;</span>)</span>
-<span id="cb211-2"><a href="#cb211-2" aria-hidden="true" tabindex="-1"></a>umbra_gdf <span class="op">=</span> gpd.read_file(umbra_shapefile_path)</span></code></pre></div>
-<div class="sourceCode" id="cb212"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb212-1"><a href="#cb212-1" aria-hidden="true" tabindex="-1"></a>path_reprojected <span class="op">=</span> path_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span>
-<span id="cb212-2"><a href="#cb212-2" aria-hidden="true" tabindex="-1"></a>umbra_reprojected <span class="op">=</span> umbra_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb213"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb213-1"><a href="#cb213-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb213-2"><a href="#cb213-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb213-3"><a href="#cb213-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb213-4"><a href="#cb213-4" aria-hidden="true" tabindex="-1"></a>umbra_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb213-5"><a href="#cb213-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb213-6"><a href="#cb213-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb213-7"><a href="#cb213-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb213-8"><a href="#cb213-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb213-9"><a href="#cb213-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb213-10"><a href="#cb213-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<div class="sourceCode" id="cb214"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb214-1"><a href="#cb214-1" aria-hidden="true" tabindex="-1"></a>path_boundary <span class="op">=</span> path_reprojected.geometry.unary_union</span>
-<span id="cb214-2"><a href="#cb214-2" aria-hidden="true" tabindex="-1"></a>umbra_subset <span class="op">=</span> umbra_reprojected[umbra_reprojected.geometry.intersects(path_boundary)]</span></code></pre></div>
-<div class="sourceCode" id="cb215"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb215-1"><a href="#cb215-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb215-2"><a href="#cb215-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb215-3"><a href="#cb215-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb215-4"><a href="#cb215-4" aria-hidden="true" tabindex="-1"></a>umbra_subset.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb215-5"><a href="#cb215-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb215-6"><a href="#cb215-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb215-7"><a href="#cb215-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb215-8"><a href="#cb215-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb215-9"><a href="#cb215-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb215-10"><a href="#cb215-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<div class="sourceCode" id="cb216"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb216-1"><a href="#cb216-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb216-2"><a href="#cb216-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
-<span id="cb216-3"><a href="#cb216-3" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb216-4"><a href="#cb216-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb216-5"><a href="#cb216-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> animate(i):</span>
-<span id="cb216-6"><a href="#cb216-6" aria-hidden="true" tabindex="-1"></a>    ax.clear()</span>
-<span id="cb216-7"><a href="#cb216-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the point from the points list at index i</span></span>
-<span id="cb216-8"><a href="#cb216-8" aria-hidden="true" tabindex="-1"></a>    umbra_filtered <span class="op">=</span> umbra_subset.iloc[i:i<span class="op">+</span><span class="dv">1</span>]</span>
-<span id="cb216-9"><a href="#cb216-9" aria-hidden="true" tabindex="-1"></a>    path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb216-10"><a href="#cb216-10" aria-hidden="true" tabindex="-1"></a>    cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
-<span id="cb216-11"><a href="#cb216-11" aria-hidden="true" tabindex="-1"></a>    umbra_filtered.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb216-12"><a href="#cb216-12" aria-hidden="true" tabindex="-1"></a>    ax.set_axis_off()</span>
-<span id="cb216-13"><a href="#cb216-13" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> <span class="bu">dict</span>(boxstyle<span class="op">=</span><span class="st">&#39;round&#39;</span>, facecolor<span class="op">=</span><span class="st">&#39;wheat&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb216-14"><a href="#cb216-14" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> umbra_filtered.iloc[<span class="dv">0</span>].Time</span>
-<span id="cb216-15"><a href="#cb216-15" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> <span class="st">&#39;Time: </span><span class="sc">{}</span><span class="st"> UTC&#39;</span>.<span class="bu">format</span>(time)</span>
-<span id="cb216-16"><a href="#cb216-16" aria-hidden="true" tabindex="-1"></a>    ax.text(<span class="fl">0.05</span>, <span class="fl">0.20</span>, text, transform<span class="op">=</span>ax.transAxes, fontsize<span class="op">=</span><span class="dv">16</span>,</span>
-<span id="cb216-17"><a href="#cb216-17" aria-hidden="true" tabindex="-1"></a>            verticalalignment<span class="op">=</span><span class="st">&#39;top&#39;</span>, bbox<span class="op">=</span>props)</span>
-<span id="cb216-18"><a href="#cb216-18" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
-<span id="cb216-19"><a href="#cb216-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb216-20"><a href="#cb216-20" aria-hidden="true" tabindex="-1"></a>ani <span class="op">=</span> FuncAnimation(fig, animate, frames<span class="op">=</span><span class="bu">len</span>(umbra_subset),</span>
-<span id="cb216-21"><a href="#cb216-21" aria-hidden="true" tabindex="-1"></a>                    interval<span class="op">=</span><span class="dv">500</span>, repeat<span class="op">=</span><span class="va">True</span>, cache_frame_data<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb216-22"><a href="#cb216-22" aria-hidden="true" tabindex="-1"></a>plt.close()</span></code></pre></div>
-<div class="sourceCode" id="cb217"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb217-1"><a href="#cb217-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib <span class="im">as</span> mpl</span>
-<span id="cb217-2"><a href="#cb217-2" aria-hidden="true" tabindex="-1"></a>mpl.rcParams[<span class="st">&#39;animation.embed_limit&#39;</span>] <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">128</span></span>
-<span id="cb217-3"><a href="#cb217-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> HTML</span>
-<span id="cb217-4"><a href="#cb217-4" aria-hidden="true" tabindex="-1"></a>HTML(ani.to_jshtml())</span></code></pre></div>
-<div class="sourceCode" id="cb218"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb218-1"><a href="#cb218-1" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb218-2"><a href="#cb218-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;solar_eclipse.gif&#39;</span>)</span>
-<span id="cb218-3"><a href="#cb218-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb218-4"><a href="#cb218-4" aria-hidden="true" tabindex="-1"></a>ani.save(output_path, writer<span class="op">=</span>PillowWriter(fps<span class="op">=</span><span class="dv">5</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb214"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb214-1"><a href="#cb214-1" aria-hidden="true" tabindex="-1"></a>path_shapefile_path <span class="op">=</span> os.path.join(data_folder, path_shapefile <span class="op">+</span> <span class="st">&#39;.shp&#39;</span>)</span>
+<span id="cb214-2"><a href="#cb214-2" aria-hidden="true" tabindex="-1"></a>path_gdf <span class="op">=</span> gpd.read_file(path_shapefile_path)</span></code></pre></div>
+<div class="sourceCode" id="cb215"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb215-1"><a href="#cb215-1" aria-hidden="true" tabindex="-1"></a>umbra_shapefile_path <span class="op">=</span> os.path.join(data_folder, umbra_shapefile <span class="op">+</span> <span class="st">&#39;.shp&#39;</span>)</span>
+<span id="cb215-2"><a href="#cb215-2" aria-hidden="true" tabindex="-1"></a>umbra_gdf <span class="op">=</span> gpd.read_file(umbra_shapefile_path)</span></code></pre></div>
+<div class="sourceCode" id="cb216"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb216-1"><a href="#cb216-1" aria-hidden="true" tabindex="-1"></a>path_reprojected <span class="op">=</span> path_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span>
+<span id="cb216-2"><a href="#cb216-2" aria-hidden="true" tabindex="-1"></a>umbra_reprojected <span class="op">=</span> umbra_gdf.to_crs(<span class="st">&#39;epsg:3857&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb217"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb217-1"><a href="#cb217-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb217-2"><a href="#cb217-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb217-3"><a href="#cb217-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb217-4"><a href="#cb217-4" aria-hidden="true" tabindex="-1"></a>umbra_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb217-5"><a href="#cb217-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb217-6"><a href="#cb217-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb217-7"><a href="#cb217-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb217-8"><a href="#cb217-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb217-9"><a href="#cb217-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb217-10"><a href="#cb217-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb218"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb218-1"><a href="#cb218-1" aria-hidden="true" tabindex="-1"></a>path_boundary <span class="op">=</span> path_reprojected.geometry.unary_union</span>
+<span id="cb218-2"><a href="#cb218-2" aria-hidden="true" tabindex="-1"></a>umbra_subset <span class="op">=</span> umbra_reprojected[umbra_reprojected.geometry.intersects(path_boundary)]</span></code></pre></div>
+<div class="sourceCode" id="cb219"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb219-1"><a href="#cb219-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb219-2"><a href="#cb219-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb219-3"><a href="#cb219-3" aria-hidden="true" tabindex="-1"></a>path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb219-4"><a href="#cb219-4" aria-hidden="true" tabindex="-1"></a>umbra_subset.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb219-5"><a href="#cb219-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb219-6"><a href="#cb219-6" aria-hidden="true" tabindex="-1"></a>cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb219-7"><a href="#cb219-7" aria-hidden="true" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb219-8"><a href="#cb219-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb219-9"><a href="#cb219-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb219-10"><a href="#cb219-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb220"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb220-1"><a href="#cb220-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb220-2"><a href="#cb220-2" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">7</span>)</span>
+<span id="cb220-3"><a href="#cb220-3" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb220-4"><a href="#cb220-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb220-5"><a href="#cb220-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> animate(i):</span>
+<span id="cb220-6"><a href="#cb220-6" aria-hidden="true" tabindex="-1"></a>    ax.clear()</span>
+<span id="cb220-7"><a href="#cb220-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the point from the points list at index i</span></span>
+<span id="cb220-8"><a href="#cb220-8" aria-hidden="true" tabindex="-1"></a>    umbra_filtered <span class="op">=</span> umbra_subset.iloc[i:i<span class="op">+</span><span class="dv">1</span>]</span>
+<span id="cb220-9"><a href="#cb220-9" aria-hidden="true" tabindex="-1"></a>    path_reprojected.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#cccccc&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb220-10"><a href="#cb220-10" aria-hidden="true" tabindex="-1"></a>    cx.add_basemap(ax, crs<span class="op">=</span>path_reprojected.crs, source<span class="op">=</span>cx.providers.OpenTopoMap)</span>
+<span id="cb220-11"><a href="#cb220-11" aria-hidden="true" tabindex="-1"></a>    umbra_filtered.plot(ax<span class="op">=</span>ax, facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>, edgecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb220-12"><a href="#cb220-12" aria-hidden="true" tabindex="-1"></a>    ax.set_axis_off()</span>
+<span id="cb220-13"><a href="#cb220-13" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> <span class="bu">dict</span>(boxstyle<span class="op">=</span><span class="st">&#39;round&#39;</span>, facecolor<span class="op">=</span><span class="st">&#39;wheat&#39;</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb220-14"><a href="#cb220-14" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> umbra_filtered.iloc[<span class="dv">0</span>].Time</span>
+<span id="cb220-15"><a href="#cb220-15" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> <span class="st">&#39;Time: </span><span class="sc">{}</span><span class="st"> UTC&#39;</span>.<span class="bu">format</span>(time)</span>
+<span id="cb220-16"><a href="#cb220-16" aria-hidden="true" tabindex="-1"></a>    ax.text(<span class="fl">0.05</span>, <span class="fl">0.20</span>, text, transform<span class="op">=</span>ax.transAxes, fontsize<span class="op">=</span><span class="dv">16</span>,</span>
+<span id="cb220-17"><a href="#cb220-17" aria-hidden="true" tabindex="-1"></a>            verticalalignment<span class="op">=</span><span class="st">&#39;top&#39;</span>, bbox<span class="op">=</span>props)</span>
+<span id="cb220-18"><a href="#cb220-18" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, size <span class="op">=</span> <span class="dv">18</span>)</span>
+<span id="cb220-19"><a href="#cb220-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb220-20"><a href="#cb220-20" aria-hidden="true" tabindex="-1"></a>ani <span class="op">=</span> FuncAnimation(fig, animate, frames<span class="op">=</span><span class="bu">len</span>(umbra_subset),</span>
+<span id="cb220-21"><a href="#cb220-21" aria-hidden="true" tabindex="-1"></a>                    interval<span class="op">=</span><span class="dv">500</span>, repeat<span class="op">=</span><span class="va">True</span>, cache_frame_data<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb220-22"><a href="#cb220-22" aria-hidden="true" tabindex="-1"></a>plt.close()</span></code></pre></div>
+<div class="sourceCode" id="cb221"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib <span class="im">as</span> mpl</span>
+<span id="cb221-2"><a href="#cb221-2" aria-hidden="true" tabindex="-1"></a>mpl.rcParams[<span class="st">&#39;animation.embed_limit&#39;</span>] <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">128</span></span>
+<span id="cb221-3"><a href="#cb221-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> HTML</span>
+<span id="cb221-4"><a href="#cb221-4" aria-hidden="true" tabindex="-1"></a>HTML(ani.to_jshtml())</span></code></pre></div>
+<div class="sourceCode" id="cb222"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb222-1"><a href="#cb222-1" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb222-2"><a href="#cb222-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;solar_eclipse.gif&#39;</span>)</span>
+<span id="cb222-3"><a href="#cb222-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb222-4"><a href="#cb222-4" aria-hidden="true" tabindex="-1"></a>ani.save(output_path, writer<span class="op">=</span>PillowWriter(fps<span class="op">=</span><span class="dv">5</span>))</span></code></pre></div>
 </div>
 <div id="leafmap" class="section level2">
 <h2>Leafmap</h2>
@@ -2675,73 +2863,73 @@ streamlit-folium</code></pre>
 </ul>
 <div id="setup-and-data-download-11" class="section level4">
 <h4>Setup and Data Download</h4>
-<div class="sourceCode" id="cb219"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb219-1"><a href="#cb219-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb219-2"><a href="#cb219-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb219-3"><a href="#cb219-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
-<span id="cb219-4"><a href="#cb219-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree mapclassify</span>
-<span id="cb219-5"><a href="#cb219-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span>
-<span id="cb219-6"><a href="#cb219-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install leafmap</span>
-<span id="cb219-7"><a href="#cb219-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install osmnx</span></code></pre></div>
-<div class="sourceCode" id="cb220"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb220-1"><a href="#cb220-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb220-2"><a href="#cb220-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb220-3"><a href="#cb220-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> folium</span>
-<span id="cb220-4"><a href="#cb220-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span></code></pre></div>
-<div class="sourceCode" id="cb221"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb221-2"><a href="#cb221-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb221-3"><a href="#cb221-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb221-4"><a href="#cb221-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb221-5"><a href="#cb221-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb221-6"><a href="#cb221-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb221-7"><a href="#cb221-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb223"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb223-1"><a href="#cb223-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb223-2"><a href="#cb223-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb223-3"><a href="#cb223-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
+<span id="cb223-4"><a href="#cb223-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install fiona shapely pyproj rtree mapclassify</span>
+<span id="cb223-5"><a href="#cb223-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install geopandas</span>
+<span id="cb223-6"><a href="#cb223-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install leafmap</span>
+<span id="cb223-7"><a href="#cb223-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>pip install osmnx</span></code></pre></div>
+<div class="sourceCode" id="cb224"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb224-1"><a href="#cb224-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb224-2"><a href="#cb224-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb224-3"><a href="#cb224-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> folium</span>
+<span id="cb224-4"><a href="#cb224-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span></code></pre></div>
+<div class="sourceCode" id="cb225"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb225-1"><a href="#cb225-1" aria-hidden="true" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb225-2"><a href="#cb225-2" aria-hidden="true" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb225-3"><a href="#cb225-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb225-4"><a href="#cb225-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb225-5"><a href="#cb225-5" aria-hidden="true" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb225-6"><a href="#cb225-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb225-7"><a href="#cb225-7" aria-hidden="true" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
 </div>
 <div id="downloading-osm-data" class="section level4">
 <h4>Downloading OSM Data</h4>
 <p>We can easily download data for a city or a region by its name using the <code>leafmap.osm_gdf_from_place()</code> function. We can specify the list of required tags using a dictionary. See <a href="https://wiki.openstreetmap.org/wiki/Map_features">OSM Wiki</a> for a complete list of tags and values.</p>
 <p>You can also download data using a bounding box using <code>leafmap.osm.osm_gdf_from_bbox()</code> function.</p>
 <p>Reference: <a href="https://leafmap.org/osm/#leafmap.osm.osm_gdf_from_place"><code>leafmap.osm_gdf_from_place</code></a></p>
-<div class="sourceCode" id="cb222"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb222-1"><a href="#cb222-1" aria-hidden="true" tabindex="-1"></a>parking_gdf <span class="op">=</span> leafmap.osm_gdf_from_place(</span>
-<span id="cb222-2"><a href="#cb222-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Bangalore&#39;</span>, </span>
-<span id="cb222-3"><a href="#cb222-3" aria-hidden="true" tabindex="-1"></a>    tags<span class="op">=</span>{<span class="st">&#39;amenity&#39;</span>: [<span class="st">&#39;parking&#39;</span>, <span class="st">&#39;parking_space&#39;</span>, <span class="st">&#39;parking_entrance&#39;</span>]}</span>
-<span id="cb222-4"><a href="#cb222-4" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="sourceCode" id="cb226"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb226-1"><a href="#cb226-1" aria-hidden="true" tabindex="-1"></a>parking_gdf <span class="op">=</span> leafmap.osm_gdf_from_place(</span>
+<span id="cb226-2"><a href="#cb226-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Bangalore&#39;</span>, </span>
+<span id="cb226-3"><a href="#cb226-3" aria-hidden="true" tabindex="-1"></a>    tags<span class="op">=</span>{<span class="st">&#39;amenity&#39;</span>: [<span class="st">&#39;parking&#39;</span>, <span class="st">&#39;parking_space&#39;</span>, <span class="st">&#39;parking_entrance&#39;</span>]}</span>
+<span id="cb226-4"><a href="#cb226-4" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
 <p>The GeoDataFrame has a hierarchical MultiIndex. Let’s flatten it using <code>reset_index()</code></p>
-<div class="sourceCode" id="cb223"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb223-1"><a href="#cb223-1" aria-hidden="true" tabindex="-1"></a>parking_gdf <span class="op">=</span> parking_gdf.reset_index(level<span class="op">=</span>[<span class="dv">0</span>,<span class="dv">1</span>])</span></code></pre></div>
+<div class="sourceCode" id="cb227"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb227-1"><a href="#cb227-1" aria-hidden="true" tabindex="-1"></a>parking_gdf <span class="op">=</span> parking_gdf.reset_index(level<span class="op">=</span>[<span class="dv">0</span>,<span class="dv">1</span>])</span></code></pre></div>
 <p>The result has many columns. Let’s filter to required columns.</p>
-<div class="sourceCode" id="cb224"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb224-1"><a href="#cb224-1" aria-hidden="true" tabindex="-1"></a>parking_gdf_subset <span class="op">=</span> parking_gdf[[<span class="st">&#39;amenity&#39;</span>,<span class="st">&#39;parking&#39;</span>, <span class="st">&#39;access&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span></code></pre></div>
+<div class="sourceCode" id="cb228"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb228-1"><a href="#cb228-1" aria-hidden="true" tabindex="-1"></a>parking_gdf_subset <span class="op">=</span> parking_gdf[[<span class="st">&#39;amenity&#39;</span>,<span class="st">&#39;parking&#39;</span>, <span class="st">&#39;access&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span></code></pre></div>
 <p>The results contains both points and polygon features. Let’s separate them out.</p>
-<div class="sourceCode" id="cb225"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb225-1"><a href="#cb225-1" aria-hidden="true" tabindex="-1"></a>parking_zones <span class="op">=</span> parking_gdf_subset[</span>
-<span id="cb225-2"><a href="#cb225-2" aria-hidden="true" tabindex="-1"></a>    parking_gdf_subset[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x : x.<span class="bu">type</span> <span class="op">==</span> <span class="st">&#39;Polygon&#39;</span> )]</span>
-<span id="cb225-3"><a href="#cb225-3" aria-hidden="true" tabindex="-1"></a>parking_locations <span class="op">=</span> parking_gdf_subset[</span>
-<span id="cb225-4"><a href="#cb225-4" aria-hidden="true" tabindex="-1"></a>    parking_gdf_subset[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x : x.<span class="bu">type</span> <span class="op">==</span> <span class="st">&#39;Point&#39;</span> )]</span></code></pre></div>
+<div class="sourceCode" id="cb229"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb229-1"><a href="#cb229-1" aria-hidden="true" tabindex="-1"></a>parking_zones <span class="op">=</span> parking_gdf_subset[</span>
+<span id="cb229-2"><a href="#cb229-2" aria-hidden="true" tabindex="-1"></a>    parking_gdf_subset[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x : x.<span class="bu">type</span> <span class="op">==</span> <span class="st">&#39;Polygon&#39;</span> )]</span>
+<span id="cb229-3"><a href="#cb229-3" aria-hidden="true" tabindex="-1"></a>parking_locations <span class="op">=</span> parking_gdf_subset[</span>
+<span id="cb229-4"><a href="#cb229-4" aria-hidden="true" tabindex="-1"></a>    parking_gdf_subset[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x : x.<span class="bu">type</span> <span class="op">==</span> <span class="st">&#39;Point&#39;</span> )]</span></code></pre></div>
 <p>We can save the resulting GeoDataFrame to a GeoPackage.</p>
-<div class="sourceCode" id="cb226"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb226-1"><a href="#cb226-1" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;parking.gpkg&#39;</span></span>
-<span id="cb226-2"><a href="#cb226-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
-<span id="cb226-3"><a href="#cb226-3" aria-hidden="true" tabindex="-1"></a>parking_zones.to_file(driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>, filename<span class="op">=</span>output_path, layer<span class="op">=</span><span class="st">&#39;zones&#39;</span>)</span>
-<span id="cb226-4"><a href="#cb226-4" aria-hidden="true" tabindex="-1"></a>parking_locations.to_file(driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>, filename<span class="op">=</span>output_path, layer<span class="op">=</span><span class="st">&#39;locations&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb230"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb230-1"><a href="#cb230-1" aria-hidden="true" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;parking.gpkg&#39;</span></span>
+<span id="cb230-2"><a href="#cb230-2" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
+<span id="cb230-3"><a href="#cb230-3" aria-hidden="true" tabindex="-1"></a>parking_zones.to_file(driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>, filename<span class="op">=</span>output_path, layer<span class="op">=</span><span class="st">&#39;zones&#39;</span>)</span>
+<span id="cb230-4"><a href="#cb230-4" aria-hidden="true" tabindex="-1"></a>parking_locations.to_file(driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>, filename<span class="op">=</span>output_path, layer<span class="op">=</span><span class="st">&#39;locations&#39;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="visualizing-osm-data" class="section level3">
 <h3>Visualizing OSM Data</h3>
 <p>The <code>leafmap.osm</code> module has many functions that can add OSM data directy to the map. Here we use <code>add_osm_from_geocode()</code> function to add the boundary of a region from OSM. In addition, we can select a basemap from <code>leafmap.basemaps.keys()</code> for the map.</p>
-<div class="sourceCode" id="cb227"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb227-1"><a href="#cb227-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
-<span id="cb227-2"><a href="#cb227-2" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
-<span id="cb227-3"><a href="#cb227-3" aria-hidden="true" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
-<span id="cb227-4"><a href="#cb227-4" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div>
+<div class="sourceCode" id="cb231"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb231-1"><a href="#cb231-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
+<span id="cb231-2"><a href="#cb231-2" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
+<span id="cb231-3"><a href="#cb231-3" aria-hidden="true" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb231-4"><a href="#cb231-4" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div>
 <p>We can add the GeoDataFrame to the map as well using GeoPanda’s <code>explore()</code> function which allows us to customize the marker’s shape, size for the point layer.</p>
-<div class="sourceCode" id="cb228"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb228-1"><a href="#cb228-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
-<span id="cb228-2"><a href="#cb228-2" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
-<span id="cb228-3"><a href="#cb228-3" aria-hidden="true" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
-<span id="cb228-4"><a href="#cb228-4" aria-hidden="true" tabindex="-1"></a>parking_zones.explore(</span>
-<span id="cb228-5"><a href="#cb228-5" aria-hidden="true" tabindex="-1"></a>    style_kwds<span class="op">=</span>{<span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
-<span id="cb228-6"><a href="#cb228-6" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;orange&#39;</span>,</span>
-<span id="cb228-7"><a href="#cb228-7" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking zones&#39;</span>,</span>
-<span id="cb228-8"><a href="#cb228-8" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
-<span id="cb228-9"><a href="#cb228-9" aria-hidden="true" tabindex="-1"></a>parking_locations.explore(</span>
-<span id="cb228-10"><a href="#cb228-10" aria-hidden="true" tabindex="-1"></a>    marker_type<span class="op">=</span><span class="st">&#39;circle&#39;</span>,</span>
-<span id="cb228-11"><a href="#cb228-11" aria-hidden="true" tabindex="-1"></a>    marker_kwds<span class="op">=</span>{<span class="st">&#39;radius&#39;</span>: <span class="dv">1</span>},</span>
-<span id="cb228-12"><a href="#cb228-12" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;yellow&#39;</span>,</span>
-<span id="cb228-13"><a href="#cb228-13" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking locations&#39;</span>,</span>
-<span id="cb228-14"><a href="#cb228-14" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
-<span id="cb228-15"><a href="#cb228-15" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div>
+<div class="sourceCode" id="cb232"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb232-1"><a href="#cb232-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
+<span id="cb232-2"><a href="#cb232-2" aria-hidden="true" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
+<span id="cb232-3"><a href="#cb232-3" aria-hidden="true" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb232-4"><a href="#cb232-4" aria-hidden="true" tabindex="-1"></a>parking_zones.explore(</span>
+<span id="cb232-5"><a href="#cb232-5" aria-hidden="true" tabindex="-1"></a>    style_kwds<span class="op">=</span>{<span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
+<span id="cb232-6"><a href="#cb232-6" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;orange&#39;</span>,</span>
+<span id="cb232-7"><a href="#cb232-7" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking zones&#39;</span>,</span>
+<span id="cb232-8"><a href="#cb232-8" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
+<span id="cb232-9"><a href="#cb232-9" aria-hidden="true" tabindex="-1"></a>parking_locations.explore(</span>
+<span id="cb232-10"><a href="#cb232-10" aria-hidden="true" tabindex="-1"></a>    marker_type<span class="op">=</span><span class="st">&#39;circle&#39;</span>,</span>
+<span id="cb232-11"><a href="#cb232-11" aria-hidden="true" tabindex="-1"></a>    marker_kwds<span class="op">=</span>{<span class="st">&#39;radius&#39;</span>: <span class="dv">1</span>},</span>
+<span id="cb232-12"><a href="#cb232-12" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;yellow&#39;</span>,</span>
+<span id="cb232-13"><a href="#cb232-13" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking locations&#39;</span>,</span>
+<span id="cb232-14"><a href="#cb232-14" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
+<span id="cb232-15"><a href="#cb232-15" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div>
 </div>
 </div>
 </div>
