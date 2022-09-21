@@ -27,12 +27,14 @@ nh_color = col1.color_picker('Pick NH Color', '#0000FF', key='nh')
 sh_color = col2.color_picker('Pick SH Color', '#FF0000', key='sh')
 units = col3.radio('Units', ['Kilometers', 'Miles'])
 
+
 if units == 'Miles':
     filtered = filtered[['NH', 'SH']]*0.621371
     
 fig, ax = plt.subplots(1, 1)
+
 filtered.plot(kind='bar', ax=ax, color=[nh_color, sh_color],
-    ylabel=units, xlabel='Category')
+    ylabel='Kilometers', xlabel='Category')
 ax.set_title('Length of Highways')
 ax.set_ylim(0, 2500)
 ax.get_xaxis().set_ticklabels([])
