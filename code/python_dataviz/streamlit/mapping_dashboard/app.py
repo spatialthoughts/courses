@@ -6,7 +6,7 @@ import leafmap.foliumap as leafmap
 
 st.set_page_config(page_title='Dashboard', layout='wide')
 
-st.title('National Highway Dashboard')
+st.title('Highway Dashboard')
 
 st.sidebar.title('About')
 st.sidebar.info('Explore the Highway Statistics')
