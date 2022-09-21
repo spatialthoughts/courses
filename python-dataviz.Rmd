@@ -174,7 +174,7 @@ Open the notebook named ``09_multilayer_maps.ipynb``.
 
 \newpage
 
-# Building Apps and Dashboards with Streamlit
+# Streamlit Basics 
 
 Streamlit is a Python library that allows you to create web-apps and dashboard by just writing Python code. It provides you with a wide range of UI widgets and layouts that can be used to build user=interfaces. Your streamlit app is just a regular Python file with a `.py` extension. 
 
@@ -208,8 +208,173 @@ knitr::include_graphics('images/python_dataviz/streamlit2.png')
 
 Your installation is now complete. You can close the terminal window to stop the streamlit server.
 
-## Streamlit Basics 
 
+## Create a Simple Dashboard
+
+Let's create a simple interactive dashboard by loading a CSV file and displaying a chart with some statistics. We will get familiar with the streamlit app development workflow and explore different widgets and layout elements.
+
+1. Create a folder named **dashboard** on your Desktop.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard1.png')
+```
+
+2. Open your favorite text editor and create a file with the following content. By convention, we import `streamlit as st`. Then we can use the `st.title()` to display the title of our dashboard and `st.write()` to add a paragraph of text. Save the file in the **dashboard** folder on your desktop as `app.py`
+
+```{python eval=FALSE}
+import streamlit as st
+
+
+st.title('A Simple Dashboard')
+st.write('This dashboard displays a chart for the selected region.')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard2.png')
+```
+
+3. Once the file is saved, open *Anaconda Prompt* (Windows) or *Terminal* (Mac/Linux). Switch to the conda environment where you have installed the required packages. We then use `cd` command to change the current directory to  the once with the `app.py` file. Then run the following command to start the streamlit server and launch the app.
+
+```{python eval=FALSE}
+streamlit run app.py
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard3.png')
+```
+
+4. A new browser tab will open and display the output of the app.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard4.png')
+```
+
+5. Let's read some data and display it. We load a CSV file from a URL using Pandas and get a DataFrame object. We then use `st.dataframe()` widget to render the dataframe. Update your `app.py` with the following code. As you save the file, you will notice that streamlit will detect it and display a prompt to re-run your app. Choose *Always rerun*.
+
+```{python eval=FALSE}
+import streamlit as st
+import pandas as pd
+
+
+st.title('A Simple Dashboard')
+st.write('This dashboard displays a chart for the selected region.')
+
+
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+csv_file = 'highway_lengths_by_district.csv'
+
+url = data_url + csv_file
+df = pd.read_csv(url)
+
+st.dataframe(df)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard5.png')
+```
+
+6. The app will now display the dataframe. The dataframe consists of 3 columns. The `DISTRICT` column contains a unique name for the admin region. The *NH* and *SH* columns contain the length of *National Highways* and *State Highways* in Kilometers for each admin region. We will now create a dashboard that displays a chart with the lengths of highways for the user-selected admin region.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard6.png')
+```
+
+
+7. Let's add a dropdown menu with the list of admin regions. We first get the names from the `DISTRICT` column and use `st.selectbox()` to add a dropdown selector. Streamlit apps always run the entire `app.py` whenever any selection is changed. With our current app structure, whenever the user selected a new admin region, the source file will be fetched again and a new dataframe will be created. This is not required as the source data does not change on every interaction. A good practice is to put the data fetching in a function and use the `@st.cache` decorator which will cache the results. Anytime the function is called with the same arguments, it will return the cached version of the data instead of fetching it.
+
+```{python eval=FALSE}
+import streamlit as st
+import pandas as pd
+
+
+st.title('A Simple Dashboard')
+st.write('This dashboard displays a chart for the selected region.')
+
+@st.cache
+def load_data():
+    data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+    csv_file = 'highway_lengths_by_district.csv'
+
+    url = data_url + csv_file
+    df = pd.read_csv(url)
+    
+    return df
+
+df = load_data()
+
+districts = df.DISTRICT.values
+district = st.selectbox('Select a district', districts)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard7.png')
+```
+
+8. As the user selects an admin region from the selectbox, the selected value is saved in the `district` variable. We use it to filter the DataFrame to the selected district. Then we use Matplotlib to create a bar-chart with the filtered dataframe and display it using `st.pyplot()` widget.
+
+```{python eval=FALSE}
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+st.title('A Simple Dashboard')
+st.write('This dashboard displays a chart for the selected region.')
+
+@st.cache
+def load_data():
+    data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+    csv_file = 'highway_lengths_by_district.csv'
+
+    url = data_url + csv_file
+    df = pd.read_csv(url)
+    
+    return df
+
+df = load_data()
+
+districts = df.DISTRICT.values
+district = st.selectbox('Select a district', districts)
+filtered = df[df['DISTRICT'] == district] 
+
+
+fig, ax = plt.subplots(1, 1)
+
+filtered.plot(kind='bar', ax=ax, color=[nh_color, sh_color],
+    ylabel='Kilometers', xlabel='Category')
+ax.get_xaxis().set_ticklabels([])
+stats = st.pyplot(fig)
+```
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard8.png')
+```
+
+9. Our dashboard now displays an updated chart every-time you change the selection. Streamlit provides many other user-interface widgets. Let's explore some more of them. We will use `st.color_picker()` widget to allow users to customize the color of the bar chart. We can display 2 color-pickers side-by-side using a column layout. We use `st.columns()` to create 2 columns `col1` and `col2`. We add a `color_picker()` to each column with appropriate label and a default color. If we have more than 1 widget of the same type in the app, we need to provide a unique `key` that can be used to identify the widget. We make some final tweaks to the chart and complete the dashboard.
+
+
+```{python eval=FALSE, code=readLines('code/python_dataviz/streamlit/simple_dashboard/app.py')}
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard9.png')
+```
+
+## Exercise
+
+Add a radio-button to the app that allows the user to select the units for length between Kilometers and Miles as shown below. As the user toggles the radio-button, you should apply the appropriate conversion from Kilometer to Miles and update the chart.
+
+* Hint1: Change `st.columns()` to have 3 columns and save the results into 3 separate objects. `col1, col2, col3 = st.columns(3)`
+* Hint2: You can convert the values from Kilometer to Miles using `filtered = filtered[['NH', 'SH']]*0.621371`
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/python_dataviz/dashboard_exercise.png')
+```
+
+
+# Building Mapping Apps with Leafmap and Streamlit
 
 ## Create a Mapping Dashboard
 
@@ -219,15 +384,15 @@ The code below creates an interactive mapping dashboard that displays the statis
 ```{python eval=FALSE, code=readLines('code/python_dataviz/streamlit/dashboard/app.py')}
 ```
 
-## Publishing Apps with Streamlit Cloud
+# Publishing Apps with Streamlit Cloud
 
 Streamlit provides free hosting for your streamlit apps. In this section, we will now learn how to deploy an app to Streamlit cloud and configure it correctly.
 
-### Upload the app to Github
+## Upload the app to GitHub
 
 To run your app on Streamlit Cloud, you need to upload your app to GitHub. Streamlit supports both private and public repositories. In this example, we will be deploying a *Route Finder* app which has been uploaded to GitHub at `https://github.com/spatialthoughts/python-dataviz-web/blob/main/streamlit/route_finder/app.py`
 
-### Add App dependencies
+## Add App dependencies
 
 If your app needs a third-party Python package, you need to add it in a separate file called `requirements.txt`. The packages listed in the file will be installed on Streamlit Cloud before running the app.
 
