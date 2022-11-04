@@ -1,7 +1,10 @@
+// Script showing how to stack Sentinel-2 and Sentinel-1 bands
+// for supervised classification
+
 var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7")
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
 var boundary = arkavathy.geometry()
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -35,13 +38,16 @@ var filtered = s1
   .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
   .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
   .filter(ee.Filter.eq('instrumentMode', 'IW'))
+  // Change the pass to ASCENDING depending on your location
   .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))
   .filterDate('2019-01-01', '2020-01-01')
   .filterBounds(boundary)
-  .select("V.")
+  .select('V.')
 
 // Mean is preferred for SAR data
 var sarComposite = filtered.mean()
 var composite = composite.addBands(sarComposite)
 
-print(composite) 
+print(composite);
+
+// Use this composite for supervised classification
