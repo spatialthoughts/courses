@@ -1,11 +1,13 @@
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
+var gcp = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_gcps');
+var alos = ee.Image('JAXA/ALOS/AW3D30/V2_2');
 
 
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var boundary = arkavathy.geometry()
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -29,11 +31,11 @@ function maskCloudAndShadowsSR(image) {
 var filtered = s2
 .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(boundary))
+  .filter(ee.Filter.bounds(geometry))
   .map(maskCloudAndShadowsSR)
-  .select('B.*')
+  .select('B.*');
 
-var composite = filtered.median().clip(boundary) 
+var composite = filtered.median().clip(geometry);
 
 
 var addIndices = function(image) {
@@ -47,8 +49,8 @@ var addIndices = function(image) {
         'A': image.select('B8'), // nir
         'B': image.select('B2'), // blue
   }).rename('bsi');
-  return image.addBands(ndvi).addBands(ndbi).addBands(mndwi).addBands(bsi)
-}
+  return image.addBands(ndvi).addBands(ndbi).addBands(mndwi).addBands(bsi);
+};
 
 var composite = addIndices(composite);
 
@@ -76,7 +78,7 @@ function normalize(image){
   // Compute min and max of the image
   var minDict = image.reduceRegion({
     reducer: ee.Reducer.min(),
-    geometry: boundary,
+    geometry: geometry,
     scale: 10,
     maxPixels: 1e9,
     bestEffort: true,
@@ -84,7 +86,7 @@ function normalize(image){
   });
   var maxDict = image.reduceRegion({
     reducer: ee.Reducer.max(),
-    geometry: boundary,
+    geometry: geometry,
     scale: 10,
     maxPixels: 1e9,
     bestEffort: true,
@@ -93,13 +95,13 @@ function normalize(image){
   var mins = ee.Image.constant(minDict.values(bandNames));
   var maxs = ee.Image.constant(maxDict.values(bandNames));
 
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
-  return normalized
+  var normalized = image.subtract(mins).divide(maxs.subtract(mins));
+  return normalized;
 }
 
 var composite = normalize(composite);
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn()
+var gcp = gcp.randomColumn();
 
 // This being a simpler classification, we take 60% points
 // for validation. Normal recommended ratio is
@@ -114,7 +116,8 @@ var training = composite.sampleRegions({
   scale: 10,
   tileScale: 16
 });
-print(training)
+print(training);
+
 // Train a classifier.
 var classifier = ee.Classifier.smileRandomForest(50)
 .train({
@@ -141,7 +144,8 @@ var test = classified.sampleRegions({
   tileScale: 16
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
+
 // Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy());
