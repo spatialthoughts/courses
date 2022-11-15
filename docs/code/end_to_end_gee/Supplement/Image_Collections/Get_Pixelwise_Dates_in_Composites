@@ -1,0 +1,87 @@
+// Example script showing how to determine the date of each pixel
+// in a composite image
+
+// Select a region
+var admin1 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level1');
+var karnataka = admin1.filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'));
+var geometry = karnataka.geometry();
+
+// Use the Sentinel-2 collection 
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+// Write a function for Cloud masking
+var maskS2clouds = function(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
+}
+
+// Write a function to apply the scaling factor to
+// each of the bands to get reflectance values
+var scaleImage = function(image) {
+  return image
+    .multiply(0.0001)
+    .copyProperties(image, ['system:time_start'])
+}
+
+
+// Write a function that computes NDVI for an image and adds it as a band
+// We also add negative ndvi so we can find date of lowest NDVI
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  var invertNdvi = ndvi.multiply(-1).rename('invertndvi');
+  return image.addBands([ndvi, invertNdvi]);
+}
+// Write a function to add date band
+var addDateBand = function(image) {
+  // Create an image with day of the year as value
+  var date = ee.Date(image.get('system:time_start'));
+  // Create an image where each pixel's value is the
+  // timestamp of the image date
+  var dateImage = ee.Image.constant(date.millis()).rename(['timestamp']).toFloat();
+  // We can also create an image where each pixel has the value
+  // equivalent to the day of the year of the image date
+  var doy = date.getRelative('day', 'year');
+  var doyImage = ee.Image.constant(doy).rename(['doy']).toFloat();
+  return image.addBands([dateImage, doyImage]);
+};
+
+// Filter and pre-process the collection
+var filtered = s2
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .map(scaleImage)
+  .map(addNDVI)
+  .map(addDateBand);
+  
+// Create a composite with highest and lowest NDVI per pixel
+var maxNdvi = filtered.qualityMosaic('ndvi')
+var minNdvi = filtered.qualityMosaic('invertndvi')
+
+// We select the 'doy' band
+// The DOY images have a pixel value equivalent to day of the year
+// of the image from which the pixel was used.
+var maxDoy = maxNdvi.select('doy');
+var minDoy = minNdvi.select('doy');
+
+//  Visualize the results
+
+// First add the collection so we can validate the results
+// by inspecting pixel values
+Map.addLayer(filtered.select('ndvi'), {}, 'Full Collection', false);
+
+Map.centerObject(geometry, 10);
+var palette = ['#fef0d9','#fdcc8a','#fc8d59','#e34a33','#b30000'];
+var doyVis = {min:0, max:365, palette: palette}
+Map.addLayer(minDoy.clip(geometry), doyVis, 'DOY of Minimum NDVI');
+Map.addLayer(maxDoy.clip(geometry), doyVis, 'DOY of Maximum NDVI');
+
+  
+

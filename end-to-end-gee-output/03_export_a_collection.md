@@ -20,7 +20,7 @@ ee.Initialize()
 
 ```python
 geometry = ee.Geometry.Point([107.61303468448624, 12.130969369851766])
-s2 = ee.ImageCollection("COPERNICUS/S2")
+s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 rgbVis = {
   'min': 0.0,
   'max': 3000,

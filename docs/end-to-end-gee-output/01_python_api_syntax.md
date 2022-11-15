@@ -51,7 +51,7 @@ You can create Earth Engine objects using the ``ee`` functions the same way.
 
 
 ```python
-s2 = ee.ImageCollection('COPERNICUS/S2')
+s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 geometry = ee.Geometry.Polygon([[
   [82.60642647743225, 27.16350437805251],
   [82.60984897613525, 27.1618529901377],
@@ -66,7 +66,7 @@ Python doesn't use a semi-colon for line ending. To indicate line-continuation y
 
 javascript code:
 ```
-var s2 = ee.ImageCollection('COPERNICUS/S2');
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-02-01', '2019-03-01'))
   .filter(ee.Filter.bounds(geometry));
@@ -203,7 +203,7 @@ The correct code should print the value **30**.
 ```
 var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
 
-var s2 = ee.ImageCollection('COPERNICUS/S2');
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 
 var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))

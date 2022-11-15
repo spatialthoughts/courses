@@ -1,21 +1,17 @@
 // Moving-Window Temporal Smoothing 
-var s2 = ee.ImageCollection("COPERNICUS/S2");
-var geometry = ee.Geometry.Polygon([[
-  [82.60642647743225, 27.16350437805251],
-  [82.60984897613525, 27.1618529901377],
-  [82.61088967323303, 27.163695288375266],
-  [82.60757446289062, 27.16517483230927]
-]]);
-Map.addLayer(geometry, {color: 'red'}, 'Farm')
-Map.centerObject(geometry)
-var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Point([74.80368345518073, 30.391793042969]);
 
-var filtered = s2
-  .filter(ee.Filter.date('2017-01-01', '2018-01-01'))
-  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.bounds(geometry))
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = ee.Date.fromYMD(2021, 1, 1);
 
-// Write a function for Cloud masking
+// Function to add a NDVI band to an image
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+} 
+
+// Function to mask clouds
 function maskS2clouds(image) {
   var qa = image.select('QA60')
   var cloudBitMask = 1 << 10;
@@ -27,23 +23,44 @@ function maskS2clouds(image) {
       .copyProperties(image, ["system:time_start"])
 }
 
-var filtered = filtered.map(maskS2clouds)
-// Write a function that computes NDVI for an image and adds it as a band
-function addNDVI(image) {
-  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
-  return image.addBands(ndvi);
-}
+var originalCollection = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .map(addNDVI);
 
-// Map the function over the collection
-var withNdvi = filtered.map(addNDVI);
+// Display a time-series chart
+var chart = ui.Chart.image.series({
+  imageCollection: originalCollection.select('ndvi'),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 20
+}).setOptions({
+      title: 'Original NDVI Time Series',
+      interpolateNulls: false,
+      vAxis: {title: 'NDVI', viewWindow: {min: 0, max: 1}},
+      hAxis: {title: '', format: 'YYYY-MM'},
+      lineWidth: 1,
+      pointSize: 4,
+      series: {
+        0: {color: '#238b45'},
+      },
+
+    })
+print(chart);
 
 // Moving-Window Smoothing
 
 // Specify the time-window
-var days = 30
+var days = 15;
 
-// We use a 'join' to find all images that are within
-// the time-window
+// Convert to milliseconds 
+var millis = ee.Number(days).multiply(1000*60*60*24);
+
+// We use a 'save-all join' to find all images 
+// that are within the time-window
+
 // The join will add all matching images into a
 // new property called 'images'
 var join = ee.Join.saveAll({
@@ -53,44 +70,90 @@ var join = ee.Join.saveAll({
 // This filter will match all images that are captured
 // within the specified day of the source image
 var diffFilter = ee.Filter.maxDifference({
-  difference: 1000 * 60 * 60 * 24 * days,
+  difference: millis,
   leftField: 'system:time_start', 
   rightField: 'system:time_start'
 });
 
-// Select the 'ndvi' band
-var ndviCol = withNdvi.select('ndvi')
 
 var joinedCollection = join.apply({
-  primary: ndviCol, 
-  secondary: ndviCol, 
+  primary: originalCollection, 
+  secondary: originalCollection, 
   condition: diffFilter
 });
+
+print('Joined Collection', joinedCollection);
 
 // Each image in the joined collection will contain
 // matching images in the 'images' property
 // Extract and return the mean of matched images
-var smoothedCollection = ee.ImageCollection(joinedCollection.map(function(image) {
-  var collection = ee.ImageCollection.fromImages(image.get('images'));
-  return ee.Image(image).addBands(collection.mean().rename('moving_average'));
-}))
-  
+var extractAndComputeMean = function(image) {
+  var matchingImages = ee.ImageCollection.fromImages(image.get('images'));
+  var meanImage = matchingImages.reduce(
+    ee.Reducer.mean().setOutputs(['moving_average']))
+  return ee.Image(image).addBands(meanImage)
+}
+
+var smoothedCollection = ee.ImageCollection(
+  joinedCollection.map(extractAndComputeMean));
+
+print('Smoothed Collection', smoothedCollection)
+
 // Display a time-series chart
 var chart = ui.Chart.image.series({
-  imageCollection: smoothedCollection.select(['ndvi', 'moving_average']),
+  imageCollection: smoothedCollection.select(['ndvi', 'ndvi_moving_average']),
   region: geometry,
   reducer: ee.Reducer.mean(),
   scale: 20
 }).setOptions({
-      lineWidth: 1,
       title: 'NDVI Time Series',
-      interpolateNulls: true,
-      vAxis: {title: 'NDVI'},
-      hAxis: {title: '', format: 'YYYY-MMM'},
+      interpolateNulls: false,
+      vAxis: {title: 'NDVI', viewWindow: {min: 0, max: 1}},
+      hAxis: {title: '', format: 'YYYY-MM'},
+      lineWidth: 1,
+      pointSize: 4,
       series: {
-        1: {color: 'gray', lineDashStyle: [1, 1]}, // Original NDVI
-        0: {color: 'red', lineWidth: 2 }, // Smoothed NDVI
+        0: {color: '#66c2a4', lineDashStyle: [1, 1], pointSize: 2}, // Original NDVI
+        1: {color: '#238b45', lineWidth: 2 }, // Smoothed NDVI
       },
 
     })
 print(chart);
+
+// Let's export the NDVI time-series as a video
+var palette = ['#d73027','#f46d43','#fdae61','#fee08b',
+  '#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850'];
+var ndviVis = {min:-0.2, max: 0.8,  palette: palette}
+
+Map.centerObject(geometry, 16);
+var bbox = Map.getBounds({asGeoJSON: true});
+
+var visualizeImage = function(image) {
+  return image.visualize(ndviVis).clip(bbox).selfMask()
+}
+
+var visCollectionOriginal = originalCollection.select('ndvi')
+  .map(visualizeImage)
+
+
+var visCollectionSmoothed = smoothedCollection.select('ndvi_moving_average')
+  .map(visualizeImage)
+
+
+Export.video.toDrive({
+  collection: visCollectionOriginal,
+  description: 'Original_Time_Series',
+  folder: 'earthengine',
+  fileNamePrefix: 'original',
+  framesPerSecond: 2,
+  dimensions: 800,
+  region: bbox})
+  
+Export.video.toDrive({
+  collection: visCollectionSmoothed,
+  description: 'Smoothed_Time_Series',
+  folder: 'earthengine',
+  fileNamePrefix: 'smoothed',
+  framesPerSecond: 2,
+  dimensions: 800,
+  region: bbox})

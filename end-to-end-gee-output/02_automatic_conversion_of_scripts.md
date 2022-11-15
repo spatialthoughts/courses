@@ -24,7 +24,7 @@ The automatic conversion of code is done by calling the `geemap.js_snippet_to_py
 javascript_code = """
 var geometry = ee.Geometry.Point([107.61303468448624, 12.130969369851766]);
 Map.centerObject(geometry, 12)
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -88,7 +88,7 @@ Map = geemap.Map()
 
 geometry = ee.Geometry.Point([107.61303468448624, 12.130969369851766])
 Map.centerObject(geometry, 12)
-s2 = ee.ImageCollection("COPERNICUS/S2")
+s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 rgbVis = {
   'min': 0.0,
   'max': 3000,

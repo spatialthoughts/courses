@@ -40,7 +40,7 @@ Load the TerraClimate collection and select the 'tmmx' band.
 
 
 ```python
-terraclimate = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE")
+terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE')
 tmax = terraclimate.select('tmmx')
 ```
 
