@@ -4154,7 +4154,7 @@ Launching multiple tasks using the Python API
 <div id="automating-downloads" class="section level2">
 <h2>05. Automating Downloads</h2>
 <p>Another common use of the GEE Python API is to automate data processing and export. You can create a Python script that can be called from a server or launched on a schedule using tools such as <a href="https://medium.com/@roddyjaques/how-to-run-anaconda-programs-with-a-bat-file-5f6dd7675508">Windows Scheduler</a> or <a href="https://donny-son.github.io/posts/cronjob-with-conda/">crontab</a>.</p>
-<p>This script below provides a complete example of automating a download using Google Earth Engine API. It uses the Google Earth Engine API to compute the average soil moisture for the past 2 weeks over all districts in a state. The result is then downloaded as a JSON file and saved locally.</p>
+<p>This script below provides a complete example of automating a download using Google Earth Engine API. It uses the Google Earth Engine API to compute the average soil moisture for the given time period over all districts in a state. The result is then downloaded as a JSON file and saved locally.</p>
 <blockquote>
 <p>Make sure you have completed the <a href="install-gee-python-api.html#authentication">one-time authentication flow</a> before running the script.</p>
 </blockquote>
@@ -4170,57 +4170,59 @@ Launching multiple tasks using the Python API
 <span id="cb109-6"><a href="#cb109-6" aria-hidden="true" tabindex="-1"></a>ee.Initialize()</span>
 <span id="cb109-7"><a href="#cb109-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb109-8"><a href="#cb109-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Get current date and convert to milliseconds </span></span>
-<span id="cb109-9"><a href="#cb109-9" aria-hidden="true" tabindex="-1"></a>end_date <span class="op">=</span> ee.Date(datetime.datetime.now().timestamp()<span class="op">*</span><span class="dv">1000</span>)</span>
-<span id="cb109-10"><a href="#cb109-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">2</span>, <span class="st">&#39;week&#39;</span>)</span>
+<span id="cb109-9"><a href="#cb109-9" aria-hidden="true" tabindex="-1"></a>start_date <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2022</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb109-10"><a href="#cb109-10" aria-hidden="true" tabindex="-1"></a>end_date <span class="op">=</span> start_date.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
 <span id="cb109-11"><a href="#cb109-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-12"><a href="#cb109-12" aria-hidden="true" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM_dd&#39;</span>)</span>
+<span id="cb109-12"><a href="#cb109-12" aria-hidden="true" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM&#39;</span>)</span>
 <span id="cb109-13"><a href="#cb109-13" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
 <span id="cb109-14"><a href="#cb109-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb109-15"><a href="#cb109-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
 <span id="cb109-16"><a href="#cb109-16" aria-hidden="true" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
 <span id="cb109-17"><a href="#cb109-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb109-18"><a href="#cb109-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Datasets</span></span>
-<span id="cb109-19"><a href="#cb109-19" aria-hidden="true" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;NASA_USDA/HSL/SMAP10KM_soil_moisture&quot;</span>)</span>
-<span id="cb109-20"><a href="#cb109-20" aria-hidden="true" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)</span>
-<span id="cb109-21"><a href="#cb109-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-22"><a href="#cb109-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
-<span id="cb109-23"><a href="#cb109-23" aria-hidden="true" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
-<span id="cb109-24"><a href="#cb109-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-25"><a href="#cb109-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
-<span id="cb109-26"><a href="#cb109-26" aria-hidden="true" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;ssm&#39;</span>)</span>
-<span id="cb109-27"><a href="#cb109-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-28"><a href="#cb109-28" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
+<span id="cb109-19"><a href="#cb109-19" aria-hidden="true" tabindex="-1"></a><span class="co"># SMAP is in safe mode and not generating new data since August 2022</span></span>
+<span id="cb109-20"><a href="#cb109-20" aria-hidden="true" tabindex="-1"></a><span class="co"># https://nsidc.org/data/user-resources/data-announcements/user-notice-smap-safe-mode</span></span>
+<span id="cb109-21"><a href="#cb109-21" aria-hidden="true" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;NASA_USDA/HSL/SMAP10KM_soil_moisture&quot;</span>)</span>
+<span id="cb109-22"><a href="#cb109-22" aria-hidden="true" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)</span>
+<span id="cb109-23"><a href="#cb109-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-24"><a href="#cb109-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
+<span id="cb109-25"><a href="#cb109-25" aria-hidden="true" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb109-26"><a href="#cb109-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-27"><a href="#cb109-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
+<span id="cb109-28"><a href="#cb109-28" aria-hidden="true" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;ssm&#39;</span>)</span>
 <span id="cb109-29"><a href="#cb109-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-30"><a href="#cb109-30" aria-hidden="true" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
+<span id="cb109-30"><a href="#cb109-30" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
 <span id="cb109-31"><a href="#cb109-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-32"><a href="#cb109-32" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
-<span id="cb109-33"><a href="#cb109-33" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
-<span id="cb109-34"><a href="#cb109-34" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
-<span id="cb109-35"><a href="#cb109-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">10000</span>,</span>
-<span id="cb109-36"><a href="#cb109-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
-<span id="cb109-37"><a href="#cb109-37" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb109-38"><a href="#cb109-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-39"><a href="#cb109-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
-<span id="cb109-40"><a href="#cb109-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
-<span id="cb109-41"><a href="#cb109-41" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb109-42"><a href="#cb109-42" aria-hidden="true" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
-<span id="cb109-43"><a href="#cb109-43" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
-<span id="cb109-44"><a href="#cb109-44" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
-<span id="cb109-45"><a href="#cb109-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-46"><a href="#cb109-46" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
+<span id="cb109-32"><a href="#cb109-32" aria-hidden="true" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
+<span id="cb109-33"><a href="#cb109-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-34"><a href="#cb109-34" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
+<span id="cb109-35"><a href="#cb109-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
+<span id="cb109-36"><a href="#cb109-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
+<span id="cb109-37"><a href="#cb109-37" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">10000</span>,</span>
+<span id="cb109-38"><a href="#cb109-38" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
+<span id="cb109-39"><a href="#cb109-39" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb109-40"><a href="#cb109-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-41"><a href="#cb109-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
+<span id="cb109-42"><a href="#cb109-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
+<span id="cb109-43"><a href="#cb109-43" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb109-44"><a href="#cb109-44" aria-hidden="true" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
+<span id="cb109-45"><a href="#cb109-45" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
+<span id="cb109-46"><a href="#cb109-46" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
 <span id="cb109-47"><a href="#cb109-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-48"><a href="#cb109-48" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> []</span>
+<span id="cb109-48"><a href="#cb109-48" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
 <span id="cb109-49"><a href="#cb109-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-50"><a href="#cb109-50" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
-<span id="cb109-51"><a href="#cb109-51" aria-hidden="true" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
-<span id="cb109-52"><a href="#cb109-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-53"><a href="#cb109-53" aria-hidden="true" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb109-50"><a href="#cb109-50" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> []</span>
+<span id="cb109-51"><a href="#cb109-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-52"><a href="#cb109-52" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
+<span id="cb109-53"><a href="#cb109-53" aria-hidden="true" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
 <span id="cb109-54"><a href="#cb109-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb109-55"><a href="#cb109-55" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
-<span id="cb109-56"><a href="#cb109-56" aria-hidden="true" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
-<span id="cb109-57"><a href="#cb109-57" aria-hidden="true" tabindex="-1"></a>    writer.writeheader()</span>
-<span id="cb109-58"><a href="#cb109-58" aria-hidden="true" tabindex="-1"></a>    writer.writerows(data)</span>
-<span id="cb109-59"><a href="#cb109-59" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
+<span id="cb109-55"><a href="#cb109-55" aria-hidden="true" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb109-56"><a href="#cb109-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-57"><a href="#cb109-57" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
+<span id="cb109-58"><a href="#cb109-58" aria-hidden="true" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
+<span id="cb109-59"><a href="#cb109-59" aria-hidden="true" tabindex="-1"></a>    writer.writeheader()</span>
+<span id="cb109-60"><a href="#cb109-60" aria-hidden="true" tabindex="-1"></a>    writer.writerows(data)</span>
+<span id="cb109-61"><a href="#cb109-61" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>From the terminal, navigate to the directory where you have created the file and type the command below to run the script.</li>
 </ol>
