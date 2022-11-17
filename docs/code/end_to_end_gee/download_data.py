@@ -6,16 +6,18 @@ import os
 ee.Initialize()
 
 # Get current date and convert to milliseconds 
-end_date = ee.Date(datetime.datetime.now().timestamp()*1000)
-start_date = end_date.advance(-2, 'week')
+start_date = ee.Date.fromYMD(2022, 1, 1)
+end_date = start_date.advance(1, 'month')
 
-date_string = end_date.format('YYYY_MM_dd')
+date_string = end_date.format('YYYY_MM')
 filename = 'ssm_{}.csv'.format(date_string.getInfo())
 
 # Saving to current directory. You can change the path to appropriate location
 output_path = os.path.join(filename)
 
 # Datasets
+# SMAP is in safe mode and not generating new data since August 2022
+# https://nsidc.org/data/user-resources/data-announcements/user-notice-smap-safe-mode
 soilmoisture = ee.ImageCollection("NASA_USDA/HSL/SMAP10KM_soil_moisture")
 admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2")
 
