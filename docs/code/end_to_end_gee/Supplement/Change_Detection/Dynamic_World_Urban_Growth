@@ -1,0 +1,75 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[77.43062052556523, 13.103764122826366],
+          [77.43062052556523, 12.821384160047845],
+          [77.7588370782996, 12.821384160047845],
+          [77.7588370782996, 13.103764122826366]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Urban Growth Change Detection using Dynamic World Probability Bands
+
+var geometry = ee.Geometry.Polygon([[
+  [77.43062052556523, 13.103764122826366],
+  [77.43062052556523, 12.821384160047845],
+  [77.7588370782996, 12.821384160047845],
+  [77.7588370782996, 13.103764122826366]
+]]);
+Map.centerObject(geometry);
+
+// Detect newly urbanized regions from the year 2019 to 2020.
+var beforeYear = 2019;
+var afterYear = 2020;
+
+// Create start and end dates for the before and after periods.
+var beforeStart = ee.Date.fromYMD(beforeYear, 1 , 1);
+var beforeEnd = beforeStart.advance(1, 'year');
+
+var afterStart = ee.Date.fromYMD(afterYear, 1 , 1);
+var afterEnd = afterStart.advance(1, 'year');
+
+// Add Sentinel-2 Composites to verify the results.
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+     .filterBounds(geometry)
+     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35));
+
+// Create a median composite from sentinel-2 images.
+var beforeS2 = s2.filterDate(beforeStart, beforeEnd).median();
+
+var afterS2 = s2.filterDate(afterStart, afterEnd).median();
+  
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000};
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2');
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2');
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+// Filter the collection and select the 'built' band.
+var dwFiltered = dw
+  .filter(ee.Filter.bounds(geometry))
+  .select('built');
+
+// Create a mean composite indicating the average probability through the year.
+var beforeDw = dwFiltered.filter(ee.Filter.date(beforeStart, beforeEnd)).mean();
+  
+var afterDw = dwFiltered.filter(ee.Filter.date(afterStart, afterEnd)).mean();
+
+// Select all pixels that are
+// < 0.2 'built' probability before
+// > 0.5 'built' probability after
+var newUrban = beforeDw.lt(0.2).and(afterDw.gt(0.5));
+
+var changeVisParams = {min: 0, max: 1, palette: ['white', 'red']};
+Map.addLayer(newUrban.clip(geometry), changeVisParams, 'New Urban');
+
+// Mask non-change pixels from the binary newUrban image 
+// using the selfMask function and add it to the map.
+Map.addLayer(
+  newUrban.selfMask().clip(geometry), changeVisParams, 'New Urban (Masked)');

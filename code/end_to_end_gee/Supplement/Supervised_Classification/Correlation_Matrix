@@ -1,0 +1,62 @@
+// Calculate Pair-wise Correlation Between Bands of an Image
+
+// We take a multi-band composite image created in the previous sections
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_multiband_composite');
+var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
+Map.addLayer(composite, visParams, 'RGB');
+
+var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
+
+// This image has 18 bands and we want to compute correlation between them.
+// Get the band names
+// These bands will be the input variables to the model
+var bands = composite.bandNames();
+print(bands);
+
+
+// Generate random points to sample from the image
+var numPoints = 5000
+var samples = composite.sample({ 
+  region: geometry,
+  scale: 10, 
+  numPixels: numPoints,
+  tileScale: 16
+});
+print(samples.first());
+
+// Calculate pairwise-correlation between each pair of bands
+// Use ee.Reducer.pearsonsCorrelation() for Pearson's Correlation
+// Use ee.Reducer.spearmansCorrelation() for Spearman's Correlation
+var pairwiseCorr = ee.FeatureCollection(bands.map(function(i){
+  return bands.map(function(j){
+    var stats = samples.reduceColumns({
+      reducer: ee.Reducer.pearsonsCorrelation(),
+      selectors: [i,j]
+    });
+    var bandNames = ee.String(i).cat('_').cat(j);
+    return ee.Feature(null, {'correlation': stats.get('correlation'), 'band': bandNames});  
+  });
+}).flatten());
+
+// Export the table as a CSV file
+Export.table.toDrive({
+  collection: pairwiseCorr,
+  description: 'Pairwise_Correlation',
+  folder: 'earthengine',
+  fileNamePrefix: 'pairwise_correlation',
+  fileFormat: 'CSV',
+});
+
+// You can also export the sampled points and calculate correlation
+// in Python or R
+Export.table.toDrive({
+  collection: samples,
+  description: 'Feature_Sample_Data',
+  folder: 'earthengine',
+  fileNamePrefix: 'feature_sample_data',
+  fileFormat: 'CSV',
+  selectors: bands.getInfo()
+});
