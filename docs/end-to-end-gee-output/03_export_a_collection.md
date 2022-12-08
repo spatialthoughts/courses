@@ -54,7 +54,7 @@ withNdvi = filtered.map(addNDVI)
 
 #### Export All Images
 
-Exports are done via the ``ee.batch`` module. A key difference between javascript and Python version is that the `region` parameter needs to be supplied with actual geometry coordinates.
+Exports are done via the ``ee.batch`` module. This module allows you to automatically start an export - making it suitable for batch exports.
 
 
 ```python
@@ -70,10 +70,10 @@ for i, image_id in enumerate(image_ids):
   task = ee.batch.Export.image.toDrive(**{
     'image': image.select('ndvi'),
     'description': 'Image Export {}'.format(i+1),
-    'fileNamePrefix': image.id().getInfo(),
+    'fileNamePrefix': image_id,
     'folder':'earthengine',
     'scale': 100,
-    'region': image.geometry().bounds().getInfo()['coordinates'],
+    'region': image.geometry(),
     'maxPixels': 1e10
   })
   task.start()
