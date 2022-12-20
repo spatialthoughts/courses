@@ -29,6 +29,3 @@ ax.set_ylabel('Total Incidents')
 
 plt.tight_layout()
 plt.show()
-
-plt.tight_layout()
-plt.show()
