@@ -14,6 +14,21 @@ line = ax.lines[0]
 for x_value, y_value in zip(line.get_xdata(), line.get_ydata()):
     ax.annotate(y_value,(x_value, y_value), xytext=(0, 20), 
         textcoords="offset points", ha='center', va='top')
-plt.tight_layout()
 
+# Extra: Custmize X-Axis labels
+labels = []
+for date in pd.to_datetime(monthly_counts.index):
+  if date.month in [1, 6, 12]:
+    labels.append(date.strftime('%Y-%m'))
+  else:
+    labels.append('')
+ax.set_xticklabels(labels)  
+
+ax.set_title('Total Crime by Month')
+ax.set_ylabel('Total Incidents')
+
+plt.tight_layout()
+plt.show()
+
+plt.tight_layout()
 plt.show()
