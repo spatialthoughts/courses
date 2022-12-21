@@ -15,7 +15,7 @@ st.title('National Highway Dashboard')
 st.sidebar.title("About")
 st.sidebar.info('Explore the Roads')
 
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
 gpkg_file = 'karnataka.gpkg'
 csv_file = 'highway_lengths_by_district.csv'
 

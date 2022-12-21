@@ -7,7 +7,7 @@ st.write('This dashboard displays a chart for the selected region.')
 
 @st.cache
 def load_data():
-    data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+    data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
     csv_file = 'highway_lengths_by_district.csv'
 
     url = data_url + csv_file
