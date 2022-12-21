@@ -115,7 +115,7 @@ ax.set_ylabel('NDVI')
 
 # Save the plot
 output_folder = 'output'
-output_path = os.path.join(output_folder, 'modis_ndvi_time_series.png')
+output_path = os.path.join(output_folder, 'smooth_ndvi_time_series.png')
 plt.savefig(output_path)
 
 plt.show()

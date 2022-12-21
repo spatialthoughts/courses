@@ -182,7 +182,7 @@ Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.le
 You will need to specify additional `kwargs` parameters to create a correct visualization.
 
 1. The GeoTIFF image is a single-band image with grayscale values of night light intensities. The range of these values are between 0-60. Use `rescale='0,60'`.
-2. The image has a nodata values stored as `nan`. Use `nodata='nan`.
+2. The image has a nodata values stored as `nan`. Use `nodata='nan'`.
 3. A grayscale image can be displayed in color using a colormap. Use `colormap_name=viridis`.
 
 
