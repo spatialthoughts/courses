@@ -229,7 +229,7 @@ Finally, save the merged array to disk as a GeoTiff file.
 
 ```python
 output_filename = 'merged.tif'
-output_path = os.path.join(data_folder, output_filename)
+output_path = os.path.join(output_folder, output_filename)
 merged.rio.to_raster(output_path)
 ```
 

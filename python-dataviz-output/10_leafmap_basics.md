@@ -106,7 +106,7 @@ m.zoom_to_gdf(roads_gdf)
 m
 ```
 
-A very useful feature of LeafMap is the ability to load a Cloud-Optimized GeoTIFF (COG) file directly from a URL without the need of a server. The file is streamed directly and high-resolution tiles are automatically fetched as you zoom in. 
+A very useful feature of LeafMap is the ability to load a Cloud-Optimized GeoTIFF (COG) file directly from a URL without the need of a server. The file is streamed directly and high-resolution tiles are automatically fetched as you zoom in. We load a 8-bit RGB image hosted on GitHub using the `add_cog_layer()` function.
 
 Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer)
 
@@ -114,7 +114,7 @@ Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.le
 ```python
 m = leafmap.Map(width=800, height=500)
 
-cog_url = os.path.join(data_url, 'bangalore_lulc.tif')
+cog_url = os.path.join(data_url, 'bangalore_lulc_rgb.tif')
 bounds = leafmap.cog_bounds(cog_url)
 
 m.add_cog_layer(cog_url, name='Land Use Land Cover')
@@ -130,7 +130,7 @@ Reference: [leafmap.foliumap.Map.add_legend](https://leafmap.org/foliumap/#leafm
 ```python
 m = leafmap.Map(width=800, height=500)
 
-cog_url = os.path.join(data_url, 'bangalore_lulc.tif')
+cog_url = os.path.join(data_url, 'bangalore_lulc_rgb.tif')
 bounds = leafmap.cog_bounds(cog_url)
 
 m.add_cog_layer(cog_url, name='Land Use Land Cover')
@@ -143,6 +143,7 @@ labels = ["Trees","Shrubland","Grassland","Cropland","Built-up",
           "Barren / sparse vegetation","Snow and ice","Open water",
           "Herbaceous wetland","Mangroves","Moss and lichen"]
 m.add_legend(colors=colors, labels=labels)
+m
 ```
 
 We can save the resulting map to a HTML file using the `to_html()` function.
@@ -151,7 +152,7 @@ We can save the resulting map to a HTML file using the `to_html()` function.
 ```python
 m = leafmap.Map(width=800, height=500)
 
-cog_url = os.path.join(data_url, 'bangalore_lulc.tif')
+cog_url = os.path.join(data_url, 'bangalore_lulc_rgb.tif')
 bounds = leafmap.cog_bounds(cog_url)
 
 m.add_cog_layer(cog_url, name='Land Use Land Cover')
@@ -174,19 +175,19 @@ m.to_html(output_path)
 
 The code below contains a basic leafmap map. We want to a raster layers of VIIRS Nighttime Lights over India. The URL to a Cloud Optmized GeoTiff (COG) file hosted on Google Cloud Storage is given below.
 
-Add the data to the map and visualize it using a the **viridis** color ramp.
-
-Hint: Use the `colormap_name` parameter.
+Add the data to the map and visualize it.
 
 Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer)
 
+You will need to specify additional `kwargs` parameters to create a correct visualization.
+
+1. The GeoTIFF image is a single-band image with grayscale values of night light intensities. The range of these values are between 0-60. Use `rescale='0,60'`.
+2. The image has a nodata values stored as `nan`. Use `nodata='nan`.
+3. A grayscale image can be displayed in color using a colormap. Use `colormap_name=viridis`.
+
+
 
 ```python
-data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/viirs_ntl_2021_india.tif'
-```
-
-
-```python
-m = leafmap.Map(width=800, height=500, google_map='SATELLITE')
-m
+gcs_bucket = 'https://storage.googleapis.com/spatialthoughts-public-data/'
+cog_url = os.path.join(gcs_bucket, 'viirs_ntl_2021_india.tif')
 ```

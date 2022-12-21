@@ -56,7 +56,7 @@ for shapefile in [path_shapefile, umbra_shapefile]:
     download(url)
 ```
 
-## Data Pre-Processing
+#### Data Pre-Processing
 
 
 ```python
@@ -78,37 +78,15 @@ umbra_reprojected = umbra_gdf.to_crs('epsg:3857')
 
 
 ```python
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(15,7)
-path_reprojected.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
-umbra_reprojected.plot(ax=ax, facecolor='none', edgecolor='#636363', alpha=0.5)
-
-cx.add_basemap(ax, crs=path_reprojected.crs, source=cx.providers.OpenTopoMap)
-ax.set_axis_off()
-plt.title('2017 Total Solar Eclipse Path', size = 18)
-
-plt.show()
-```
-
-
-```python
 path_boundary = path_reprojected.geometry.unary_union
 umbra_subset = umbra_reprojected[umbra_reprojected.geometry.intersects(path_boundary)]
 ```
 
+#### Creating Animation
 
-```python
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(15,7)
-path_reprojected.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
-umbra_subset.plot(ax=ax, facecolor='none', edgecolor='#636363', alpha=0.5)
+We use Matplotlibs `FuncAnimation` function from the `animation` module to create an animation with each frame showing the position of the umbra through the solar eclipse.
 
-cx.add_basemap(ax, crs=path_reprojected.crs, source=cx.providers.OpenTopoMap)
-ax.set_axis_off()
-plt.title('2017 Total Solar Eclipse Path', size = 18)
-
-plt.show()
-```
+Reference: [`matplotlib.animation.FuncAnimation`](https://matplotlib.org/stable/api/_as_gen/matplotlib.animation.FuncAnimation.html)
 
 
 ```python
