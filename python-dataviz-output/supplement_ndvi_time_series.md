@@ -2,13 +2,6 @@
 
 
 ```python
-%%capture
-if 'google.colab' in str(get_ipython()):
-  !apt install openpyxl
-```
-
-
-```python
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
@@ -54,34 +47,19 @@ We set the 'Date' column as the index of the dateframe. This will allow us to fi
 
 
 ```python
-df = df.set_index('Date')
+df = df.set_index(pd.to_datetime(df['Date']))
 df
 ```
 
-The dataframe contains time-series from 2 differnet sensors. Filter them to separate dataframes.
-
-
-```python
-modis_df = df[df['Sensor'] == 'Modis']
-landsat_df = df[df['Sensor'] == 'Landsat']
-sentinel_df = df[df['Sensor'] == 'Sentinel-2']
-```
-
-Create a chart with time-series of all 3 sensors. We use `mdates` module to control the tick-marks on X-Axis.
+Create a chart with time-series of values in the 'NDVI' column. We use `mdates` module to control the tick-marks on X-Axis.
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(20,10)
-modis_df.plot(y='NDVI', kind='line', ax=ax, 
-              marker='o', markersize=2, color='#2b8cbe',
-              label='MODIS')
-landsat_df.plot(y='NDVI', kind='line', ax=ax, 
-                marker='o', markersize=2, color='#feb24c',
-                label='Landsat')
-sentinel_df.plot(y='NDVI', kind='line', ax=ax,
-                 marker='o', markersize=2, color='#238b45',
-                 label='Sentinel-2')
+df.plot(y='NDVI', kind='line', ax=ax,
+        marker='o', markersize=2, color='#238b45',
+        label='Original NDVI')
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
@@ -100,7 +78,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_12_0.png)
+![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_9_0.png)
     
 
 
@@ -110,21 +88,21 @@ Pandas has built-in method `rolling()` to allow us to compute moving averages. L
 
 
 ```python
-window_size_days = 16
+window_size_days = 30
 window = '{}D'.format(window_size_days)
-modis_smooth = modis_df.copy()
-modis_smooth['NDVI_smooth'] = modis_smooth['NDVI'].rolling(window, center=True).mean()
-modis_smooth
+df_smooth = df.copy()
+df_smooth['NDVI_smooth'] = df_smooth['NDVI'].rolling(window, center=True).mean()
+df_smooth
 ```
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(20,10)
-modis_smooth.plot(y='NDVI', kind='line', ax=ax, 
+df_smooth.plot(y='NDVI', kind='line', ax=ax, 
                   marker='o', markersize=1, color='#66c2a4', linestyle='dotted',
                   label='Original')
-modis_smooth.plot(y='NDVI_smooth', kind='line', ax=ax,
+df_smooth.plot(y='NDVI_smooth', kind='line', ax=ax,
                   marker='o', linewidth= 2, markersize=0, color='#238b45', 
                   label='{} Day Moving-Average'.format(window_size_days))
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
@@ -145,6 +123,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_15_0.png)
+![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_12_0.png)
     
 
