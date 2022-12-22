@@ -24,6 +24,7 @@ import os
 import geopandas as gpd
 import folium
 import leafmap.foliumap as leafmap
+import osmnx
 ```
 
 
