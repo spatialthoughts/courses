@@ -16,12 +16,12 @@ data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-da
 gpkg_file = 'karnataka.gpkg'
 csv_file = 'highway_lengths_by_district.csv'
 
-@st.cache
+@st.experimental_memo
 def read_gdf(url, layer):
     gdf = gpd.read_file(url, layer=layer)
     return gdf
 
-@st.cache
+@st.experimental_memo
 def read_csv(url):
     df = pd.read_csv(url)
     return df

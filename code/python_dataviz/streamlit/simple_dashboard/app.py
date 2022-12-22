@@ -33,5 +33,5 @@ filtered.plot(kind='bar', ax=ax, color=[nh_color, sh_color],
     ylabel='Kilometers', xlabel='Category')
 ax.set_title('Length of Highways')
 ax.set_ylim(0, 2500)
-ax.get_xaxis().set_ticklabels([])
+ax.set_xticklabels([])
 stats = st.pyplot(fig)
