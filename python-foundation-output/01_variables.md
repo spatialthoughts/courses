@@ -8,7 +8,7 @@ In Python you can create a string by typing letters between single or double quo
 
 
 ```python
-city = 'San Fransico'
+city = 'San Francisco'
 state = 'California'
 print(city, state)
 ```

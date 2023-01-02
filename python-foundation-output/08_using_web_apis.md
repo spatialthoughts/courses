@@ -92,7 +92,7 @@ print(response.status_code)
 
 Almost all APIs require you to sign-up and obtain a *key*. The *key* is used to identify you and enforce usage limits so that you do not overwhelm the servers. We will obtain a key from OpenRouteServie so we can use their API
 
-Visit [OpenRouteService Sign-up page](https://openrouteservice.org/dev/#/signup) and create an account. Once your account is activated, visit your Dashboard and request a token. Select *Free* as the Token type and enter ``python_foundation`` as the Token name. Click *CREATE TOKEN*. Once created, copy the long string displayed under Key and enter below.
+Visit [OpenRouteService Sign-up page](https://openrouteservice.org/dev/#/signup) and create an account. Once your account is activated, visit your Dashboard and request a token. Select *Standard* as the Token type and enter ``python_foundation`` as the Token name. Click *CREATE TOKEN*. Once created, copy the long string displayed under Key and enter below.
 
 
 ```python

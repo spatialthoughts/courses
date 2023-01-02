@@ -16,7 +16,7 @@ jupyter-nbconvert --to markdown  code/python_dataviz/*.ipynb --output-dir python
 sed -i '' 's/\[png\]/\[\]/g' python-dataviz-output/*.md
 # image paths need to be set relative to the folder. Replace it with sed
 sed -i '' -E 's/\((.+_files)/\(python-dataviz-output\/\1/g' python-dataviz-output/*.md
-cp code/python_dataviz/solutions/* $SOLUTIONS_DIR/
+cp -R code/python_dataviz/solutions/* $SOLUTIONS_DIR/
 
 # Update python-dataviz-web repository
 cp code/python_dataviz/*.ipynb $WEB_DIR/

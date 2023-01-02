@@ -66,7 +66,7 @@ We first find all the individual files in the directory using the `os.listdir()`
 ```python
 srtm_path = os.path.join(data_pkg_path, 'srtm')
 all_files = os.listdir(srtm_path)
-print(python-foundation-output/all_files)
+print(all_files)
 ```
 
 The rasterio.merge module has a `merge()` method that takes a list of *datasets* and returns the merged dataset. So we create an empty list, open each of the files and append it to the list.

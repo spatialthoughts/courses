@@ -34,6 +34,11 @@ Pandas provide easy methods to directly read files into a DataFrame. You can use
 df = pd.read_csv(path)
 ```
 
+
+```python
+df
+```
+
 Once the file is read and a DataFrame object is created, we can inspect it using the `head()` method. 
 
 
@@ -56,7 +61,13 @@ Pandas have many ways of selecting and filtered data from a dataframe. We will n
 ```python
 home_country = 'India'
 filtered = df[df['country'] == home_country]
-print(filtered)
+filtered
+```
+
+
+```python
+filtered = df[df['population'] > 1000000]
+filtered
 ```
 
 Filtered dataframe is a just view of the original data and we cannot make changes to it. We can save the filtered view to a new dataframe using the `copy()` method.
@@ -64,6 +75,25 @@ Filtered dataframe is a just view of the original data and we cannot make change
 
 ```python
 country_df = df[df['country'] == home_country].copy()
+```
+
+
+```python
+home_city = 'Mumbai'
+city_df = df[df['city'] == home_city].iloc[0]['lng']
+city_df
+```
+
+
+```python
+# iloc[]
+```
+
+
+```python
+home_city = 'Bengaluru'
+
+country_df[country_df['city_ascii'] == home_city].iloc[0]['lng']
 ```
 
 To locate a particular row or column from a dataframe, Pandas providea `loc[]` and `iloc[]` methods - that allows you to *locate* particular slices of data. Learn about [different indexing methods](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#different-choices-for-indexing) in Pandas. Here we can use `iloc[]` to find the row matching the `home_city` name. Since `iloc[]` uses index, the *0* here refers to the first row.
