@@ -122,7 +122,7 @@ For our task, we can do a *left* join and add attributes of the district that *i
 
 
 ```python
-joined = gpd.sjoin(roads_reprojected, districts_reprojected, how='left', op='intersects')
+joined = gpd.sjoin(roads_reprojected, districts_reprojected, how='left', predicate='intersects')
 print(joined.head())
 ```
 
