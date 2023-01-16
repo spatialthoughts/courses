@@ -155,7 +155,7 @@ if not os.path.exists(output_dir):
 output_filename = 'cities_distance.csv'
 output_path = os.path.join(output_dir, output_filename)
 
-with open(output_path, mode='w', encoding='utf-8') as output_file:
+with open(output_path, mode='w', newline='', encoding='utf-8') as output_file:
     fieldnames = ['city', 'distance_from_home']
     csv_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
     csv_writer.writeheader()
@@ -204,7 +204,7 @@ with open(input_path, 'r', encoding='utf-8') as input_file:
             home_city_coordinates = (row['lat'], row['lng'])
             break
 
-with open(output_path, mode='w') as output_file:
+with open(output_path, mode='w', newline='') as output_file:
     fieldnames = ['city', 'distance_from_home']
     csv_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
     csv_writer.writeheader()

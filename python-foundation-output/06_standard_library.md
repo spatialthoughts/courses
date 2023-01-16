@@ -71,6 +71,8 @@ Find the coordinates of 2 cities near you and calculate the distance between the
 
 
 ```python
+import math
+
 def haversine_distance(origin, destination):
   lat1, lon1 = origin
   lat2, lon2 = destination

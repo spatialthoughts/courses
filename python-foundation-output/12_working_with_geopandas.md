@@ -1,6 +1,6 @@
 # Working with Geopandas
 
-![](images/python_foundation/geopandas.png)
+![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/geopandas.png?raw=1)
 
 
 GeoPandas extends the Pandas library to enable spatial operations. It provides new data types such as **GeoDataFrame** and **GeoSeries** which are subclasses of Pandas **DataFrame** and **Series** and enables efficient vector data processing in Python.
@@ -14,7 +14,7 @@ GeoPandas make use of many other widely used spatial libraries - but it provides
 
 We will carry out a geoprocessing task that shows various features of this library and show how to do geo data processing in Python. The task is to take a roads data layer from OpenStreetMap and compute the total length of National Highways for each district in a state. The problem is described in detail in my [Advanced QGIS](https://courses.spatialthoughts.com/advanced-qgis.html#exercise-find-the-length-of-national-highways-in-a-state) course and show the steps needed to perform this analysis in QGIS. We will replicate this example in Python.
 
-![](images/python_foundation/karnataka.png)
+![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/karnataka.png?raw=1)
 
 
 By convention, `geopandas` is commonly imported as `gpd`
@@ -114,7 +114,7 @@ districts_reprojected = districts_gdf.to_crs('EPSG:32643')
 
 A spatial join is performed using the `sjoin()` method. It takes 2 core arguments.
 
-- `op`: The spatial predicate to decdie which objects to join. Options are *intersects*, *within* and *contains*.
+- `predicate`: The spatial predicate to decdie which objects to join. Options are *intersects*, *within* and *contains*.
 - `how`: The type of join to perform. Options are *left*, *right* and *inner*.
 
 For our task, we can do a *left* join and add attributes of the district that *intersect* the road.

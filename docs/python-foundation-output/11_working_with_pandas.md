@@ -1,6 +1,6 @@
 # Working with Pandas
 
-![](images/python_foundation/pandas-logo.png)
+![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/pandas-logo.png?raw=1)
 
 Pandas is a powerful library for working with data. Pandas provides fast and easy functions for reading data from files, and analyzing it.
 
@@ -119,7 +119,7 @@ Let's learn how to do calculations on a dataframe. We can iterate over each row 
 
 The `apply()` function takes 2 arguments. A function to apply, and the axis along which to apply it. `axis=0` means it will be applied to columns and `axis=1` means it will apply to rows.
 
-![](images/python_foundation/pandas_axis.png)
+![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/pandas_axis.png?raw=1)
 
 
 ```python
@@ -172,8 +172,36 @@ print('Successfully written output file at {}'.format(output_path))
 
 ## Exercise
 
-You will notice that the output file contains a row with the `home_city` as well. Modify the `filtered` dataframe to remove this row and write it to a file.
+You will notice that the output file contains a row with the `home_city` as well. Modify the `filtered` dataframe to remove this row and write the results to a file.
 
 Hint: Use the Boolean filtering method we learnt earlier to select rows that do not match the `home_city`.
+
+
+```python
+import os
+from geopy import distance
+import pandas as pd
+
+def calculate_distance(row):
+    city_coordinates = (row['lat'], row['lng'])
+    return distance.geodesic(city_coordinates, home_city_coordinates).km
+
+data_pkg_path = 'data'
+filename = 'worldcities.csv'
+path = os.path.join(data_pkg_path, filename)
+df = pd.read_csv(path)
+
+home_country = 'India'
+home_city = 'Bengaluru'
+
+country_df = df[df['country'] == home_country].copy()
+filtered = country_df[country_df['city_ascii'] == home_city]
+home_city_coordinates = (filtered.iloc[0]['lat'], filtered.iloc[0]['lng'])
+
+country_df['distance'] = country_df.apply(calculate_distance, axis=1)
+filtered = country_df[['city_ascii','distance']]
+filtered = filtered.rename(columns = {'city_ascii': 'city'})
+filtered
+```
 
 ----
