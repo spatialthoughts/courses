@@ -1,9 +1,27 @@
-var classified = ee.Image('users/ujavalgandhi/e2e/arkavathy_base_classification');
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_2019_composite');
 var gcp = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_gcps');
 var gcp = gcp.randomColumn();
 
 var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
 var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+
+var training = composite.sampleRegions({
+  collection: trainingGcp,
+  properties: ['landcover'],
+  scale: 10,
+  tileScale: 16
+});
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50)
+.train({
+  features: training,  
+  classProperty: 'landcover',
+  inputProperties: composite.bandNames()
+});
+
+// Classify the image.
+var classified = composite.classify(classifier);
 
 //************************************************************************** 
 // Accuracy Assessment

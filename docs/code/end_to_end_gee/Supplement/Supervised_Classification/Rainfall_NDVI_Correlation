@@ -1,4 +1,15 @@
 // Calculate Rainfall-NDVI Correlation
+
+// We want to know whether there exists a correlation between
+// rainfall and NDVI
+// We build a collection containing monthly total rainfall for a year
+// and the next month's average NDVI.
+// We then use ee.Reducer.pearsonsCorrelation() to compute pixel-wise
+// correlation between rainfall and NDVI response.
+
+// Positive values will indicate vegetation growth in response to
+// precipitation and generally rainfed agriculture.
+
 var geometry = ee.Geometry.Point([75.71168046831512, 13.30751919691132]);
 Map.centerObject(geometry, 10)
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
@@ -42,31 +53,29 @@ var composite = s2Filtered.median()
 Map.addLayer(composite, rgbVis, 'Composite')  
 
 
-
 // Rainfall
 var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD");
 var chirpsFiltered = chirps
   .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
 
 
-// Monsoon months
+// Create a collection of monthly images
 var months = ee.List.sequence(1, 11)
 
-// Monthly Images
 var byMonth = months.map(function(month) {
+    // Total monthly rainfall
     var monthlyRain = chirpsFiltered
       .filter(ee.Filter.calendarRange(month, month, 'month'))
     var totalRain = monthlyRain.sum()
-
+    // Next month's average NDVI
     var nextMonth = ee.Number(month).add(1)
     var monthly = s2Filtered
       .filter(ee.Filter.calendarRange(nextMonth, nextMonth, 'month'))
     var medianComposite = monthly.median()
   
-
     return totalRain.addBands(medianComposite).set({'month': month})
 })
-var monthlyCol = ee.ImageCollection.fromImages(byMonth)
+var monthlyCol = ee.ImageCollection.fromImages(byMonth);
 
 // Display Composites
 var julImage = ee.Image(monthlyCol.filter(ee.Filter.eq('month', 7)).first())

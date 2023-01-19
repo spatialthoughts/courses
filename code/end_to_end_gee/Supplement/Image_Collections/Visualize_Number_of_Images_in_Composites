@@ -1,0 +1,58 @@
+// Exploring Composite Images
+// Example script showing 
+// 1. How to visualize the DOY (day-of-year) of each pixel of a composite
+// 2. How to visualize count of images at each pixel of a composite
+var admin1 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level1');
+var karnataka = admin1.filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'));
+var geometry = karnataka.geometry();
+
+var s2 =ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Add a band to each image indicating the DOY of each image
+var filteredWithDoyBand = filtered.map(function(image) {
+  // Create an image with day of the year as value
+  var date = ee.Date(image.get('system:time_start'));
+  var day = date.getRelative('day', 'year');
+  var dayImage = ee.Image.constant(day).rename(['dayofyear']).int().clip(image.geometry());
+  return image.addBands([dayImage]);
+});
+
+var composite = filteredWithDoyBand.median();
+
+Map.centerObject(geometry, 8);
+Map.addLayer(composite.clip(geometry), rgbVis, '2019 Median Composite')
+
+
+// Visualize which pixels contribute to the composite
+var dateImage = composite.select('dayofyear').int();
+
+var doyVis = {
+  min:20,
+  max: 100,
+  palette: ['d7191c','fdae61','ffffbf','a6d96a','1a9641']
+}
+Map.addLayer(dateImage.clip(geometry), doyVis, 'DOY of Each Pixel in Composite');
+
+// Visualize the number of images contributing to each pixel 
+// of the composite
+// Select a single band and use count()
+var count = filtered.select(['B4']).count();
+
+// show image count
+var countVis = {
+    min: 50,
+    max: 100,
+    palette: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15']
+}
+Map.addLayer(count.clip(geometry), countVis, 'Number of S2 Scenes')
