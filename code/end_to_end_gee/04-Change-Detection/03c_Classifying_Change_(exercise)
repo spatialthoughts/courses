@@ -1,9 +1,10 @@
 var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
 var change = ee.FeatureCollection('users/ujavalgandhi/e2e/bangalore_change_gcps');
-var nochange = ee.FeatureCollection('users/ujavalgandhi/e2e/bangalore_nochange_gcps')
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+var nochange = ee.FeatureCollection('users/ujavalgandhi/e2e/bangalore_nochange_gcps');
+var s2 = ee.ImageCollection('COPERNICUS/S2');
 
-Map.centerObject(bangalore)
+var geometry = bangalore.geometry();
+Map.centerObject(geometry);
 
 var rgbVis = {
   min: 0.0,
@@ -13,32 +14,32 @@ var rgbVis = {
 
 // Write a function for Cloud masking
 function maskS2clouds(image) {
-  var qa = image.select('QA60')
+  var qa = image.select('QA60');
   var cloudBitMask = 1 << 10;
   var cirrusBitMask = 1 << 11;
   var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
   return image.updateMask(mask)//.divide(10000)
       .select("B.*")
-      .copyProperties(image, ["system:time_start"])
+      .copyProperties(image, ["system:time_start"]);
 } 
 
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2019-02-01'))
-  .filter(ee.Filter.bounds(bangalore))
-  .map(maskS2clouds)
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds);
 
   
-var image2019 = filtered.median().clip(bangalore)
+var image2019 = filtered.median().clip(geometry);
 // Display the input composite.
 Map.addLayer(image2019, rgbVis, '2019');
 
 var filtered = s2
   .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
   .filter(ee.Filter.bounds(bangalore))
-  .map(maskS2clouds)
+  .map(maskS2clouds);
 
-var image2020 = filtered.median().clip(bangalore)
+var image2020 = filtered.median().clip(geometry);
 
 Map.addLayer(image2020, rgbVis, '2020');
 
@@ -47,15 +48,15 @@ Map.addLayer(image2020, rgbVis, '2020');
 // Let's add an NDBI band that can improve the detection
 var addNDBI = function(image) {
   var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
-  return image.addBands(ndbi)
-}
+  return image.addBands(ndbi);
+};
 
 // use addNDBI() function to add the NDBI band to both 2019 and 2020 composite images
 // Hint1: You can save the resulting image in the same variable to avoid changing 
 // a lot of code.
 // var image = addNDBI(image)
 
-var stackedImage = image2019.addBands(image2020)
+var stackedImage = image2019.addBands(image2020);
 
 // Overlay the point on the image to get training data.
 var training = stackedImage.sampleRegions({

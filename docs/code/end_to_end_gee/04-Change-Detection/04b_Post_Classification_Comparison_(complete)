@@ -1,11 +1,13 @@
-var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary")
-var urban = ee.FeatureCollection("users/ujavalgandhi/e2e/urban_gcps")
-var bare = ee.FeatureCollection("users/ujavalgandhi/e2e/bare_gcps")
-var water = ee.FeatureCollection("users/ujavalgandhi/e2e/water_gcps")
-var vegetation = ee.FeatureCollection("users/ujavalgandhi/e2e/vegetation_gcps")
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+var urban = ee.FeatureCollection('users/ujavalgandhi/e2e/urban_gcps');
+var bare = ee.FeatureCollection('users/ujavalgandhi/e2e/bare_gcps');
+var water = ee.FeatureCollection('users/ujavalgandhi/e2e/water_gcps');
+var vegetation = ee.FeatureCollection('users/ujavalgandhi/e2e/vegetation_gcps');
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR');
+var geometry = bangalore.geometry();
+Map.centerObject(geometry);
 
-Map.centerObject(bangalore)
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -15,15 +17,15 @@ var rgbVis = {
 // 2019 Jan
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2019-02-01'))
-  .filter(ee.Filter.bounds(bangalore))
-  .select('B.*')
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
 
   
-var before = filtered.median().clip(bangalore)
+var before = filtered.median().clip(geometry);
 // Display the input composite.
 Map.addLayer(before, rgbVis, 'before');
 
-var training = urban.merge(bare).merge(water).merge(vegetation)
+var training = urban.merge(bare).merge(water).merge(vegetation);
 
 // Overlay the point on the image to get training data.
 var training = before.sampleRegions({
@@ -48,10 +50,10 @@ Map.addLayer(beforeClassified,
 // 2020 Jan
 var after = s2
   .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
-  .filter(ee.Filter.bounds(bangalore))
+  .filter(ee.Filter.bounds(geometry))
   .select('B.*')
   .median()
-  .clip(bangalore)
+  .clip(geometry);
 
 Map.addLayer(after, rgbVis, 'after');
 
@@ -61,28 +63,28 @@ Map.addLayer(afterClassified,
   {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'after_classified');
 
 // Reclassify from 0-3 to 1-4
-var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
-var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
+var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4]);
+var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4]);
 
 // Show all changed areas
-var changed = afterClasses.subtract(beforeClasses).neq(0)
-Map.addLayer(changed, {min:0, max:1, palette: ['white', 'red']}, 'Change')
+var changed = afterClasses.subtract(beforeClasses).neq(0);
+Map.addLayer(changed, {min:0, max:1, palette: ['white', 'red']}, 'Change');
 
 // We multiply the before image with 100 and add the after image
 // The resulting pixel values will be unique and will represent each unique transition
 // i.e. 102 is urban to bare, 103 urban to water etc.
-var merged = beforeClasses.multiply(100).add(afterClasses).rename('transitions')
+var merged = beforeClasses.multiply(100).add(afterClasses).rename('transitions');
 
 // Use a frequencyHistogram to get a pixel count per class
 var transitionMatrix = merged.reduceRegion({
   reducer: ee.Reducer.frequencyHistogram(), 
-  geometry: bangalore,
+  geometry: geometry,
   maxPixels: 1e10,
   scale:10,
   tileScale: 16
-})
+});
 // This prints number of pixels for each class transition
-print(transitionMatrix.get('transitions'))
+print(transitionMatrix.get('transitions'));
 
 // If we want to calculate the area of each class transition
 // we can use a grouped reducer
@@ -96,20 +98,19 @@ var areas = areaImage.reduceRegion({
       groupField: 1,
       groupName: 'transitions',
     }),
-    geometry: bangalore,
+    geometry: geometry,
     scale: 100,
     tileScale: 4,
     maxPixels: 1e10
     }); 
 
 // Post-process the result to generate a clean output
-var classAreas = ee.List(areas.get('groups'))
+var classAreas = ee.List(areas.get('groups'));
 var classAreaLists = classAreas.map(function(item) {
-      var areaDict = ee.Dictionary(item)
-      var classNumber = ee.Number(areaDict.get('transitions')).format()
-      var area = ee.Number(areaDict.get('sum')).round()
-      return ee.List([classNumber, area])
-    })
-var classTransitionsAreaDict = ee.Dictionary(classAreaLists.flatten())
-print(classTransitionsAreaDict)
-
+      var areaDict = ee.Dictionary(item);
+      var classNumber = ee.Number(areaDict.get('transitions')).format();
+      var area = ee.Number(areaDict.get('sum')).round();
+      return ee.List([classNumber, area]);
+    });
+var classTransitionsAreaDict = ee.Dictionary(classAreaLists.flatten());
+print(classTransitionsAreaDict);

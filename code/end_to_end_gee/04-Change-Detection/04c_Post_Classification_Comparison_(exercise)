@@ -1,11 +1,14 @@
-var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary")
-var urban = ee.FeatureCollection("users/ujavalgandhi/e2e/urban_gcps")
-var bare = ee.FeatureCollection("users/ujavalgandhi/e2e/bare_gcps")
-var water = ee.FeatureCollection("users/ujavalgandhi/e2e/water_gcps")
-var vegetation = ee.FeatureCollection("users/ujavalgandhi/e2e/vegetation_gcps")
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+var urban = ee.FeatureCollection('users/ujavalgandhi/e2e/urban_gcps');
+var bare = ee.FeatureCollection('users/ujavalgandhi/e2e/bare_gcps');
+var water = ee.FeatureCollection('users/ujavalgandhi/e2e/water_gcps');
+var vegetation = ee.FeatureCollection('users/ujavalgandhi/e2e/vegetation_gcps');
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR');
 
-Map.centerObject(bangalore)
+var geometry = bangalore.geometry();
+Map.centerObject(geometry);
+
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -15,15 +18,15 @@ var rgbVis = {
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.bounds(bangalore))
-  .select('B.*')
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
 
   
-var before = filtered.median().clip(bangalore)
+var before = filtered.median().clip(geometry);
 // Display the input composite.
 Map.addLayer(before, rgbVis, 'before');
 
-var training = urban.merge(bare).merge(water).merge(vegetation)
+var training = urban.merge(bare).merge(water).merge(vegetation);
 
 // Overlay the point on the image to get training data.
 var training = before.sampleRegions({
@@ -49,10 +52,10 @@ Map.addLayer(beforeClassified,
 var after = s2
   .filter(ee.Filter.date('2020-01-01', '2020-02-01'))
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.bounds(bangalore))
+  .filter(ee.Filter.bounds(geometry))
   .select('B.*')
   .median()
-  .clip(bangalore)
+  .clip(geometry);
 
 Map.addLayer(after, rgbVis, 'after');
 
@@ -62,11 +65,11 @@ Map.addLayer(afterClassified,
   {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, 'after_classified');
 
 // Reclassify from 0-3 to 1-4
-var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
-var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4])
+var beforeClasses = beforeClassified.remap([0, 1, 2, 3], [1, 2, 3, 4]);
+var afterClasses = afterClassified.remap([0, 1, 2, 3], [1, 2, 3, 4]);
 
 var merged = beforeClasses.multiply(100).add(afterClasses)
-  .rename('transitions')
+  .rename('transitions');
 
 // Exercise
 // Show all areas where water became other classes and display the result
