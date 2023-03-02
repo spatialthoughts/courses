@@ -10,5 +10,6 @@ ax.plot(point1[0], point1[1], color='green', marker='^',linestyle='None', label=
 ax.plot(point2[0], point2[1], color='red', marker='o', linestyle='None',label='point2')
 ax.set_xlim([0, 5])
 ax.set_ylim([0, 5])
-plt.legend()
+ax.legend()
+
 plt.show()
