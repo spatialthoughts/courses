@@ -110,9 +110,7 @@ band1 = rds.sel(band=1)
 band1
 ```
 
-## Merging Rasters
-
-Now that you understand the basic data structure of *xarray* and the &rio* extension, let's use it to process some data. We will take 4 individual SRTM tiles and merge them to a single GeoTiff. You will note that `rioxarray` handles the CRS and transform much better - taking care of internal details and providing a simple API.
+## Plotting Multiple Rasters
 
 Open each source file using `open_rasterio()` method and store the resulting datasets in a list.
 
@@ -126,26 +124,16 @@ for tile in srtm_tiles:
     datasets.append(band)
 ```
 
-Use the `merge_arrays()` method from the `rioxarray.merge` module to merge the rasters.
+You can visualize any `DataArray` object by calling `plot()` method. Here we create a subplot with 1 row and 4 columns. The `subplots()` method will return a list of Axes that we can use to render each of the source SRTM rasters. For plots with multiple columns, the Axes will be a nested list. To easily iterate over it, we can use `.flat` which returns a 1D iterator on the axes. 
 
-
-```python
-merged = merge_arrays(datasets)
-merged
-```
-
-## Plotting Multiple Rasters
-
-You can visualize any `DataArray` object by calling `plot()` method. Here we create a row of 4 plots and render each of the source SRTM rasters. 
-
-We can use the `cmap` option to specify a color ramp. Here we are using the built-in *Greys* ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values.
+While plotting the data, we can use the `cmap` option to specify a color ramp. Here we are using the built-in *Greys* ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values.
 
 
 ```python
 fig, axes = plt.subplots(1, 4)
 fig.set_size_inches(15,3)
-for index, da in enumerate(datasets):
-    ax = axes[index]
+for index, ax in enumerate(axes.flat):
+    da = datasets[index]
     im = da.plot.imshow(ax=ax, cmap='Greys_r')
     filename = srtm_tiles[index]
     ax.set_title(filename)
@@ -156,11 +144,25 @@ plt.show()
 
 
     
-![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_27_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_23_0.png)
     
 
 
-Similarly, we can visualize the merged raster.
+## Merging Rasters
+
+Now that you understand the basic data structure of *xarray* and the &rio* extension, let's use it to process some data. We will take 4 individual SRTM tiles and merge them to a single GeoTiff. You will note that `rioxarray` handles the CRS and transform much better - taking care of internal details and providing a simple API.
+
+We will use the `merge_arrays()` method from the `rioxarray.merge` module to merge the rasters. We can also specify an optional `method` that controls how overlapping tiles are merged. Here we have chosen `first` which takes the value of the first raster in the overlapping region.
+
+Reference: [`merge_arrays()`](https://corteva.github.io/rioxarray/html/rioxarray.html#rioxarray.merge.merge_arrays)
+
+
+```python
+merged = merge_arrays(datasets, method='first')
+merged
+```
+
+We can now visualize the merged raster.
 
 
 ```python
