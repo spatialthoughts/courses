@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 st.title('A Simple Dashboard')
 st.write('This dashboard displays a chart for the selected region.')
 
-@st.cache
+@st.cache_data
 def load_data():
     data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
     csv_file = 'highway_lengths_by_district.csv'

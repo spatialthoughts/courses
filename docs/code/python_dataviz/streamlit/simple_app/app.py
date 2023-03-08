@@ -11,7 +11,7 @@ address = st.text_input('Enter an address.')
 
 ORS_API_KEY = '<your api key>'
 
-@st.cache
+@st.cache_data
 def geocode(query):
     parameters = {
         'api_key': ORS_API_KEY,

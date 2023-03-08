@@ -20,7 +20,7 @@ placeholder = st.empty()
 
 ORS_API_KEY = st.secrets['ORS_API_KEY']
 
-@st.cache
+@st.cache_data
 def geocode(query):
     parameters = {
         'api_key': ORS_API_KEY,

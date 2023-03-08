@@ -182,16 +182,33 @@ Streamlit is a Python library that allows you to create web-apps and dashboard b
 
 You need to install the `streamlit` package to create the app. We will be using Anaconda to install ``streamlit`` and related packages on your machine. Please review the [Anaconda Installation Guide](https://courses.spatialthoughts.com/python-foundation.html#installation-and-setting-up-the-environment) for step-by-step instructions.
 
-Once you have installed Anaconda, open *Anaconda Prompt* or a *Terminal* and run the following commands.
+1. Once you have installed Anaconda, open *Anaconda Prompt* or a *Terminal* and run the following commands.
 
 ```
+conda update --all
 conda create --name streamlit -y
 conda activate streamlit
-conda install -c conda-forge streamlit -y
-conda install -c conda-forge leafmap geopandas streamlit-folium -y
 ```
 
-After the installation is done, run the following command.
+2. Now your environment is ready. We will install the required packages. First install `geopandas`.
+
+```
+conda install -c conda-forge geopandas  -y
+```
+
+3. Next we will install `streamlit` and `leafmap`.
+
+```
+conda install -c conda-forge streamlit streamlit-folium leafmap -y
+```
+
+Some users have reported problems where conda is not able to resolve the environment for installing these packages. Here is an alternate installation procedure if you face difficulties with above. After install geopandas, switch to using `pip` for installing the remaining packages.
+
+```
+pip install streamlit streamlit-folium leafmap
+```
+
+4. After the installation is done, run the following command.
 
 ```
 streamlit hello
@@ -280,7 +297,7 @@ knitr::include_graphics('images/python_dataviz/dashboard6.png')
 ```
 
 
-7. Let's add a dropdown menu with the list of admin regions. We first get the names from the `DISTRICT` column and use `st.selectbox()` to add a dropdown selector. Streamlit apps always run the entire `app.py` whenever any selection is changed. With our current app structure, whenever the user selected a new admin region, the source file will be fetched again and a new dataframe will be created. This is not required as the source data does not change on every interaction. A good practice is to put the data fetching in a function and use the `@st.cache` decorator which will cache the results. Anytime the function is called with the same arguments, it will return the cached version of the data instead of fetching it.
+7. Let's add a dropdown menu with the list of admin regions. We first get the names from the `DISTRICT` column and use `st.selectbox()` to add a dropdown selector. Streamlit apps always run the entire `app.py` whenever any selection is changed. With our current app structure, whenever the user selected a new admin region, the source file will be fetched again and a new dataframe will be created. This is not required as the source data does not change on every interaction. A good practice is to put the data fetching in a function and use the `@st.cache_data` decorator which will cache the results. Anytime the function is called with the same arguments, it will return the cached version of the data instead of fetching it.
 
 ```{python eval=FALSE}
 import streamlit as st
@@ -290,7 +307,7 @@ import pandas as pd
 st.title('A Simple Dashboard')
 st.write('This dashboard displays a chart for the selected region.')
 
-@st.cache
+@st.cache_data
 def load_data():
     data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
     csv_file = 'highway_lengths_by_district.csv'
@@ -321,7 +338,7 @@ import matplotlib.pyplot as plt
 st.title('A Simple Dashboard')
 st.write('This dashboard displays a chart for the selected region.')
 
-@st.cache
+@st.cache_data
 def load_data():
     data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
     csv_file = 'highway_lengths_by_district.csv'
@@ -409,7 +426,7 @@ address = st.text_input('Enter an address.')
 
 ORS_API_KEY = '<your api key>'
 
-@st.cache
+@st.cache_data
 def geocode(query):
     parameters = {
         'api_key': ORS_API_KEY,
@@ -488,7 +505,7 @@ knitr::include_graphics('images/python_dataviz/mapping_dashboard1.png')
 ```
 
 
-2. We now use `geopandas` to read 2 vector layers from a geopackage and `pandas` to read a CSV file containing road statistics. We put the code for data fetching inside a function and cache it. GeoDataFrames objects do not work well with the legacy `@st.cache` function, so we use the newer `@st.experimental_memo` function which caches the items by value and doesn't give an error about mutativing the items stored in the cache.
+2. We now use `geopandas` to read 2 vector layers from a geopackage and `pandas` to read a CSV file containing road statistics. We put the code for data fetching inside a function and cache it using the `st.cache_data` decorator.
 
 ```{python eval=FALSE}
 import streamlit as st
@@ -507,12 +524,12 @@ data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-da
 gpkg_file = 'karnataka.gpkg'
 csv_file = 'highway_lengths_by_district.csv'
 
-@st.experimental_memo
+@st.cache_data
 def read_gdf(url, layer):
     gdf = gpd.read_file(url, layer=layer)
     return gdf
 
-@st.experimental_memo
+@st.cache_data
 def read_csv(url):
     df = pd.read_csv(url)
     return df
