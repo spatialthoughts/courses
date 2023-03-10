@@ -119,18 +119,19 @@ plt.show()
 
 To create more informative map visualization, we need to reproject this grid to another projection. CartoPy supports a wide range of projections and can plot them using matplotlib. CartoPy creates a GeoAxes object and replaces the default Axes with it. This allows you to plot the data on a specified projection.
 
+We start as usual by create a subplot but specify an additional argument to set the CRS from CartoPy.
+
 Reference: [CartoPy List of Projections](https://scitools.org.uk/cartopy/docs/latest/reference/crs.html?highlight=list#list-of-projections)
 
 
 ```python
-ax = plt.axes(projection=ccrs.Orthographic(0, 30))
-ax.coastlines()
+fig, ax = plt.subplots(1, 1, subplot_kw={'projection': ccrs.Orthographic(0, 30)})
+fig.set_size_inches(5,5)
+
 anomaly2021.plot.imshow(ax=ax,
     vmin=-3, vmax=3, cmap='coolwarm',
     transform=ccrs.PlateCarree())
 
-fig = plt.gcf()
-fig.set_size_inches(5,5)
 plt.tight_layout()
 plt.show()
 ```
@@ -148,8 +149,8 @@ cbar_kwargs = {
     'extend':'neither'
 }
 
-ax = plt.axes(projection=ccrs.Orthographic(0, 30))
-ax.coastlines()
+fig, ax = plt.subplots(1, 1, subplot_kw={'projection': ccrs.Orthographic(0, 30)})
+fig.set_size_inches(10, 10)
 anomaly2021.plot.imshow(
     ax=ax,
     vmin=-3, vmax=3, cmap='coolwarm',
@@ -157,8 +158,7 @@ anomaly2021.plot.imshow(
     add_labels=False,
     cbar_kwargs=cbar_kwargs)
 
-fig = plt.gcf()
-fig.set_size_inches(10,10)
+ax.coastlines()
 plt.title('Temperature Anomaly in 2021 (°C)', fontsize = 14)
 
 output_folder = 'output'
