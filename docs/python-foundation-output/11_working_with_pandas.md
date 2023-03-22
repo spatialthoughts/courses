@@ -1,6 +1,6 @@
 # Working with Pandas
 
-![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/pandas-logo.png?raw=1)
+![](images/python_foundation/pandas-logo.png)
 
 Pandas is a powerful library for working with data. Pandas provides fast and easy functions for reading data from files, and analyzing it.
 

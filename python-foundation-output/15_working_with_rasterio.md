@@ -128,7 +128,7 @@ new_dataset = rasterio.open(output_path, 'w',
                             count=1,
                             nodata=-32768.0,
                             dtype=merged_data.dtype,
-                            crs='+proj=latlong',
+                            crs='EPSG:4326',
                             transform=merged_transform)
 new_dataset.write(merged_data)
 new_dataset.close()

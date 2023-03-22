@@ -96,7 +96,7 @@ Visit [OpenRouteService Sign-up page](https://openrouteservice.org/dev/#/signup)
 
 
 ```python
-ORS_API_KEY = '<replace this with your key>'
+ORS_API_KEY = 'replace this with your key'
 ```
 
 We will use the OpenRouteServices's [Directions Service](https://openrouteservice.org/dev/#/api-docs/v2/directions/{profile}/get). This service returns the driving, biking or walking directions between the given origin and destination points.
@@ -150,6 +150,40 @@ print(distance/1000)
 
 You can compare this distance to the straight-line distance and see the difference.
 
+## Exercise 1
+
+Replace the `ORS_API_KEY` with your own key in the code below. Change the cities with your chosen cities and run the cell to see the summary of driving directions. Extract the values for `distance` (meters) and `duration` (seconds). Convert and print the driving distance in km and driving time in minutes.
+
+
+```python
+import requests
+
+ORS_API_KEY = 'replace this with your key'
+
+san_francisco = (37.7749, -122.4194)
+new_york = (40.661, -73.944)
+
+parameters = {
+    'api_key': ORS_API_KEY,
+    'start' : '{},{}'.format(san_francisco[1], san_francisco[0]),
+    'end' : '{},{}'.format(new_york[1], new_york[0])
+}
+
+response = requests.get(
+    'https://api.openrouteservice.org/v2/directions/driving-car', params=parameters)
+
+if response.status_code == 200:
+    print('Request successful.')
+    data = response.json()
+else:
+    print('Request failed.')
+
+data = response.json()
+
+summary = data['features'][0]['properties']['summary']
+print(summary)
+```
+
 ## API Rate Limiting
 
 Many web APIs enforce *rate limiting* - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent. 
@@ -170,9 +204,9 @@ for x in range(10):
     time.sleep(1)
 ```
 
-## Exercise
+## Exercise 2
 
-Below cell contains a dictionary with 3 destination cities and their coordinates. Write a `for` loop to iterate over the `destination_cities` disctionary and call `get_driving_distance()` function to print real driving distance between San Fransico and each city. Rate limit your queries by adding `time.sleep(2)` between successive function calls.
+Below cell contains a dictionary with 3 destination cities and their coordinates. Write a `for` loop to iterate over the `destination_cities` disctionary and call `get_driving_distance()` function to print real driving distance between San Fransico and each city. Rate limit your queries by adding `time.sleep(2)` between successive function calls. Make sure to replace the `ORS_API_KEY` value with your own key.
 
 
 ```python
@@ -180,7 +214,7 @@ import csv
 import os
 import requests
 import time
-ORS_API_KEY = '<replace this with your key>'
+ORS_API_KEY = 'replace this with your key'
 
 def get_driving_distance(source_coordinates, dest_coordinates):
     parameters = {

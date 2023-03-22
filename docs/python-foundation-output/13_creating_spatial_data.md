@@ -81,8 +81,16 @@ print('Successfully written output file at {}'.format(output_path))
 
 The data package contains multiple geonames text files from different countries in the `geonames/` folder. Write code to read all the files, merge them and extract the mountain features to a single geopackage.
 
-- Hint1: Use the `os.listdir()` method to get all files in a directory.
-- Hint2: Use the Pandas method `concat()` to merge multiple dataframes.
+- Example Workflow:
+    - 1. Create an empty list called `dataframes`
+    - 2. Iterate over the filenames and within the loop
+        - a. Construct the path to the file
+        - b. Read it using pandas
+        - c. Filter it for the mountain features
+        - d. Append to the list `dataframes`. 
+    - Use pd.concat() function to merge the list of dataframes.
+    - Create a GeoDataFrame
+    - Write the GeoDataFrame to a file.
 
 
 ```python
@@ -93,13 +101,8 @@ import geopandas as gpd
 data_pkg_path = 'data/geonames/'
 files = os.listdir(data_pkg_path)
 
-filepaths = []
 for file in files:
-    filepaths.append(os.path.join(data_pkg_path, file))
-print(filepaths)
-
-# Iterate over the files, read them using pandas and create a list of dataframes. 
-# You can then use pd.concat() function to merge them
+    print(file)
 ```
 
 ----

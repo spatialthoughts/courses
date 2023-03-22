@@ -1,6 +1,6 @@
 # Working with Geopandas
 
-![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/geopandas.png?raw=1)
+![](images/python_foundation/geopandas.png)
 
 
 GeoPandas extends the Pandas library to enable spatial operations. It provides new data types such as **GeoDataFrame** and **GeoSeries** which are subclasses of Pandas **DataFrame** and **Series** and enables efficient vector data processing in Python.
