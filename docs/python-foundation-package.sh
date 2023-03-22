@@ -1,6 +1,9 @@
 OUTPUT_DIR=~/Downloads/
 PACKAGE_DIR=~/Downloads/python_foundation
 SOLUTIONS_DIR=~/Downloads/python_foundation_solutions
+WEB_DIR=~/projects/python-foundation-web
+
+
 mkdir -p $PACKAGE_DIR/images/python_foundation
 mkdir -p $PACKAGE_DIR/data
 mkdir -p $PACKAGE_DIR/output
@@ -13,3 +16,8 @@ jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/python_f
 jupyter-nbconvert --to markdown  code/python_foundation/[0-9]*.ipynb --output-dir python-foundation-output/
 cp code/python_foundation/*.ipynb $PACKAGE_DIR/
 cp code/python_foundation/solutions/*.ipynb $SOLUTIONS_DIR/
+
+
+# Update python-foundation-web repository
+cp code/python_foundation/*.ipynb $WEB_DIR/
+cp code/python_foundation/*.py $WEB_DIR/
