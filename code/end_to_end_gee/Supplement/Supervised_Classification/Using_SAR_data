@@ -3,7 +3,8 @@
 
 var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7")
 var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var boundary = arkavathy.geometry()
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
 var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
 var rgbVis = {
   min: 0.0,
@@ -26,11 +27,11 @@ function maskCloudAndShadowsSR(image) {
 
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(boundary))
+  .filter(ee.Filter.bounds(geometry))
   .map(maskCloudAndShadowsSR)
   .select('B.*')
   
-var composite = filtered.median().clip(boundary)
+var composite = filtered.median().clip(geometry)
 
 var s1 = ee.ImageCollection("COPERNICUS/S1_GRD")
 var filtered = s1
@@ -41,7 +42,7 @@ var filtered = s1
   // Change the pass to ASCENDING depending on your location
   .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))
   .filterDate('2019-01-01', '2020-01-01')
-  .filterBounds(boundary)
+  .filterBounds(geometry)
   .select('V.')
 
 // Apply Speckle Filter
@@ -69,7 +70,7 @@ function dbToPower(img){
  
 // The RL speckle filter
 function refinedLee(image) {
-   
+  var date = image.date();
   var bandNames = image.bandNames();
   image = dbToPower(image);
    
@@ -172,5 +173,6 @@ function refinedLee(image) {
       .arrayFlatten([['sum']])
       .float();
   })).toBands().rename(bandNames);
-  return powerToDb(ee.Image(result));
+  var resultImage = powerToDb(ee.Image(result));
+  return resultImage.set('system:time_start', date.millis());
 }

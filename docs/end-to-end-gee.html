@@ -1323,7 +1323,7 @@ NDVI computation on an ImageCollection
 <span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> withIndices <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addIndices)<span class="op">;</span></span>
 <span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Composite</span></span>
-<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> withIndices<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span></span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span> withIndices<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">;</span></span>
 <span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(composite)<span class="op">;</span></span>
 <span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract the &#39;ndwi&#39; band and display a NDWI map</span></span>
@@ -1420,7 +1420,7 @@ Map.addLayer(cloudlessMasked, rgbVis, &#39;S2 Cloudless Masked Image&#39;)</code
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> myList <span class="op">=</span> ee<span class="op">.</span><span class="at">List</span><span class="op">.</span><span class="fu">sequence</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
 <span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(myList)</span>
 <span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Use a reducer to compute min and max in the list</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Use a reducer to compute average value</span></span>
 <span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> mean <span class="op">=</span> myList<span class="op">.</span><span class="fu">reduce</span>(ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>())<span class="op">;</span></span>
 <span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(mean)<span class="op">;</span></span>
 <span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a></span>
@@ -5009,53 +5009,96 @@ Correlation Matrix created in Python using data exported from GEE
 </div>
 <div id="calculating-area-by-class" class="section level3">
 <h3>Calculating Area by Class</h3>
-<p>This code snippet shows how to use a <a href="https://developers.google.com/earth-engine/guides/reducers_grouping">Grouped Reducer</a> to calculate area covered by each class in a classified image. It also shows how to use the <code>ui.Chart.image.byClass()</code> function to create a chart showing the area for each class.</p>
-<p><img src="images/end_to_end_gee/area_by_class.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>This code snippet shows how to use a <a href="https://developers.google.com/earth-engine/guides/reducers_grouping">Grouped Reducer</a> to calculate area covered by each class in a classified image. It also shows how to use the <code>ui.Chart.feature.byProperty()</code> function to create a column chart and the <code>ui.Chart.feature.byFeature()</code> function to create a pie chart with areas of each class.</p>
+<p><img src="images/end_to_end_gee/area_by_class_bar.png" width="50%" style="display: block; margin: auto;" /></p>
+<p><img src="images/end_to_end_gee/area_by_class_pie.png" width="50%" style="display: block; margin: auto;" /></p>
 <p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3ASupplement%2FSupervised_Classification%2FCalculating_Area_by_Class" target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb117"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb117-1"><a href="#cb117-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classified <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;users/ujavalgandhi/e2e/bangalore_classified&quot;</span>)<span class="op">;</span></span>
 <span id="cb117-2"><a href="#cb117-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> bangalore <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/public/bangalore_boundary&quot;</span>)<span class="op">;</span></span>
-<span id="cb117-3"><a href="#cb117-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb117-4"><a href="#cb117-4" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
-<span id="cb117-5"><a href="#cb117-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb117-6"><a href="#cb117-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a 2 band image with the area image and the classified image</span></span>
-<span id="cb117-7"><a href="#cb117-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Divide the area image by 1e6 so area results are in Sq Km</span></span>
-<span id="cb117-8"><a href="#cb117-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areaImage <span class="op">=</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelArea</span>()<span class="op">.</span><span class="fu">divide</span>(<span class="fl">1e6</span>)<span class="op">.</span><span class="fu">addBands</span>(classified)<span class="op">;</span></span>
-<span id="cb117-9"><a href="#cb117-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb117-10"><a href="#cb117-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate Area by Class</span></span>
-<span id="cb117-11"><a href="#cb117-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Using a Grouped Reducer</span></span>
-<span id="cb117-12"><a href="#cb117-12" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areas <span class="op">=</span> areaImage<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
-<span id="cb117-13"><a href="#cb117-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">.</span><span class="fu">group</span>({</span>
-<span id="cb117-14"><a href="#cb117-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb117-15"><a href="#cb117-15" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;classification&#39;</span><span class="op">,</span></span>
-<span id="cb117-16"><a href="#cb117-16" aria-hidden="true" tabindex="-1"></a>    })<span class="op">,</span></span>
-<span id="cb117-17"><a href="#cb117-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">geometry</span><span class="op">:</span> bangalore<span class="op">,</span></span>
-<span id="cb117-18"><a href="#cb117-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">scale</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
-<span id="cb117-19"><a href="#cb117-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">4</span><span class="op">,</span></span>
-<span id="cb117-20"><a href="#cb117-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
-<span id="cb117-21"><a href="#cb117-21" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span> </span>
-<span id="cb117-22"><a href="#cb117-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb117-23"><a href="#cb117-23" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classAreas <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(areas<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))</span>
-<span id="cb117-24"><a href="#cb117-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(classAreas)</span>
-<span id="cb117-25"><a href="#cb117-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb117-26"><a href="#cb117-26" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areaChart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">byClass</span>({</span>
-<span id="cb117-27"><a href="#cb117-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">image</span><span class="op">:</span> areaImage<span class="op">,</span></span>
-<span id="cb117-28"><a href="#cb117-28" aria-hidden="true" tabindex="-1"></a>  <span class="dt">classBand</span><span class="op">:</span> <span class="st">&#39;classification&#39;</span><span class="op">,</span> </span>
-<span id="cb117-29"><a href="#cb117-29" aria-hidden="true" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> bangalore<span class="op">,</span></span>
-<span id="cb117-30"><a href="#cb117-30" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
-<span id="cb117-31"><a href="#cb117-31" aria-hidden="true" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">,</span></span>
-<span id="cb117-32"><a href="#cb117-32" aria-hidden="true" tabindex="-1"></a>  <span class="dt">classLabels</span><span class="op">:</span> [<span class="st">&#39;urban&#39;</span><span class="op">,</span> <span class="st">&#39;bare&#39;</span><span class="op">,</span> <span class="st">&#39;water&#39;</span><span class="op">,</span> <span class="st">&#39;vegetation&#39;</span>]<span class="op">,</span></span>
-<span id="cb117-33"><a href="#cb117-33" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb117-34"><a href="#cb117-34" aria-hidden="true" tabindex="-1"></a>  <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Classes&#39;</span>}<span class="op">,</span></span>
-<span id="cb117-35"><a href="#cb117-35" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area Km^2&#39;</span>}<span class="op">,</span></span>
-<span id="cb117-36"><a href="#cb117-36" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area by class&#39;</span><span class="op">,</span></span>
-<span id="cb117-37"><a href="#cb117-37" aria-hidden="true" tabindex="-1"></a>  <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb117-38"><a href="#cb117-38" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;gray&#39;</span> }<span class="op">,</span></span>
-<span id="cb117-39"><a href="#cb117-39" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;brown&#39;</span> }<span class="op">,</span></span>
-<span id="cb117-40"><a href="#cb117-40" aria-hidden="true" tabindex="-1"></a>    <span class="dv">2</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span> }<span class="op">,</span></span>
-<span id="cb117-41"><a href="#cb117-41" aria-hidden="true" tabindex="-1"></a>    <span class="dv">3</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;green&#39;</span> }</span>
-<span id="cb117-42"><a href="#cb117-42" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb117-43"><a href="#cb117-43" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb117-44"><a href="#cb117-44" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(areaChart)<span class="op">;</span> </span></code></pre></div>
+<span id="cb117-3"><a href="#cb117-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> bangalore<span class="op">.</span><span class="fu">geometry</span>()<span class="op">;</span></span>
+<span id="cb117-4"><a href="#cb117-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-5"><a href="#cb117-5" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(classified<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]}<span class="op">,</span> <span class="st">&#39;2019&#39;</span>)<span class="op">;</span></span>
+<span id="cb117-6"><a href="#cb117-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-7"><a href="#cb117-7" aria-hidden="true" tabindex="-1"></a><span class="co">// We can calculate the areas of all classes in a single pass</span></span>
+<span id="cb117-8"><a href="#cb117-8" aria-hidden="true" tabindex="-1"></a><span class="co">// using a Grouped Reducer. Learn more at </span></span>
+<span id="cb117-9"><a href="#cb117-9" aria-hidden="true" tabindex="-1"></a><span class="co">// https://spatialthoughts.com/2020/06/19/calculating-area-gee/</span></span>
+<span id="cb117-10"><a href="#cb117-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-11"><a href="#cb117-11" aria-hidden="true" tabindex="-1"></a><span class="co">// First create a 2 band image with the area image and the classified image</span></span>
+<span id="cb117-12"><a href="#cb117-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Divide the area image by 1e6 so area results are in Sq Km</span></span>
+<span id="cb117-13"><a href="#cb117-13" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areaImage <span class="op">=</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelArea</span>()<span class="op">.</span><span class="fu">divide</span>(<span class="fl">1e6</span>)<span class="op">.</span><span class="fu">addBands</span>(classified)<span class="op">;</span></span>
+<span id="cb117-14"><a href="#cb117-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-15"><a href="#cb117-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate areas</span></span>
+<span id="cb117-16"><a href="#cb117-16" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areas <span class="op">=</span> areaImage<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
+<span id="cb117-17"><a href="#cb117-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">.</span><span class="fu">group</span>({</span>
+<span id="cb117-18"><a href="#cb117-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb117-19"><a href="#cb117-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;classification&#39;</span><span class="op">,</span></span>
+<span id="cb117-20"><a href="#cb117-20" aria-hidden="true" tabindex="-1"></a>    })<span class="op">,</span></span>
+<span id="cb117-21"><a href="#cb117-21" aria-hidden="true" tabindex="-1"></a>    <span class="dt">geometry</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb117-22"><a href="#cb117-22" aria-hidden="true" tabindex="-1"></a>    <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb117-23"><a href="#cb117-23" aria-hidden="true" tabindex="-1"></a>    <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
+<span id="cb117-24"><a href="#cb117-24" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span> </span>
+<span id="cb117-25"><a href="#cb117-25" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb117-26"><a href="#cb117-26" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classAreas <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(areas<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))</span>
+<span id="cb117-27"><a href="#cb117-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-28"><a href="#cb117-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Process results to extract the areas and</span></span>
+<span id="cb117-29"><a href="#cb117-29" aria-hidden="true" tabindex="-1"></a><span class="co">// create a FeatureCollection</span></span>
+<span id="cb117-30"><a href="#cb117-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-31"><a href="#cb117-31" aria-hidden="true" tabindex="-1"></a><span class="co">// We can define a dictionary with class names</span></span>
+<span id="cb117-32"><a href="#cb117-32" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classNames <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>({</span>
+<span id="cb117-33"><a href="#cb117-33" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;0&#39;</span><span class="op">:</span> <span class="st">&#39;urban&#39;</span><span class="op">,</span></span>
+<span id="cb117-34"><a href="#cb117-34" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;1&#39;</span><span class="op">:</span> <span class="st">&#39;bare&#39;</span><span class="op">,</span></span>
+<span id="cb117-35"><a href="#cb117-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;2&#39;</span><span class="op">:</span> <span class="st">&#39;water&#39;</span><span class="op">,</span></span>
+<span id="cb117-36"><a href="#cb117-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;3&#39;</span><span class="op">:</span> <span class="st">&#39;vegetation&#39;</span></span>
+<span id="cb117-37"><a href="#cb117-37" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb117-38"><a href="#cb117-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-39"><a href="#cb117-39" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classAreas <span class="op">=</span> classAreas<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb117-40"><a href="#cb117-40" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> areaDict <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)</span>
+<span id="cb117-41"><a href="#cb117-41" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> classNumber <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;classification&#39;</span>))<span class="op">.</span><span class="fu">format</span>()<span class="op">;</span></span>
+<span id="cb117-42"><a href="#cb117-42" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> className <span class="op">=</span> classNames<span class="op">.</span><span class="fu">get</span>(classNumber)<span class="op">;</span></span>
+<span id="cb117-43"><a href="#cb117-43" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> area <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
+<span id="cb117-44"><a href="#cb117-44" aria-hidden="true" tabindex="-1"></a>    areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;sum&#39;</span>))</span>
+<span id="cb117-45"><a href="#cb117-45" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> {<span class="st">&#39;class&#39;</span><span class="op">:</span> classNumber<span class="op">,</span> <span class="st">&#39;class_name&#39;</span><span class="op">:</span> className<span class="op">,</span> <span class="st">&#39;area&#39;</span><span class="op">:</span> area})</span>
+<span id="cb117-46"><a href="#cb117-46" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb117-47"><a href="#cb117-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-48"><a href="#cb117-48" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> classAreaFc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(classAreas)<span class="op">;</span></span>
+<span id="cb117-49"><a href="#cb117-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-50"><a href="#cb117-50" aria-hidden="true" tabindex="-1"></a><span class="co">// We can now chart the resulting FeatureCollection</span></span>
+<span id="cb117-51"><a href="#cb117-51" aria-hidden="true" tabindex="-1"></a><span class="co">// If your area is large, it is advisable to first Export</span></span>
+<span id="cb117-52"><a href="#cb117-52" aria-hidden="true" tabindex="-1"></a><span class="co">// the FeatureCollection as an Asset and import it once</span></span>
+<span id="cb117-53"><a href="#cb117-53" aria-hidden="true" tabindex="-1"></a><span class="co">// the export is finished.</span></span>
+<span id="cb117-54"><a href="#cb117-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-55"><a href="#cb117-55" aria-hidden="true" tabindex="-1"></a><span class="co">// Let&#39;s create a Bar Chart</span></span>
+<span id="cb117-56"><a href="#cb117-56" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areaChart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byProperty</span>({</span>
+<span id="cb117-57"><a href="#cb117-57" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> classAreaFc<span class="op">,</span></span>
+<span id="cb117-58"><a href="#cb117-58" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xProperties</span><span class="op">:</span> [<span class="st">&#39;area&#39;</span>]<span class="op">,</span></span>
+<span id="cb117-59"><a href="#cb117-59" aria-hidden="true" tabindex="-1"></a>  <span class="dt">seriesProperty</span><span class="op">:</span> <span class="st">&#39;class_name&#39;</span><span class="op">,</span></span>
+<span id="cb117-60"><a href="#cb117-60" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;ColumnChart&#39;</span>)</span>
+<span id="cb117-61"><a href="#cb117-61" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb117-62"><a href="#cb117-62" aria-hidden="true" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Classes&#39;</span>}<span class="op">,</span></span>
+<span id="cb117-63"><a href="#cb117-63" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area Km^2&#39;</span>}<span class="op">,</span></span>
+<span id="cb117-64"><a href="#cb117-64" aria-hidden="true" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area by class&#39;</span><span class="op">,</span></span>
+<span id="cb117-65"><a href="#cb117-65" aria-hidden="true" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb117-66"><a href="#cb117-66" aria-hidden="true" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;gray&#39;</span> }<span class="op">,</span></span>
+<span id="cb117-67"><a href="#cb117-67" aria-hidden="true" tabindex="-1"></a>      <span class="dv">1</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;brown&#39;</span> }<span class="op">,</span></span>
+<span id="cb117-68"><a href="#cb117-68" aria-hidden="true" tabindex="-1"></a>      <span class="dv">2</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span> }<span class="op">,</span></span>
+<span id="cb117-69"><a href="#cb117-69" aria-hidden="true" tabindex="-1"></a>      <span class="dv">3</span><span class="op">:</span> { <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;green&#39;</span> }</span>
+<span id="cb117-70"><a href="#cb117-70" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb117-71"><a href="#cb117-71" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb117-72"><a href="#cb117-72" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(areaChart)<span class="op">;</span> </span>
+<span id="cb117-73"><a href="#cb117-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-74"><a href="#cb117-74" aria-hidden="true" tabindex="-1"></a><span class="co">// We can also create a Pie-Chart</span></span>
+<span id="cb117-75"><a href="#cb117-75" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> areaChart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byFeature</span>({</span>
+<span id="cb117-76"><a href="#cb117-76" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> classAreaFc<span class="op">,</span></span>
+<span id="cb117-77"><a href="#cb117-77" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xProperty</span><span class="op">:</span> <span class="st">&#39;class_name&#39;</span><span class="op">,</span></span>
+<span id="cb117-78"><a href="#cb117-78" aria-hidden="true" tabindex="-1"></a>  <span class="dt">yProperties</span><span class="op">:</span> [<span class="st">&#39;area&#39;</span>]</span>
+<span id="cb117-79"><a href="#cb117-79" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;PieChart&#39;</span>)</span>
+<span id="cb117-80"><a href="#cb117-80" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb117-81"><a href="#cb117-81" aria-hidden="true" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Classes&#39;</span>}<span class="op">,</span></span>
+<span id="cb117-82"><a href="#cb117-82" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area Km^2&#39;</span>}<span class="op">,</span></span>
+<span id="cb117-83"><a href="#cb117-83" aria-hidden="true" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area by class&#39;</span><span class="op">,</span></span>
+<span id="cb117-84"><a href="#cb117-84" aria-hidden="true" tabindex="-1"></a>    <span class="dt">colors</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span><span class="op">,</span> <span class="st">&#39;brown&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]</span>
+<span id="cb117-85"><a href="#cb117-85" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb117-86"><a href="#cb117-86" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(areaChart)<span class="op">;</span> </span></code></pre></div>
 </div>
 <div id="spectral-signature-plots" class="section level3">
 <h3>Spectral Signature Plots</h3>
