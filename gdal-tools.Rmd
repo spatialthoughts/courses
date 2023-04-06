@@ -523,39 +523,9 @@ cd landsat8
 
 ### 1.4.1 Merging individual bands into RGB composite
 
-Let's create an RGB composite image by combining three 3 different bands - Red, Green and Blue - into a single image. We can use the `gdal_merge.py` command to merge different images. Here we must use the `-separate` option which tells the command to place each image in a separate band.
+Let's create an RGB composite image by combining three 3 different bands - Red, Green and Blue - into a single image. Here we must use the `-separate` option which tells the command to place each image in a separate band.
 
-> Note that Windows users need to specify the full path to the GDAL scripts and run it with the python command as shown below. Mac/Linux users can just type the script name directly but if you get an error, you can also specify the full path on Mac/Linux as `python $CONDA_PREFIX/bin/gdal_merge.py`
-
-**Windows**
-```
-python %CONDA_PREFIX%\Scripts\gdal_merge.py ^
-  -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE ^
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif ^
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif ^
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
-```
-
-**Mac/Linux**
-```
-gdal_merge.py \
-  -o rgb.tif -separate -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE \
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif \
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B3.tif \
-  RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B2.tif
-```
-
-Once the command finishes, you can view the result in QGIS. 
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/gdal/rgb.png')
-```
-
-**Tip: Merging Large Files**
-
-The `gdal_merge.py` script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. `gdal_merge.py` can also be slower than using `gdal_translate` - when you have large files. So a preferred approach for merging large files would be using the approach shown earlier in the course.
-
-First, create a virtual raster. `gdalbuildvrt` also has a `-separate` flag to put each file in a different band.
+> Note: GDAL tools also have a `gdal_merge.py` script that can also merge rasters into an image. But this script loads all rasters into memory before merging them. This can lead to excessive RAM usage and out of memory errors when working with large files. `gdal_merge.py` can also be slower than using `gdal_translate` - when you have large files. So a preferred approach for merging large files would be using the virtual raster as shown here.
 
 **Windows**
 ```
@@ -579,6 +549,11 @@ Then use `gdal_translate` to merge them.
 gdal_translate rgb.vrt rgb.tif -co PHOTOMETRIC=RGB -co COMPRESS=DEFLATE 
 ```
 
+Once the command finishes, you can view the result in QGIS. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/rgb.png')
+```
 
 ### 1.4.2 Apply Histogram Stretch and Color Correction
 
@@ -625,6 +600,9 @@ gdalinfo -stats RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.TIF
 ```
 It is important to set NoData value. As seen from the output above, NoData is set to **-999**.
  
+> Note that Windows users need to specify the full path to the GDAL scripts and run it with the python command as shown below. Mac/Linux users can just type the script name directly but if you get an error, you can also specify the full path on Mac/Linux as `python $CONDA_PREFIX/bin/gdal_merge.py`
+
+
 **Windows**
 ```
 python %CONDA_PREFIX%\Scripts\gdal_calc.py ^
@@ -1583,8 +1561,25 @@ If your GDAL version has both KML and LIBKML drivers, OGR will prefer the LIBKML
 
 ## Extracting Image Metadata and Statistics
 
-You can run `gdalinfo` command with the `-json` option which returns the info as a JSON string. This allows you to programatically access the information and parse it. The example below shows how to extract the image statistics returned by `gdalinfo`.
+You can run `gdalinfo` command with the `-json` option which returns the info as a JSON string. This allows you to programatically access the information and parse it. 
 
+Let's say we want to extract the maximum value of the `merged.vrt` created in the [Merging Tiles](#merging-tiles) section. We can get the output of the command as a JSON by supplying the `-json` option.
+
+```
+gdalinfo -stats -json merged.vrt
+```
+
+Next, we need a way to parse the JSON and extract the fields we are interested in. There are many other command-line utilities designed to do just that. Here we use the popular JSON processing utility [jq](https://stedolan.github.io/jq/). You can download and install the `jq CLI` for your operating system and make sure it is in the system path. Then we can extract the required data using the `jq` query like below.
+
+```
+gdalinfo -stats -json merged.vrt | jq ".bands[0].maximum"
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/jq.png')
+```
+
+Alternatively, you can also run the command via Python and use the `json` module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.
 
 ```{python eval=FALSE, code=readLines('code/gdal/gdalinfo.py')}
 ```
