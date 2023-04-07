@@ -827,25 +827,15 @@ gdalwarp -t_srs EPSG:4042 -order 1 -tr 0.005 0.005 \
   -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
 ```
 
-We can use the same GCPs and do a Thin-plate-spline transformation.
-
-**Windows**
-```
-gdalwarp -t_srs EPSG:4042 -tps -tr 0.005 0.005 ^
-  india-with-gcp.tif india-reprojected-tps.tif ^
-  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
-```
-
-**Mac/Linux**
-```
-gdalwarp -t_srs EPSG:4042 -tps -tr 0.005 0.005 \
-  india-with-gcp.tif india-reprojected-tps.tif \
-  -co COMPRESS=JPEG -co JPEG_QUALITY=50 -co PHOTOMETRIC=YCBCR
-```
 
 ```{r echo=FALSE, fig.align='center'}
 knitr::include_graphics('images/gdal/georeference_gcp.png')
 ```
+
+### Exercise 4 
+
+Try the Thin-plate-spline transformation on the `india-with-gcp.tif` file and save the results as `india-reprojected-tps.tif` file. Note the Thin-Place-Splie option is available at `-tps` with the `gdalwarp` command.
+
 
 ## Assignment 
 
@@ -1018,7 +1008,7 @@ knitr::include_graphics('images/gdal/ogr_csv08.png')
 
 This shows the power of OGR command-line tools. In just a single line, we can read, filter, transform and write the results in any output format supported by OGR. 
 
-### Exercise 4
+### Exercise 5
 
 Write a command using `ogr2ogr` that performs the following operations. 
 
@@ -1082,7 +1072,7 @@ knitr::include_graphics('images/gdal/ogrmerge02.png')
 
 > Tip: There is a very useful option `-src_layer_field_name` that can add a new field to the output layer containing the name of the input file which contributed that particular record.
 
-### Exercise 5
+### Exercise 6
 
 Create a new GeoPackage `large_earthquakes.gpkg` containing only the earthquakes with magnitude greater than 4.5.
 
@@ -1584,6 +1574,22 @@ Alternatively, you can also run the command via Python and use the `json` module
 ```{python eval=FALSE, code=readLines('code/gdal/gdalinfo.py')}
 ```
 
+## Group Statistics
+
+We can use SQL GROUP BY clause in `ogr2ogr` to generate summary statistics from a layer. Let's first create a geopackage from the `worldcities.csv` layer.
+
+```
+ogr2ogr -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 \
+  -sql "SELECT city, country, CAST(population as integer) as population from worldcities" \
+  worldcities.gpkg worldcities.csv -nln worldcities
+```
+
+We have a layer `worldcities.gpkg` that has **population** and **country** columns. Let's calculate the total population per country. We can save the resulting statistics as an Excel sheet.
+
+```
+ogr2ogr stats.xlsx worldcities.gpkg \
+  -sql "SELECT country, sum(population) as total_population from worldcities GROUP BY country"
+```
 
 ## Using Virtual Layers
 
