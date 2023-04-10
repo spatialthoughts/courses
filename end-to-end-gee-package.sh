@@ -6,6 +6,8 @@ cp -R ~/projects/End-to-End-GEE/03-Supervised-Classification code/end_to_end_gee
 cp -R ~/projects/End-to-End-GEE/04-Change-Detection code/end_to_end_gee/
 cp -R ~/projects/End-to-End-GEE/05-Earth-Engine-Apps code/end_to_end_gee/
 cp -R ~/projects/End-to-End-GEE/Supplement code/end_to_end_gee/
+cp -R ~/projects/End-to-End-GEE/Assignments code/end_to_end_gee/
+
 # Python notebooks
 # Clear output from cells before packaging
 jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/end_to_end_gee/*.ipynb
