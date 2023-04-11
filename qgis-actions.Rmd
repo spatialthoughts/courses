@@ -64,6 +64,174 @@ Download [qgis-actions.zip]()
 
 # 1. Hello World
 
+Let's get started by learning the basics of QGIS Actions.
+
+## 1.1 Extract a Feature from a Layer
+
+We will create an action that takes a layer of all countries in the world and allows you to extract any country polygon by clicking on it.
+
+1. Open QGIS. QGIS comes with a bunch of built-in 'Easter Egg' features that can be triggered by typing a keyword in the *Coordinate* box at the botton of the main window. While many of these are for fun, some provide useful functionality. Enter the keyword **world** into the coordinate box and click *Enter*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld1.png')
+```
+
+2. A new layer named `World Map` will be added to the *Layers* panel. This layer is the [Admin0 - Countries](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/) boundaries dataset from Natural Earth. Let's define an action on this layer. Right-click the layer and select *Properties*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld2.png')
+```
+
+3. Switch to the *Actions* tab and click the *Add a new action* (*+*) button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld3.png')
+```
+
+4. Select **Python** as the *Type*. Enter **Hello World** as the *Description*. This will be the name of the action as it appears in various menu items. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code and click *OK*.
+
+```
+print('Hello World')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld4.png')
+```
+
+5. Click *OK* again to get back to the main QGIS Canvas. We now have an action that will print `Hello World` when we click on a feature. To see the output, open the *Python Console* from **Plugins &rarr; Python Console**. Locate the *Actions* button on the *Attributes Toolbar*. Click the dropdown menu next to it and select *Hello World*. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld5.png')
+```
+
+6. Once the action is selected, click on any feature from the layer. You will see *Hello World* printed in the console.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld6.png')
+```
+
+7. You now know how to define and trigger a Python action. Let's make the action more useful. Instead of printing a static text, let's modify the action to print the name of the country where we clicked. Open the *Attribute Table* of the `World Map` layer. You will notice that the **NAME** attribute contains the country names.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld7.png')
+```
+
+8. Right click the `World Map` layer and select *Properties*. From the *Actions* tab, double click the already defined *Hello World* action.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld8.png')
+```
+
+9. Our action is triggered by clicking on a feature and we can access the attributes of that feature. Select the **NAME** attribute and click *Insert*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld9.png')
+```
+
+10. You will see the value `[%NAME%]` entered in the *Action Text* textbox. This is a special expression syntax which indicates that the value surrounded by `[%` and `%]` will be replaced with the value of the attribute from the feature when the action is triggered.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld10.png')
+```
+
+11. Update the code to print the attribute value as below.
+
+```
+print('[%NAME%]')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld11.png')
+```
+
+12. Click *OK* and get back to the main window. Select the action and click on any feature. You will now see the name of the country printed in the console.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld12.png')
+```
+
+13. Along with all the attributes of the clicked feature, we also have access to other project and layer variables. Update the code as below to print the values of the feature id and layer id along with the value of the `NAME` attribute. Note that we are using the Python [f-strings](https://realpython.com/python-string-formatting/#3-string-interpolation-f-strings-python-36) for formatting the output.
+
+```
+feature_name = '[%NAME%]'
+feature_id = [%$id%]
+layer_id = '[%@layer_id%]'
+print(f'feature name: {feature_name}')
+print(f'feature id: {feature_id}')
+print(f'layer id: {layer_id}')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld13.png')
+```
+
+14. Click *OK* and try the action again. This time you will see the feature id and layer id printed along with the feature name.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld14.png')
+```
+
+15. Now you know how to access the `@layer_id` and `$id` values of the current feature. We can now use it to extract the current feature and create a new layer from it. Replace the *Action Text* with the following code which uses  [`QgsFeatureSource.materialize()`](https://qgis.org/pyqgis/3.0/core/Feature/QgsFeatureSource.html#qgis.core.QgsFeatureSource.materialize) method to create a new memory based vector layer with the query containing the feature id.
+
+```
+feature_name = '[%NAME%]'
+feature_id = [%$id%]
+layer_id = '[%@layer_id%]'
+
+layer = QgsProject.instance().mapLayer(layer_id)
+new_layer = layer.materialize(
+    QgsFeatureRequest().setFilterFids([feature_id]))
+new_layer.setName(feature_name)
+QgsProject.instance().addMapLayer(new_layer)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld15.png')
+```
+
+16. Go back to the main Canvas and close the *Python Console*. Select the *Hello World* action and click on any feature. You will see a new layer added to the *Layers* panel that contains the feature. Really useful!
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld16.png')
+```
+
+17. We have a small problem. As the new layer is created and added to the *Layers* panel, it becomes the active layer. To trigger the action again, we have to select the `World Map` layer again. To prevent this, we can use `[QgisInterface.setActiveLayer()](https://qgis.org/pyqgis/master/gui/QgisInterface.html#qgis.gui.QgisInterface.setActiveLayer)` method to set the current layer as the active layer. We import `iface` in the code to access the current instance ot the `QgisInterface` class.
+
+```
+from qgis.utils import iface
+
+feature_name = '[%NAME%]'
+feature_id = [%$id%]
+layer_id = '[%@layer_id%]'
+
+layer = QgsProject.instance().mapLayer(layer_id)
+new_layer = layer.materialize(
+    QgsFeatureRequest().setFilterFids([feature_id]))
+new_layer.setName(feature_name)
+QgsProject.instance().addMapLayer(new_layer)
+iface.setActiveLayer(layer)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld17.png')
+```
+
+18. Now you are able to click around and extract multiple countries without having to manually switch layers.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld18.png')
+```
+
+## 1.1 Exercise 
+
+Update the action to display an *Info* message on the QGIS message bar as shown below. 
+
+Hint: You can use [iface.messageBar().pushInfo()](https://qgis.org/pyqgis/3.0/gui/Message/QgsMessageBar.html#qgis.gui.QgsMessageBar.pushInfo) method to display a message.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/helloworld_exercise.png')
+```
+
 # Data Credits
 
 
