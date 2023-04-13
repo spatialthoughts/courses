@@ -234,11 +234,11 @@ Hint: You can use [iface.messageBar().pushInfo()](https://qgis.org/pyqgis/3.0/gu
 knitr::include_graphics('images/qgis_actions/helloworld_exercise.png')
 ```
 
-# 2. Automating Data Editing and Selection
+# 2. Automate Data Editing and Selection
 
 In this section, we will work with a dataset of land parcels and learn how QGIS Actions can be used to speed up data selection and editing.
 
-## 2.1 Selecting Multiple Features
+## 2.1 Select Multiple Features
 
 1. Open the `Parcels_Multi_Select.qgz` project from your data package.
 
@@ -359,7 +359,7 @@ selected_ids = [feature.id() for feature in layer.selectedFeatures()]
 knitr::include_graphics('images/qgis_actions/multiselect_exercise.png')
 ```
 
-## 2.2 Updating Field Values
+## 2.2 Update Field Values
 
 1. Open the `Parcels_QA.qgz` project from your data package. 
 
@@ -436,8 +436,156 @@ layer = QgsProject.instance().mapLayer(layer_id)
 knitr::include_graphics('images/qgis_actions/qa_exercise.png')
 ```
 
+# 3. Manage Imagery Collections
+
+Actions also provide a simple and intuitive way to manage large imagery collections using QGIS. In this section, we will learn how to create a *Tile Index* and setup actions to interactively load and remove raster layers of interest.
+
+## 3.1 Load and Remove Raster Layers
+
+1. The first step in our process is to create a tile index layer from a set of raster files in your data package. Open the QGIS Processing Toolbox from **Processing &rarr; Toolbox**. Search for the algorithm named **Tile index**. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex1.png')
+```
+
+2. In the *Tile Index* dialog, click *...*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex2.png')
+```
+
+3. In the *Input files* dialog, click *Add Directory...* button and browse to the **qgis_actions &rarr; imagery** folder. Click *open*. Once the files are listed, click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex3.png')
+```
+
+4. Back in the *Tile Index* dialog, check the *Store absolute path to the indexed rasters* box. Leave all other parameters to their default value and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex4.png')
+```
+
+5. A new layer named *Tile Index* will be loaded in the *Layers* panel. This layer has bounding box polygons for each of the image tiles in the folder along with its path. Open the *Attribute Table*. You will see that the path to the raster tiles is stored in the *location* attribute.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex5.png')
+```
+
+6. Right-click the `Tile Index` layer and select *Properties*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex6.png')
+```
+
+7. Switch to the *Actions* tab and click the *Add a new action* (*+*) button. Select **Python** as the *Type*. Enter **Load Selected Tile** as the *Description*. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code and click *OK*. 
+
+```{python eval=FALSE}
+import os
+from qgis.utils import iface
+
+path = r'[%location%]'
+iface.addRasterLayer(path)
+
+file_name = os.path.basename(path)
+iface.messageBar().pushSuccess(
+  'Success', f'Raster tile {file_name} loaded')
+
+layer_id = '[%@layer_id%]'
+layer = QgsProject.instance().mapLayer(layer_id)
+iface.setActiveLayer(layer)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/tileindex7.png')
+```
+
+8. Click *OK* again to get back to the main QGIS Canvas. Select the action *Load Selected Tile* and click on any polygon to load the raster layer in QGIS. This action allows you to selectively load only the required tiles.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex8.png')
+```
+
+9. Let's setup another action to remove the unwanted tile layers. Right-click the `Tile Index` layer and select *Properties*. Switch to the *Actions* tab and click the *Add a new action* (*+*) button. Select **Python** as the *Type*. Enter **Remove Selected Tile** as the *Description*. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code. Here we use the [`QgsProject.removeMapLayer()`](https://qgis.org/pyqgis/3.0/core/Project/QgsProject.html#qgis.core.QgsProject.removeMapLayer) method to remove the layer. We must also call `iface.mapCanvas().refresh()` to see the results. Click *OK*. 
+
+```{python eval=FALSE}
+import os
+from qgis.utils import iface
+
+path = r'[%location%]'
+
+file_name = os.path.basename(path)
+layer_name = os.path.splitext(file_name)[0]
+layer_list = QgsProject.instance().mapLayersByName(layer_name)
+
+if layer_list:
+  QgsProject.instance().removeMapLayer(layer_list[0])
+  iface.mapCanvas().refresh()
+  iface.messageBar().pushSuccess(
+    'Success', f'Raster tile {file_name} removed.')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/tileindex9.png')
+```
+
+10. Click *OK* again to get back to the main QGIS Canvas. Select the action *Remove Selected Tile* and click on the canvas over any tile that has been loaded in QGIS. That tile will be removed.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex10.png')
+```
+
+We have now finished this section and you are ready to do the exercise. Your can load the `Tile_Index_Checkpoint1.qgz` file in the `solutions` folder to catch up to this point.
+
+## Exercise 4
+
+The action *Load Selected Tile* allows you to load any tile multiple times. This is not desirable since it will create duplicate layers. Update the action to load a tile only if it is not previously loaded in QGIS. It should display an error message when you try to load a tile that is already loaded.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/tileindex_exercise.png')
+```
+
+
+# Supplement
+
+## View Panorama from Mapillary
+
+```{python eval=FALSE}
+import requests
+from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtWebKitWidgets import QWebView
+from qgis.utils import iface
+
+# Sign up at https://www.mapillary.com/developer
+# Replce YOUR_ACCESS_TOKEN with your own token below
+parameters = {
+    'access_token': 'YOUR_ACCESS_TOKEN',
+    'bbox': '{},{},{},{}'.format([%$x%]-0.001,[%$y%]-0.001, [%$x%]+0.001, [%$y%]+0.001),
+    'fields': 'thumb_1024_url',
+	'limit': 1
+}
+
+response = requests.get(
+        'https://graph.mapillary.com/images', params=parameters)
+if response.status_code == 200:
+    data_json = response.json()
+    if data_json['data']:
+        url = data_json['data'][0]['thumb_1024_url']
+        myWV = QWebView(None)
+        myWV.load(QUrl(url))
+        myWV.show()
+    else:
+        qgis.utils.iface.messageBar().pushMessage('No images found')
+```
+
 
 # Data Credits
+
+* Admin0 boundaries: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+* Parcels and Neighborhood boundaries downloaded from [DataSF Open Data Portal](https://datasf.org/opendata/)
+* NAIP 2016 Aerial Imagery for California: The National Agriculture Imagery Program (NAIP). USDA-FSA-APFO Aerial Photography Field Office. Downloaded from [NRCS](https://nrcs.app.box.com/v/naip/folder/18144379349)
+* OpenStreetMap (osm) data layers: Data/Maps Copyright 2023 Geofabrik GmbH and OpenStreetMap Contributors.
 
 
 # License
