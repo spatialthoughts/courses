@@ -70,7 +70,7 @@ Let's get started by learning the basics of QGIS Actions.
 
 We will create an action that takes a layer of all countries in the world and allows you to extract any country polygon by clicking on it.
 
-1. Open QGIS. QGIS comes with a few hidden *Easter Eggs* that can be triggered by typing a keyword in the *Coordinate* box at the bottom of the main window. While many of these are for fun, some provide useful functionality. One such hidden feature is the ability to load a world map by typing a keyword. Enter the keyword **world** into the coordinate box at the bottom of the QGIS window and click *Enter*.
+1. Open QGIS. QGIS comes with a few hidden *Easter Eggs* that can be triggered by typing a keyword in the *Coordinate* box at the bottom of the main window. While many of these are for fun, some provide useful functionality. One such hidden feature is the ability to load a world map by typing a keyword. Enter the keyword **world** into the coordinate box at the bottom of the QGIS window rm and click *Enter*.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/qgis_actions/helloworld1.png')
@@ -90,7 +90,7 @@ knitr::include_graphics('images/qgis_actions/helloworld3.png')
 
 4. Select **Python** as the *Type*. Enter **Hello World** as the *Description*. This will be the name of the action as it appears in various menu items. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code and click *OK*.
 
-```
+```{python eval=FALSE}
 print('Hello World')
 ```
 
@@ -136,7 +136,7 @@ knitr::include_graphics('images/qgis_actions/helloworld10.png')
 
 11. Update the code to print the attribute value as below.
 
-```
+```{python eval=FALSE}
 print('[%NAME%]')
 ```
 
@@ -152,7 +152,7 @@ knitr::include_graphics('images/qgis_actions/helloworld12.png')
 
 13. Along with all the attributes of the clicked feature, we also have access to other project and layer variables. Update the code as below to print the values of the feature id and layer id along with the value of the `NAME` attribute. Note that we are using the Python [f-strings](https://realpython.com/python-string-formatting/#3-string-interpolation-f-strings-python-36) for formatting the output.
 
-```
+```{python eval=FALSE}
 feature_name = '[%NAME%]'
 feature_id = [%$id%]
 layer_id = '[%@layer_id%]'
@@ -173,7 +173,7 @@ knitr::include_graphics('images/qgis_actions/helloworld14.png')
 
 15. Now you know how to access the `@layer_id` and `$id` values of the current feature. We can now use it to extract the current feature and create a new layer from it. Replace the *Action Text* with the following code which uses  [`QgsFeatureSource.materialize()`](https://qgis.org/pyqgis/3.0/core/Feature/QgsFeatureSource.html#qgis.core.QgsFeatureSource.materialize) method to create a new memory based vector layer with the query containing the feature id.
 
-```
+```{python eval=FALSE}
 feature_name = '[%NAME%]'
 feature_id = [%$id%]
 layer_id = '[%@layer_id%]'
@@ -197,7 +197,7 @@ knitr::include_graphics('images/qgis_actions/helloworld16.png')
 
 17. We have a small problem. As the new layer is created and added to the *Layers* panel, it becomes the active layer. To trigger the action again, we have to select the `World Map` layer again. To prevent this, we can use [`QgisInterface.setActiveLayer()`](https://qgis.org/pyqgis/master/gui/QgisInterface.html#qgis.gui.QgisInterface.setActiveLayer) method to set the current layer as the active layer. We import `iface` in the code to access the current instance of the `QgisInterface` class.
 
-```
+```{python eval=FALSE}
 from qgis.utils import iface
 
 feature_name = '[%NAME%]'
@@ -222,7 +222,9 @@ knitr::include_graphics('images/qgis_actions/helloworld17.png')
 knitr::include_graphics('images/qgis_actions/helloworld18.png')
 ```
 
-## 1.1 Exercise 
+We have now finished this section and you are ready to do the exercise. Your can load the `HelloWorld_Checkpoint1.qgz` file in the `solutions` folder to catch up to this point.
+
+## Exercise 1
 
 Update the action to display an *Info* message on the QGIS message bar as shown below. 
 
@@ -231,6 +233,209 @@ Hint: You can use [iface.messageBar().pushInfo()](https://qgis.org/pyqgis/3.0/gu
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/qgis_actions/helloworld_exercise.png')
 ```
+
+# 2. Automating Data Editing and Selection
+
+In this section, we will work with a dataset of land parcels and learn how QGIS Actions can be used to speed up data selection and editing.
+
+## 2.1 Selecting Multiple Features
+
+1. Open the `Parcels_Multi_Select.qgz` project from your data package.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect1.png')
+```
+
+2. Select the `parcels` layer and open the *Attribute Table*. The **mapblklot** attribute contains a unique identifier for each parcels and the **block_num** attribute has a unique identifier for each city block. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect2.png')
+```
+
+3. A city block is a group of parcels that is surrounded by streets. If we select a few parcels belonging to the same city block, you will see that they all have the same value for the **block_num** attribute. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect3.png')
+```
+
+4. A common task while managing such data is to select all parcels belonging to the same block. Let's build an action that allows us to select all parcels from a block with a single click. Right-click the `parcels` layer and select *Properties*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect4.png')
+```
+
+5. Switch to the *Actions* tab and click the *Add a new action* (*+*) button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect5.png')
+```
+
+6. Select **Python** as the *Type*. Enter **Select all Parcels from the Block** as the *Description*. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code and click *OK*. Click *OK* again to get back to the main QGIS Canvas.
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+layer = QgsProject.instance().mapLayer(layer_id)
+
+field_name = 'block_num'
+field_value = '[%block_num%]'
+expression = f'"{field_name}" = \'{field_value}\''
+print(expression)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/multiselect6.png')
+```
+
+7. This action is going to print an expression that can be used to select all parcels from the same block as the parcel where you clicked. Let's test this. Open the *Python Console* from **Plugins &rarr; Python Console**. Locate the *Actions* button on the *Attributes Toolbar*. Click the dropdown menu next to it and select *Select all Parcels from the Block*. Click on any parcel. You will see an expression printed in the console.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect7.png')
+```
+
+8. The expression should work to select all parcels having the same block number. Let's update the action with the code as follows.
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+layer = QgsProject.instance().mapLayer(layer_id)
+
+field_name = 'block_num'
+field_value = '[%block_num%]'
+expression = f'"{field_name}" = \'{field_value}\''
+layer.selectByExpression(expression)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/multiselect8.png')
+```
+
+9. Trigger the action again and click on any parcels. This time you will see that all the parcels from the block will be selected.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect9.png')
+```
+
+10. If you use the action again, the current selection will go away and a new selection will be made. We can change this behavior by supplying an addition *behavior* option to the [`QgsVEctorLayer.selectByExpression()`](https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.selectByExpression) method. Update the code as below.
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+layer = QgsProject.instance().mapLayer(layer_id)
+
+field_name = 'block_num'
+field_value = '[%block_num%]'
+expression = f'"{field_name}" = \'{field_value}\''
+layer.selectByExpression(expression, QgsVectorLayer.AddToSelection)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/multiselect10.png')
+```
+
+11. Now as you click on multiple parcels, the new block selection will be added to the previous selections.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect11.png')
+```
+
+We have now finished this section and you are ready to do the exercise. Your can load the `Parcels_Multi_Select_Checkpoint1.qgz` file in the `solutions` folder to catch up to this point.
+
+## Exercise 2
+
+Add another action to the `parcels` layer called *Extract Selected Features*. This action should create a new memory layer from the selected parcels. The following code block shows how to get a list of selected feature ids that can be used in your solution.
+
+```{python eval=FALSE}
+from qgis.utils import iface
+
+layer_id = '[%@layer_id%]'
+
+layer = QgsProject.instance().mapLayer(layer_id)
+selected_ids = [feature.id() for feature in layer.selectedFeatures()]
+```
+
+**Hint**: Use [`QgsFeatureSource.materialize()`](https://qgis.org/pyqgis/3.0/core/Feature/QgsFeatureSource.html#qgis.core.QgsFeatureSource.materialize) method we learnt in the previous section.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/multiselect_exercise.png')
+```
+
+## 2.2 Updating Field Values
+
+1. Open the `Parcels_QA.qgz` project from your data package. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa2.png')
+```
+
+2. This project contains the same `parcels` layer that has been styled and labeled using the values from the **checked** column. This column contains the value of either **Y** or **N**. Let's say we are tasked with checking each feature and then updating the value of this field to **Y** once it has been checked. Let's setup an action to automate this QA process.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa2.png')
+```
+
+3. Right-click the `parcels` layer and select *Properties*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa3.png')
+```
+
+4. Switch to the *Actions* tab and click the *Add a new action* (*+*) button. Select **Python** as the *Type*. Enter **Mark QA Done** as the *Description*. Leave the *Action Scopes* to the default selected values of **Feature** and **Canvas**. Under the *Action Text* enter the following Python code and click *OK*. This code uses [`QgsVectorLayer.changeAttributeValue()`](https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.changeAttributeValue) method to update the field **checked**'s value to **Y**. Note that we are using the `with edit(layer)` statement to wrap our editing code in a more semantic code block. This will ensure that the changes committed at the end or rolled back appropriately if there are any errors.
+
+```{python eval=FALSE}
+feature_id = [%$id%]
+layer_id = '[%@layer_id%]'
+field_name = 'checked'
+
+layer = QgsProject().instance().mapLayer(layer_id)
+field = layer.fields().lookupField(field_name)
+
+with edit(layer):
+    layer.changeAttributeValue(feature_id, field, 'Y')
+    iface.messageBar().pushInfo('Success', 'Field Value Updated')
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/qa4.png')
+```
+
+5. Click *OK* again to get back to the main QGIS Canvas. Select the action and click on any parcel with the **N** label. You will see that the value is updated and the parcel turns green instantly.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa5.png')
+```
+
+6. Actions can also be trigged from other interfaces. Let's add this action to the attribute table. Right-click the `parcels` layer and select *Properties*. Switch to the *Actions* tab. At the bottom, check the *Show in Attribute Table* box. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/qgis_actions/qa6.png')
+```
+
+7. Click *OK* again to get back to the main QGIS Canvas. Open the *Attribute Table* for the `parcels` layer. You will notice that there is a new *Actions* column with the *Mark QA Done* action added to the table. You can click on the button to trigger the action for each feature.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa7.png')
+```
+
+We have now finished this section and you are ready to do the exercise. Your can load the `Parcels_QA_Checkpoint1.qgz` file in the `solutions` folder to catch up to this point.
+
+## Exercise 3
+
+Add another action to the `parcels` layer called *Delete Parcel*. This action should delete the feature when selected. Use the following code block to start working on your solution.
+
+```{python eval=FALSE}
+feature_id = [%$id%]
+layer_id = '[%@layer_id%]'
+
+layer = QgsProject.instance().mapLayer(layer_id)
+```
+
+*Hint:* You can use [`QgsVectorLayer.deleteFeature()`](https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.deleteFeature) method to delete a feature by its feature id.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/qa_exercise.png')
+```
+
 
 # Data Credits
 
