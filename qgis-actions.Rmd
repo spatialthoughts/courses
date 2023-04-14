@@ -550,6 +550,16 @@ knitr::include_graphics('images/qgis_actions/tileindex_exercise.png')
 
 ## View Panorama from Mapillary
 
+QGIS actions can also be used to query an external API and display the results. The example below shows how to use the [Mapillary API](https://www.mapillary.com/developer/api-documentation) to fetch street-level imagery and display them in QGIS. 
+
+To try the action, open the `Mapillary_Images.qgz` project from the data package. The `pharmacies` layer has an action defined called **Show Panorama from Mapillary** with the code below. Before you can use this action, you will need a *Client Token* from Mapillary. [Sign-up for a Mapillary Developer Account](https://www.mapillary.com/developer) and register a new application. Click on *View* under *Client Token* and obtain your access token.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/mapillary1.png')
+```
+
+Open the code for the action and replace `YOUR_ACCESS_TOKEN` with your access token.
+
 ```{python eval=FALSE}
 import requests
 from qgis.PyQt.QtCore import QUrl
@@ -578,6 +588,38 @@ if response.status_code == 200:
         qgis.utils.iface.messageBar().pushMessage('No images found')
 ```
 
+Once the token is updated, you can select the action and click on any pharmacy location. The action will send a request to mapillary API to fetch the nearest imagery. It will be then displayed in a new window in QGIS.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/mapillary2.png')
+```
+
+## Select Features in a Buffer Zone
+
+Another useful application of action is to select features from a layer within a buffer zone. Open the `Buffer_Select.qgz` project from your data package. This project contains a `roads` and a `buildings` layer. The `roads` layer has an action defined called **Select Buildings within Buffer** that selects all buildings that are within 20 meters of the selected road segment.
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+fid = [% $id %]
+distance = 20
+
+line_layer = QgsProject.instance().mapLayer(layer_id)
+line_feature = line_layer.getFeature(fid)
+line_geometry = line_feature.geometry().buffer(distance, 5)
+
+polygon_layer_name = 'buildings'
+polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
+nearby_features = [p.id() for p in polygon_layer.getFeatures() 
+    if p.geometry().intersects(line_geometry) ]
+polygon_layer.selectByIds(nearby_features)
+```
+
+Select the action and click on any road feature. All the buildings within the buffer zone will be selected.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/buffer_select1.png')
+```
 
 # Data Credits
 
