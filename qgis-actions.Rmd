@@ -313,7 +313,7 @@ knitr::include_graphics('images/qgis_actions/multiselect8.png')
 knitr::include_graphics('images/qgis_actions/multiselect9.png')
 ```
 
-10. If you use the action again, the current selection will go away and a new selection will be made. We can change this behavior by supplying an addition *behavior* option to the [`QgsVEctorLayer.selectByExpression()`](https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.selectByExpression) method. Update the code as below.
+10. If you use the action again, the current selection will go away and a new selection will be made. We can change this behavior by supplying an addition *behavior* option to the [`QgsVectorLayer.selectByExpression()`](https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.selectByExpression) method. Update the code as below.
 
 ```{python eval=FALSE}
 layer_id = '[%@layer_id%]'
@@ -540,6 +540,7 @@ We have now finished this section and you are ready to do the exercise. Your can
 
 The action *Load Selected Tile* allows you to load any tile multiple times. This is not desirable since it will create duplicate layers. Update the action to load a tile only if it is not previously loaded in QGIS. It should display an error message when you try to load a tile that is already loaded.
 
+Hint: Use `iface.messageBar().pushCritical()` to display an error message.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/qgis_actions/tileindex_exercise.png')
@@ -547,6 +548,122 @@ knitr::include_graphics('images/qgis_actions/tileindex_exercise.png')
 
 
 # Supplement
+
+## Select Features in a Buffer Zone
+
+Another useful application of action is to select features from a layer within a buffer zone. Open the `Buffer_Select.qgz` project from your data package. This project contains a `roads` and a `buildings` layer. The `roads` layer has an action defined called **Select Buildings within Buffer** that selects all buildings that are within 20 meters of the selected road segment.
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+fid = [% $id %]
+distance = 20
+
+line_layer = QgsProject.instance().mapLayer(layer_id)
+line_feature = line_layer.getFeature(fid)
+line_geometry = line_feature.geometry().buffer(distance, 5)
+
+polygon_layer_name = 'buildings'
+polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
+nearby_features = [p.id() for p in polygon_layer.getFeatures() 
+    if p.geometry().intersects(line_geometry) ]
+polygon_layer.selectByIds(nearby_features)
+```
+
+Select the action and click on any road feature. All the buildings within the buffer zone will be selected.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/buffer_select1.png')
+```
+
+## Reversing Line Direction using Processing Algorithm
+
+The QGIS Processing Toolbox contains many useful algorithms. You can call any algorithms using Python from Actions. This example shows how to setup an action to run a processing algorithm a line feature to reverse direction.
+
+We will use the **Vector Geometry &rarr; Reverse line direction** algorithm. By default, all Processing algorithms create new layer. If we want to edit the layer, we must enable the [Edit Features In-Place mode](https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#the-processing-in-place-layer-modifier). The same mode can be invoked from PyQGIS via `execute_in_place()` method. We will define an action 
+
+Open the `Network_Linedirection.qgz` project. It contains a line layer named `street_centerlines` which has been styled to show an arrow in the direction of the line. We have defined an action **Reverse Line Direction** on this layer with the following code.
+
+```{python eval=FALSE}
+from processing.gui.AlgorithmExecutor import execute_in_place
+
+layer_id = '[%@layer_id%]'
+layer = QgsProject.instance().mapLayer(layer_id)
+fid = [% $id %]
+layer.selectByIds([fid])
+
+registry = QgsApplication.instance().processingRegistry()
+algorithm = registry.algorithmById('native:reverselinedirection')
+
+parameters = {
+    'INPUT': layer,
+    'selectedFeaturesOnly': True,
+    'featureLimit': -1,
+   ' geometryCheck': QgsFeatureRequest.GeometryAbortOnInvalid
+}
+with edit(layer):
+    execute_in_place(algorithm, parameters)
+    
+layer.removeSelection()
+```
+
+Select the action and click on any line segment. You will see the line direction will get reversed. Our Python action saves many extra clicks compared to executing this via the Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/reverse_line.png')
+```
+
+## Creating Isochrones using ORS Tools plugin
+
+Similar to native algorithms, we can also call any third-party algorithms added from QGIS Plugins. This example shows how to use the **ORS Tools &rarr; Isochrones &rarr; Isochrones from point** algorithm to generate a walking-directions isochrone from a point layer. 
+
+Before using this example, you must install the *ORS Tools* plugin and configure it. Follow the steps below for configuration after you have installed the plugin.
+
+* Visit [OpenRouteService Sign-Up](https://openrouteservice.org/dev/#/signup) page and create an account. Once your account is activated, visit your [Dashboard](https://openrouteservice.org/dev/#/home) and request a token. Select Standard as the Token type and enter **QGIS** as the Token name. Click *CREATE TOKEN*.
+* In QGIS, go to **Web &rarr; ORS Tools &rarr; Provider Settings** and enter the API key created in the previous step.
+
+Now you are ready to try out the action. Open the `Stations_Isochrones.qgz` project from your data package. This project has a `san_francisco_stations` layer with a few actions such as **Calculate Isochrone (1km)** defined with code similar to below.
+
+```{python eval=FALSE}
+import processing
+from qgis.utils import iface
+
+x_coord = [%@click_x%]
+y_coord = [%@click_y%]
+layer_id = '[%@layer_id%]'
+# Distance in meters
+distance = 1000
+
+# Check if ORS Tools in available
+providers = [x.name() for x in QgsApplication.processingRegistry().providers()]
+
+if 'ORS Tools' not in providers:
+    iface.messageBar().pushCritical(
+      'Error',
+      'This action requires the ORS Tools plugin. Please install and configure the plugin.')
+else:
+    input_point = f'{x_coord},{y_coord}'
+    result = processing.run(
+        'ORS Tools:isochrones_from_point',{
+        'INPUT_PROVIDER':0,'INPUT_PROFILE':6,'INPUT_POINT': input_point,
+        'INPUT_METRIC':1,'INPUT_RANGES':f'{distance}', 'INPUT_AVOID_FEATURES':[],
+        'INPUT_AVOID_BORDERS':None,'INPUT_AVOID_COUNTRIES':'',
+        'INPUT_AVOID_POLYGONS':None,'OUTPUT':'TEMPORARY_OUTPUT'
+        }
+    )
+    new_layer = result['OUTPUT']
+    new_layer.setName(f'Isochrone Polygon ({distance}m)')
+    QgsProject.instance().addMapLayer(new_layer)
+
+    layer = QgsProject.instance().mapLayer(layer_id)
+    iface.setActiveLayer(layer)
+```
+
+Select the layer and use the action **Calculate Isochrone (1km)** and click on any point. The OpenRouteService API will generate a isochrone using the OpenStreetMap(OSM) network and you will see a polygon of all areas reachable by walk within 1 km of the station. Similarly, you can try out other actions for different distances.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_actions/isochrone.png')
+```
+
 
 ## View Panorama from Mapillary
 
@@ -594,32 +711,6 @@ Once the token is updated, you can select the action and click on any pharmacy l
 knitr::include_graphics('images/qgis_actions/mapillary2.png')
 ```
 
-## Select Features in a Buffer Zone
-
-Another useful application of action is to select features from a layer within a buffer zone. Open the `Buffer_Select.qgz` project from your data package. This project contains a `roads` and a `buildings` layer. The `roads` layer has an action defined called **Select Buildings within Buffer** that selects all buildings that are within 20 meters of the selected road segment.
-
-```{python eval=FALSE}
-layer_id = '[%@layer_id%]'
-fid = [% $id %]
-distance = 20
-
-line_layer = QgsProject.instance().mapLayer(layer_id)
-line_feature = line_layer.getFeature(fid)
-line_geometry = line_feature.geometry().buffer(distance, 5)
-
-polygon_layer_name = 'buildings'
-polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
-nearby_features = [p.id() for p in polygon_layer.getFeatures() 
-    if p.geometry().intersects(line_geometry) ]
-polygon_layer.selectByIds(nearby_features)
-```
-
-Select the action and click on any road feature. All the buildings within the buffer zone will be selected.
-
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/qgis_actions/buffer_select1.png')
-```
 
 # Data Credits
 

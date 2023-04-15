@@ -383,8 +383,10 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#supplement">Supplement</a>
 <ul>
-<li><a href="#view-panorama-from-mapillary">View Panorama from Mapillary</a></li>
 <li><a href="#select-features-in-a-buffer-zone">Select Features in a Buffer Zone</a></li>
+<li><a href="#reversing-line-direction-using-processing-algorithm">Reversing Line Direction using Processing Algorithm</a></li>
+<li><a href="#creating-isochrones-using-ors-tools-plugin">Creating Isochrones using ORS Tools plugin</a></li>
+<li><a href="#view-panorama-from-mapillary">View Panorama from Mapillary</a></li>
 </ul></li>
 <li><a href="#data-credits">Data Credits</a></li>
 <li><a href="#license">License</a></li>
@@ -585,7 +587,7 @@ $(document).ready(function () {
 </ol>
 <p><img src="images/qgis_actions/multiselect9.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="10" style="list-style-type: decimal">
-<li>If you use the action again, the current selection will go away and a new selection will be made. We can change this behavior by supplying an addition <em>behavior</em> option to the <a href="https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.selectByExpression"><code>QgsVEctorLayer.selectByExpression()</code></a> method. Update the code as below.</li>
+<li>If you use the action again, the current selection will go away and a new selection will be made. We can change this behavior by supplying an addition <em>behavior</em> option to the <a href="https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.selectByExpression"><code>QgsVectorLayer.selectByExpression()</code></a> method. Update the code as below.</li>
 </ol>
 <div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsProject.instance().mapLayer(layer_id)</span>
@@ -743,63 +745,136 @@ $(document).ready(function () {
 <div id="exercise-4" class="section level2">
 <h2>Exercise 4</h2>
 <p>The action <em>Load Selected Tile</em> allows you to load any tile multiple times. This is not desirable since it will create duplicate layers. Update the action to load a tile only if it is not previously loaded in QGIS. It should display an error message when you try to load a tile that is already loaded.</p>
+<p>Hint: Use <code>iface.messageBar().pushCritical()</code> to display an error message.</p>
 <p><img src="images/qgis_actions/tileindex_exercise.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="supplement" class="section level1">
 <h1>Supplement</h1>
+<div id="select-features-in-a-buffer-zone" class="section level2">
+<h2>Select Features in a Buffer Zone</h2>
+<p>Another useful application of action is to select features from a layer within a buffer zone. Open the <code>Buffer_Select.qgz</code> project from your data package. This project contains a <code>roads</code> and a <code>buildings</code> layer. The <code>roads</code> layer has an action defined called <strong>Select Buildings within Buffer</strong> that selects all buildings that are within 20 meters of the selected road segment.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fid <span class="op">=</span> [<span class="op">%</span> $id <span class="op">%</span>]</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>distance <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>line_layer <span class="op">=</span> QgsProject.instance().mapLayer(layer_id)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>line_feature <span class="op">=</span> line_layer.getFeature(fid)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>line_geometry <span class="op">=</span> line_feature.geometry().<span class="bu">buffer</span>(distance, <span class="dv">5</span>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>polygon_layer_name <span class="op">=</span> <span class="st">&#39;buildings&#39;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>polygon_layer <span class="op">=</span> QgsProject.instance().mapLayersByName(polygon_layer_name)[<span class="dv">0</span>]</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>nearby_features <span class="op">=</span> [p.<span class="bu">id</span>() <span class="cf">for</span> p <span class="kw">in</span> polygon_layer.getFeatures() </span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> p.geometry().intersects(line_geometry) ]</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>polygon_layer.selectByIds(nearby_features)</span></code></pre></div>
+<p>Select the action and click on any road feature. All the buildings within the buffer zone will be selected.</p>
+<p><img src="images/qgis_actions/buffer_select1.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="reversing-line-direction-using-processing-algorithm" class="section level2">
+<h2>Reversing Line Direction using Processing Algorithm</h2>
+<p>The QGIS Processing Toolbox contains many useful algorithms. You can call any algorithms using Python from Actions. This example shows how to setup an action to run a processing algorithm a line feature to reverse direction.</p>
+<p>We will use the <strong>Vector Geometry → Reverse line direction</strong> algorithm. By default, all Processing algorithms create new layer. If we want to edit the layer, we must enable the <a href="https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#the-processing-in-place-layer-modifier">Edit Features In-Place mode</a>. The same mode can be invoked from PyQGIS via <code>execute_in_place()</code> method. We will define an action</p>
+<p>Open the <code>Network_Linedirection.qgz</code> project. It contains a line layer named <code>street_centerlines</code> which has been styled to show an arrow in the direction of the line. We have defined an action <strong>Reverse Line Direction</strong> on this layer with the following code.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> processing.gui.AlgorithmExecutor <span class="im">import</span> execute_in_place</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsProject.instance().mapLayer(layer_id)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>fid <span class="op">=</span> [<span class="op">%</span> $id <span class="op">%</span>]</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>layer.selectByIds([fid])</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>registry <span class="op">=</span> QgsApplication.instance().processingRegistry()</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>algorithm <span class="op">=</span> registry.algorithmById(<span class="st">&#39;native:reverselinedirection&#39;</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>parameters <span class="op">=</span> {</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;INPUT&#39;</span>: layer,</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;selectedFeaturesOnly&#39;</span>: <span class="va">True</span>,</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;featureLimit&#39;</span>: <span class="op">-</span><span class="dv">1</span>,</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>   <span class="st">&#39; geometryCheck&#39;</span>: QgsFeatureRequest.GeometryAbortOnInvalid</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> edit(layer):</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    execute_in_place(algorithm, parameters)</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>layer.removeSelection()</span></code></pre></div>
+<p>Select the action and click on any line segment. You will see the line direction will get reversed. Our Python action saves many extra clicks compared to executing this via the Toolbox.</p>
+<p><img src="images/qgis_actions/reverse_line.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="creating-isochrones-using-ors-tools-plugin" class="section level2">
+<h2>Creating Isochrones using ORS Tools plugin</h2>
+<p>Similar to native algorithms, we can also call any third-party algorithms added from QGIS Plugins. This example shows how to use the <strong>ORS Tools → Isochrones → Isochrones from point</strong> algorithm to generate a walking-directions isochrone from a point layer.</p>
+<p>Before using this example, you must install the <em>ORS Tools</em> plugin and configure it. Follow the steps below for configuration after you have installed the plugin.</p>
+<ul>
+<li>Visit <a href="https://openrouteservice.org/dev/#/signup">OpenRouteService Sign-Up</a> page and create an account. Once your account is activated, visit your <a href="https://openrouteservice.org/dev/#/home">Dashboard</a> and request a token. Select Standard as the Token type and enter <strong>QGIS</strong> as the Token name. Click <em>CREATE TOKEN</em>.</li>
+<li>In QGIS, go to <strong>Web → ORS Tools → Provider Settings</strong> and enter the API key created in the previous step.</li>
+</ul>
+<p>Now you are ready to try out the action. Open the <code>Stations_Isochrones.qgz</code> project from your data package. This project has a <code>san_francisco_stations</code> layer with a few actions such as <strong>Calculate Isochrone (1km)</strong> defined with code similar to below.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> processing</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.utils <span class="im">import</span> iface</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>x_coord <span class="op">=</span> [<span class="op">%@</span>click_x<span class="op">%</span>]</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>y_coord <span class="op">=</span> [<span class="op">%@</span>click_y<span class="op">%</span>]</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Distance in meters</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>distance <span class="op">=</span> <span class="dv">1000</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if ORS Tools in available</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>providers <span class="op">=</span> [x.name() <span class="cf">for</span> x <span class="kw">in</span> QgsApplication.processingRegistry().providers()]</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;ORS Tools&#39;</span> <span class="kw">not</span> <span class="kw">in</span> providers:</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    iface.messageBar().pushCritical(</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>      <span class="st">&#39;Error&#39;</span>,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">&#39;This action requires the ORS Tools plugin. Please install and configure the plugin.&#39;</span>)</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    input_point <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>x_coord<span class="sc">}</span><span class="ss">,</span><span class="sc">{</span>y_coord<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> processing.run(</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;ORS Tools:isochrones_from_point&#39;</span>,{</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;INPUT_PROVIDER&#39;</span>:<span class="dv">0</span>,<span class="st">&#39;INPUT_PROFILE&#39;</span>:<span class="dv">6</span>,<span class="st">&#39;INPUT_POINT&#39;</span>: input_point,</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;INPUT_METRIC&#39;</span>:<span class="dv">1</span>,<span class="st">&#39;INPUT_RANGES&#39;</span>:<span class="ss">f&#39;</span><span class="sc">{</span>distance<span class="sc">}</span><span class="ss">&#39;</span>, <span class="st">&#39;INPUT_AVOID_FEATURES&#39;</span>:[],</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;INPUT_AVOID_BORDERS&#39;</span>:<span class="va">None</span>,<span class="st">&#39;INPUT_AVOID_COUNTRIES&#39;</span>:<span class="st">&#39;&#39;</span>,</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;INPUT_AVOID_POLYGONS&#39;</span>:<span class="va">None</span>,<span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>    new_layer <span class="op">=</span> result[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>    new_layer.setName(<span class="ss">f&#39;Isochrone Polygon (</span><span class="sc">{</span>distance<span class="sc">}</span><span class="ss">m)&#39;</span>)</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>    QgsProject.instance().addMapLayer(new_layer)</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>    layer <span class="op">=</span> QgsProject.instance().mapLayer(layer_id)</span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>    iface.setActiveLayer(layer)</span></code></pre></div>
+<p>Select the layer and use the action <strong>Calculate Isochrone (1km)</strong> and click on any point. The OpenRouteService API will generate a isochrone using the OpenStreetMap(OSM) network and you will see a polygon of all areas reachable by walk within 1 km of the station. Similarly, you can try out other actions for different distances.</p>
+<p><img src="images/qgis_actions/isochrone.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
 <div id="view-panorama-from-mapillary" class="section level2">
 <h2>View Panorama from Mapillary</h2>
 <p>QGIS actions can also be used to query an external API and display the results. The example below shows how to use the <a href="https://www.mapillary.com/developer/api-documentation">Mapillary API</a> to fetch street-level imagery and display them in QGIS.</p>
 <p>To try the action, open the <code>Mapillary_Images.qgz</code> project from the data package. The <code>pharmacies</code> layer has an action defined called <strong>Show Panorama from Mapillary</strong> with the code below. Before you can use this action, you will need a <em>Client Token</em> from Mapillary. <a href="https://www.mapillary.com/developer">Sign-up for a Mapillary Developer Account</a> and register a new application. Click on <em>View</em> under <em>Client Token</em> and obtain your access token.</p>
 <p><img src="images/qgis_actions/mapillary1.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>Open the code for the action and replace <code>YOUR_ACCESS_TOKEN</code> with your access token.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.PyQt.QtCore <span class="im">import</span> QUrl</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.PyQt.QtWebKitWidgets <span class="im">import</span> QWebView</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.utils <span class="im">import</span> iface</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign up at https://www.mapillary.com/developer</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Replace YOUR_ACCESS_TOKEN with your own token below</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>parameters <span class="op">=</span> {</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;access_token&#39;</span>: <span class="st">&#39;YOUR_ACCESS_TOKEN&#39;</span>,</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;bbox&#39;</span>: <span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>([<span class="op">%</span>$x<span class="op">%</span>]<span class="op">-</span><span class="fl">0.001</span>,[<span class="op">%</span>$y<span class="op">%</span>]<span class="op">-</span><span class="fl">0.001</span>, [<span class="op">%</span>$x<span class="op">%</span>]<span class="op">+</span><span class="fl">0.001</span>, [<span class="op">%</span>$y<span class="op">%</span>]<span class="op">+</span><span class="fl">0.001</span>),</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fields&#39;</span>: <span class="st">&#39;thumb_1024_url&#39;</span>,</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;limit&#39;</span>: <span class="dv">1</span></span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;https://graph.mapillary.com/images&#39;</span>, params<span class="op">=</span>parameters)</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> response.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    data_json <span class="op">=</span> response.json()</span>
-<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> data_json[<span class="st">&#39;data&#39;</span>]:</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        url <span class="op">=</span> data_json[<span class="st">&#39;data&#39;</span>][<span class="dv">0</span>][<span class="st">&#39;thumb_1024_url&#39;</span>]</span>
-<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>        myWV <span class="op">=</span> QWebView(<span class="va">None</span>)</span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>        myWV.load(QUrl(url))</span>
-<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>        myWV.show()</span>
-<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>        qgis.utils.iface.messageBar().pushMessage(<span class="st">&#39;No images found&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.PyQt.QtCore <span class="im">import</span> QUrl</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.PyQt.QtWebKitWidgets <span class="im">import</span> QWebView</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.utils <span class="im">import</span> iface</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign up at https://www.mapillary.com/developer</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Replace YOUR_ACCESS_TOKEN with your own token below</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>parameters <span class="op">=</span> {</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;access_token&#39;</span>: <span class="st">&#39;YOUR_ACCESS_TOKEN&#39;</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;bbox&#39;</span>: <span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>([<span class="op">%</span>$x<span class="op">%</span>]<span class="op">-</span><span class="fl">0.001</span>,[<span class="op">%</span>$y<span class="op">%</span>]<span class="op">-</span><span class="fl">0.001</span>, [<span class="op">%</span>$x<span class="op">%</span>]<span class="op">+</span><span class="fl">0.001</span>, [<span class="op">%</span>$y<span class="op">%</span>]<span class="op">+</span><span class="fl">0.001</span>),</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;fields&#39;</span>: <span class="st">&#39;thumb_1024_url&#39;</span>,</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;limit&#39;</span>: <span class="dv">1</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;https://graph.mapillary.com/images&#39;</span>, params<span class="op">=</span>parameters)</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> response.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    data_json <span class="op">=</span> response.json()</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> data_json[<span class="st">&#39;data&#39;</span>]:</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>        url <span class="op">=</span> data_json[<span class="st">&#39;data&#39;</span>][<span class="dv">0</span>][<span class="st">&#39;thumb_1024_url&#39;</span>]</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>        myWV <span class="op">=</span> QWebView(<span class="va">None</span>)</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>        myWV.load(QUrl(url))</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>        myWV.show()</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>        qgis.utils.iface.messageBar().pushMessage(<span class="st">&#39;No images found&#39;</span>)</span></code></pre></div>
 <p>Once the token is updated, you can select the action and click on any pharmacy location. The action will send a request to mapillary API to fetch the nearest imagery. It will be then displayed in a new window in QGIS.</p>
 <p><img src="images/qgis_actions/mapillary2.png" width="75%" style="display: block; margin: auto;" /></p>
-</div>
-<div id="select-features-in-a-buffer-zone" class="section level2">
-<h2>Select Features in a Buffer Zone</h2>
-<p>Another useful application of action is to select features from a layer within a buffer zone. Open the <code>Buffer_Select.qgz</code> project from your data package. This project contains a <code>roads</code> and a <code>buildings</code> layer. The <code>roads</code> layer has an action defined called <strong>Select Buildings within Buffer</strong> that selects all buildings that are within 20 meters of the selected road segment.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fid <span class="op">=</span> [<span class="op">%</span> $id <span class="op">%</span>]</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>distance <span class="op">=</span> <span class="dv">20</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>line_layer <span class="op">=</span> QgsProject.instance().mapLayer(layer_id)</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>line_feature <span class="op">=</span> line_layer.getFeature(fid)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>line_geometry <span class="op">=</span> line_feature.geometry().<span class="bu">buffer</span>(distance, <span class="dv">5</span>)</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>polygon_layer_name <span class="op">=</span> <span class="st">&#39;buildings&#39;</span></span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>polygon_layer <span class="op">=</span> QgsProject.instance().mapLayersByName(polygon_layer_name)[<span class="dv">0</span>]</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>nearby_features <span class="op">=</span> [p.<span class="bu">id</span>() <span class="cf">for</span> p <span class="kw">in</span> polygon_layer.getFeatures() </span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> p.geometry().intersects(line_geometry) ]</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>polygon_layer.selectByIds(nearby_features)</span></code></pre></div>
-<p>Select the action and click on any road feature. All the buildings within the buffer zone will be selected.</p>
-<p><img src="images/qgis_actions/buffer_select1.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="data-credits" class="section level1">
