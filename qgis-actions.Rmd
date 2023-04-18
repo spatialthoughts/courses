@@ -553,6 +553,8 @@ knitr::include_graphics('images/qgis_actions/tileindex_exercise.png')
 
 Another useful application of action is to select features from a layer within a buffer zone. Open the `Buffer_Select.qgz` project from your data package. This project contains a `roads` and a `buildings` layer. The `roads` layer has an action defined called **Select Buildings within Buffer** that selects all buildings that are within 20 meters of the selected road segment.
 
+Note the use of `line_geometry.boundingBox()` in the `getFeatures()` method which makes use of the spatial index (if it exists) to speed up finding the candidate features.
+
 ```{python eval=FALSE}
 layer_id = '[%@layer_id%]'
 fid = [% $id %]
@@ -564,9 +566,13 @@ line_geometry = line_feature.geometry().buffer(distance, 5)
 
 polygon_layer_name = 'buildings'
 polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
-nearby_features = [p.id() for p in polygon_layer.getFeatures() 
-    if p.geometry().intersects(line_geometry) ]
-polygon_layer.selectByIds(nearby_features)
+nearby_features = [
+  p.id() 
+  for p in polygon_layer.getFeatures(line_geometry.boundingBox()) 
+  if p.geometry().intersects(line_geometry)
+]
+if nearby_features:
+  polygon_layer.selectByIds(nearby_features)
 ```
 
 Select the action and click on any road feature. All the buildings within the buffer zone will be selected.
