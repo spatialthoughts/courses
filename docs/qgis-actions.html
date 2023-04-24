@@ -632,16 +632,18 @@ $(document).ready(function () {
 <ol start="4" style="list-style-type: decimal">
 <li>Switch to the <em>Actions</em> tab and click the <em>Add a new action</em> (<em>+</em>) button. Select <strong>Python</strong> as the <em>Type</em>. Enter <strong>Mark QA Done</strong> as the <em>Description</em>. Leave the <em>Action Scopes</em> to the default selected values of <strong>Feature</strong> and <strong>Canvas</strong>. Under the <em>Action Text</em> enter the following Python code and click <em>OK</em>. This code uses <a href="https://qgis.org/pyqgis/master/core/QgsVectorLayer.html#qgis.core.QgsVectorLayer.changeAttributeValue"><code>QgsVectorLayer.changeAttributeValue()</code></a> method to update the field <strong>checked</strong>’s value to <strong>Y</strong>. Note that we are using the <code>with edit(layer)</code> statement to wrap our editing code in a more semantic code block. This will ensure that the changes committed at the end or rolled back appropriately if there are any errors.</li>
 </ol>
-<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>feature_id <span class="op">=</span> [<span class="op">%</span>$id<span class="op">%</span>]</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>field_name <span class="op">=</span> <span class="st">&#39;checked&#39;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsProject().instance().mapLayer(layer_id)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>field <span class="op">=</span> layer.fields().lookupField(field_name)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> edit(layer):</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    layer.changeAttributeValue(feature_id, field, <span class="st">&#39;Y&#39;</span>)</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    iface.messageBar().pushInfo(<span class="st">&#39;Success&#39;</span>, <span class="st">&#39;Field Value Updated&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> qgis.utils <span class="im">import</span> iface</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>feature_id <span class="op">=</span> [<span class="op">%</span>$id<span class="op">%</span>]</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>field_name <span class="op">=</span> <span class="st">&#39;checked&#39;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> QgsProject().instance().mapLayer(layer_id)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>field <span class="op">=</span> layer.fields().lookupField(field_name)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> edit(layer):</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    layer.changeAttributeValue(feature_id, field, <span class="st">&#39;Y&#39;</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    iface.messageBar().pushInfo(<span class="st">&#39;Success&#39;</span>, <span class="st">&#39;Field Value Updated&#39;</span>)</span></code></pre></div>
 <p><img src="images/qgis_actions/qa4.png" width="60%" style="display: block; margin: auto;" /></p>
 <ol start="5" style="list-style-type: decimal">
 <li>Click <em>OK</em> again to get back to the main QGIS Canvas. Select the action and click on any parcel with the <strong>N</strong> label. You will see that the value is updated and the parcel turns green instantly.</li>
@@ -754,6 +756,9 @@ $(document).ready(function () {
 <div id="select-features-in-a-buffer-zone" class="section level2">
 <h2>Select Features in a Buffer Zone</h2>
 <p>Another useful application of action is to select features from a layer within a buffer zone. Open the <code>Buffer_Select.qgz</code> project from your data package. This project contains a <code>roads</code> and a <code>buildings</code> layer. The <code>roads</code> layer has an action defined called <strong>Select Buildings within Buffer</strong> that selects all buildings that are within 20 meters of the selected road segment.</p>
+<blockquote>
+<p>Note: This example uses <code>line_geometry.boundingBox()</code> in the <code>getFeatures()</code> method which makes use of the spatial index (if it exists) to speed up finding the candidate features.</p>
+</blockquote>
 <div class="sourceCode" id="cb14"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>layer_id <span class="op">=</span> <span class="st">&#39;[%@layer_id%]&#39;</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fid <span class="op">=</span> [<span class="op">%</span> $id <span class="op">%</span>]</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>distance <span class="op">=</span> <span class="dv">20</span></span>
@@ -764,16 +769,23 @@ $(document).ready(function () {
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>polygon_layer_name <span class="op">=</span> <span class="st">&#39;buildings&#39;</span></span>
 <span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>polygon_layer <span class="op">=</span> QgsProject.instance().mapLayersByName(polygon_layer_name)[<span class="dv">0</span>]</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>nearby_features <span class="op">=</span> [p.<span class="bu">id</span>() <span class="cf">for</span> p <span class="kw">in</span> polygon_layer.getFeatures() </span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> p.geometry().intersects(line_geometry) ]</span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>polygon_layer.selectByIds(nearby_features)</span></code></pre></div>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>nearby_features <span class="op">=</span> [</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">id</span>() </span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> p <span class="kw">in</span> polygon_layer.getFeatures(line_geometry.boundingBox()) </span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> p.geometry().intersects(line_geometry)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> nearby_features:</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>  polygon_layer.selectByIds(nearby_features)</span></code></pre></div>
 <p>Select the action and click on any road feature. All the buildings within the buffer zone will be selected.</p>
 <p><img src="images/qgis_actions/buffer_select1.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="reversing-line-direction-using-processing-algorithm" class="section level2">
 <h2>Reversing Line Direction using Processing Algorithm</h2>
 <p>The QGIS Processing Toolbox contains many useful algorithms. You can call any algorithms using Python from Actions. This example shows how to setup an action to run a processing algorithm a line feature to reverse direction.</p>
-<p>We will use the <strong>Vector Geometry → Reverse line direction</strong> algorithm. By default, all Processing algorithms create new layer. If we want to edit the layer, we must enable the <a href="https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#the-processing-in-place-layer-modifier">Edit Features In-Place mode</a>. The same mode can be invoked from PyQGIS via <code>execute_in_place()</code> method. We will define an action</p>
+<p>We will use the <strong>Vector Geometry → Reverse line direction</strong> algorithm. By default, all Processing algorithms create new layer. If we want to edit the layer, we must enable the <a href="https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#the-processing-in-place-layer-modifier">Edit Features In-Place mode</a>. The same mode can be invoked from PyQGIS via <code>execute_in_place()</code> method.</p>
+<blockquote>
+<p>Note: The <em>Advanced Digitizing Toolbar</em> already has a tool that allows you reverse the line direction for the selected feature. This example is an implementation of a similar functionality using an Action.</p>
+</blockquote>
 <p>Open the <code>Network_Linedirection.qgz</code> project. It contains a line layer named <code>street_centerlines</code> which has been styled to show an arrow in the direction of the line. We have defined an action <strong>Reverse Line Direction</strong> on this layer with the following code.</p>
 <div class="sourceCode" id="cb15"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> processing.gui.AlgorithmExecutor <span class="im">import</span> execute_in_place</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
