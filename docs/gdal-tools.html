@@ -840,9 +840,10 @@ Color Relief
 Text File with the List of Images
 </p>
 </div>
-<pre><code>gdalbuildvrt -input_file_list filelist.txt naip.vrt</code></pre>
-<p>We can use the <code>-outsize</code> option and specify a percentage to generate a smaller size preview. The below command generates a 2% preview image in JPEG format.</p>
-<pre><code>gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg </code></pre>
+<p>We are working with Photometric RGB tiles and want to apply JPEG compression on the result. To avoid JPEG artifact and maintain nodata values, it is a good practice to add an Alpha band which will contain the mask containing all valid pixels. We use the <code>-addalpha</code> option to create an alpha band.</p>
+<pre><code>gdalbuildvrt -addalpha -input_file_list filelist.txt naip.vrt</code></pre>
+<p>We can use the <code>-outsize</code> option and specify a percentage to generate a smaller size preview. The below command generates a 2% preview image in JPEG format. Since we have a 4-band image, we specify which bands to be used for generating the JPG image using the <code>-b</code> option.</p>
+<pre><code>gdal_translate -b 1 -b 2 -b 3 -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg </code></pre>
 <p><img src="images/gdal/naip_preview.jpg" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="create-a-tile-index" class="section level3">
@@ -855,16 +856,17 @@ Text File with the List of Images
 <h3>1.3.3 Mosaic and clip to AOI</h3>
 <p>Let’s say we want to mosaic all the source tiles into a single image. We also want to clip the mosaic to a given AOI.</p>
 <p><img src="images/gdal/aoiselection.png" width="75%" style="display: block; margin: auto;" /></p>
-<p>We can use the <code>gdalwarp</code> utility to clip the raster using the <code>-cutline</code> option. We can also add JPEG compression to the output file to reduce the file size. Refer to the post <a href="https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html">GeoTiff Compression for Dummies</a> by Paul Ramsey that gives more insights into compression imagery.</p>
-<blockquote>
-<p>Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. See <a href="#removing-jpeg-compression-artifacts">Supplement</a> for techniques to mask the black portion and obtian clean edges.</p>
-</blockquote>
+<p>We can use the <code>gdalwarp</code> utility to clip the raster using the <code>-cutline</code> option.</p>
+<pre><code>gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi_cut.tif -co COMPRESS=DEFLATE -co TILED=YES</code></pre>
+<p>We can also add JPEG compression to the output file to reduce the file size. Refer to the post <a href="https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html">GeoTiff Compression for Dummies</a> by Paul Ramsey that gives more insights into compression imagery. Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. To prevent this, we specify the <code>--config GDAL_TIFF_INTERNAL_MASK YES</code> option that uses the mask from the alpha band.</p>
 <p><strong>Windows</strong></p>
-<pre><code>gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
-  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR</code></pre>
+<pre><code>gdal_translate aoi_cut.tif aoi.tif ^
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -co JPEG_QUALITY=75 ^
+  -b 1 -b 2 -b 3 -mask 4 --config GDAL_TIFF_INTERNAL_MASK YES</code></pre>
 <p><strong>Mac/Linux</strong></p>
-<pre><code>gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif \
-  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR</code></pre>
+<pre><code>gdal_translate aoi_cut.tif aoi.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -co JPEG_QUALITY=75 \
+  -b 1 -b 2 -b 3 -mask 4 --config GDAL_TIFF_INTERNAL_MASK YES</code></pre>
 <p><img src="images/gdal/mosaic.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="creating-overviews" class="section level3">
@@ -1388,48 +1390,48 @@ Dissolved Buffers
 <p>You can run the GDAL/OGR commands in a loop using Python. Say you want to convert the format of the images from JPEG200 to GeoTiff. You would run a command such as below.</p>
 <pre><code>gdal_translate -of GTiff -co COMPRESS=JPEG {input} {output}</code></pre>
 <p>But it would be a lot of manual effort if you want to run the commands on hundreds of input files. Here’s where a simple python script can help you automate running the commands in a batch. The data directory contains a file called <code>batch.py</code> with the following python code.</p>
-<div class="sourceCode" id="cb90"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
-<span id="cb90-8"><a href="#cb90-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb90-9"><a href="#cb90-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb90-10"><a href="#cb90-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb90-11"><a href="#cb90-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<div class="sourceCode" id="cb91"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
+<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
 <p>In Anaconda Prompt, run the following command from <code>gdal-tools</code> directory to start batch processing on all tiles contained in the <code>naip/</code> directory.</p>
 <pre><code>python batch.py</code></pre>
 <p>The data directory also contains an example of running the batch commands in parallel using python’s built-in multiprocessing library. If your system has multi-core CPU, running commands in parallel like this on multiple threads can give you performance boost over running them in series.</p>
-<div class="sourceCode" id="cb92"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb92-3"><a href="#cb92-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
-<span id="cb92-4"><a href="#cb92-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb92-5"><a href="#cb92-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
-<span id="cb92-6"><a href="#cb92-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb92-7"><a href="#cb92-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
-<span id="cb92-8"><a href="#cb92-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb92-9"><a href="#cb92-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
-<span id="cb92-10"><a href="#cb92-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb92-11"><a href="#cb92-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb92-12"><a href="#cb92-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb92-13"><a href="#cb92-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb92-14"><a href="#cb92-14" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb92-15"><a href="#cb92-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb92-16"><a href="#cb92-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb92-17"><a href="#cb92-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb92-18"><a href="#cb92-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb92-19"><a href="#cb92-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb92-20"><a href="#cb92-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb92-21"><a href="#cb92-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb92-22"><a href="#cb92-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb92-23"><a href="#cb92-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb92-24"><a href="#cb92-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb92-25"><a href="#cb92-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb92-26"><a href="#cb92-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb92-27"><a href="#cb92-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb92-28"><a href="#cb92-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb93-2"><a href="#cb93-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb93-3"><a href="#cb93-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
+<span id="cb93-4"><a href="#cb93-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-5"><a href="#cb93-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb93-6"><a href="#cb93-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-7"><a href="#cb93-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb93-8"><a href="#cb93-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-9"><a href="#cb93-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
+<span id="cb93-10"><a href="#cb93-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb93-11"><a href="#cb93-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb93-12"><a href="#cb93-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
+<span id="cb93-13"><a href="#cb93-13" aria-hidden="true" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
+<span id="cb93-14"><a href="#cb93-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb93-15"><a href="#cb93-15" aria-hidden="true" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb93-16"><a href="#cb93-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb93-17"><a href="#cb93-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb93-18"><a href="#cb93-18" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb93-19"><a href="#cb93-19" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
+<span id="cb93-20"><a href="#cb93-20" aria-hidden="true" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
+<span id="cb93-21"><a href="#cb93-21" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb93-22"><a href="#cb93-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
+<span id="cb93-23"><a href="#cb93-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb93-24"><a href="#cb93-24" aria-hidden="true" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
+<span id="cb93-25"><a href="#cb93-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb93-26"><a href="#cb93-26" aria-hidden="true" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
+<span id="cb93-27"><a href="#cb93-27" aria-hidden="true" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
+<span id="cb93-28"><a href="#cb93-28" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and prints the time taken by each of them.</p>
 <pre><code>python batch_parallel.py</code></pre>
 <div style="page-break-after: always;"></div>
@@ -1523,7 +1525,7 @@ Colorized Shaded Relief
 </div>
 <div id="removing-jpeg-compression-artifacts" class="section level2">
 <h2>Removing JPEG Compression Artifacts</h2>
-<p>Applying JPEG compression on aerial or drone imagery can cause the results to have edge artifacts. Since JPEG is a lossy compression algorithm, it causes no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called <a href="https://gdal.org/programs/nearblack.html">nearblack</a> that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel values and masks them. Let’s say we want to take the mosaic created in the <a href="#mosaic-and-clip-to-aoi">Moasic and Clip to AOI</a> section and mask the black pixels. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the <code>nearblack</code> program to set edge pixels with value 0-5 being considered nodata.</p>
+<p>Applying JPEG compression on aerial or drone imagery can cause the results to have edge artifacts. Since JPEG is a lossy compression algorithm, it causes no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called <a href="https://gdal.org/programs/nearblack.html">nearblack</a> that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel values and masks them. Let’s say we have a mosaic of JPEG compressed imagery without an alpha band and we want to set a mask. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the <code>nearblack</code> program to set edge pixels with value 0-5 being considered nodata.</p>
 <pre><code>nearblack -near 5 -setmask -o aoi_masked.tif aoi.tif \
   -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR</code></pre>
 <div class="figure" style="text-align: center">
@@ -1644,25 +1646,25 @@ KML Export with NameField
 <pre><code>gdalinfo -stats -json merged.vrt | jq &quot;.bands[0].maximum&quot;</code></pre>
 <p><img src="images/gdal/jq.png" width="60%" style="display: block; margin: auto;" /></p>
 <p>Alternatively, you can also run the command via Python and use the <code>json</code> module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.</p>
-<div class="sourceCode" id="cb122"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb122-1"><a href="#cb122-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb122-2"><a href="#cb122-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb122-3"><a href="#cb122-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb122-4"><a href="#cb122-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb122-5"><a href="#cb122-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb122-6"><a href="#cb122-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb122-7"><a href="#cb122-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb122-8"><a href="#cb122-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb122-9"><a href="#cb122-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb122-10"><a href="#cb122-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb122-11"><a href="#cb122-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb122-12"><a href="#cb122-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb122-13"><a href="#cb122-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb122-14"><a href="#cb122-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb122-15"><a href="#cb122-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb122-16"><a href="#cb122-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb122-17"><a href="#cb122-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb122-18"><a href="#cb122-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb122-19"><a href="#cb122-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb123"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-5"><a href="#cb123-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb123-6"><a href="#cb123-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-7"><a href="#cb123-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb123-8"><a href="#cb123-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb123-9"><a href="#cb123-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb123-10"><a href="#cb123-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb123-11"><a href="#cb123-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb123-12"><a href="#cb123-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb123-13"><a href="#cb123-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb123-14"><a href="#cb123-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb123-15"><a href="#cb123-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb123-16"><a href="#cb123-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb123-17"><a href="#cb123-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb123-18"><a href="#cb123-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb123-19"><a href="#cb123-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 <div id="group-statistics" class="section level2">
 <h2>Group Statistics</h2>

@@ -437,14 +437,15 @@ ls *.jp2 > filelist.txt
 knitr::include_graphics('images/gdal/aoi_textfile.png')
 ```
 
+We are working with Photometric RGB tiles and want to apply JPEG compression on the result. To avoid JPEG artifact and maintain nodata values, it is a good practice to add an Alpha band which will contain the mask containing all valid pixels. We use the `-addalpha` option to create an alpha band.
 ```
-gdalbuildvrt -input_file_list filelist.txt naip.vrt
+gdalbuildvrt -addalpha -input_file_list filelist.txt naip.vrt
 ```
 
-We can use the `-outsize` option and specify a percentage to generate a smaller size preview. The below command generates a 2% preview image in JPEG format.
+We can use the `-outsize` option and specify a percentage to generate a smaller size preview. The below command generates a 2% preview image in JPEG format. Since we have a 4-band image, we specify which bands to be used for generating the JPG image using the `-b` option.
 
 ```
-gdal_translate -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
+gdal_translate -b 1 -b 2 -b 3 -of JPEG -outsize 2% 2% naip.vrt naip_preview.jpg 
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -469,20 +470,26 @@ Let's say we want to mosaic all the source tiles into a single image. We also wa
 knitr::include_graphics('images/gdal/aoiselection.png')
 ```
 
-We can use the `gdalwarp` utility to clip the raster using the `-cutline` option. We can also add JPEG compression to the output file to reduce the file size. Refer to the post [GeoTiff Compression for Dummies](https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html) by Paul Ramsey that gives more insights into compression imagery. 
+We can use the `gdalwarp` utility to clip the raster using the `-cutline` option. 
 
-> Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. See [Supplement](#removing-jpeg-compression-artifacts) for techniques to mask the black portion and obtian clean edges.
+```
+gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi_cut.tif -co COMPRESS=DEFLATE -co TILED=YES
+```
+
+We can also add JPEG compression to the output file to reduce the file size. Refer to the post [GeoTiff Compression for Dummies](https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html) by Paul Ramsey that gives more insights into compression imagery. Note that JPEG is a lossy compression method and can cause edge artifacts for image mosaics. To prevent this, we specify the `--config GDAL_TIFF_INTERNAL_MASK YES` option that uses the mask from the alpha band.
 
 **Windows**
 ```
-gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif ^
-  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
+gdal_translate aoi_cut.tif aoi.tif ^
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -co JPEG_QUALITY=75 ^
+  -b 1 -b 2 -b 3 -mask 4 --config GDAL_TIFF_INTERNAL_MASK YES
 ```
 
 **Mac/Linux**
 ```
-gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif \
-  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR
+gdal_translate aoi_cut.tif aoi.tif \
+  -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -co JPEG_QUALITY=75 \
+  -b 1 -b 2 -b 3 -mask 4 --config GDAL_TIFF_INTERNAL_MASK YES
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -1357,7 +1364,7 @@ knitr::include_graphics('images/gdal/colorized_hillshade.png')
 
 ## Removing JPEG Compression Artifacts
 
-Applying JPEG compression on aerial or drone imagery can cause the results to have edge artifacts. Since JPEG is a lossy compression algorithm, it causes no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called [nearblack](https://gdal.org/programs/nearblack.html) that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel values and masks them. Let's say we want to take the mosaic created in the [Moasic and Clip to AOI](#mosaic-and-clip-to-aoi) section and mask the black pixels. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the `nearblack` program to set edge pixels with value 0-5 being considered nodata.
+Applying JPEG compression on aerial or drone imagery can cause the results to have edge artifacts. Since JPEG is a lossy compression algorithm, it causes no-data values (typically 0) being converted to non-zero values. This causes problems when you want to mosaic different tiles, or mask the black pixels. Fortunately, GDAL comes with a handy tool called [nearblack](https://gdal.org/programs/nearblack.html) that is designed to solve this problem. You can specify a tolerance value to remove edge pixels that may not be exactly 0. It scans the image inwards till it finds these near-black pixel values and masks them. Let's say we have a mosaic of JPEG compressed imagery without an alpha band and we want to set a mask. If we simply set 0 as nodata value, you will end up with edge artifacts, along with many dark pixels within the mosaic (building shadows/water etc.) being masked. Instead we use the `nearblack` program to set edge pixels with value 0-5 being considered nodata.
 
 ```
 nearblack -near 5 -setmask -o aoi_masked.tif aoi.tif \
