@@ -456,12 +456,14 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#supplement">Supplement</a>
 <ul>
+<li><a href="#extracting-image-metadata-and-statistics">Extracting Image Metadata and Statistics</a></li>
 <li><a href="#creating-contours">Creating Contours</a></li>
 <li><a href="#creating-colorized-hillshade">Creating Colorized Hillshade</a></li>
 <li><a href="#removing-jpeg-compression-artifacts">Removing JPEG Compression Artifacts</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles">Splitting a Mosaic into Tiles</a></li>
 <li><a href="#merging-files-with-different-resolutions">Merging Files with Different Resolutions</a></li>
 <li><a href="#calculate-pixel-wise-statistics-over-multiple-rasters">Calculate Pixel-Wise Statistics over Multiple Rasters</a></li>
+<li><a href="#extracting-values-from-a-raster">Extracting Values from a Raster</a></li>
 <li><a href="#raster-to-vector-conversion">Raster to Vector Conversion</a></li>
 <li><a href="#working-with-kml-files">Working with KML Files</a>
 <ul>
@@ -469,7 +471,6 @@ $(document).ready(function () {
 <li><a href="#converting-kml-files-to-other-formats">Converting KML Files to Other Formats</a></li>
 <li><a href="#kml-vs.-libkml-drivers">KML vs. LIBKML Drivers</a></li>
 </ul></li>
-<li><a href="#extracting-image-metadata-and-statistics">Extracting Image Metadata and Statistics</a></li>
 <li><a href="#group-statistics">Group Statistics</a></li>
 <li><a href="#using-virtual-layers">Using Virtual Layers</a>
 <ul>
@@ -1475,6 +1476,35 @@ BASH_ENV=~/.bashrc
 </div>
 <div id="supplement" class="section level1">
 <h1>Supplement</h1>
+<div id="extracting-image-metadata-and-statistics" class="section level2">
+<h2>Extracting Image Metadata and Statistics</h2>
+<p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it.</p>
+<p>Let’s say we want to extract the maximum value of the <code>merged.vrt</code> created in the <a href="#merging-tiles">Merging Tiles</a> section. We can get the output of the command as a JSON by supplying the <code>-json</code> option.</p>
+<pre><code>gdalinfo -stats -json merged.vrt</code></pre>
+<p>Next, we need a way to parse the JSON and extract the fields we are interested in. There are many other command-line utilities designed to do just that. Here we use the popular JSON processing utility <a href="https://stedolan.github.io/jq/">jq</a>. You can download and install the <code>jq CLI</code> for your operating system and make sure it is in the system path. Then we can extract the required data using the <code>jq</code> query like below.</p>
+<pre><code>gdalinfo -stats -json merged.vrt | jq &quot;.bands[0].maximum&quot;</code></pre>
+<p><img src="images/gdal/jq.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>Alternatively, you can also run the command via Python and use the <code>json</code> module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.</p>
+<div class="sourceCode" id="cb100"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb100-3"><a href="#cb100-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb100-4"><a href="#cb100-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-5"><a href="#cb100-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb100-6"><a href="#cb100-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-7"><a href="#cb100-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb100-8"><a href="#cb100-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb100-9"><a href="#cb100-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb100-10"><a href="#cb100-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb100-11"><a href="#cb100-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb100-12"><a href="#cb100-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb100-13"><a href="#cb100-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb100-14"><a href="#cb100-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb100-15"><a href="#cb100-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb100-16"><a href="#cb100-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb100-17"><a href="#cb100-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb100-18"><a href="#cb100-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb100-19"><a href="#cb100-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+</div>
 <div id="creating-contours" class="section level2">
 <h2>Creating Contours</h2>
 <blockquote>
@@ -1582,6 +1612,14 @@ JPEG Artifacts Cleaned by GDAL nearblack
   --calc=&#39;(A+B+C)/3&#39; \
   --outfile mean.tif</code></pre>
 </div>
+<div id="extracting-values-from-a-raster" class="section level2">
+<h2>Extracting Values from a Raster</h2>
+<p>A useful tool called <code>gdallocationinfo</code> comes with the GDAL suite and can do point lookups from the raster at one or more pairs of coordinates. Combined with GDAL’s capabilities to stream data from cloud datasets with the <a href="https://gdal.org/user/virtual_file_systems.html">Virtual File System</a>, you can efficiently lookup pixel values from without having to load the entire raster into memory.</p>
+<p>For example, we have a large (8GB) single-band Cloud-Optimized GeoTiff (COG) file on a Google Cloud Storage bucket. This file is a global mosaic of VIIRS Nighttime Lights for the year 2021 and the pixel values are the radiance values. To access this file, we use the <code>/vsigs/</code> (Google Cloud Storage files) handler and provide the path in form of <code>/vgigs/&lt;bucket_name&gt;/&lt;file_name&gt;</code>. This particular file is public, so we add the config option <code>--config GS_NO_SIGN_REQUEST YES</code>.</p>
+<pre><code>gdalinfo /vsigs/spatialthoughts-public-data/viirs_ntl_2021_global.tif --config GS_NO_SIGN_REQUEST YES</code></pre>
+<p>We are successfully able to open and lookup the metadata of this file. Now let’s query the pixel value at a single coordinate using <code>gdallocationinfo</code>. We specify the location in WGS84 Lon/Lat format, so use the <code>-wgs84</code> option.</p>
+<pre><code>gdallocationinfo -valonly /vsigs/spatialthoughts-public-data/viirs_ntl_2021_global.tif -wgs84 77.5946 12.9716 --config GS_NO_SIGN_REQUEST YES</code></pre>
+</div>
 <div id="raster-to-vector-conversion" class="section level2">
 <h2>Raster to Vector Conversion</h2>
 <p>GDAL comes with the <code>gdal_polygonize.py</code> allowing us to convert rasters to vector layers. Let’s say we want to extract the coordinates of the highest elevation from the merged raster in the <a href="#merging-tiles">Merging Tiles</a> section. Querying the raster with <code>gdalinfo -stats</code> shows us that the highest pixel value is <strong>8748</strong>.</p>
@@ -1636,35 +1674,6 @@ KML Export with NameField
 <pre><code>ogr2ogr -f LIBKML metro_stations.kml spatial_query.gpkg metro_stations --config LIBKML_NAME_FIELD station</code></pre>
 <p>If your GDAL version has both KML and LIBKML drivers, OGR will prefer the LIBKML driver. To force OGR to use the KML driver for reading files, you can add <code>--config OGR_SKIP LIBKML</code> to your command.</p>
 </div>
-</div>
-<div id="extracting-image-metadata-and-statistics" class="section level2">
-<h2>Extracting Image Metadata and Statistics</h2>
-<p>You can run <code>gdalinfo</code> command with the <code>-json</code> option which returns the info as a JSON string. This allows you to programatically access the information and parse it.</p>
-<p>Let’s say we want to extract the maximum value of the <code>merged.vrt</code> created in the <a href="#merging-tiles">Merging Tiles</a> section. We can get the output of the command as a JSON by supplying the <code>-json</code> option.</p>
-<pre><code>gdalinfo -stats -json merged.vrt</code></pre>
-<p>Next, we need a way to parse the JSON and extract the fields we are interested in. There are many other command-line utilities designed to do just that. Here we use the popular JSON processing utility <a href="https://stedolan.github.io/jq/">jq</a>. You can download and install the <code>jq CLI</code> for your operating system and make sure it is in the system path. Then we can extract the required data using the <code>jq</code> query like below.</p>
-<pre><code>gdalinfo -stats -json merged.vrt | jq &quot;.bands[0].maximum&quot;</code></pre>
-<p><img src="images/gdal/jq.png" width="60%" style="display: block; margin: auto;" /></p>
-<p>Alternatively, you can also run the command via Python and use the <code>json</code> module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.</p>
-<div class="sourceCode" id="cb123"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb123-5"><a href="#cb123-5" aria-hidden="true" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb123-6"><a href="#cb123-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb123-7"><a href="#cb123-7" aria-hidden="true" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb123-8"><a href="#cb123-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb123-9"><a href="#cb123-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb123-10"><a href="#cb123-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb123-11"><a href="#cb123-11" aria-hidden="true" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb123-12"><a href="#cb123-12" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb123-13"><a href="#cb123-13" aria-hidden="true" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb123-14"><a href="#cb123-14" aria-hidden="true" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb123-15"><a href="#cb123-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb123-16"><a href="#cb123-16" aria-hidden="true" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb123-17"><a href="#cb123-17" aria-hidden="true" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb123-18"><a href="#cb123-18" aria-hidden="true" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb123-19"><a href="#cb123-19" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 <div id="group-statistics" class="section level2">
 <h2>Group Statistics</h2>
@@ -1767,6 +1776,7 @@ KML Export with NameField
 <li>London 1m DSM. Downloaded from Defra Data Services Platform. © Environment Agency copyright and/or database right 2019. All rights reserved.</li>
 <li>Melbourne Metro Stations: © 2019 <a href="https://data.melbourne.vic.gov.au/">The City of Melbourne Open Data Portal</a>. Data provided by Metro Trains Melbourne</li>
 <li>Melbourne Bars and Pubs: © 2019 <a href="https://data.melbourne.vic.gov.au/">The City of Melbourne Open Data Portal</a>. Data provided by Census of Land Use and Employment (CLUE)</li>
+<li>VIIRS Annual VNL V2 for 2021. C. D. Elvidge, M. Zhizhin, T. Ghosh, F-C. Hsu, “Annual time series of global VIIRS nighttime lights derived from monthly averages: 2012 to 2019”, Remote Sensing (In press)</li>
 </ul>
 </div>
 <div id="license" class="section level1">

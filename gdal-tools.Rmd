@@ -1304,6 +1304,32 @@ gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi.tif -co COMPRESS=JPEG -
 
 # Supplement
 
+
+## Extracting Image Metadata and Statistics
+
+You can run `gdalinfo` command with the `-json` option which returns the info as a JSON string. This allows you to programatically access the information and parse it. 
+
+Let's say we want to extract the maximum value of the `merged.vrt` created in the [Merging Tiles](#merging-tiles) section. We can get the output of the command as a JSON by supplying the `-json` option.
+
+```
+gdalinfo -stats -json merged.vrt
+```
+
+Next, we need a way to parse the JSON and extract the fields we are interested in. There are many other command-line utilities designed to do just that. Here we use the popular JSON processing utility [jq](https://stedolan.github.io/jq/). You can download and install the `jq CLI` for your operating system and make sure it is in the system path. Then we can extract the required data using the `jq` query like below.
+
+```
+gdalinfo -stats -json merged.vrt | jq ".bands[0].maximum"
+```
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/gdal/jq.png')
+```
+
+Alternatively, you can also run the command via Python and use the `json` module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.
+
+```{python eval=FALSE, code=readLines('code/gdal/gdalinfo.py')}
+```
+
 ## Creating Contours
 
 > Note : The `merged.tif` file used below was created in the [Merging Tiles](#merging-tiles) section.
@@ -1451,6 +1477,21 @@ gdal_calc.py \
   --outfile mean.tif
 ```
 
+## Extracting Values from a Raster
+
+A useful tool called `gdallocationinfo` comes with the GDAL suite and can do point lookups from the raster at one or more pairs of coordinates. Combined with GDAL's capabilities to stream data from cloud datasets with the [Virtual File System](https://gdal.org/user/virtual_file_systems.html), you can efficiently lookup pixel values from without having to load the entire raster into memory.
+
+For example, we have a large (8GB) single-band Cloud-Optimized GeoTiff (COG) file on a Google Cloud Storage bucket. This file is a global mosaic of VIIRS Nighttime Lights for the year 2021 and the pixel values are the radiance values. To access this file, we use the `/vsigs/` (Google Cloud Storage files) handler and provide the path in form of `/vgigs/<bucket_name>/<file_name>`. This particular file is public, so we add the config option `--config GS_NO_SIGN_REQUEST YES`.
+
+```
+gdalinfo /vsigs/spatialthoughts-public-data/viirs_ntl_2021_global.tif --config GS_NO_SIGN_REQUEST YES
+```
+
+We are successfully able to open and lookup the metadata of this file. Now let's query the pixel value at a single coordinate using `gdallocationinfo`. We specify the location in WGS84 Lon/Lat format, so use the `-wgs84` option.
+
+```
+gdallocationinfo -valonly /vsigs/spatialthoughts-public-data/viirs_ntl_2021_global.tif -wgs84 77.5946 12.9716 --config GS_NO_SIGN_REQUEST YES
+```
 
 ## Raster to Vector Conversion
 
@@ -1555,31 +1596,6 @@ ogr2ogr -f LIBKML metro_stations.kml spatial_query.gpkg metro_stations --config 
 
 If your GDAL version has both KML and LIBKML drivers, OGR will prefer the LIBKML driver. To force OGR to use the KML driver for reading files, you can add `--config OGR_SKIP LIBKML` to your command.
 
-
-## Extracting Image Metadata and Statistics
-
-You can run `gdalinfo` command with the `-json` option which returns the info as a JSON string. This allows you to programatically access the information and parse it. 
-
-Let's say we want to extract the maximum value of the `merged.vrt` created in the [Merging Tiles](#merging-tiles) section. We can get the output of the command as a JSON by supplying the `-json` option.
-
-```
-gdalinfo -stats -json merged.vrt
-```
-
-Next, we need a way to parse the JSON and extract the fields we are interested in. There are many other command-line utilities designed to do just that. Here we use the popular JSON processing utility [jq](https://stedolan.github.io/jq/). You can download and install the `jq CLI` for your operating system and make sure it is in the system path. Then we can extract the required data using the `jq` query like below.
-
-```
-gdalinfo -stats -json merged.vrt | jq ".bands[0].maximum"
-```
-
-```{r echo=FALSE, fig.align='center', out.width='60%'}
-knitr::include_graphics('images/gdal/jq.png')
-```
-
-Alternatively, you can also run the command via Python and use the `json` module to parse and extract the results. The code below shows how to extract the min and max values for each of the SRTM tiles used in the example earlier.
-
-```{python eval=FALSE, code=readLines('code/gdal/gdalinfo.py')}
-```
 
 ## Group Statistics
 
@@ -1729,6 +1745,7 @@ knitr::include_graphics('images/gdal/geonames6.png')
 * London 1m DSM. Downloaded from Defra Data Services Platform. © Environment Agency copyright and/or database right 2019. All rights reserved. 
 * Melbourne Metro Stations: © 2019 [The City of Melbourne Open Data Portal](https://data.melbourne.vic.gov.au/). Data provided by Metro Trains Melbourne 
 * Melbourne Bars and Pubs: © 2019 [The City of Melbourne Open Data Portal](https://data.melbourne.vic.gov.au/). Data provided by Census of Land Use and Employment (CLUE)
+* VIIRS Annual VNL V2 for 2021. C. D. Elvidge, M. Zhizhin, T. Ghosh, F-C. Hsu, "Annual time series of global VIIRS nighttime lights derived from monthly averages: 2012 to 2019", Remote Sensing (In press)
 
 # License
 
