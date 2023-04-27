@@ -680,7 +680,6 @@ knitr::include_graphics('images/gdal/pansharpen_before.png')
 knitr::include_graphics('images/gdal/pansharpen_after.png')
 ```
 
-
 ## 1.5 Processing WMS Layers
 
 GDAL supports reading from a variety of web services, including [Web Map Services (WMS)](https://gdal.org/drivers/raster/wms.html) layers.
@@ -1554,6 +1553,41 @@ If we want to extract the centroid of the polygon and print the coordinates, we 
 ```
 ogrinfo everest.shp -sql 'SELECT AsText(ST_Centroid(geometry)) from everest' -dialect SQLite
 ```
+
+## Viewshed Analysis
+
+The `gdal_viewshed` command can do visibility analysis using elevation rasters. This is a very useful analysis for many applications including urban planning and telecommunications. We can take the London 1m DSM dataset and carry out the visibility analysis from a location.
+
+We will determine all the areas of London that are visible from the top of the [Tower 42](https://en.wikipedia.org/wiki/Tower_42) building. This is a skyscraper located in the city of London.
+
+We take the merged DSM created for [Assignment 1](https://courses.spatialthoughts.com/gdal-tools.html#assignment) and generate a viewshed.
+
+The CRS of the dataset is EPSG:27700 so we need to get the observer location coordinates in this CRS. We can use the `gdaltransform` command to convert the Lat/Lon coordinates to the coordinates in the target CRS. Run the command below and press enter.
+
+```
+gdaltransform -s_srs EPSG:4326 -t_srs EPSG:27700
+```
+
+The command takes input from the terminal. Enter the X and Y coordinate as follows
+```
+-0.083738 51.515178
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Results of Viewshed Analysis'}
+knitr::include_graphics('images/gdal/gdaltransform.png')
+```
+
+
+The output of the command are the X and Y coordinates **533061.985055201 181323.948402008**. We round them off and use it in the `gdal_viewshed` command.
+
+```
+gdal_viewshed -b 1 -ox 533062 -oy 181324 -oz 10 -md 100000.0 -f GTiff -co COMPRESS=DEFLATE -co PREDICTOR=2 merged.tif viewshed_tower42.tif
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Results of Viewshed Analysis'}
+knitr::include_graphics('images/gdal/viewshed.png')
+```
+
 
 ## Working with KML Files
 
