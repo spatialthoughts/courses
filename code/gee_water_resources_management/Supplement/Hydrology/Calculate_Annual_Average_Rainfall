@@ -1,0 +1,44 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD"),
+    india = ee.FeatureCollection("users/ujavalgandhi/public/soi_india_boundary");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/*
+Copyright (c) 2020 Ujaval Gandhi.
+This work is licensed under the terms of the MIT license.  
+For a copy of the license, see https://opensource.org/licenses/MIT
+*/
+
+// Calculate annual average rainfall for past 35+ years
+var years = ee.List.sequence(1981, 2015)
+print(years)
+
+var yearlyRainfall = function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1)
+  var endDate = startDate.advance(1, 'year')
+  var filtered = chirps
+    .filter(ee.Filter.date(startDate, endDate))
+  var total = filtered.reduce(ee.Reducer.sum())
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'year': year
+  })
+}
+
+var rainfallYears = ee.ImageCollection.fromImages(years.map(yearlyRainfall));
+
+// Calculate Average Annual Rainfall
+var annualAverage = rainfallYears
+  .reduce(ee.Reducer.mean()).rename('annual_rainfall');
+
+// Export the results
+var exportImage = annualAverage.clip(india.geometry());
+
+Export.image.toDrive({
+  image: exportImage,
+  description: 'CHIRPS_Annual_Average_Rainfall',
+  folder: 'earthengine',
+  fileNamePrefix: 'chirps_average_annual_rainfall',
+  region: india.geometry(),
+  scale: 5566,
+  crs: 'EPSG:4326',
+  maxPixels: 1e10})

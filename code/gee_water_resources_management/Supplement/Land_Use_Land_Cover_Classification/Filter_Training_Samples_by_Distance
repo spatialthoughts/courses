@@ -1,0 +1,43 @@
+// Example script showing show to ensure training and validation
+// samples are not spatially autocorrelated.
+
+// We exclude training samples that are close to validation samples.
+
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_2019_composite');
+var gcp = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_gcps');
+// Display the input composite.
+
+var rgbVis = {
+  min: 0.0,
+  max: 0.3,
+  bands: ['B4', 'B3', 'B2'],
+};
+Map.centerObject(composite, 10);
+Map.addLayer(composite, rgbVis, 'image');
+
+
+var gcp = gcp.randomColumn();
+var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+print('Total Training GCP', trainingGcp.size())
+print('Total Validation GCP', validationGcp.size())
+
+// Define a filter for distance
+var distance = 500;
+
+var distFilter = ee.Filter.withinDistance({
+  distance: distance,
+  leftField: '.geo',
+  rightField: '.geo',
+  maxError: 10
+});
+
+// Use ee.Join.inverted() to select all trainingGcp
+// NOT within the given distance from validationGcp
+var filteredGcp = ee.Join.inverted().apply(trainingGcp, validationGcp, distFilter);
+print(filteredGcp);
+print('Spatial Uncorrelated Training GCP', filteredGcp.size())
+
+Map.addLayer(trainingGcp, {color:'blue'}, 'Original Training Samples');
+Map.addLayer(validationGcp, {color:'yellow'}, ' Validation Samples');
+Map.addLayer(filteredGcp, {color:'cyan'}, ' Modified Training Samples');

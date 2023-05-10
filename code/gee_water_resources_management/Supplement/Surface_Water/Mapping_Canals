@@ -17,23 +17,26 @@ var geometry =
 
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
 
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(10);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 10% or cloud shadow classification
-  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
-  return image.updateMask(mask);
+// Cloud masking function
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  // Return the masked and scaled data, without the QA bands.
+  return image.updateMask(mask).divide(10000)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
 }
 
 var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
   .filter(ee.Filter.bounds(geometry))
-  .map(maskCloudAndShadowsSR);
+  .map(maskS2clouds);
   
 var image = filtered.median(); 
 

@@ -1,44 +1,86 @@
 var classified = ee.Image("users/ujavalgandhi/e2e/bangalore_classified");
 var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary");
+var geometry = bangalore.geometry();
 
 Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
 
-// Create a 2 band image with the area image and the classified image
+// We can calculate the areas of all classes in a single pass
+// using a Grouped Reducer. Learn more at 
+// https://spatialthoughts.com/2020/06/19/calculating-area-gee/
+
+// First create a 2 band image with the area image and the classified image
 // Divide the area image by 1e6 so area results are in Sq Km
 var areaImage = ee.Image.pixelArea().divide(1e6).addBands(classified);
 
-// Calculate Area by Class
-// Using a Grouped Reducer
+// Calculate areas
 var areas = areaImage.reduceRegion({
       reducer: ee.Reducer.sum().group({
       groupField: 1,
       groupName: 'classification',
     }),
-    geometry: bangalore,
-    scale: 100,
-    tileScale: 4,
+    geometry: geometry,
+    scale: 10,
     maxPixels: 1e10
     }); 
-
+ 
 var classAreas = ee.List(areas.get('groups'))
-print(classAreas)
 
-var areaChart = ui.Chart.image.byClass({
-  image: areaImage,
-  classBand: 'classification', 
-  region: bangalore,
-  scale: 100,
-  reducer: ee.Reducer.sum(),
-  classLabels: ['urban', 'bare', 'water', 'vegetation'],
-}).setOptions({
-  hAxis: {title: 'Classes'},
-  vAxis: {title: 'Area Km^2'},
-  title: 'Area by class',
-  series: {
-    0: { color: 'gray' },
-    1: { color: 'brown' },
-    2: { color: 'blue' },
-    3: { color: 'green' }
-  }
-});
+// Process results to extract the areas and
+// create a FeatureCollection
+
+// We can define a dictionary with class names
+var classNames = ee.Dictionary({
+  '0': 'urban',
+  '1': 'bare',
+  '2': 'water',
+  '3': 'vegetation'
+})
+
+var classAreas = classAreas.map(function(item) {
+  var areaDict = ee.Dictionary(item)
+  var classNumber = ee.Number(areaDict.get('classification')).format();
+  var className = classNames.get(classNumber);
+  var area = ee.Number(
+    areaDict.get('sum'))
+  return ee.Feature(null, {'class': classNumber, 'class_name': className, 'area': area})
+})
+
+var classAreaFc = ee.FeatureCollection(classAreas);
+
+// We can now chart the resulting FeatureCollection
+// If your area is large, it is advisable to first Export
+// the FeatureCollection as an Asset and import it once
+// the export is finished.
+
+// Let's create a Bar Chart
+var areaChart = ui.Chart.feature.byProperty({
+  features: classAreaFc,
+  xProperties: ['area'],
+  seriesProperty: 'class_name',
+}).setChartType('ColumnChart')
+  .setOptions({
+    hAxis: {title: 'Classes'},
+    vAxis: {title: 'Area Km^2'},
+    title: 'Area by class',
+    series: {
+      0: { color: 'gray' },
+      1: { color: 'brown' },
+      2: { color: 'blue' },
+      3: { color: 'green' }
+    }
+  });
+print(areaChart); 
+
+// We can also create a Pie-Chart
+var areaChart = ui.Chart.feature.byFeature({
+  features: classAreaFc,
+  xProperty: 'class_name',
+  yProperties: ['area']
+}).setChartType('PieChart')
+  .setOptions({
+    hAxis: {title: 'Classes'},
+    vAxis: {title: 'Area Km^2'},
+    title: 'Area by class',
+    colors: ['gray', 'brown', 'blue', 'green']
+  });
 print(areaChart); 

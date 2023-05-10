@@ -5,10 +5,26 @@ var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
 var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
 var geometry = selected.geometry()
 
+// Cloud masking function
+function maskS2clouds(image) {
+  var qa = image.select('QA60')
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  // Return the masked and scaled data, without the QA bands.
+  return image.updateMask(mask).divide(10000)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
+}
+
 var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
   .filter(ee.Filter.bounds(geometry))
-
+  .map(maskS2clouds);
+  
 var image = filtered.median().clip(geometry); 
 
 
@@ -77,7 +93,7 @@ var waterCluster = ee.Number(waterClusterList.get('max1'))
 // Select all pixels from the water cluster and mask everything else
 var water = clustered.eq(waterCluster).selfMask()
 
-var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
 var waterVis = {min:0, max:1, palette: ['white', 'blue']}
 
 // Visualize the results

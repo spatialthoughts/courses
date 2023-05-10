@@ -1,0 +1,123 @@
+// Script showing how to use migrated training samples
+// for multi-year classification
+
+// Training samples are collected on a 2019 Sentinel-2 composite
+// and are used to classify a 2020 Sentinel-2 composite
+// We use spectral distance measure to discard samples that show
+// large change between the target and reference years.
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+    
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
+
+var rgbVis = {
+  min: 0.0,
+  max: 0.3,
+  bands: ['B4', 'B3', 'B2'],
+};
+
+var scaleValues = function(image) {
+  return image.multiply(0.0001).copyProperties(image, ['system:time_start']);
+};
+
+// Prepare 2019 composite
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*')
+  .map(scaleValues);
+
+var composite2019 = filtered.median().clip(geometry);
+
+
+// Prepare 2020 Composite
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*')
+  .map(scaleValues);
+
+var composite2020 = filtered.median().clip(geometry);
+
+// Display the 2020 composite.
+Map.addLayer(composite2019, rgbVis, 'Composite 2019');
+// Display the 2021 composite.
+Map.addLayer(composite2020, rgbVis, 'Composite 2020');
+
+
+// Compute Spectral Distance between 2019 and 2020 images
+var distance = composite2019.spectralDistance(composite2020, 'sam');
+// GCPs were collected on 2020 image
+// Find out which GCPs are still unchanged in 2021
+
+// Get the distance at the training points
+var gcpWithDistance = distance.sampleRegions({
+  collection: gcp,
+  scale: 10,
+  tileScale: 16,
+  geometries: true
+})
+Map.addLayer(gcpWithDistance, {color: 'red'}, 'GCPs with Distance', false);
+
+// Adjust the threshold to discard GCPs are changed locations
+// Threshold is determined manually
+var threshold = 0.2
+var newGcp = gcpWithDistance.filter(ee.Filter.lt('distance', threshold));
+Map.addLayer(newGcp, {color: 'blue'}, 'Filtered GCPs');
+
+print('Total GCPs', gcp.size());
+print('Migrated GCPs', newGcp.size());
+// We wrap the classification workflow in a function
+// and call the function with the different composites and GCPs
+performClassification(composite2019, gcp, '2019');
+performClassification(composite2020, newGcp, '2020');
+
+//************************************************************************** 
+// Classification and Accuracy Assessment
+//************************************************************************** 
+function performClassification(image, gcp, year) {
+  var gcp = gcp.randomColumn();
+  var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
+  var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+  
+  // Overlay the point on the image to get training data.
+  var training = image.sampleRegions({
+    collection: trainingGcp,
+    properties: ['landcover'],
+    scale: 10,
+    tileScale: 16
+  });
+  
+  // Train a classifier.
+  var classifier = ee.Classifier.smileRandomForest(50)
+  .train({
+    features: training,  
+    classProperty: 'landcover',
+    inputProperties: image.bandNames()
+  });
+  
+  // Classify the image.
+  var classified = image.classify(classifier);
+  
+  Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, year);
+  
+  // Use classification map to assess accuracy using the validation fraction
+  // of the overall training set created above.
+  var test = classified.sampleRegions({
+    collection: validationGcp,
+    properties: ['landcover'],
+    tileScale: 16,
+    scale: 10,
+  });
+  
+  var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+  // Printing of confusion matrix may time out. Alternatively, you can export it as CSV
+  print('Confusion Matrix ' + year, testConfusionMatrix);
+  print('Test Accuracy ' + year, testConfusionMatrix.accuracy());
+
+}
