@@ -585,6 +585,10 @@ $(document).ready(function () {
 <li><a href="#unsupervised-clustering-basic">Unsupervised Clustering Basic</a></li>
 <li><a href="#unsupervised-clustering-advanced">Unsupervised Clustering Advanced</a></li>
 </ul></li>
+<li><a href="#sar">SAR</a>
+<ul>
+<li><a href="#sentinel-1-ard-pre-processing">Sentinel-1 ARD Pre-Processing</a></li>
+</ul></li>
 <li><a href="#time-series-analysis">Time Series Analysis</a>
 <ul>
 <li><a href="#mann-kendall-test">Mann Kendall Test</a></li>
@@ -4911,9 +4915,8 @@ Masked and Classified VCI Image
 <div id="earth-engine-apps" class="section level1">
 <h1>07 Earth Engine Apps</h1>
 <p>A simple yet powerful application of GEE is the building App. We can build these apps to share the work with others as a working model instead of a static report. Earth Engine Apps uses JavaScript internally. This module will introduce you to GEE Apps by creating Surface Water Explorer App.</p>
-<blockquote>
-<p>Visit this <a href="https://www.earthengine.app/">Earth Engine Apps</a> to exlpore more examples.</p>
-</blockquote>
+<p><a href="https://docs.google.com/presentation/d/1B4NiKObQpmL29yLk7CHR5lVu706TVNkWjqOtngP1wl8/edit?usp=sharing" target="_blank"><img src="images/gee_water_resources_management/apps.png" width="400" alt="View Presentation" /></a></p>
+<p><a href="https://docs.google.com/presentation/d/1B4NiKObQpmL29yLk7CHR5lVu706TVNkWjqOtngP1wl8/edit?usp=sharing" target="_blank">View the Presentation ↗</a></p>
 <div id="client-vs-server" class="section level2">
 <h2>01. Client vs Server</h2>
 <p>The User Interface elements in your Code Editor - Map View, Drawing Tools etc. are ‘client-side’ elements. They run in YOUR browser. Image Collections, feature collections, calculations on Earth Engine objects etc. are ‘server-side’ elements. They run in Google’s data center. You cannot mix both these objects. To learn more, visit the <a href="https://developers.google.com/earth-engine/guides/client_server">Client vs. Server</a> section of the Earth Engine User Guide.</p>
@@ -6217,79 +6220,181 @@ Masked and Classified VCI Image
 <span id="cb97-139"><a href="#cb97-139" aria-hidden="true" tabindex="-1"></a>  </span></code></pre></div>
 </div>
 </div>
+<div id="sar" class="section level2">
+<h2>SAR</h2>
+<div id="sentinel-1-ard-pre-processing" class="section level3">
+<h3>Sentinel-1 ARD Pre-Processing</h3>
+<p>This example script shows how to apply a Gamma MAP (Maximum A-posterior) Speckle Filter and Radiometric Terrain Correction to Sentinel-1 images using the Analysis Ready Data (ARD) preparation framework published by Mullissa, A. et. al.</p>
+<div class="figure" style="text-align: center">
+<img src="images/gee_water_resources_management/gamma_map.png" alt="Gamma MAP Speckle filtering" width="100%" />
+<p class="caption">
+Gamma MAP Speckle filtering
+</p>
+</div>
+<div class="sourceCode" id="cb98"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example script that shows how to pre-process SAR data</span></span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a><span class="co">// using Analysis Ready Data (ARD) Framework from</span></span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a><span class="co">// https://github.com/adugnag/gee_s1_ard/tree/main</span></span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Mullissa, A.; Vollrath, A.; Odongo-Braun, C.; Slagter, B.;</span></span>
+<span id="cb98-6"><a href="#cb98-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Balling, J.; Gou, Y.; Gorelick, N.; Reiche, J. </span></span>
+<span id="cb98-7"><a href="#cb98-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Sentinel-1 SAR Backscatter Analysis Ready Data Preparation </span></span>
+<span id="cb98-8"><a href="#cb98-8" aria-hidden="true" tabindex="-1"></a><span class="co">// in Google Earth Engine. Remote Sens. 2021, 13, 1954. </span></span>
+<span id="cb98-9"><a href="#cb98-9" aria-hidden="true" tabindex="-1"></a><span class="co">// https://doi.org/10.3390/rs13101954</span></span>
+<span id="cb98-10"><a href="#cb98-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-11"><a href="#cb98-11" aria-hidden="true" tabindex="-1"></a><span class="co">// This script applies GAMMA MAP filter with border noise</span></span>
+<span id="cb98-12"><a href="#cb98-12" aria-hidden="true" tabindex="-1"></a><span class="co">// removal and radiometric terrain correction</span></span>
+<span id="cb98-13"><a href="#cb98-13" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gsw <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;JRC/GSW1_2/GlobalSurfaceWater&quot;</span>)<span class="op">;</span></span>
+<span id="cb98-14"><a href="#cb98-14" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> admin2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)<span class="op">;</span></span>
+<span id="cb98-15"><a href="#cb98-15" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> hydrosheds <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&quot;WWF/HydroSHEDS/03VFDEM&quot;</span>)<span class="op">;</span></span>
+<span id="cb98-16"><a href="#cb98-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb98-17"><a href="#cb98-17" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> startDate <span class="op">=</span> <span class="st">&#39;2018-08-10&#39;</span></span>
+<span id="cb98-18"><a href="#cb98-18" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> endDate <span class="op">=</span> <span class="st">&#39;2018-08-23&#39;</span></span>
+<span id="cb98-19"><a href="#cb98-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-20"><a href="#cb98-20" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ernakulam <span class="op">=</span> admin2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM2_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Ernakulam&#39;</span>))</span>
+<span id="cb98-21"><a href="#cb98-21" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ernakulam<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb98-22"><a href="#cb98-22" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(geometry<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;grey&#39;</span>}<span class="op">,</span> <span class="st">&#39;Ernakulam District&#39;</span>)</span>
+<span id="cb98-23"><a href="#cb98-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-24"><a href="#cb98-24" aria-hidden="true" tabindex="-1"></a><span class="co">// ************************************************************</span></span>
+<span id="cb98-25"><a href="#cb98-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Sentinel-1 ARD Pre-Processing</span></span>
+<span id="cb98-26"><a href="#cb98-26" aria-hidden="true" tabindex="-1"></a><span class="co">// ************************************************************</span></span>
+<span id="cb98-27"><a href="#cb98-27" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> wrapper <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;users/adugnagirma/gee_s1_ard:wrapper&#39;</span>)<span class="op">;</span></span>
+<span id="cb98-28"><a href="#cb98-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> helper <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;users/adugnagirma/gee_s1_ard:utilities&#39;</span>)<span class="op">;</span></span>
+<span id="cb98-29"><a href="#cb98-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-30"><a href="#cb98-30" aria-hidden="true" tabindex="-1"></a><span class="co">//-----------------------------------------------------------//</span></span>
+<span id="cb98-31"><a href="#cb98-31" aria-hidden="true" tabindex="-1"></a><span class="co">// DEFINE PARAMETERS</span></span>
+<span id="cb98-32"><a href="#cb98-32" aria-hidden="true" tabindex="-1"></a><span class="co">//-----------------------------------------------------------//</span></span>
+<span id="cb98-33"><a href="#cb98-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-34"><a href="#cb98-34" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> parameters <span class="op">=</span> {</span>
+<span id="cb98-35"><a href="#cb98-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">//1. Data Selection</span></span>
+<span id="cb98-36"><a href="#cb98-36" aria-hidden="true" tabindex="-1"></a>  <span class="dt">START_DATE</span><span class="op">:</span> <span class="st">&#39;2018-08-10&#39;</span><span class="op">,</span></span>
+<span id="cb98-37"><a href="#cb98-37" aria-hidden="true" tabindex="-1"></a>  <span class="dt">STOP_DATE</span><span class="op">:</span> <span class="st">&#39;2018-08-23&#39;</span><span class="op">,</span></span>
+<span id="cb98-38"><a href="#cb98-38" aria-hidden="true" tabindex="-1"></a>  <span class="dt">POLARIZATION</span><span class="op">:</span><span class="st">&#39;VVVH&#39;</span><span class="op">,</span></span>
+<span id="cb98-39"><a href="#cb98-39" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ORBIT</span> <span class="op">:</span> <span class="st">&#39;DESCENDING&#39;</span><span class="op">,</span></span>
+<span id="cb98-40"><a href="#cb98-40" aria-hidden="true" tabindex="-1"></a>  <span class="dt">GEOMETRY</span><span class="op">:</span> geometry<span class="op">,</span> </span>
+<span id="cb98-41"><a href="#cb98-41" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb98-42"><a href="#cb98-42" aria-hidden="true" tabindex="-1"></a>  <span class="co">//2. Additional Border noise correction</span></span>
+<span id="cb98-43"><a href="#cb98-43" aria-hidden="true" tabindex="-1"></a>  <span class="dt">APPLY_ADDITIONAL_BORDER_NOISE_CORRECTION</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb98-44"><a href="#cb98-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb98-45"><a href="#cb98-45" aria-hidden="true" tabindex="-1"></a>  <span class="co">//3.Speckle filter</span></span>
+<span id="cb98-46"><a href="#cb98-46" aria-hidden="true" tabindex="-1"></a>  <span class="dt">APPLY_SPECKLE_FILTERING</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb98-47"><a href="#cb98-47" aria-hidden="true" tabindex="-1"></a>  <span class="dt">SPECKLE_FILTER_FRAMEWORK</span><span class="op">:</span> <span class="st">&#39;MULTI&#39;</span><span class="op">,</span></span>
+<span id="cb98-48"><a href="#cb98-48" aria-hidden="true" tabindex="-1"></a>  <span class="dt">SPECKLE_FILTER</span><span class="op">:</span> <span class="st">&#39;GAMMA MAP&#39;</span><span class="op">,</span></span>
+<span id="cb98-49"><a href="#cb98-49" aria-hidden="true" tabindex="-1"></a>  <span class="dt">SPECKLE_FILTER_KERNEL_SIZE</span><span class="op">:</span> <span class="dv">9</span><span class="op">,</span></span>
+<span id="cb98-50"><a href="#cb98-50" aria-hidden="true" tabindex="-1"></a>  <span class="dt">SPECKLE_FILTER_NR_OF_IMAGES</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb98-51"><a href="#cb98-51" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb98-52"><a href="#cb98-52" aria-hidden="true" tabindex="-1"></a>  <span class="co">//4. Radiometric terrain normalization</span></span>
+<span id="cb98-53"><a href="#cb98-53" aria-hidden="true" tabindex="-1"></a>  <span class="dt">APPLY_TERRAIN_FLATTENING</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb98-54"><a href="#cb98-54" aria-hidden="true" tabindex="-1"></a>  <span class="dt">DEM</span><span class="op">:</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;USGS/SRTMGL1_003&#39;</span>)<span class="op">,</span></span>
+<span id="cb98-55"><a href="#cb98-55" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TERRAIN_FLATTENING_MODEL</span><span class="op">:</span> <span class="st">&#39;VOLUME&#39;</span><span class="op">,</span></span>
+<span id="cb98-56"><a href="#cb98-56" aria-hidden="true" tabindex="-1"></a>  <span class="dt">TERRAIN_FLATTENING_ADDITIONAL_LAYOVER_SHADOW_BUFFER</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb98-57"><a href="#cb98-57" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb98-58"><a href="#cb98-58" aria-hidden="true" tabindex="-1"></a>  <span class="co">//5. Output</span></span>
+<span id="cb98-59"><a href="#cb98-59" aria-hidden="true" tabindex="-1"></a>  <span class="dt">FORMAT</span> <span class="op">:</span> <span class="st">&#39;DB&#39;</span><span class="op">,</span></span>
+<span id="cb98-60"><a href="#cb98-60" aria-hidden="true" tabindex="-1"></a>  <span class="dt">CLIP_TO_ROI</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb98-61"><a href="#cb98-61" aria-hidden="true" tabindex="-1"></a>  <span class="dt">SAVE_ASSETS</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb98-62"><a href="#cb98-62" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb98-63"><a href="#cb98-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-64"><a href="#cb98-64" aria-hidden="true" tabindex="-1"></a><span class="co">// Preprocess the S1 collection</span></span>
+<span id="cb98-65"><a href="#cb98-65" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> output <span class="op">=</span> wrapper<span class="op">.</span><span class="fu">s1_preproc</span>(parameters)<span class="op">;</span></span>
+<span id="cb98-66"><a href="#cb98-66" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s1 <span class="op">=</span> output[<span class="dv">0</span>]</span>
+<span id="cb98-67"><a href="#cb98-67" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> s1_preprocess <span class="op">=</span> output[<span class="dv">1</span>]</span>
+<span id="cb98-68"><a href="#cb98-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-69"><a href="#cb98-69" aria-hidden="true" tabindex="-1"></a><span class="co">// Function to add VV/VH ratio band</span></span>
+<span id="cb98-70"><a href="#cb98-70" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> addRatioBand <span class="op">=</span> <span class="kw">function</span>(image) {</span>
+<span id="cb98-71"><a href="#cb98-71" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> ratioBand <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;VV&#39;</span>)</span>
+<span id="cb98-72"><a href="#cb98-72" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">divide</span>(image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;VH&#39;</span>))<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;VV/VH&#39;</span>)</span>
+<span id="cb98-73"><a href="#cb98-73" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ratioBand)</span>
+<span id="cb98-74"><a href="#cb98-74" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb98-75"><a href="#cb98-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-76"><a href="#cb98-76" aria-hidden="true" tabindex="-1"></a><span class="co">// Convert to DB and Add VV/VH ratio band</span></span>
+<span id="cb98-77"><a href="#cb98-77" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> speckleFiltered <span class="op">=</span> s1_preprocess</span>
+<span id="cb98-78"><a href="#cb98-78" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(helper<span class="op">.</span><span class="at">lin_to_db</span>)</span>
+<span id="cb98-79"><a href="#cb98-79" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(addRatioBand)<span class="op">;</span></span>
+<span id="cb98-80"><a href="#cb98-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-81"><a href="#cb98-81" aria-hidden="true" tabindex="-1"></a><span class="co">// Visualize</span></span>
+<span id="cb98-82"><a href="#cb98-82" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> sarComposite <span class="op">=</span> speckleFiltered<span class="op">.</span><span class="fu">mosaic</span>()<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">;</span></span>
+<span id="cb98-83"><a href="#cb98-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-84"><a href="#cb98-84" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> visParams <span class="op">=</span> {</span>
+<span id="cb98-85"><a href="#cb98-85" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;VV&#39;</span><span class="op">,</span> <span class="st">&#39;VH&#39;</span><span class="op">,</span> <span class="st">&#39;VV/VH&#39;</span>]<span class="op">,</span></span>
+<span id="cb98-86"><a href="#cb98-86" aria-hidden="true" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span>[<span class="op">-</span><span class="dv">25</span><span class="op">,</span> <span class="op">-</span><span class="dv">25</span><span class="op">,</span> <span class="dv">0</span>]<span class="op">,</span></span>
+<span id="cb98-87"><a href="#cb98-87" aria-hidden="true" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span>[<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">2</span>]</span>
+<span id="cb98-88"><a href="#cb98-88" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb98-89"><a href="#cb98-89" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(sarComposite<span class="op">,</span> visParams<span class="op">,</span> <span class="st">&#39;SAR RGB Visualization&#39;</span>)<span class="op">;</span> </span></code></pre></div>
+</div>
+</div>
 <div id="time-series-analysis" class="section level2">
 <h2>Time Series Analysis</h2>
 <div id="mann-kendall-test" class="section level3">
 <h3>Mann Kendall Test</h3>
-<div class="sourceCode" id="cb98"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> taluks <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/gee-water-resources/kgis_taluks&quot;</span>)<span class="op">;</span></span>
-<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> chirps <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;UCSB-CHG/CHIRPS/PENTAD&#39;</span>)</span>
-<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a><span class="co">// We will compute the trend of total seasonal rainfall</span></span>
-<span id="cb98-6"><a href="#cb98-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-7"><a href="#cb98-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Introducting calendarRange()</span></span>
-<span id="cb98-8"><a href="#cb98-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> julyImages <span class="op">=</span> chirps</span>
-<span id="cb98-9"><a href="#cb98-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">7</span><span class="op">,</span> <span class="dv">7</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
-<span id="cb98-10"><a href="#cb98-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(julyImages)</span>
-<span id="cb98-11"><a href="#cb98-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-12"><a href="#cb98-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Rainy season is June - September</span></span>
-<span id="cb98-13"><a href="#cb98-13" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> createSeasonalImage <span class="op">=</span> <span class="kw">function</span>(year) {</span>
-<span id="cb98-14"><a href="#cb98-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> startDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">6</span><span class="op">,</span> <span class="dv">1</span>)</span>
-<span id="cb98-15"><a href="#cb98-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> endDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">9</span><span class="op">,</span> <span class="dv">30</span>)</span>
-<span id="cb98-16"><a href="#cb98-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> seasonFiltered <span class="op">=</span> chirps</span>
-<span id="cb98-17"><a href="#cb98-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(startDate<span class="op">,</span> endDate))</span>
-<span id="cb98-18"><a href="#cb98-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate total precipitation</span></span>
-<span id="cb98-19"><a href="#cb98-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> total <span class="op">=</span> seasonFiltered<span class="op">.</span><span class="fu">reduce</span>(ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>())</span>
-<span id="cb98-20"><a href="#cb98-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> total<span class="op">.</span><span class="fu">set</span>({</span>
-<span id="cb98-21"><a href="#cb98-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;system:time_start&#39;</span><span class="op">:</span> startDate<span class="op">.</span><span class="fu">millis</span>()<span class="op">,</span></span>
-<span id="cb98-22"><a href="#cb98-22" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;system:time_end&#39;</span><span class="op">:</span> endDate<span class="op">.</span><span class="fu">millis</span>()<span class="op">,</span></span>
-<span id="cb98-23"><a href="#cb98-23" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;year&#39;</span><span class="op">:</span> year<span class="op">,</span></span>
-<span id="cb98-24"><a href="#cb98-24" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb98-25"><a href="#cb98-25" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb98-26"><a href="#cb98-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-27"><a href="#cb98-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-28"><a href="#cb98-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-29"><a href="#cb98-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Aggregate Precipitation Data to get Annual Time-Series</span></span>
-<span id="cb98-30"><a href="#cb98-30" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> years <span class="op">=</span> ee<span class="op">.</span><span class="at">List</span><span class="op">.</span><span class="fu">sequence</span>(<span class="dv">1981</span><span class="op">,</span> <span class="dv">2013</span>)</span>
-<span id="cb98-31"><a href="#cb98-31" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> yearlyImages <span class="op">=</span> years<span class="op">.</span><span class="fu">map</span>(createSeasonalImage)</span>
-<span id="cb98-32"><a href="#cb98-32" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yearlyImages)</span>
-<span id="cb98-33"><a href="#cb98-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-34"><a href="#cb98-34" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> yearlyCol <span class="op">=</span> ee<span class="op">.</span><span class="at">ImageCollection</span><span class="op">.</span><span class="fu">fromImages</span>(yearlyImages)</span>
-<span id="cb98-35"><a href="#cb98-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-36"><a href="#cb98-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-37"><a href="#cb98-37" aria-hidden="true" tabindex="-1"></a><span class="co">// Join the time series to itself</span></span>
-<span id="cb98-38"><a href="#cb98-38" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> afterFilter <span class="op">=</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lessThan</span>({</span>
-<span id="cb98-39"><a href="#cb98-39" aria-hidden="true" tabindex="-1"></a>  <span class="dt">leftField</span><span class="op">:</span> <span class="st">&#39;system:time_start&#39;</span><span class="op">,</span></span>
-<span id="cb98-40"><a href="#cb98-40" aria-hidden="true" tabindex="-1"></a>  <span class="dt">rightField</span><span class="op">:</span> <span class="st">&#39;system:time_start&#39;</span></span>
-<span id="cb98-41"><a href="#cb98-41" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb98-42"><a href="#cb98-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-43"><a href="#cb98-43" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> joined <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(ee<span class="op">.</span><span class="at">Join</span><span class="op">.</span><span class="fu">saveAll</span>(<span class="st">&#39;after&#39;</span>)<span class="op">.</span><span class="fu">apply</span>({</span>
-<span id="cb98-44"><a href="#cb98-44" aria-hidden="true" tabindex="-1"></a>  <span class="dt">primary</span><span class="op">:</span> yearlyCol<span class="op">,</span></span>
-<span id="cb98-45"><a href="#cb98-45" aria-hidden="true" tabindex="-1"></a>  <span class="dt">secondary</span><span class="op">:</span> yearlyCol<span class="op">,</span></span>
-<span id="cb98-46"><a href="#cb98-46" aria-hidden="true" tabindex="-1"></a>  <span class="dt">condition</span><span class="op">:</span> afterFilter</span>
-<span id="cb98-47"><a href="#cb98-47" aria-hidden="true" tabindex="-1"></a>}))<span class="op">;</span></span>
-<span id="cb98-48"><a href="#cb98-48" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(joined)</span>
-<span id="cb98-49"><a href="#cb98-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-50"><a href="#cb98-50" aria-hidden="true" tabindex="-1"></a><span class="co">// Mann-Kendall trend test</span></span>
-<span id="cb98-51"><a href="#cb98-51" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> sign <span class="op">=</span> <span class="kw">function</span>(i<span class="op">,</span> j) { <span class="co">// i and j are images</span></span>
-<span id="cb98-52"><a href="#cb98-52" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Image</span>(j)<span class="op">.</span><span class="fu">neq</span>(i) <span class="co">// Zero case</span></span>
-<span id="cb98-53"><a href="#cb98-53" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">multiply</span>(ee<span class="op">.</span><span class="fu">Image</span>(j)<span class="op">.</span><span class="fu">subtract</span>(i)<span class="op">.</span><span class="fu">clamp</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>))<span class="op">.</span><span class="fu">int</span>()<span class="op">;</span></span>
-<span id="cb98-54"><a href="#cb98-54" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
-<span id="cb98-55"><a href="#cb98-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-56"><a href="#cb98-56" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> kendall <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(joined<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(current) {</span>
-<span id="cb98-57"><a href="#cb98-57" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> afterCollection <span class="op">=</span> ee<span class="op">.</span><span class="at">ImageCollection</span><span class="op">.</span><span class="fu">fromImages</span>(current<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;after&#39;</span>))<span class="op">;</span></span>
-<span id="cb98-58"><a href="#cb98-58" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> afterCollection<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(image) {</span>
-<span id="cb98-59"><a href="#cb98-59" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The unmask is to prevent accumulation of masked pixels that</span></span>
-<span id="cb98-60"><a href="#cb98-60" aria-hidden="true" tabindex="-1"></a>    <span class="co">// result from the undefined case of when either current or image</span></span>
-<span id="cb98-61"><a href="#cb98-61" aria-hidden="true" tabindex="-1"></a>    <span class="co">// is masked.  It won&#39;t affect the sum, since it&#39;s unmasked to zero.</span></span>
-<span id="cb98-62"><a href="#cb98-62" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="fu">sign</span>(current<span class="op">,</span> image))<span class="op">.</span><span class="fu">unmask</span>(<span class="dv">0</span>)<span class="op">;</span></span>
-<span id="cb98-63"><a href="#cb98-63" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb98-64"><a href="#cb98-64" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set parallelScale to avoid User memory limit exceeded.</span></span>
-<span id="cb98-65"><a href="#cb98-65" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">flatten</span>())<span class="op">.</span><span class="fu">reduce</span>(<span class="st">&#39;sum&#39;</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
-<span id="cb98-66"><a href="#cb98-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb98-67"><a href="#cb98-67" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;red&#39;</span><span class="op">,</span> <span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]<span class="op">;</span></span>
-<span id="cb98-68"><a href="#cb98-68" aria-hidden="true" tabindex="-1"></a><span class="co">// Stretch this as necessary.</span></span>
-<span id="cb98-69"><a href="#cb98-69" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(kendall<span class="op">,</span> {<span class="dt">min</span><span class="op">:-</span><span class="dv">30</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">30</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span> <span class="st">&#39;kendall&#39;</span>)<span class="op">;</span> </span></code></pre></div>
+<div class="sourceCode" id="cb99"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> taluks <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;users/ujavalgandhi/gee-water-resources/kgis_taluks&quot;</span>)<span class="op">;</span></span>
+<span id="cb99-2"><a href="#cb99-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> chirps <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;UCSB-CHG/CHIRPS/PENTAD&#39;</span>)</span>
+<span id="cb99-3"><a href="#cb99-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-4"><a href="#cb99-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-5"><a href="#cb99-5" aria-hidden="true" tabindex="-1"></a><span class="co">// We will compute the trend of total seasonal rainfall</span></span>
+<span id="cb99-6"><a href="#cb99-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-7"><a href="#cb99-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Introducting calendarRange()</span></span>
+<span id="cb99-8"><a href="#cb99-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> julyImages <span class="op">=</span> chirps</span>
+<span id="cb99-9"><a href="#cb99-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">7</span><span class="op">,</span> <span class="dv">7</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
+<span id="cb99-10"><a href="#cb99-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(julyImages)</span>
+<span id="cb99-11"><a href="#cb99-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-12"><a href="#cb99-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Rainy season is June - September</span></span>
+<span id="cb99-13"><a href="#cb99-13" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> createSeasonalImage <span class="op">=</span> <span class="kw">function</span>(year) {</span>
+<span id="cb99-14"><a href="#cb99-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> startDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">6</span><span class="op">,</span> <span class="dv">1</span>)</span>
+<span id="cb99-15"><a href="#cb99-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> endDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">9</span><span class="op">,</span> <span class="dv">30</span>)</span>
+<span id="cb99-16"><a href="#cb99-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> seasonFiltered <span class="op">=</span> chirps</span>
+<span id="cb99-17"><a href="#cb99-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(startDate<span class="op">,</span> endDate))</span>
+<span id="cb99-18"><a href="#cb99-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate total precipitation</span></span>
+<span id="cb99-19"><a href="#cb99-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> total <span class="op">=</span> seasonFiltered<span class="op">.</span><span class="fu">reduce</span>(ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>())</span>
+<span id="cb99-20"><a href="#cb99-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> total<span class="op">.</span><span class="fu">set</span>({</span>
+<span id="cb99-21"><a href="#cb99-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;system:time_start&#39;</span><span class="op">:</span> startDate<span class="op">.</span><span class="fu">millis</span>()<span class="op">,</span></span>
+<span id="cb99-22"><a href="#cb99-22" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;system:time_end&#39;</span><span class="op">:</span> endDate<span class="op">.</span><span class="fu">millis</span>()<span class="op">,</span></span>
+<span id="cb99-23"><a href="#cb99-23" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;year&#39;</span><span class="op">:</span> year<span class="op">,</span></span>
+<span id="cb99-24"><a href="#cb99-24" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb99-25"><a href="#cb99-25" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb99-26"><a href="#cb99-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-27"><a href="#cb99-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-28"><a href="#cb99-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-29"><a href="#cb99-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Aggregate Precipitation Data to get Annual Time-Series</span></span>
+<span id="cb99-30"><a href="#cb99-30" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> years <span class="op">=</span> ee<span class="op">.</span><span class="at">List</span><span class="op">.</span><span class="fu">sequence</span>(<span class="dv">1981</span><span class="op">,</span> <span class="dv">2013</span>)</span>
+<span id="cb99-31"><a href="#cb99-31" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> yearlyImages <span class="op">=</span> years<span class="op">.</span><span class="fu">map</span>(createSeasonalImage)</span>
+<span id="cb99-32"><a href="#cb99-32" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yearlyImages)</span>
+<span id="cb99-33"><a href="#cb99-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-34"><a href="#cb99-34" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> yearlyCol <span class="op">=</span> ee<span class="op">.</span><span class="at">ImageCollection</span><span class="op">.</span><span class="fu">fromImages</span>(yearlyImages)</span>
+<span id="cb99-35"><a href="#cb99-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-36"><a href="#cb99-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-37"><a href="#cb99-37" aria-hidden="true" tabindex="-1"></a><span class="co">// Join the time series to itself</span></span>
+<span id="cb99-38"><a href="#cb99-38" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> afterFilter <span class="op">=</span> ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lessThan</span>({</span>
+<span id="cb99-39"><a href="#cb99-39" aria-hidden="true" tabindex="-1"></a>  <span class="dt">leftField</span><span class="op">:</span> <span class="st">&#39;system:time_start&#39;</span><span class="op">,</span></span>
+<span id="cb99-40"><a href="#cb99-40" aria-hidden="true" tabindex="-1"></a>  <span class="dt">rightField</span><span class="op">:</span> <span class="st">&#39;system:time_start&#39;</span></span>
+<span id="cb99-41"><a href="#cb99-41" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb99-42"><a href="#cb99-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-43"><a href="#cb99-43" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> joined <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(ee<span class="op">.</span><span class="at">Join</span><span class="op">.</span><span class="fu">saveAll</span>(<span class="st">&#39;after&#39;</span>)<span class="op">.</span><span class="fu">apply</span>({</span>
+<span id="cb99-44"><a href="#cb99-44" aria-hidden="true" tabindex="-1"></a>  <span class="dt">primary</span><span class="op">:</span> yearlyCol<span class="op">,</span></span>
+<span id="cb99-45"><a href="#cb99-45" aria-hidden="true" tabindex="-1"></a>  <span class="dt">secondary</span><span class="op">:</span> yearlyCol<span class="op">,</span></span>
+<span id="cb99-46"><a href="#cb99-46" aria-hidden="true" tabindex="-1"></a>  <span class="dt">condition</span><span class="op">:</span> afterFilter</span>
+<span id="cb99-47"><a href="#cb99-47" aria-hidden="true" tabindex="-1"></a>}))<span class="op">;</span></span>
+<span id="cb99-48"><a href="#cb99-48" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(joined)</span>
+<span id="cb99-49"><a href="#cb99-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-50"><a href="#cb99-50" aria-hidden="true" tabindex="-1"></a><span class="co">// Mann-Kendall trend test</span></span>
+<span id="cb99-51"><a href="#cb99-51" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> sign <span class="op">=</span> <span class="kw">function</span>(i<span class="op">,</span> j) { <span class="co">// i and j are images</span></span>
+<span id="cb99-52"><a href="#cb99-52" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Image</span>(j)<span class="op">.</span><span class="fu">neq</span>(i) <span class="co">// Zero case</span></span>
+<span id="cb99-53"><a href="#cb99-53" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">multiply</span>(ee<span class="op">.</span><span class="fu">Image</span>(j)<span class="op">.</span><span class="fu">subtract</span>(i)<span class="op">.</span><span class="fu">clamp</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>))<span class="op">.</span><span class="fu">int</span>()<span class="op">;</span></span>
+<span id="cb99-54"><a href="#cb99-54" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb99-55"><a href="#cb99-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-56"><a href="#cb99-56" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> kendall <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(joined<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(current) {</span>
+<span id="cb99-57"><a href="#cb99-57" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> afterCollection <span class="op">=</span> ee<span class="op">.</span><span class="at">ImageCollection</span><span class="op">.</span><span class="fu">fromImages</span>(current<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;after&#39;</span>))<span class="op">;</span></span>
+<span id="cb99-58"><a href="#cb99-58" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> afterCollection<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(image) {</span>
+<span id="cb99-59"><a href="#cb99-59" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The unmask is to prevent accumulation of masked pixels that</span></span>
+<span id="cb99-60"><a href="#cb99-60" aria-hidden="true" tabindex="-1"></a>    <span class="co">// result from the undefined case of when either current or image</span></span>
+<span id="cb99-61"><a href="#cb99-61" aria-hidden="true" tabindex="-1"></a>    <span class="co">// is masked.  It won&#39;t affect the sum, since it&#39;s unmasked to zero.</span></span>
+<span id="cb99-62"><a href="#cb99-62" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="fu">sign</span>(current<span class="op">,</span> image))<span class="op">.</span><span class="fu">unmask</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb99-63"><a href="#cb99-63" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb99-64"><a href="#cb99-64" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set parallelScale to avoid User memory limit exceeded.</span></span>
+<span id="cb99-65"><a href="#cb99-65" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">flatten</span>())<span class="op">.</span><span class="fu">reduce</span>(<span class="st">&#39;sum&#39;</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb99-66"><a href="#cb99-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb99-67"><a href="#cb99-67" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;red&#39;</span><span class="op">,</span> <span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;green&#39;</span>]<span class="op">;</span></span>
+<span id="cb99-68"><a href="#cb99-68" aria-hidden="true" tabindex="-1"></a><span class="co">// Stretch this as necessary.</span></span>
+<span id="cb99-69"><a href="#cb99-69" aria-hidden="true" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(kendall<span class="op">,</span> {<span class="dt">min</span><span class="op">:-</span><span class="dv">30</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">30</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span> <span class="st">&#39;kendall&#39;</span>)<span class="op">;</span> </span></code></pre></div>
 </div>
 </div>
 </div>
