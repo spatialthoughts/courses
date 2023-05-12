@@ -1,0 +1,38 @@
+// We use the Harmonized Global Night Time Lights (1992-2020) dataset
+var dmsp = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/dmsp');
+var viirs = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/viirs');
+
+// Merge both collections to create a single Night Lights Collection
+var ntlCol = dmsp.merge(viirs);
+
+// Using LSIB for country boundaries
+var lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
+    
+var country = 'Japan';
+var selected = lsib.filter(ee.Filter.eq('country_na', country));
+var geometry = selected.geometry();
+
+var year = 2009;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year')
+
+// We filter for the selected year
+var filtered = ntlCol
+  .filter(ee.Filter.date(startDate, endDate))
+
+// Extract the image and set the masked pixels to 0
+var ntlImage = ee.Image(filtered.first()).unmask(0);
+
+var palette =['#253494','#2c7fb8','#41b6c4','#a1dab4','#ffffcc' ];
+var ntlVis = {min:0, max: 63,  palette: palette}
+
+Map.centerObject(geometry, 6);
+Map.addLayer(ntlImage.clip(geometry), ntlVis, 'Night Time Lights ' + year);
+
+// Extract the native resolution of the image
+var resolution = ntlImage.projection().nominalScale();
+
+// NTL images have DN values from 0-63
+// We can create a histogram to show pixel counts
+// for each DN value
+

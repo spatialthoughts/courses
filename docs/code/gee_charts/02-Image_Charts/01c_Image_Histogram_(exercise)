@@ -1,0 +1,56 @@
+var dmsp = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/dmsp');
+var viirs = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/viirs');
+var ntlCol = dmsp.merge(viirs);
+var lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
+
+var country = 'Japan';
+
+var selected = lsib.filter(ee.Filter.eq('country_na', country));
+var geometry = selected.geometry();
+
+// This function creates charts for the given year
+var createChart = function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate = startDate.advance(1, 'year')
+  
+  var filtered = ntlCol
+    .filter(ee.Filter.date(startDate, endDate))
+  
+  var ntlImage = ee.Image(filtered.first()).unmask(0);
+  
+  var resolution = ntlImage.projection().nominalScale();
+  var chart = ui.Chart.image.histogram({
+    image: ntlImage,
+    region: geometry,
+    scale: resolution,
+    maxBuckets: 63,
+    minBucketWidth: 1
+    }).setOptions({
+      title: 'Night Time Lights Distribution for ' + country + ' ' + year,
+      vAxis: {
+        title: 'Number of Grids', 
+        gridlines: {color: 'transparent'}
+      },
+      hAxis: {
+        title: 'Level of Observed Nighttime Lights',
+        ticks: [0, 6, 13, 21, 29, 37, 45, 53, 61],
+        gridlines: {color: 'transparent'}
+      },
+      bar: { gap: 1 },
+      legend: { position: 'none' },
+      colors: ['#525252']
+    })
+  return chart;
+}
+
+// Exercise
+
+// The code now has a function createChart that creates a chart
+// for the given year
+
+// a) Change the name of the country to your chosen country
+// b) Call the function to create histograms for the year 2010 and 2020
+// c) Print the charts.
+
+print('All country  names', lsib.aggregate_array('country_na'));
+
