@@ -1,0 +1,52 @@
+var geometry1 = ee.Geometry.Point([72.57, 23.04]);
+var geometry2 = ee.Geometry.Point([77.58, 12.97]);
+
+var gfs = ee.ImageCollection('NOAA/GFS0P25');
+var forecast = gfs.select('temperature_2m_above_ground');
+
+var now = Date.now();
+var now = ee.Date(now).advance(-1, 'day');
+
+var filtered = forecast
+  .filterDate(now, now.advance(1, 'day'));
+
+var filtered = filtered.select('temperature_2m_above_ground')
+  .map(function(image) {
+    var forecastTime = image.get('forecast_time');
+    return image.set('system:time_start', forecastTime);
+  });
+
+var locations = ee.FeatureCollection([
+  ee.Feature(geometry1, {'name': 'Ahmedabad'}),
+  ee.Feature(geometry2, {'name': 'Bengaluru'})
+  ]);
+  
+// Create a chart of forecasted temperatures
+
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection: filtered,
+  regions: locations,
+  reducer: ee.Reducer.first(),
+  scale: 27830,
+  seriesProperty: 'name'
+}).setOptions({
+      lineWidth: 1,
+      pointSize: 2,
+      title: 'Temperature Forecast at Multiple Locations',
+      vAxis: {title: 'Temparature (°C)'},
+      hAxis: {title: '', format: 'YYYY-MM-dd'},
+      series: {
+        0: {color: '#fc8d62'},
+        1: {color: '#8da0cb'}
+      },
+      legend: {
+        position: 'top'
+      }
+    });
+
+// Exercise
+
+// a) Replace the 'geometry1' and 'geometry1' points with your chosen location.
+// b) Modify the chart options to limit the Y-Axis range to the 
+//    actual range of temperatures at your chosen locations (i.e. between 20-45 degrees)
+// c) Print the chart.

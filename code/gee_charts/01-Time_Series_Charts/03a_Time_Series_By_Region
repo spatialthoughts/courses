@@ -1,0 +1,45 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry1 = /* color: #00ffff */ee.Geometry.Point([72.571259807491, 23.048742705530582]),
+    geometry2 = /* color: #bf04c2 */ee.Geometry.Point([77.58165230513475, 12.979877606696357]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// We use the NOAA GFS dataset
+var gfs = ee.ImageCollection('NOAA/GFS0P25');
+
+// Select the temperature band
+var forecast = gfs.select('temperature_2m_above_ground');
+
+// Get the forecasts for today
+var now = Date.now();
+var now = ee.Date(now).advance(-1, 'day');
+
+var filtered = forecast
+  .filterDate(now, now.advance(1, 'day'));
+
+// All forecast images have a timestamp of the current day
+// As we want a time-series of forecasts, we update the
+// timestamp to the date the image is forecasting.
+var filtered = filtered.select('temperature_2m_above_ground')
+  .map(function(image) {
+    var forecastTime = image.get('forecast_time');
+    return image.set('system:time_start', forecastTime);
+  });
+
+// Create a chart of forecast at a single location
+var chart = ui.Chart.image.series({
+  imageCollection: filtered,
+  region: geometry1,
+  reducer: ee.Reducer.first(),
+  scale: 27830}).setOptions({
+    lineWidth: 1,
+    pointSize: 2,
+    title: 'Temperature Forecast at a Single Location',
+    vAxis: {title: 'Temparature (°C)'},
+    hAxis: {title: '', format: 'YYYY-MM-dd'},
+    series: {
+      0: {color: '#fc8d62'},
+    },
+    legend: {
+      position: 'none'
+    }
+  });
+print(chart);
