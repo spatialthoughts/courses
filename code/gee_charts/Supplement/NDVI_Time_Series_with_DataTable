@@ -1,0 +1,53 @@
+var forest = ee.FeatureCollection('projects/google/charts_feature_example')
+                 .filter(ee.Filter.eq('label', 'Forest'));
+var vegIndices = ee.ImageCollection('MODIS/006/MOD13A1')
+                     .filter(ee.Filter.date('2010-01-01', '2020-01-01'))
+                     .select(['NDVI', 'EVI']);
+
+function formatDate(img) {
+  var year = img.date().get('year').format()
+  var month = img.date().get('month').subtract(1).format()
+  var day = img.date().get('day').format()
+  return ee.String('Date(')
+    .cat(year)
+    .cat(', ')
+    .cat(month)
+    .cat(', ')
+    .cat(day)
+    .cat(ee.String(', 1)'));
+}
+
+var reductionTable = vegIndices.map(function(img) {
+  var stat = img.reduceRegion(
+      {reducer: ee.Reducer.mean(), geometry: forest, scale: 500});
+  var date = formatDate(img);   // x-axis values.
+  var evi = stat.get('EVI');    // y-axis series 1 values.
+  var ndvi = stat.get('NDVI');  // y-axis series 2 values.
+  var row = ee.List([date, evi, ndvi]);
+  return ee.Feature(null, {'row': row});
+});
+var dataTableServer = reductionTable.aggregate_array('row');
+var columnHeader = ee.List([[
+  {label: 'Date', role: 'domain', type: 'date'},
+  {label: 'EVI', role: 'data', type: 'number'},
+  {label: 'NDVI', role: 'data', type: 'number'}
+]]);
+dataTableServer = columnHeader.cat(dataTableServer);
+dataTableServer.evaluate(function(dataTableClient) {
+  print(dataTableClient)
+  var chart = ui.Chart(dataTableClient).setChartType('LineChart').setOptions({
+    timeZone: 'America/Los_Angeles',
+    title: 'Annual NDVI Time Series with Inter-Annual Variance',
+    intervals: {style: 'area'},
+    hAxis: {
+      title: 'Day of year',
+      titleTextStyle: {italic: false, bold: true},
+    },
+    vAxis: {title: 'NDVI (x1e4)', titleTextStyle: {italic: false, bold: true}},
+    lineWidth: 5,
+    colors: ['e37d05', '1d6b99'],
+    curveType: 'function'
+  });
+  print(chart);
+}); 
+

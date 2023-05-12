@@ -1,0 +1,77 @@
+var cities = ee.FeatureCollection('users/ujavalgandhi/public/indian_cities');
+
+var geometry = cities.filter(ee.Filter.eq('Name', 'Chennai')).geometry();
+
+// Select which NTL collection to use and date range
+var ntlCol = ee.ImageCollection("projects/sat-io/open-datasets/EOG_VNL_V21/average_masked");
+
+var resolution = ee.Image(ntlCol.first()).projection().nominalScale();
+
+print('Input Resolution (m)', resolution);
+
+var palette =['#253494','#2c7fb8','#41b6c4','#a1dab4','#ffffcc' ];
+var ntlVis = {min:0, max: 63,  palette: palette}
+
+Map.addLayer(ntlCol.first(), ntlVis, 'Original')
+
+
+var preCovidStartDate = ee.Date.fromYMD(2012, 1, 1);
+var preCovidEndDate = ee.Date.fromYMD(2020, 1, 1);
+
+var postCovidStartDate = ee.Date.fromYMD(2019, 1, 1);
+var postCovidEndDate = ee.Date.fromYMD(2023, 1, 1);
+
+var preFiltered = ntlCol
+  .filter(ee.Filter.date(preCovidStartDate, preCovidEndDate))
+  
+var postFiltered = ntlCol
+  .filter(ee.Filter.date(postCovidStartDate, postCovidEndDate))
+
+// Rename band  
+var preCovid = preFiltered.select(['b1'], ['pre_covid'])
+var postCovid = postFiltered.select(['b1'], ['post_covid'])
+
+var collection = preCovid.merge(postCovid)
+
+var createChart = function(cityName) {
+  print(cityName)
+  var geometry = cities.filter(ee.Filter.eq('Name', cityName)).geometry();
+  print(geometry)
+  var chart = ui.Chart.image.series({
+  imageCollection: collection,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: resolution,
+  })
+  .setOptions({
+    title: 'VIIRS NTL Time Series for ' + cityName,
+    //interpolateNulls: true,
+    pointSize: 2,
+    lineWidth: 2,
+    vAxis: {title: 'Average Nighttime Lights', viewWindow: {min:0}},
+    hAxis: {title: '', format: 'YYYY-MM'},
+    series: {
+      0: {color: '#2166ac', visibleInLegend: true, labelInLegend: 'Actual'},
+      1: {color: '#2166ac', visibleInLegend: false}, 
+    },
+    trendlines: {
+      1: {color: 'red', pointSize: 0, lineWidth: 1,
+        labelInLegend: 'Pre-Covid Trend', visibleInLegend: true}
+    }
+  })
+  return chart
+}
+
+
+var cityNames = cities.aggregate_array('Name');
+print(cityNames);
+
+cityNames.evaluate(function(cityNames) {
+  for (var i = 0; i < cityNames.length; i++) {
+    var chart = createChart(cityNames[i]);
+    print(chart);
+    
+  }
+
+})
+

@@ -1,0 +1,85 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var gswYearly = ee.ImageCollection("JRC/GSW1_4/YearlyHistory"),
+    geometry = 
+    /* color: #00ff00 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[76.81609791099727, 13.006205490518589],
+          [76.81609791099727, 12.901814893718418],
+          [76.8998686629504, 12.901814893718418],
+          [76.8998686629504, 13.006205490518589]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var geometry = geometry;
+Map.centerObject(geometry, 12);
+
+var filtered = gswYearly.filter(ee.Filter.eq('year', 2020))
+var gsw2020 = ee.Image(filtered.first())
+
+// Select permanent or seasonal water
+var water = gsw2020.eq(3).or(gsw2020.eq(2)).rename('water');
+
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .multiply(0.0001)
+      .copyProperties(image, ['system:time_start']);
+}
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*');
+
+var composite = filtered.median();
+
+var rgbVis = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
+Map.addLayer(composite.clip(geometry), rgbVis, 'RGB');
+
+var waterVis = {min:0, max:1, palette: ['white','blue']};
+Map.addLayer(water.clip(geometry).selfMask(), waterVis, 'Water', false);
+
+// We want a Scatter Plot of 'NIR' (B8) and 'GREEN' (B3) bands
+var bands = composite.select(['B8', 'B3']);
+var samples = bands.addBands(water).stratifiedSample({
+  numPoints: 250,
+  classBand: 'water',
+  region: geometry,
+  scale: 10})
+
+var chart = ui.Chart.feature.groups({
+  features: samples,
+  xProperty: 'B3',
+  yProperty: 'B8',
+  seriesProperty: 'water'})
+.setChartType('ScatterChart')
+.setOptions({
+  title: 'Relationship Among Spectral Bands for Water and Non-Water Pixels',
+  colors: ['black', 'blue'],
+  dataOpacity: 0.8,
+  pointSize: 0.5,
+  hAxis: {
+    'title': 'Green reflectance',
+    titleTextStyle: {italic: false, bold: true},
+    viewWindow: {min:0, max:0.2}
+  },
+  vAxis: {
+    'title': 'NIR Reflectance',
+    titleTextStyle: {italic: false, bold: true},
+    viewWindow: {min:0, max:0.2}
+  },
+  series: {
+    1: {color: 'blue', labelInLegend: 'Water'},
+    0: {color: 'gray', labelInLegend: 'Non-Water'}
+  }
+  });
+print(chart);

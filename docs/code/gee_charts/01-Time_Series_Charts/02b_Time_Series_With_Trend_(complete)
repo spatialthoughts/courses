@@ -1,0 +1,70 @@
+// Select a region
+var geometry = ee.Geometry.Point([77.60450647855242, 12.89920572482159]);
+
+// We use the CHIRPS Rainfall Dataset
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD');
+
+// We will compute the trend of total annual precipitation
+var createAnnualImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate = startDate.advance(1, 'year');
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate));
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum()).rename('Precipitation');
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  });
+};
+
+// Aggregate Precipitation Data over 40 years
+var years = ee.List.sequence(1981, 2020);
+var yearlyImages = years.map(createAnnualImage);
+var yearlyCol = ee.ImageCollection.fromImages(yearlyImages);
+
+// Create a time-series with sens slope trend
+var chart = ui.Chart.image.series({
+  imageCollection: yearlyCol,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 5566,
+}).setOptions({
+    title: 'Annual Total Precipitation',
+    color: 'blue',
+    pointSize: 3,
+    lineWidth: 1,
+    vAxis: {
+      title: 'Rainfall (mm)',
+      ticks: [0, 200, 400, 600, 800, 1000, 1200, 1400], 
+      gridlines: {color: '#f0f0f0'}
+    },
+    hAxis: {
+      title: 'Year',
+      gridlines: {
+        color: '#f0f0f0',
+        units: {years: { format: 'YYYY'}}
+      }
+    },
+
+    legend: {
+      position: 'in'
+    },
+    series: {
+      0: {
+        visibleInLegend: false
+      }
+    },
+    trendlines: {
+      0: {
+        type: 'linear', 
+        color: 'black', 
+        lineWidth: 1,
+        pointSize: 0,
+        visibleInLegend: true,
+        labelInLegend: 'Precipitation Trend',
+      }
+    },
+});
+print(chart);

@@ -1,0 +1,125 @@
+// ********************************************************************
+// Charting - ui.Chart.image.series.byRegion()
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Using GeoBoundries admin boundaries
+var admin0 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM0");
+var admin1 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM1");
+var admin2 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM2");
+Map.addLayer(admin0)
+// Let's select 2 Admin1 regions to compare
+
+var region1 = 'India';
+var region2 = 'People\'s Republic of China'; 
+
+var selectedRegions = admin0.filter(ee.Filter.inList('shapeName', [region1, region2]));
+print('Filtered Admin0 collection', selectedRegions);
+
+// We pick Landscan population dataset
+var landscan = ee.ImageCollection("projects/sat-io/open-datasets/ORNL/LANDSCAN_GLOBAL");
+var band = 'b1';
+
+var startYear = 2001;
+var endYear = 2023;
+
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+
+var populationFiltered = landscan
+  .filter(ee.Filter.date(startDate, endDate))
+  .select(band);
+print('Filtered Population Collection', populationFiltered);
+
+// Extract the resolution of the population dataset
+var projection = populationFiltered.first().projection();
+var resolution = projection.nominalScale();
+print('Population Data Resolution', resolution);
+
+// Create a time-series chart comparing the population
+
+var chartOptions = {
+    title: 'Population Time Series',
+    vAxis: {
+        title: 'Population', 
+        // Set viewWindow so Y-axis starts from 0
+        viewWindow: {
+          min: 0
+        }
+      },
+      hAxis: {
+        title: '',
+        format: 'YYYY',
+        gridlines: {color: 'transparent'}
+
+      },
+  }
+  
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection: populationFiltered,
+  regions: selectedRegions,
+  reducer: ee.Reducer.sum(),
+  scale: resolution,
+  seriesProperty: 'shapeName'
+}).setChartType('ColumnChart')
+  .setOptions(chartOptions);
+print('Chart using ui.Chart.image.seriesByRegion()', chart);
+
+// Exporting Population Time-Series
+
+// We need to extract population for each region for each year
+// map() a function on the Population ImageCollection
+// map() a function on the Regions FeatureCollection
+// flatten() the results
+
+var populationTimeSeries = populationFiltered.map(function(image) {
+  // For each image, map() a function for each region
+  var results = selectedRegions.map(function(feature) {
+    // Now extract the population for the feature for the image
+    var geometry = feature.geometry();
+    var region = feature.get('shapeName');
+    
+    var stats = image.reduceRegion({
+      reducer: ee.Reducer.sum(),
+      geometry: geometry,
+      scale: resolution,
+      maxPixels: 1e10,
+      tileScale: 16
+    })
+    var totalPopulation = stats.getNumber(band);
+    // We create a feature with region geometry and the population as property
+    // Creating features allow us to use many built-in functions in GEE
+    // compared to a dictionary or other object types
+    var outputFeature = ee.Feature(geometry, {
+      'population': totalPopulation,
+      'region': region,
+      'year': image.date().get('year'),
+      'system:time_start': image.get('system:time_start')
+    });
+    return outputFeature;
+  })
+  return results;
+}).flatten()
+
+print('Population Time Series by Region', populationTimeSeries);
+
+// Export the results as an Asset
+Export.table.toAsset({
+  collection: populationTimeSeries,
+  description: 'Time_Series_Export_to_Asset',
+  assetId: 'users/ujavalgandhi/ee_dataviz/population_time_series_by_region'
+})
+
+// Once the Export is finished, import it and create a chart.
+var populationTimeSeriesFeatures = ee.FeatureCollection('users/ujavalgandhi/ee_dataviz/population_time_series_by_region');
+
+// Plot the Time Series to see the changes in population
+// over the years
+var chart = ui.Chart.feature.groups({
+    features: populationTimeSeriesFeatures,
+    xProperty: 'system:time_start',
+    yProperty: 'population',
+    seriesProperty: 'region'
+  })
+  .setChartType('ColumnChart')
+  .setOptions(chartOptions);
+print('Chart using ui.Chart.feature.groups', chart);

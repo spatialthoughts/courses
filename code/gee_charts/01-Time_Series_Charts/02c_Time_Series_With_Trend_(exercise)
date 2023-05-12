@@ -1,0 +1,55 @@
+// Select a region
+var geometry = ee.Geometry.Point([77.60450647855242, 12.89920572482159]);
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD');
+
+var createAnnualImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate = startDate.advance(1, 'year');
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate));
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum()).rename('Precipitation');
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  });
+};
+var years = ee.List.sequence(1981, 2020);
+var yearlyImages = years.map(createAnnualImage);
+var yearlyCol = ee.ImageCollection.fromImages(yearlyImages);
+
+var chart = ui.Chart.image.series({
+  imageCollection: yearlyCol,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 5566,
+}).setOptions({
+    title: 'Annual Total Precipitation',
+    color: 'blue',
+    pointSize: 3,
+    lineWidth: 1,
+    vAxis: {title: 'Rainfall (mm)'},
+    hAxis: {title: 'Year'},
+    trendlines: {
+      0: {
+        lineWidth: 1,
+        pointSize: 0,
+        color: 'black',
+        visibleInLegend: true,
+        labelInLegend: 'Precipitation Trend',
+      }
+    },
+});
+print(chart);
+
+// Exercise
+
+// a) Delete the 'geometry' and add a new point at your chosen location
+// b) Modify the chart options to remove the legend from the chart.
+// c) Print the chart.
+
+// Hint: Use legend 'position' option
+// See reference:
+// https://developers.google.com/chart/interactive/docs/gallery/linechart
+ 

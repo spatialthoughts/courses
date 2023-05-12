@@ -1,0 +1,83 @@
+// Select a location
+var geometry = ee.Geometry.Point([77.57738128916243, 12.964758918835752]);
+
+// We use TerraClimate Dataset
+var terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE');
+
+// Select the temerature bands
+// 'tmmx' = Maximum temperature
+// 'tmmn' (Minimum temperature)
+var temp = terraclimate.select(['tmmx', 'tmmn']);
+
+// The pixel values have a scale factor of 0.1
+// We must multiply the pixel values with the scale factor
+// to get the temperature values in °C
+var tempScaled = temp.map(function(image) {
+  return image.multiply(0.1)
+    .copyProperties(image,['system:time_start']);
+});
+
+// Filter the collection
+var startYear = 2022;
+var endYear = 2022;
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+
+var filtered = tempScaled
+  .filter(ee.Filter.date(startDate, endDate));
+
+// Create a time-series chart
+var chart = ui.Chart.image.series({
+  imageCollection: filtered.select(['tmmx']),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 4638.3
+});
+
+// Print the chart
+print(chart);
+
+// We can use .setOptions() to customize the chart
+var chart = ui.Chart.image.series({
+  imageCollection: filtered.select(['tmmx']),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 4638.3
+});
+
+var chart = ui.Chart.image.series({
+  imageCollection: filtered.select(['tmmx']),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 4638.3
+}).setOptions({
+  lineWidth: 1,
+  pointSize: 2,
+  title: 'Monthly Temperature Time-Series',
+  vAxis: {title: 'Temparature (°C)'},
+  hAxis: {title: '', format: 'YYYY-MMM', gridlines: {count: 12}}
+})
+print(chart);    
+    
+// We can select multiple bands and get a time-series for each band
+// Additionally, we can specify the 'series' options
+// to specify styling options for each series.
+var chart = ui.Chart.image.series({
+  imageCollection: filtered.select(['tmmx', 'tmmn'], ['maximum', 'minimum']),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 4638.3
+}).setOptions({
+      lineWidth: 1,
+      pointSize: 2,
+      title: 'Monthly Temperature Time-Series',
+      vAxis: {title: 'Temparature (°C)'},
+      hAxis: {title: '', format: 'YYYY-MMM', gridlines: {count: 12}},
+      series: {
+        0: {color: 'red'},
+        1: {color: 'blue'}
+      },
+    })
+
+// Print the chart
+print(chart);

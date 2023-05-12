@@ -1,0 +1,40 @@
+var geometry = ee.Geometry.Point([77.57738128916243, 12.964758918835752]);
+var terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE');
+var temp = terraclimate.select(['tmmx', 'tmmn']);
+var tempScaled = temp.map(function(image) {
+  return image.multiply(0.1)
+    .copyProperties(image,['system:time_start']);
+});
+var startYear = 2022;
+var endYear = 2022;
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+
+var filtered = tempScaled
+  .filter(ee.Filter.date(startDate, endDate));
+    
+var chart = ui.Chart.image.series({
+  imageCollection: filtered.select(['tmmx', 'tmmn'], ['maximum', 'minimum']),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 4638.3
+}).setOptions({
+      lineWidth: 1,
+      pointSize: 2,
+      title: 'Monthly Temperature Time-Series',
+      vAxis: {title: 'Temparature (°C)'},
+      hAxis: {title: '', format: 'YYYY-MMM', gridlines: {count: 12}},
+      series: {
+        0: {color: 'red'},
+        1: {color: 'blue'}
+      },
+    })
+
+// Exercise
+
+// a) Delete the 'geometry' and add a new point at your chosen location
+// b) Modify the chart options display the series with dashed lines
+// c) Print the chart.
+
+// See reference:
+// https://developers.google.com/chart/interactive/docs/lines#dashed 
