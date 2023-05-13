@@ -1,0 +1,116 @@
+// We want to plot the relationship between
+// 2 spectral bands for different classes
+
+// Select a region
+var geometry =   ee.Geometry.Polygon([[
+  [76.816, 13.006],[76.816, 12.901],
+  [76.899, 12.901],[76.899, 13.006]
+]]);
+
+// We use the Sentinel-2 SR data
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+// Add function for cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .multiply(0.0001)
+      .copyProperties(image, ['system:time_start']);
+}
+
+// Filter and apply cloud mask
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*');
+
+// Create a composite
+var composite = filtered.median();
+
+var rgbVis = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
+Map.centerObject(geometry, 12);
+Map.addLayer(composite.clip(geometry), rgbVis, 'RGB');
+
+// Use the Global Surface Water Yearly dataset
+var gswYearly = ee.ImageCollection('JRC/GSW1_4/YearlyHistory');
+
+// Extract the image for the chosen year
+var filtered = gswYearly.filter(ee.Filter.eq('year', 2020));
+var gsw2020 = ee.Image(filtered.first());
+
+// Select permanent or seasonal water
+var water = gsw2020.eq(3).or(gsw2020.eq(2)).rename('water');
+var waterVis = {min:0, max:1, palette: ['white','blue']};
+Map.addLayer(water.clip(geometry).selfMask(), waterVis, 'Water', false);
+
+// We want to splot the relationship between 
+// 'NIR' (B8) and 'GREEN' (B3) band reflectance
+// for water and non-water pixels
+
+// Select the bands
+var bands = composite.select(['B8', 'B3']);
+
+// Extract samples for both classes
+var samples = bands.addBands(water).stratifiedSample({
+  numPoints: 50,
+  classBand: 'water',
+  region: geometry,
+  scale: 10})
+
+print(samples.first());
+
+// Create a chart and set the chart type
+var chart = ui.Chart.feature.groups({
+  features: samples,
+  xProperty: 'B3',
+  yProperty: 'B8',
+  seriesProperty: 'water'
+}).setChartType('ScatterChart');
+  
+print(chart);
+
+// Customize the style
+var chart = ui.Chart.feature.groups({
+  features: samples,
+  xProperty: 'B3',
+  yProperty: 'B8',
+  seriesProperty: 'water'
+}).setChartType('ScatterChart')
+  .setOptions({
+    title: 'Relationship Among Spectral Values ' +
+      'for Water and Non-Water Pixels',
+    titleTextStyle: {bold: true},
+    dataOpacity: 0.8,
+    hAxis: {
+      'title': 'Green reflectance',
+      titleTextStyle: {italic: true},
+    },
+    vAxis: {
+      'title': 'NIR Reflectance',
+      titleTextStyle: {italic: true},
+
+    },
+    series: {
+      0: {
+        pointShape: 'triangle',
+        pointSize: 4,
+        color: '#2c7bb6',
+        labelInLegend: 'Water',
+        },
+      1: {
+        pointShape: 'triangle',
+        pointSize: 4,
+        color: '#f46d43',
+        labelInLegend: 'Non-Water'
+      }
+    },
+    legend: {position: 'in'}
+    });
+print(chart);

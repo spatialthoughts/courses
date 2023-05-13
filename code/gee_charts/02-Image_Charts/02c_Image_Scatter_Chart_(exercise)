@@ -1,0 +1,101 @@
+var geometry =   ee.Geometry.Polygon([[
+  [76.816, 13.006],[76.816, 12.901],
+  [76.899, 12.901],[76.899, 13.006]
+]]);
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .multiply(0.0001)
+      .copyProperties(image, ['system:time_start']);
+}
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*');
+
+var composite = filtered.median();
+
+var rgbVis = {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2};
+Map.centerObject(geometry, 12);
+Map.addLayer(composite.clip(geometry), rgbVis, 'RGB');
+
+var gswYearly = ee.ImageCollection('JRC/GSW1_4/YearlyHistory');
+var filtered = gswYearly.filter(ee.Filter.eq('year', 2020));
+var gsw2020 = ee.Image(filtered.first());
+var water = gsw2020.eq(3).or(gsw2020.eq(2)).rename('water');
+
+var waterVis = {min:0, max:1, palette: ['white','blue']};
+Map.addLayer(water.clip(geometry).selfMask(), waterVis, 'Water', false);
+
+var bands = composite.select('B.*');
+
+var samples = bands.addBands(water).stratifiedSample({
+  numPoints: 50,
+  classBand: 'water',
+  region: geometry,
+  scale: 10,
+  tileScale: 16
+})
+
+print(samples.first());
+
+var createChart = function(band1, band2) {
+  var chart = ui.Chart.feature.groups({
+    features: samples,
+    xProperty: band1,
+    yProperty: band2,
+    seriesProperty: 'water'
+  }).setChartType('ScatterChart')
+    .setOptions({
+      title: 'Relationship Among Spectral Values ' +
+        'for Water and Non-Water Pixels',
+      titleTextStyle: {bold: true},
+      dataOpacity: 0.8,
+      hAxis: {
+        'title': band1 +' reflectance',
+        titleTextStyle: {italic: true},
+      },
+      vAxis: {
+        'title': band2 +' reflectance',
+        titleTextStyle: {italic: true},
+  
+      },
+      series: {
+        0: {
+          pointShape: 'triangle',
+          pointSize: 4,
+          color: '#2c7bb6',
+          labelInLegend: 'Water',
+          },
+        1: {
+          pointShape: 'triangle',
+          pointSize: 4,
+          color: '#f46d43',
+          labelInLegend: 'Non-Water'
+        }
+      },
+      legend: {position: 'in'}
+      });
+  return chart;
+}
+
+var chart1 = createChart('B3', 'B8');
+print(chart1);
+
+// Exercise
+// The code now contains a function that creates a scatter plot
+// between the chosen bands
+
+// a) Delete the 'geometry' and add a new polygon at your chosen location
+// b) Create a chart for values from B3 and B11
+// c) Print the chart.
