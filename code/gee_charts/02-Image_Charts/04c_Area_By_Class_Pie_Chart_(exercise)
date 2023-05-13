@@ -1,0 +1,98 @@
+var geometry = ee.Geometry.Point([77.6045, 12.8992]);
+var worldcover = ee.ImageCollection('ESA/WorldCover/v200').first();
+var classified = worldcover.remap(
+  [10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100],
+  [0,  1 , 2,  3,  4,  5,  6,  7,  8,  9,  10]).rename('classification');
+var worldCoverClassNames= [
+  'Tree Cover', 'Shrubland', 'Grassland', 'Cropland', 'Built-up',
+  'Bare / sparse Vegetation', 'Snow and Ice', 
+  'Permanent Water Bodies', 'Herbaceous Wetland', 
+  'Mangroves', 'Moss and Lichen'];
+// Define a list of class colors
+var worldCoverPalette = [
+  '006400', 'ffbb22', 'ffff4c', 'f096ff', 'fa0000',
+  'b4b4b4', 'f0f0f0', '0064c8', '0096a0', '00cf75',
+  'fae6a0'];
+// We define a dictionary with class names
+var classNames = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverClassNames
+);
+// We define a dictionary with class colors
+var classColors = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverPalette
+);
+var visParams = {min:0, max:10, palette: worldCoverPalette};
+Map.addLayer(classified, visParams, 'Landcover');
+
+var bufferDistance = 50000;
+var buffer = geometry.buffer(bufferDistance);
+Map.centerObject(buffer, 12);
+Map.addLayer(buffer, {color: 'gray'}, 'Buffer Zone');
+
+var areaImage = ee.Image.pixelArea().divide(1e5);
+var areaImageWithClass = areaImage.addBands(classified);
+var areas = areaImageWithClass.reduceRegion({
+      reducer: ee.Reducer.sum().group({
+      groupField: 1,
+      groupName: 'classification',
+    }),
+    geometry: buffer,
+    scale: 10,
+    maxPixels: 1e10
+    }); 
+ 
+var classAreas = ee.List(areas.get('groups'))
+var classAreasList = classAreas.map(function(item) {
+  var areaDict = ee.Dictionary(item)
+  var classNumber = ee.Number(areaDict.get('classification')).format();
+  var area = ee.Number(
+    areaDict.get('sum'))
+  return ee.List([classNumber, area])
+})
+
+var classAreasDict = ee.Dictionary(classAreasList.flatten());
+
+var classList = classAreasDict.keys();
+var classAreaFc = ee.FeatureCollection(classList.map(function(classNumber) {
+  var classArea = classAreasDict.get(classNumber);
+  var className = classNames.get(classNumber);
+  var classColor = classColors.get(classNumber);
+  return ee.Feature(null, {
+    'class': classNumber,
+    'class_name': className,
+    'Area': classArea,
+    'color': classColor
+  });
+}));
+print('Class Area (FeatureCollection)', classAreaFc)
+
+var colors = classAreaFc.aggregate_array('color');
+
+colors.evaluate(function(colorlist) {
+  // Let's create a Pie Chart
+  var areaChart = ui.Chart.feature.byFeature({
+    features: classAreaFc,
+    xProperty: 'class_name',
+    yProperties: ['Area']
+  }).setChartType('PieChart')
+    .setOptions({
+      title: 'Area by class',
+      colors: colorlist,
+      pieSliceBorderColor: '#fafafa',
+      pieSliceTextStyle: {'color': '#252525'}, 
+      pieSliceText: 'percentage',
+      sliceVisibilityThreshold: .10
+  });
+  print(areaChart); 
+})
+
+// Exercise
+
+// a) Delete the 'geometry' and add a new point at your chosen location
+// b) Modify the chart options to show one of the slices separated from the pie.
+// c) Print the chart.
+
+// Hint: Use the 'offset' property 
+// https://developers.google.com/chart/interactive/docs/gallery/piechart#exploding-a-slice
