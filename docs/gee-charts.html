@@ -14,8 +14,8 @@
 
 <title>Creating Publication Quality Charts with GEE (Full Workshop Material)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -51,6 +51,7 @@
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
     </style>
+
 
 
 <style type="text/css">
@@ -100,7 +101,7 @@ code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
 code span.at { color: #7d9029; } /* Attribute */
 code span.bn { color: #40a070; } /* BaseN */
-code span.bu { } /* BuiltIn */
+code span.bu { color: #008000; } /* BuiltIn */
 code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
 code span.ch { color: #4070a0; } /* Char */
 code span.cn { color: #880000; } /* Constant */
@@ -113,7 +114,7 @@ code span.er { color: #ff0000; font-weight: bold; } /* Error */
 code span.ex { } /* Extension */
 code span.fl { color: #40a070; } /* Float */
 code span.fu { color: #06287e; } /* Function */
-code span.im { } /* Import */
+code span.im { color: #008000; font-weight: bold; } /* Import */
 code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
 code span.kw { color: #007020; font-weight: bold; } /* Keyword */
 code span.op { color: #666666; } /* Operator */
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -353,63 +361,89 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Creating Publication Quality Charts with GEE (Full Workshop Material)</h1>
-<h3 class="subtitle">A comprehesive guide on creating high-quality data visualizations with Google Earth Engine and Google Charts.</h3>
+<h1 class="title toc-ignore">Creating Publication Quality Charts with
+GEE (Full Workshop Material)</h1>
+<h3 class="subtitle">A comprehesive guide on creating high-quality data
+visualizations with Google Earth Engine and Google Charts.</h3>
 <h4 class="author">Ujaval Gandhi</h4>
 
 </div>
 
 <div id="TOC">
 <ul>
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#get-the-workshop-materials">Get the Workshop Materials</a></li>
-<li><a href="#time-series-charts">1. Time-Series Charts</a>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#get-the-workshop-materials"
+id="toc-get-the-workshop-materials">Get the Workshop Materials</a></li>
+<li><a href="#time-series-charts" id="toc-time-series-charts">1.
+Time-Series Charts</a>
 <ul>
-<li><a href="#simple-time-series">1.1 Simple Time-Series</a>
+<li><a href="#simple-time-series" id="toc-simple-time-series">1.1 Simple
+Time-Series</a>
 <ul>
-<li><a href="#exercise">Exercise</a></li>
+<li><a href="#exercise" id="toc-exercise">Exercise</a></li>
 </ul></li>
-<li><a href="#time-series-with-trendlines">1.2 Time-Series with Trendlines</a>
+<li><a href="#time-series-with-trendlines"
+id="toc-time-series-with-trendlines">1.2 Time-Series with Trendlines</a>
 <ul>
-<li><a href="#exercise-1">Exercise</a></li>
+<li><a href="#exercise-1" id="toc-exercise-1">Exercise</a></li>
 </ul></li>
-<li><a href="#time-series-at-multiple-locations">1.3 Time-Series at Multiple Locations</a>
+<li><a href="#time-series-at-multiple-locations"
+id="toc-time-series-at-multiple-locations">1.3 Time-Series at Multiple
+Locations</a>
 <ul>
-<li><a href="#exercise-2">Exercise</a></li>
+<li><a href="#exercise-2" id="toc-exercise-2">Exercise</a></li>
 </ul></li>
-<li><a href="#multi-year-time-series">1.4 Multi-Year Time-Series</a>
+<li><a href="#multi-year-time-series"
+id="toc-multi-year-time-series">1.4 Multi-Year Time-Series</a>
 <ul>
-<li><a href="#exercise-3">Exercise</a></li>
-</ul></li>
-</ul></li>
-<li><a href="#image-charts">2. Image Charts</a>
-<ul>
-<li><a href="#image-histogram">2.1 Image Histogram</a>
-<ul>
-<li><a href="#exercise-4">Exercise</a></li>
-</ul></li>
-<li><a href="#image-scatter-chart">2.2 Image Scatter Chart</a>
-<ul>
-<li><a href="#exercise-5">Exercise</a></li>
-</ul></li>
-<li><a href="#image-class-areas-table">2.3 Image Class Areas (Table)</a>
-<ul>
-<li><a href="#exercise-6">Exercise</a></li>
-</ul></li>
-<li><a href="#image-class-areas-pie-chart">2.4 Image Class Areas (Pie Chart)</a>
-<ul>
-<li><a href="#exercise-7">Exercise</a></li>
+<li><a href="#exercise-3" id="toc-exercise-3">Exercise</a></li>
 </ul></li>
 </ul></li>
-<li><a href="#references">References</a></li>
-<li><a href="#license">License</a></li>
-<li><a href="#citing-and-referencing">Citing and Referencing</a></li>
+<li><a href="#image-charts" id="toc-image-charts">2. Image Charts</a>
+<ul>
+<li><a href="#image-histogram" id="toc-image-histogram">2.1 Image
+Histogram</a>
+<ul>
+<li><a href="#exercise-4" id="toc-exercise-4">Exercise</a></li>
+</ul></li>
+<li><a href="#image-scatter-chart" id="toc-image-scatter-chart">2.2
+Image Scatter Chart</a>
+<ul>
+<li><a href="#exercise-5" id="toc-exercise-5">Exercise</a></li>
+</ul></li>
+<li><a href="#image-class-areas-table"
+id="toc-image-class-areas-table">2.3 Image Class Areas (Table)</a>
+<ul>
+<li><a href="#exercise-6" id="toc-exercise-6">Exercise</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#featurecollection-charts"
+id="toc-featurecollection-charts">3. FeatureCollection Charts</a>
+<ul>
+<li><a href="#image-class-areas-pie-chart"
+id="toc-image-class-areas-pie-chart">3.1 Image Class Areas (Pie
+Chart)</a>
+<ul>
+<li><a href="#exercise-7" id="toc-exercise-7">Exercise</a></li>
+</ul></li>
+<li><a href="#featurecollection-column-chart"
+id="toc-featurecollection-column-chart">3.2 FeatureCollection Column
+Chart</a>
+<ul>
+<li><a href="#exercise-8" id="toc-exercise-8">Exercise</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+<li><a href="#license" id="toc-license">License</a></li>
+<li><a href="#citing-and-referencing"
+id="toc-citing-and-referencing">Citing and Referencing</a></li>
 </ul>
 </div>
 
 <div style="page-break-after: always;"></div>
 <blockquote>
-<p><strong>This workshop is under active development and is not complete.</strong></p>
+<p><strong>This workshop is under active development and is not
+complete.</strong></p>
 </blockquote>
 <hr />
 <p><img src="images/spatial_thoughts_logo.png" width="250pt" style="display: block; margin: auto;" /></p>
@@ -417,20 +451,38 @@ $(document).ready(function () {
 <div style="page-break-after: always;"></div>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>Google Earth Engine is a cloud-based platform that enables large-scale processing of satellite imagery to detect changes, map trends, and quantify differences on the Earth’s surface. This course covers the full range of topics in Earth Engine to give the participants practical skills to master the platform and implement their remote sensing projects.</p>
-<p><a href="https://docs.google.com/presentation/d/1q8HRDTqgQEp3Hmi8IG0T7djPLTC1wRig3jXrwFTmoVE/edit?usp=sharing" target="_blank"><img src="images/gee_charts/introduction.png" width="400" alt="View Presentation" /></a></p>
-<p><a href="https://docs.google.com/presentation/d/1q8HRDTqgQEp3Hmi8IG0T7djPLTC1wRig3jXrwFTmoVE/edit?usp=sharing" target="_blank">View the Presentation ↗</a></p>
+<p>Google Earth Engine is a cloud-based platform that enables
+large-scale processing of satellite imagery to detect changes, map
+trends, and quantify differences on the Earth’s surface. This course
+covers the full range of topics in Earth Engine to give the participants
+practical skills to master the platform and implement their remote
+sensing projects.</p>
+<p><a
+href="https://docs.google.com/presentation/d/1q8HRDTqgQEp3Hmi8IG0T7djPLTC1wRig3jXrwFTmoVE/edit?usp=sharing"
+target="_blank"><img src="images/gee_charts/introduction.png"
+width="400" alt="View Presentation" /></a></p>
+<p><a
+href="https://docs.google.com/presentation/d/1q8HRDTqgQEp3Hmi8IG0T7djPLTC1wRig3jXrwFTmoVE/edit?usp=sharing"
+target="_blank">View the Presentation ↗</a></p>
 </div>
 <div id="get-the-workshop-materials" class="section level1">
 <h1>Get the Workshop Materials</h1>
-<p>The course material and exercises are in the form of Earth Engine scripts shared via a code repository.</p>
+<p>The course material and exercises are in the form of Earth Engine
+scripts shared via a code repository.</p>
 <ol style="list-style-type: decimal">
-<li><a href="https://code.earthengine.google.co.in/?accept_repo=users/ujavalgandhi/GEE-Charts">Click this link</a> to open Google Earth Engine code editor and add the repository to your account.</li>
-<li>If successful, you will have a new repository named <code>users/ujavalgandhi/GEE-Charts</code> in the <em>Scripts</em> tab in the <em>Reader</em> section.</li>
+<li><a
+href="https://code.earthengine.google.co.in/?accept_repo=users/ujavalgandhi/GEE-Charts">Click
+this link</a> to open Google Earth Engine code editor and add the
+repository to your account.</li>
+<li>If successful, you will have a new repository named
+<code>users/ujavalgandhi/GEE-Charts</code> in the <em>Scripts</em> tab
+in the <em>Reader</em> section.</li>
 <li>Verify that your code editor looks like below</li>
 </ol>
 <!-- TODO - Add image -->
-<p>If you do not see the repository in the <em>Reader</em> section, click <em>Refresh repository cache</em> button in your <em>Scripts</em> tab and it will show up.</p>
+<p>If you do not see the repository in the <em>Reader</em> section,
+click <em>Refresh repository cache</em> button in your <em>Scripts</em>
+tab and it will show up.</p>
 <div class="figure" style="text-align: center">
 <img src="images/common/repository_cache.png" alt="Refresh repository cache" width="50%" />
 <p class="caption">
@@ -440,18 +492,34 @@ Refresh repository cache
 </div>
 <div id="time-series-charts" class="section level1">
 <h1>1. Time-Series Charts</h1>
-<p>In this section, we will explore various built-in functions to create time-series charts from ImageCollections. We will also explore the customization options provided by Google Charts to make high-quality functional graphics.</p>
+<p>In this section, we will explore various built-in functions to create
+time-series charts from ImageCollections. We will also explore the
+customization options provided by Google Charts to make high-quality
+functional graphics.</p>
 <div id="simple-time-series" class="section level2">
 <h2>1.1 Simple Time-Series</h2>
-<p>We start by using the time-series charting function <code>ui.Chart.image.series()</code> that allows you to create a time-series plot from an ImageCollection at a single location. You get one time-series per band of the input dataset. We take the TerraClimate dataset and select the bands for monthly maximum and minimum temperatures. The resulting chart is a <a href="https://developers.google.com/chart/interactive/docs/gallery/linechart">Line Chart</a> that can be further customized using the <code>.setOptions()</code> method.</p>
-<p>Here are the customization applied to the default time-series chart:</p>
+<p>We start by using the time-series charting function
+<code>ui.Chart.image.series()</code> that allows you to create a
+time-series plot from an ImageCollection at a single location. You get
+one time-series per band of the input dataset. We take the TerraClimate
+dataset and select the bands for monthly maximum and minimum
+temperatures. The resulting chart is a <a
+href="https://developers.google.com/chart/interactive/docs/gallery/linechart">Line
+Chart</a> that can be further customized using the
+<code>.setOptions()</code> method.</p>
+<p>Here are the customization applied to the default time-series
+chart:</p>
 <ul>
 <li><code>lineWidth</code>: Sets the thickness of the line</li>
 <li><code>pointSize</code>: Sets the size of the data point</li>
 <li><code>title</code>: Sets the chart title</li>
-<li><code>vAxis</code>: Sets the options for Y-Axis. Axis label is specified using the <code>title</code> option.</li>
-<li><code>hAxis</code>: Sets the options for X-Axis. Grid lines are specified using the <code>gridlines</code> option. Date format for tick labels is specified with <code>format</code> option.</li>
-<li><code>series</code>: Sets the options for each individual time-series. Series count starts from 0.</li>
+<li><code>vAxis</code>: Sets the options for Y-Axis. Axis label is
+specified using the <code>title</code> option.</li>
+<li><code>hAxis</code>: Sets the options for X-Axis. Grid lines are
+specified using the <code>gridlines</code> option. Date format for tick
+labels is specified with <code>format</code> option.</li>
+<li><code>series</code>: Sets the options for each individual
+time-series. Series count starts from 0.</li>
 </ul>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/time_series.png" alt="Time-Series Chart" width="75%" />
@@ -459,7 +527,9 @@ Refresh repository cache
 Time-Series Chart
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F01b_Time_Series_(complete)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F01b_Time_Series_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a location</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">77.57738128916243</span><span class="op">,</span> <span class="fl">12.964758918835752</span>])<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -545,7 +615,9 @@ Time-Series Chart
 <span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise" class="section level3">
 <h3>Exercise</h3>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F01c_Time_Series_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F01c_Time_Series_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // a) Delete the &#39;geometry&#39; and add a new point at your chosen location
@@ -558,14 +630,25 @@ Time-Series Chart
 </div>
 <div id="time-series-with-trendlines" class="section level2">
 <h2>1.2 Time-Series with Trendlines</h2>
-<p>Google Charts can dynamically compute and display <a href="https://developers.google.com/chart/interactive/docs/gallery/trendlines">Trendlines</a> on the chart. You can choose from linear, polynomial or exponential trendlines. The linear trendline fit a least-square regression model on the dataset. Here we take a time-series of precipitation data, aggregate it to yearly precipitation and then display a linear trendline to indicate whether we see an increasing or decreasing rainfall in the region.</p>
+<p>Google Charts can dynamically compute and display <a
+href="https://developers.google.com/chart/interactive/docs/gallery/trendlines">Trendlines</a>
+on the chart. You can choose from linear, polynomial or exponential
+trendlines. The linear trendline fit a least-square regression model on
+the dataset. Here we take a time-series of precipitation data, aggregate
+it to yearly precipitation and then display a linear trendline to
+indicate whether we see an increasing or decreasing rainfall in the
+region.</p>
 <p>Here are the styling options applied to the time-series chart:</p>
 <ul>
-<li><code>vAxis.ticks</code>: Sets the tick positions for Y-Axis. We manually specify the exact tick marks we want.</li>
+<li><code>vAxis.ticks</code>: Sets the tick positions for Y-Axis. We
+manually specify the exact tick marks we want.</li>
 <li><code>gridlines.color</code>: Sets the color of the grid lines.</li>
-<li><code>legend</code>: Sets the position of the legend. The <code>in</code> options makes the legend appear inside the chart.</li>
-<li><code>series.visibleInLegend</code>: Sets whether a particular series label is visible in the legend.</li>
-<li><code>trendlines</code>: Sets the option for trendlines. We override the default label using <code>labelInLegend</code> option.</li>
+<li><code>legend</code>: Sets the position of the legend. The
+<code>in</code> options makes the legend appear inside the chart.</li>
+<li><code>series.visibleInLegend</code>: Sets whether a particular
+series label is visible in the legend.</li>
+<li><code>trendlines</code>: Sets the option for trendlines. We override
+the default label using <code>labelInLegend</code> option.</li>
 </ul>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/time_series_trend.png" alt="Time-Series Chart with Trendline" width="75%" />
@@ -573,7 +656,9 @@ Time-Series Chart
 Time-Series Chart with Trendline
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F02b_Time_Series_With_Trend_(complete)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F02b_Time_Series_With_Trend_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">77.6045</span><span class="op">,</span> <span class="fl">12.8992</span>])<span class="op">;</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -646,7 +731,9 @@ Time-Series Chart with Trendline
 <span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-1" class="section level3">
 <h3>Exercise</h3>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F02c_Time_Series_With_Trend_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F02c_Time_Series_With_Trend_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // a) Delete the &#39;geometry&#39; and add a new point at your chosen location
@@ -660,15 +747,24 @@ Time-Series Chart with Trendline
 </div>
 <div id="time-series-at-multiple-locations" class="section level2">
 <h2>1.3 Time-Series at Multiple Locations</h2>
-<p>So far, we have learnt how to display time-series of one or more variables at a single location using the <code>ui.Chart.image.series()</code> function. If you wanted to plot time-series of multiple locations in a single chart, you can use the <code>ui.Chart.image.series.byRegion()</code> function. This function takes a FeatureCollection with one or more locations and extract the time-series at each geometry.</p>
-<p>Here we take the Global Forecast System (GFS) dataset and create a chart of 16-day temperature-forecasts at 2 cities.</p>
+<p>So far, we have learnt how to display time-series of one or more
+variables at a single location using the
+<code>ui.Chart.image.series()</code> function. If you wanted to plot
+time-series of multiple locations in a single chart, you can use the
+<code>ui.Chart.image.series.byRegion()</code> function. This function
+takes a FeatureCollection with one or more locations and extract the
+time-series at each geometry.</p>
+<p>Here we take the Global Forecast System (GFS) dataset and create a
+chart of 16-day temperature-forecasts at 2 cities.</p>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/time_series_by_region.png" alt="Time-Series Chart at Multiple Locations" width="75%" />
 <p class="caption">
 Time-Series Chart at Multiple Locations
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F03b_Time_Series_By_Region_(complete)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F03b_Time_Series_By_Region_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select the locations</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry1 <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">72.57</span><span class="op">,</span> <span class="fl">23.04</span>])<span class="op">;</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry2 <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">77.58</span><span class="op">,</span> <span class="fl">12.97</span>])<span class="op">;</span></span>
@@ -747,7 +843,9 @@ Time-Series Chart at Multiple Locations
 <span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-2" class="section level3">
 <h3>Exercise</h3>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F03c_Time_Series_By_Region_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F03c_Time_Series_By_Region_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // a) Replace the &#39;geometry1&#39; and &#39;geometry2&#39; points with your chosen locations.
@@ -758,12 +856,20 @@ Time-Series Chart at Multiple Locations
 </div>
 <div id="multi-year-time-series" class="section level2">
 <h2>1.4 Multi-Year Time-Series</h2>
-<p>Another useful function to plot time-series is `<code>ui.Chart.image.doySeriesByYear()</code> that extracts and plots values from an image band at different Day-Of-Year (DOY) over many years. This type of chart is helpful visualize both inter-annual and inter-annual variations in a single chart.</p>
-<p>Here we take the MODIS 16-day Vegetation Indices (VI) dataset and create a chart of NDVI Time-Series over 4 years.</p>
+<p>Another useful function to plot time-series is
+`<code>ui.Chart.image.doySeriesByYear()</code> that extracts and plots
+values from an image band at different Day-Of-Year (DOY) over many
+years. This type of chart is helpful visualize both inter-annual and
+inter-annual variations in a single chart.</p>
+<p>Here we take the MODIS 16-day Vegetation Indices (VI) dataset and
+create a chart of NDVI Time-Series over 4 years.</p>
 <p>Here are the styling options applied to the time-series chart:</p>
 <ul>
-<li><code>interpolateNulls</code>: Sets whether to fill missing (i.e masked) time-series values</li>
-<li><code>curveType</code>: Apply smoothing on the time-series by <a href="https://developers.google.com/chart/interactive/docs/gallery/linechart#curving-the-lines">fitting a function</a>.</li>
+<li><code>interpolateNulls</code>: Sets whether to fill missing (i.e
+masked) time-series values</li>
+<li><code>curveType</code>: Apply smoothing on the time-series by <a
+href="https://developers.google.com/chart/interactive/docs/gallery/linechart#curving-the-lines">fitting
+a function</a>.</li>
 </ul>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/time_series_by_year.png" alt="DOY Time-Series Chart" width="75%" />
@@ -771,7 +877,9 @@ Time-Series Chart at Multiple Locations
 DOY Time-Series Chart
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F04b_Time_Series_By_Year_(complete)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F04b_Time_Series_By_Year_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a location</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">81.73099978484261</span><span class="op">,</span> <span class="fl">27.371459793533507</span>])<span class="op">;</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -863,7 +971,9 @@ DOY Time-Series Chart
 Exercise 04c
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F04c_Time_Series_By_Year_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A01-Time_Series_Charts%2F04c_Time_Series_By_Year_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // a) Replace the &#39;geometry&#39; with your chosen location.
@@ -877,11 +987,17 @@ Exercise 04c
 </div>
 <div id="image-charts" class="section level1">
 <h1>2. Image Charts</h1>
-<p>This section covers charting functions and techniques to plot values from an image. We will also learn how to deal with limitations of the charting API and create plots by extracting data from large regions.</p>
+<p>This section covers charting functions and techniques to plot values
+from an image. We will also learn how to deal with limitations of the
+charting API and create plots by extracting data from large regions.</p>
 <div id="image-histogram" class="section level2">
 <h2>2.1 Image Histogram</h2>
-<p>A histogram plot is a bar chart showing count of pixel values. Typically the pixel values are grouped into range of values called <em>buckets</em> on the X-Axis and the total count of pixels is shown on the Y-Axis.</p>
-<p>Here we take the Harmonized Night Time Lights dataset that contains images from both DMSP and VIIRS sensors.</p>
+<p>A histogram plot is a bar chart showing count of pixel values.
+Typically the pixel values are grouped into range of values called
+<em>buckets</em> on the X-Axis and the total count of pixels is shown on
+the Y-Axis.</p>
+<p>Here we take the Harmonized Night Time Lights dataset that contains
+images from both DMSP and VIIRS sensors.</p>
 <p>Below is the list of styling options applied to the histogram:</p>
 <ul>
 <li><code>hAxis.ticks</code>: Sets the tick labels on the X-Axis.</li>
@@ -893,7 +1009,9 @@ Exercise 04c
 Image Histogram
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F01b_Image_Histogram_(complete)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F01b_Image_Histogram_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">// We use the Harmonized Global Night Time Lights (1992-2020) dataset</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> dmsp <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;projects/sat-io/open-datasets/Harmonized_NTL/dmsp&#39;</span>)<span class="op">;</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> viirs <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;projects/sat-io/open-datasets/Harmonized_NTL/viirs&#39;</span>)<span class="op">;</span></span>
@@ -972,7 +1090,9 @@ Image Histogram
 Exercise 01c
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F01c_Image_Histogram_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F01c_Image_Histogram_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // The code now has a function createChart that creates a chart
@@ -985,13 +1105,27 @@ Exercise 01c
 </div>
 <div id="image-scatter-chart" class="section level2">
 <h2>2.2 Image Scatter Chart</h2>
-<p>A scatter plot is useful to explore the relationship between 2 variables. In Earth Engine, you can extract the pixel values from an image using any of the sampling functions such as <code>sample()</code> or <code>stratifiedSample()</code> to get a FeatureCollection with pixel values for a random subset of the pixels. We can then plot the results using the built-in charting functions for FeatureCollections.</p>
-<p>Here we use the Sentinel-2 Surface Reflectance dataset along with Global Surface Water Yearly Water History dataset to get reflectance values of water and non-water pixels within the chosen region. We then use the <code>ui.Chart.feature.groups()</code> function to plot the results. Note that you can explicitly set the desired chart type using the <code>setChartType()</code> function.</p>
-<p>Below is the list of new styling options applied to the scatter plot:</p>
+<p>A scatter plot is useful to explore the relationship between 2
+variables. In Earth Engine, you can extract the pixel values from an
+image using any of the sampling functions such as <code>sample()</code>
+or <code>stratifiedSample()</code> to get a FeatureCollection with pixel
+values for a random subset of the pixels. We can then plot the results
+using the built-in charting functions for FeatureCollections.</p>
+<p>Here we use the Sentinel-2 Surface Reflectance dataset along with
+Global Surface Water Yearly Water History dataset to get reflectance
+values of water and non-water pixels within the chosen region. We then
+use the <code>ui.Chart.feature.groups()</code> function to plot the
+results. Note that you can explicitly set the desired chart type using
+the <code>setChartType()</code> function.</p>
+<p>Below is the list of new styling options applied to the scatter
+plot:</p>
 <ul>
 <li><code>titleTextStyle</code>: Sets the style of the title text.</li>
-<li><code>dataOpacity</code>: Sets the transparency for the data points. Useful when you have overlapping data points.</li>
-<li><code>pointShape</code>: Sets the shape of the marker from the <a href="https://developers.google.com/chart/interactive/docs/points">available marker shapes</a>.</li>
+<li><code>dataOpacity</code>: Sets the transparency for the data points.
+Useful when you have overlapping data points.</li>
+<li><code>pointShape</code>: Sets the shape of the marker from the <a
+href="https://developers.google.com/chart/interactive/docs/points">available
+marker shapes</a>.</li>
 </ul>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/image_scatterchart.png" alt="Scatter Plot" width="75%" />
@@ -999,8 +1133,11 @@ Exercise 01c
 Scatter Plot
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F02b_Image_Scatter_Chart_(complete)" target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">// We want to plot the relationship between</span></span>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F02b_Image_Scatter_Chart_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">// We want to plot the relationship between</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">// 2 spectral bands for different classes</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
@@ -1118,7 +1255,9 @@ Scatter Plot
 <span id="cb11-116"><a href="#cb11-116" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-5" class="section level3">
 <h3>Exercise</h3>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F02c_Image_Scatter_Chart_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F02c_Image_Scatter_Chart_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 // The code now contains a function createChart() that creates a scatter plot
 // between the chosen bands
@@ -1130,16 +1269,30 @@ Scatter Plot
 </div>
 <div id="image-class-areas-table" class="section level2">
 <h2>2.3 Image Class Areas (Table)</h2>
-<p>Many analysts would want to create a chart or a table showing areas of different landcover classes in an image. The EE API has a dedicated function <code>ui.Chart.Image.byClass()</code> that can tabulate image pixel values by class.</p>
-<p>Here we use the ESA Landcover 2021 dataset and create a <strong>Table</strong> chart of areas within the buffer zone of a location. Note that we are using <code>setChartType()</code> function with the option <strong>Table</strong> to create a table. Such tables are useful when you are creating apps and want to display a formatted table. The <a href="https://google.earthengine.app/view/population-explorer">Global Population Explorer</a> is a good example where you can switch between a <em>Bar Chart</em> and a <em>Table</em> to display the results.</p>
+<p>Many analysts would want to create a chart or a table showing areas
+of different landcover classes in an image. The EE API has a dedicated
+function <code>ui.Chart.Image.byClass()</code> that can tabulate image
+pixel values by class.</p>
+<p>Here we use the ESA Landcover 2021 dataset and create a
+<strong>Table</strong> chart of areas within the buffer zone of a
+location. Note that we are using <code>setChartType()</code> function
+with the option <strong>Table</strong> to create a table. Such tables
+are useful when you are creating apps and want to display a formatted
+table. The <a
+href="https://google.earthengine.app/view/population-explorer">Global
+Population Explorer</a> is a good example where you can switch between a
+<em>Bar Chart</em> and a <em>Table</em> to display the results.</p>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/image_by_class_table.png" alt="Table Chart" width="75%" />
 <p class="caption">
 Table Chart
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F03b_Area_By_Class_Table_(complete)" target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F03b_Area_By_Class_Table_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">77.6045</span><span class="op">,</span> <span class="fl">12.8992</span>])<span class="op">;</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">// We use the ESA WorldCover 2021 dataset</span></span>
@@ -1203,7 +1356,9 @@ Table Chart
 <span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-6" class="section level3">
 <h3>Exercise</h3>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F03c_Area_By_Class_Table_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F03c_Area_By_Class_Table_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>// Exercise
 
 // a) Delete the &#39;geometry&#39; and add a new point at your chosen location
@@ -1211,11 +1366,24 @@ Table Chart
 // c) Print the chart.</code></pre>
 </div>
 </div>
+</div>
+<div id="featurecollection-charts" class="section level1">
+<h1>3. FeatureCollection Charts</h1>
 <div id="image-class-areas-pie-chart" class="section level2">
-<h2>2.4 Image Class Areas (Pie Chart)</h2>
-<p>One of the biggest limitations of the GEE Charting API is that it cannot create charts from more than 10000000 pixels. While this may seem like a big number, you can easily run into this limit when working with images that cover large areas. If you try creating charts for large regions, you may run into an error such as below:</p>
+<h2>3.1 Image Class Areas (Pie Chart)</h2>
+<p>One of the biggest limitations of the GEE Charting API is that it
+cannot create charts from more than 10000000 pixels. While this may seem
+like a big number, you can easily run into this limit when working with
+images that cover large areas. If you try creating charts for large
+regions, you may run into an error such as below:</p>
 <blockquote>
-<p><em>Image.reduceRegion: Too many pixels in the region. Found 159578190, but maxPixels allows only 10000000. Ensure that you are not aggregating at a higher resolution than you intended; that is a frequent cause of this error. If not, then you may set the ‘maxPixels’ argument to a limit suitable for your computation; set ‘bestEffort’ to true to aggregate at whatever scale results in ‘maxPixels’ total pixels; or both.</em></p>
+<p><em>Image.reduceRegion: Too many pixels in the region. Found
+159578190, but maxPixels allows only 10000000. Ensure that you are not
+aggregating at a higher resolution than you intended; that is a frequent
+cause of this error. If not, then you may set the ‘maxPixels’ argument
+to a limit suitable for your computation; set ‘bestEffort’ to true to
+aggregate at whatever scale results in ‘maxPixels’ total pixels; or
+both.</em></p>
 </blockquote>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/chart_error.png" alt="Chart Error" width="75%" />
@@ -1223,15 +1391,31 @@ Table Chart
 Chart Error
 </p>
 </div>
-<p>Fortunately, there is a way around it. Earth Engine allows you to aggregate values from very large regions using reducers that have an option to specify a <code>maxPixels</code> parameter. You will need to use the appropriate reducer and create a FeatureCollection with the results. The resulting value can then be plotted easily using the charting functions.</p>
-<p>Here we take the same dataset as the previous section, but try to summarize the area by class over a much larger region. We use a Grouped Reducer to compute the class areas and post-process the result into a FeatureCollection. If you find the code hard to understand, please review our article on <a href="https://spatialthoughts.com/2020/06/19/calculating-area-gee/">Calculating Area in Google Earth Engine</a> for explanation.</p>
-<p>We set the chart type to <code>PieChart</code> and plot the percentage of area of each class in the region.</p>
-<p>Below is the list of new styling options applied to the pie chart:</p>
+<p>Fortunately, there is a way around it. Earth Engine allows you to
+aggregate values from very large regions using reducers that have an
+option to specify a <code>maxPixels</code> parameter. You will need to
+use the appropriate reducer and create a FeatureCollection with the
+results. The resulting value can then be plotted easily using the
+charting functions.</p>
+<p>Here we take the same dataset as the previous section, but try to
+summarize the area by class over a much larger region. We use a Grouped
+Reducer to compute the class areas and post-process the result into a
+FeatureCollection. If you find the code hard to understand, please
+review our article on <a
+href="https://spatialthoughts.com/2020/06/19/calculating-area-gee/">Calculating
+Area in Google Earth Engine</a> for explanation.</p>
+<p>We set the chart type to <code>PieChart</code> and plot the
+percentage of area of each class in the region.</p>
+<p>Below is the list of new styling options applied to the pie
+chart:</p>
 <ul>
-<li><code>pieSliceBorderColor</code>: Sets the edge color of each pie slice.</li>
-<li><code>pieSliceTextStyle</code>: Sets the text style of pie slice labels.</li>
+<li><code>pieSliceBorderColor</code>: Sets the edge color of each pie
+slice.</li>
+<li><code>pieSliceTextStyle</code>: Sets the text style of pie slice
+labels.</li>
 <li><code>pieSliceText</code>: Sets the format of the text.</li>
-<li><code>sliceVisibilityThreshold</code>: Sets the threshold below which to group small slices into <em>others</em> category.</li>
+<li><code>sliceVisibilityThreshold</code>: Sets the threshold below
+which to group small slices into <em>others</em> category.</li>
 </ul>
 <div class="figure" style="text-align: center">
 <img src="images/gee_charts/area_by_class_piechart.png" alt="Pie Chart" width="75%" />
@@ -1239,8 +1423,11 @@ Chart Error
 Pie Chart
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F04b_Area_By_Class_Pie_Chart_(complete)" target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A03-FeatureCollection_Charts%2F01b_Area_By_Class_Pie_Chart_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Select a region</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Point</span>([<span class="fl">77.6045</span><span class="op">,</span> <span class="fl">12.8992</span>])<span class="op">;</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">// We use the ESA WorldCover 2021 dataset</span></span>
@@ -1381,7 +1568,9 @@ Pie Chart
 Exercise 04c
 </p>
 </div>
-<p><a href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A02-Image_Charts%2F04c_Area_By_Class_Pie_Chart_(exercise)" target="_blank">Open in Code Editor ↗</a></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A03-FeatureCollection_Charts%2F01c_Area_By_Class_Pie_Chart_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
 <pre><code>/ Exercise
 
 // a) Delete the &#39;geometry&#39; and add a new point at your chosen location
@@ -1392,25 +1581,141 @@ Exercise 04c
 // https://developers.google.com/chart/interactive/docs/gallery/piechart#exploding-a-slice</code></pre>
 </div>
 </div>
+<div id="featurecollection-column-chart" class="section level2">
+<h2>3.2 FeatureCollection Column Chart</h2>
+<p>In the previous example, we used the
+<code>ui.Chart.feature.byFeature()</code> function to create a plot from
+the properties of each feature. There are fewer built-in functions to
+create different plots from FeatureCollections, but we can always use
+the GEE API to process our data and create a FeatureCollection to meet
+our requirements.</p>
+<p>Here we take the WRI Global Power Plant Database and create a plot
+showing total installed capacity by fuel type for the chosen country.
+The FeatureCollection has one feature for each power plant, so we first
+need to process the collection to create one feature for each fuel type
+having a property with the total capacity. We use the a <a
+href="https://developers.google.com/earth-engine/guides/reducers_grouping">Grouped
+Reducer</a> with the <code>reduceColumns()</code> function to calculate
+group statistics on a FeatureCollection.</p>
+<p>We then use the <code>ui.Chart.feature.byFeature()</code> function to
+create a Bar Chart.</p>
+<blockquote>
+<p>Google Charts uses the term <em>Column Chart</em> for a vertical bar
+chart, while the term <em>Bar Chart</em> is used for a horizonal bar
+chart.</p>
+</blockquote>
+<p>Below is the list of new styling options applied to the column
+chart:</p>
+<ul>
+<li><code>backgroundColor</code>: Sets the background color for the
+whole chart.</li>
+</ul>
+<div class="figure" style="text-align: center">
+<img src="images/gee_charts/group_stats_column_chart.png" alt="Column Chart" width="75%" />
+<p class="caption">
+Column Chart
+</p>
+</div>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A03-FeatureCollection_Charts%2F02b_Group_Statistics_Column_Chart_(complete)"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Use the WRI Global Power Plant Database</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> table <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&#39;projects/sat-io/open-datasets/global_power_plant_DB_1-3&#39;</span>)<span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Select features for a country</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> country <span class="op">=</span> <span class="st">&#39;Germany&#39;</span><span class="op">;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> table</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;country_long&#39;</span><span class="op">,</span> country))<span class="op">;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(filtered<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co">// We want to calculate total installed capacity</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">// by each fuel type</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="co">// We use a Grouped Reducer to sum &#39;capacity_mw&#39;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co">// values grouped by &#39;primary_fuel&#39;</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> stats <span class="op">=</span> filtered<span class="op">.</span><span class="fu">reduceColumns</span>({</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">selectors</span><span class="op">:</span> [<span class="st">&#39;capacity_mw&#39;</span><span class="op">,</span> <span class="st">&#39;primary_fuel&#39;</span>]<span class="op">,</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">.</span><span class="fu">setOutputs</span>([<span class="st">&#39;capacity_mw&#39;</span>])<span class="op">.</span><span class="fu">group</span>({</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;primary_fuel&#39;</span><span class="op">,</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a><span class="co">// Post-process the result into a FeatureCollection</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> groupStats <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(stats<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))<span class="op">;</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> groupFc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(groupStats<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> item)<span class="op">;</span></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>}))<span class="op">;</span></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a chart</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byFeature</span>({</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> groupFc<span class="op">,</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xProperty</span><span class="op">:</span> <span class="st">&#39;primary_fuel&#39;</span><span class="op">,</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>  <span class="dt">yProperties</span><span class="op">:</span> [<span class="st">&#39;capacity_mw&#39;</span>]</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;ColumnChart&#39;</span>)</span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Installed Power Generation Capacity by Fuel Type for &#39;</span> <span class="op">+</span> country<span class="op">,</span></span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Capacity (MW)&#39;</span><span class="op">,</span></span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>      <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;short&#39;</span> </span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {</span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Type of Fuel&#39;</span>}<span class="op">,</span></span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>    <span class="dt">backgroundColor</span><span class="op">:</span> <span class="st">&#39;#feedde&#39;</span><span class="op">,</span></span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>    <span class="dt">colors</span><span class="op">:</span> [<span class="st">&#39;#d94801&#39;</span>]<span class="op">,</span></span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> { <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;none&#39;</span> }<span class="op">,</span></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
+<div id="exercise-8" class="section level3">
+<h3>Exercise</h3>
+<div class="figure" style="text-align: center">
+<img src="images/gee_charts/group_stats_column_chart_exercise.png" alt="Exercise 02c" width="100%" />
+<p class="caption">
+Exercise 02c
+</p>
+</div>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3A03-FeatureCollection_Charts%2F02c_Group_Statistics_Column_Chart_(exercise)"
+target="_blank">Open in Code Editor ↗</a></p>
+<pre><code>// a) Change the country name to your chosen country
+// b) Sort the groupFc by &#39;capacity_mw&#39; property so the bars are plotted
+//    from largest to smallest values
+// c) Print the chart
+
+// Hint: Use the .sort() function</code></pre>
+</div>
+</div>
 </div>
 <div id="references" class="section level1">
 <h1>References</h1>
 <ul>
-<li>Google Earth Engine Developer Guide: <a href="https://developers.google.com/earth-engine/guides/charts_overview">Chart Documentation</a></li>
+<li>Google Earth Engine Developer Guide: <a
+href="https://developers.google.com/earth-engine/guides/charts_overview">Chart
+Documentation</a></li>
 </ul>
 </div>
 <div id="license" class="section level1">
 <h1>License</h1>
-<p>The workshop material (text, images, presentation, videos) is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.</p>
-<p>The code (scripts, Jupyter notebooks) is licensed under the MIT License. For a copy, see <a href="https://opensource.org/licenses/MIT" class="uri">https://opensource.org/licenses/MIT</a></p>
-<p>You are free to re-use and adapt the material but are required to give appropriate credit to the original author as below:</p>
-<p>Copyright © 2023 Ujaval Gandhi <a href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
+<p>The workshop material (text, images, presentation, videos) is
+licensed under a <a
+href="https://creativecommons.org/licenses/by/4.0/">Creative Commons
+Attribution 4.0 International License</a>.</p>
+<p>The code (scripts, Jupyter notebooks) is licensed under the MIT
+License. For a copy, see <a href="https://opensource.org/licenses/MIT"
+class="uri">https://opensource.org/licenses/MIT</a></p>
+<p>You are free to re-use and adapt the material but are required to
+give appropriate credit to the original author as below:</p>
+<p>Copyright © 2023 Ujaval Gandhi <a
+href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
 </div>
 <div id="citing-and-referencing" class="section level1">
 <h1>Citing and Referencing</h1>
 <p>You can cite the course materials as follows</p>
 <ul>
-<li>Gandhi, Ujaval, 2023. <em>Creating Publication Quality Charts with GEE</em> Workshop. Spatial Thoughts. <a href="https://courses.spatialthoughts.com/gee-charts.html" class="uri">https://courses.spatialthoughts.com/gee-charts.html</a></li>
+<li>Gandhi, Ujaval, 2023. <em>Creating Publication Quality Charts with
+GEE</em> Workshop. Spatial Thoughts. <a
+href="https://courses.spatialthoughts.com/gee-charts.html"
+class="uri">https://courses.spatialthoughts.com/gee-charts.html</a></li>
 </ul>
 <hr />
 </div>

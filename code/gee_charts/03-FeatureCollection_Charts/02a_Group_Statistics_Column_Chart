@@ -1,0 +1,30 @@
+// Use the WRI Global Power Plant Database
+var table = ee.FeatureCollection('projects/sat-io/open-datasets/global_power_plant_DB_1-3');
+
+// Select features for a country
+var country = 'Germany';
+var filtered = table
+  .filter(ee.Filter.eq('country_long', country));
+print(filtered.first());
+
+// We want to calculate total installed capacity
+// by each fuel type
+// We use a Grouped Reducer to sum 'capacity_mw'
+// values grouped by 'primary_fuel'
+var stats = filtered.reduceColumns({
+  selectors: ['capacity_mw', 'primary_fuel'],
+  reducer: ee.Reducer.sum().setOutputs(['capacity_mw']).group({
+      groupField: 1,
+      groupName: 'primary_fuel',
+    })
+});
+
+// Post-process the result into a FeatureCollection
+var groupStats = ee.List(stats.get('groups'));
+var groupFc = ee.FeatureCollection(groupStats.map(function(item) {
+  return ee.Feature(null, item);
+}));
+
+print(groupFc);
+
+// Create a chart
