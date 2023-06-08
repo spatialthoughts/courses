@@ -1,0 +1,67 @@
+// Using GeoBoundries admin boundaries
+
+var admin0 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM0");
+var admin1 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM1");
+
+// Pick a country from the following list and replace
+// the value for 'country'
+print(admin0.aggregate_array('shapeName'))
+var country = 'United States';
+
+// Filter the Admin1 collection to the chosen country
+var selectedAdmin0 = admin0.filter(ee.Filter.eq('shapeName', country)).first();
+var selectedAdmin0Id = selectedAdmin0.get('shapeID')
+var selectedAdmin1 = admin1
+  .filter(ee.Filter.eq('ADM0_shape', selectedAdmin0Id));
+print('Filtered Admin1 collection', selectedAdmin1);
+
+// We pick Landscan population dataset
+var landscan = ee.ImageCollection("projects/sat-io/open-datasets/ORNL/LANDSCAN_GLOBAL");
+var band = 'b1';
+
+var year = 2021;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var populationFiltered = landscan
+  .filter(ee.Filter.date(startDate, endDate))
+  .select(band);
+
+var populationImage = ee.Image(populationFiltered.first());
+// Extract the resolution of the population dataset
+var projection = populationImage.projection();
+var resolution = projection.nominalScale();
+print('Population Data Resolution', resolution);
+
+// Extract Population for Each Admin1 region
+var admin1WithPopulation = populationImage.reduceRegions({
+  collection: selectedAdmin1,
+  reducer: ee.Reducer.sum().setOutputs(['population']),
+  scale: resolution,
+  tileScale: 16})
+
+// Sort and select top 10 regions
+var populatedAdmin1 = admin1WithPopulation.sort('population', false).limit(10);
+print(populatedAdmin1)
+// Create a time-series chart comparing the population
+
+var chartOptions = {
+    title: 'Top 10 Populated States in ' + country,
+    titleTextStyle: {color: 'red'},
+    vAxis: {
+        title: 'Population', 
+        // Set viewWindow so Y-axis starts from 0
+        viewWindow: {
+          min: 0
+        }
+      },
+  legend: {position: 'none'},
+  colors: ['#b3cde3'], // BarChart is a material chart with colors option
+}
+var chart = ui.Chart.feature.byFeature({
+  features: populatedAdmin1,
+  xProperty: 'shapeName',
+  yProperties: 'population'
+}).setChartType('BarChart')
+  .setOptions(chartOptions);
+print(chart);
