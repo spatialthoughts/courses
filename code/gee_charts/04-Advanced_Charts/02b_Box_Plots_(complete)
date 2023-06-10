@@ -1,0 +1,174 @@
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]]);
+
+Map.addLayer(geometry, {color: 'red'}, 'Farm');
+Map.centerObject(geometry);
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+
+var filtered = s2
+  .filter(ee.Filter.date('2017-01-01', '2018-01-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry));
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask).multiply(0.0001)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start']);
+}
+
+var filtered = filtered.map(maskS2clouds);
+// Write a function that computes NDVI for an image and adds it as a band
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+}
+
+// Map the function over the collection
+var withNdvi = filtered.map(addNDVI);
+
+// Plot the median NDVI values over time
+// Display a time-series chart
+var chart = ui.Chart.image.series({
+  imageCollection: withNdvi.select('ndvi'),
+  region: geometry,
+  reducer: ee.Reducer.median(),
+  scale: 10
+}).setOptions({
+      lineWidth: 1,
+      title: 'NDVI Time Series',
+      interpolateNulls: true,
+      vAxis: {title: 'NDVI'},
+      hAxis: {title: '', format: 'YYYY-MMM'}
+    })
+print(chart);
+
+// Extract the values from each image
+var values = withNdvi.map(function(image) {
+  var ndvi = image.select('ndvi');
+  
+  var allReducers = ee.Reducer.median()
+    .combine({reducer2: ee.Reducer.min(), sharedInputs: true} )
+    .combine({reducer2: ee.Reducer.max(), sharedInputs: true} )
+    .combine({reducer2: ee.Reducer.percentile([25]), sharedInputs: true} )
+    .combine({reducer2: ee.Reducer.percentile([50]), sharedInputs: true} )
+    .combine({reducer2: ee.Reducer.percentile([75]), sharedInputs: true} )
+  
+  var stats = ndvi.reduceRegion({
+    reducer: allReducers,
+    geometry: geometry,
+    scale: 10});
+  var date = image.date();
+  var dateString = date.format('YYYY-MM-dd');
+
+  var properties = {
+    'date': dateString,
+    'median': stats.get('ndvi_p50'), // median is 50th percentile
+    'min': stats.get('ndvi_min'),
+    'max': stats.get('ndvi_max'),
+    'p25': stats.get('ndvi_p25'),
+    'p50': stats.get('ndvi_p50'),
+    'p75': stats.get('ndvi_p75'),
+  }
+  return ee.Feature(null, properties)
+  
+})
+// Format the results as a list of DataTable rows
+
+// We need a list to map() over
+var dateList = values.aggregate_array('date');
+
+// Helper function to format dates as per DataTable requirements
+// Converts date strings
+// '2017-01-01' becomes 'Date(2017,0,1)'
+// month is indexed from 0 in Date String representation
+function formatDate(date) {
+  var year = ee.Date(date).get('year').format()
+  var month = ee.Date(date).get('month').subtract(1).format()
+  var day = ee.Date(date).get('day').format()
+  return ee.String('Date(')
+    .cat(year)
+    .cat(', ')
+    .cat(month)
+    .cat(', ')
+    .cat(day)
+    .cat(ee.String(', 1)'));
+}
+
+var rowList = dateList.map(function(date) {
+  var f = values.filter(ee.Filter.eq('date', date)).first();
+  var x = formatDate(date);
+  var median = f.get('median');
+  var min = f.get('min');
+  var max = f.get('max');
+  var p25 = f.get('p25');
+  var p50 = f.get('p50');
+  var p75 = f.get('p75');
+  var rowDict = {
+    c: [{v: x}, {v: median}, {v: min}, {v: max},
+        {v: p25}, {v: p50}, {v: p75}]
+  };
+  return rowDict;
+});
+
+print('Rows', rowList);
+
+// We need to convert the server-side rowList object
+// to client-side javascript object
+// use evaluate()
+rowList.evaluate(function(rowListClient) {
+  var dataTable = {
+    cols: [
+      {id: 'x', type: 'date'},
+      {id: 'median', type: 'number'},
+      {id: 'min', type: 'number', role: 'interval'},
+      {id: 'max', type: 'number', role: 'interval'},
+      {id: 'firstQuartile', type: 'number', role: 'interval'},
+      {id: 'median', type: 'number', role: 'interval'},
+      {id: 'thirdQuartile', type:'number', role: 'interval'}
+    ],
+    rows: rowListClient
+  };
+
+  var options = {
+    title:'NDVI Time-Series Box Plot',
+    vAxis: {title: 'NDVI'},
+    hAxis: {title: '', format: 'YYYY-MMM'},
+    legend: {position: 'none'},
+    lineWidth: 1,
+    series: [{'color': '#D3362D'}],
+    interpolateNulls: true,
+    intervals: {
+      barWidth: 2,
+      boxWidth: 4,
+      lineWidth: 1,
+      style: 'boxes'
+    },
+    interval: {
+      min: {
+        style: 'bars',
+        fillOpacity: 1,
+        color: '#777777'
+      },
+      max: {
+        style: 'bars',
+        fillOpacity: 1,
+        color: '#777777'
+      }
+    }
+  };
+    
+  var chart = ui.Chart(dataTable, 'LineChart', options);
+  print(chart);
+  });
+
