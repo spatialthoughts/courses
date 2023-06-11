@@ -1,0 +1,103 @@
+// Plot Annual Night Time Lights trends
+// Compare the Pre-Covid trend with Post-Covid observations
+
+// Use Municipal boundaries from DataMeet
+// http://projects.datameet.org/Municipal_Spatial_Data/
+var cities = ee.FeatureCollection('users/ujavalgandhi/public/indian_cities');
+
+// Select Annual NTL collection
+// https://gee-community-catalog.org/projects/eog_viirs_ntl/
+var ntlCol = ee.ImageCollection("projects/sat-io/open-datasets/EOG_VNL_V21/average_masked");
+
+var resolution = ee.Image(ntlCol.first()).projection().nominalScale();
+print('Input Resolution (m)', resolution);
+
+var palette =['#253494','#2c7fb8','#41b6c4','#a1dab4','#ffffcc' ];
+var ntlVis = {min:0, max: 63,  palette: palette};
+
+// Visualize the datasets
+Map.centerObject(cities.first());
+Map.addLayer(ntlCol.first(), ntlVis, 'NTL Image');
+Map.addLayer(cities, {color: 'red'}, 'Cities');
+
+// Define dates for pre-Covid and post-Covid
+var preCovidStartDate = ee.Date.fromYMD(2012, 1, 1);
+var preCovidEndDate = ee.Date.fromYMD(2020, 1, 1);
+
+// Start the post-covid plot from 2019 for data continuity
+var postCovidStartDate = ee.Date.fromYMD(2019, 1, 1);
+var postCovidEndDate = ee.Date.fromYMD(2023, 1, 1);
+
+var preFiltered = ntlCol
+  .filter(ee.Filter.date(preCovidStartDate, preCovidEndDate));
+  
+var postFiltered = ntlCol
+  .filter(ee.Filter.date(postCovidStartDate, postCovidEndDate));
+
+// Rename bands 
+var preCovid = preFiltered.select(['b1'], ['pre_covid']);
+var postCovid = postFiltered.select(['b1'], ['post_covid']);
+
+// Merge collections
+var collection = preCovid.merge(postCovid);
+
+// Write a function to create a chart from the given city name
+var createChart = function(cityName) {
+  print(cityName);
+  var geometry = cities.filter(ee.Filter.eq('Name', cityName)).geometry();
+
+  var chart = ui.Chart.image.series({
+    imageCollection: collection,
+    region: geometry,
+    reducer: ee.Reducer.mean(),
+    scale: resolution,
+  })
+  .setOptions({
+    title: 'VIIRS NTL Time Series for ' + cityName,
+    pointSize: 2,
+    lineWidth: 2,
+    vAxis: {
+      title: 'Average Nighttime Lights',
+      viewWindow: {min:0},
+      gridlines: {color: '#c7beb5'}
+    },
+    hAxis: {
+      title: '', 
+      format: 'YYYY',
+      ticks: [
+        new Date(2013,1,1),
+        new Date(2015,1,1),
+        new Date(2017,1,1),
+        new Date(2019,1,1),
+        new Date(2021,1,1),
+        ],
+      gridlines: {color: '#c7beb5'}
+    },
+    series: {
+      0: {color: '#2166ac', visibleInLegend: true, labelInLegend: 'Actual'},
+      1: {color: '#2166ac', visibleInLegend: false}, 
+    },
+    trendlines: {
+      1: {color: 'red', pointSize: 0, lineWidth: 1,
+        labelInLegend: 'Pre-Covid Trend', visibleInLegend: true}
+    },
+    legend: {
+      position: 'top'
+    },
+    backgroundColor: '#fef3e7'
+  });
+  return chart;
+};
+
+// We get a list of city names
+var cityNames = cities.aggregate_array('Name');
+print(cityNames);
+
+// Call the function for each city name to create the chart
+cityNames.evaluate(function(cityNames) {
+  for (var i = 0; i < cityNames.length; i++) {
+    var chart = createChart(cityNames[i]);
+    print(chart);
+  }
+});
+

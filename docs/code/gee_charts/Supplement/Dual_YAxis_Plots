@@ -6,13 +6,22 @@ var geometry = /* color: #00ff00 */ee.Geometry.Polygon(
           [7.938603061558576, 10.723767207790642]]]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 // Charting Rainfall vs NDVI 
-// Creating Dual-Y Charts in GEE
 
-// Try this on your own AOI
-// Delete the 'geometry' and draw a polygon over
-// any farm in this world and run the code.
+// Select a location
+var geometry = ee.Geometry.Polygon([[
+  [7.9378, 10.7233],
+  [7.9383, 10.7219],
+  [7.9391, 10.7224],
+  [7.9386, 10.7237]
+]]);
+Map.centerObject(geometry, 16);
 
-Map.centerObject(geometry, 16)
+// Select a time period
+var year = 2020;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Get NDVI from Sentinel-2
 var s2 = ee.ImageCollection('COPERNICUS/S2_SR');
 
 // Function to remove cloud and snow pixels from Sentinel-2 SR image
@@ -29,29 +38,26 @@ function maskCloudAndShadowsSR(image) {
   return image.updateMask(mask);
 }
 
-
-// Write a function that computes NDVI for an image and adds it as a band
+var s2Filtered = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskCloudAndShadowsSR);
+  
 function addNDVI(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
   return image.addBands(ndvi);
 }
 
-var year = 2020
-var startDate = ee.Date.fromYMD(year, 1, 1);
-var endDate = startDate.advance(1, 'year')
-var s2Filtered = s2
-  .filter(ee.Filter.date(startDate, endDate))
-  .filter(ee.Filter.bounds(geometry))
-  .map(maskCloudAndShadowsSR)
-  .map(addNDVI)
+var withNdvi = s2Filtered.map(addNDVI);
 
-// Rainfall
+// Get Rainfall from CHIRPS
 var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD');
 var chirpsFiltered = chirps
-  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.date(startDate, endDate));
 
 // Create a collection of monthly images
-var months = ee.List.sequence(1, 12)
+// with bands for ndvi and rainfall
+var months = ee.List.sequence(1, 12);
 
 var byMonth = months.map(function(month) {
     // Total monthly rainfall
@@ -60,9 +66,9 @@ var byMonth = months.map(function(month) {
       .filter(ee.Filter.calendarRange(month, month, 'month'));
     var totalRain = monthlyRain.sum();
     // Average NDVI
-    var monthlyNdvi = s2Filtered.select('ndvi')
+    var monthlyNdvi = withNdvi.select('ndvi')
       .filter(ee.Filter.calendarRange(year, year, 'year'))
-      .filter(ee.Filter.calendarRange(month, month, 'month'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'));
     var averageNdvi = monthlyNdvi.mean();
   
     return totalRain.addBands(averageNdvi).set({
@@ -100,7 +106,8 @@ var chart = ui.Chart.image.series({
       },
     hAxis: {
       gridlines:  {color: 'none'}
-    }
+    },
+    chartArea: {left: 100, right: 100}
 });
 
 print(chart);

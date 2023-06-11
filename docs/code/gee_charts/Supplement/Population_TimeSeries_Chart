@@ -1,0 +1,63 @@
+// Plot a Population Time-Series
+
+// Using GeoBoundries admin boundaries
+var admin0 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM0");
+var admin1 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM1");
+var admin2 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM2");
+Map.addLayer(admin0)
+
+// Let's select 2 Admin0 regions to compare
+var region1 = 'India';
+var region2 = 'People\'s Republic of China'; 
+
+var selectedRegions = admin0.filter(ee.Filter.inList('shapeName', [region1, region2]));
+print('Filtered Admin0 collection', selectedRegions);
+
+// We pick Landscan population dataset
+var landscan = ee.ImageCollection("projects/sat-io/open-datasets/ORNL/LANDSCAN_GLOBAL");
+var band = 'b1';
+
+var startYear = 2001;
+var endYear = 2023;
+
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+
+var populationFiltered = landscan
+  .filter(ee.Filter.date(startDate, endDate))
+  .select(band);
+print('Filtered Population Collection', populationFiltered);
+
+// Extract the resolution of the population dataset
+var projection = populationFiltered.first().projection();
+var resolution = projection.nominalScale();
+print('Population Data Resolution', resolution);
+
+// Create a time-series chart comparing the population
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection: populationFiltered,
+  regions: selectedRegions,
+  reducer: ee.Reducer.sum(),
+  scale: resolution,
+  seriesProperty: 'shapeName'
+}).setChartType('ColumnChart')
+  .setOptions({
+    title: 'Population Time Series (LandScan Global)',
+    vAxis: {
+      title: 'Population', 
+      // Set viewWindow so Y-axis starts from 0
+      viewWindow: {
+        min: 0
+      }
+    },
+    hAxis: {
+      title: '',
+      format: 'YYYY',
+      gridlines: {color: 'transparent'}
+    },
+    legend: {
+      position: 'bottom'
+    }
+  });
+  
+print(chart);
