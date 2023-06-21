@@ -14,6 +14,8 @@ rm -R $PACKAGE_DIR/data/.ipynb_checkpoints $PACKAGE_DIR/data/*/.ipynb_checkpoint
 # Clear output from cells before packaging
 jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/python_foundation/[0-9]*.ipynb
 jupyter-nbconvert --to markdown  code/python_foundation/[0-9]*.ipynb --output-dir python-foundation-output/
+jupyter-nbconvert --to markdown  code/python_foundation/assignment.ipynb --output-dir python-foundation-output/
+
 cp code/python_foundation/*.ipynb $PACKAGE_DIR/
 cp code/python_foundation/solutions/*.ipynb $SOLUTIONS_DIR/
 
