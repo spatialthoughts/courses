@@ -9,11 +9,14 @@ var gfs = ee.ImageCollection('NOAA/GFS0P25');
 var forecast = gfs.select('temperature_2m_above_ground');
 
 // Get the forecasts for today
-var now = Date.now();
-var now = ee.Date(now).advance(-1, 'day');
+// Forecasts are generated every 6 hours
+// To account for ingestion delay, we get the forests
+// generated in past 10 hours
+var now = ee.Date(Date.now());
+var before = now.advance(-10, 'hour');
 
 var filtered = forecast
-  .filterDate(now, now.advance(1, 'day'));
+  .filter(ee.Filter.date(before, now));
 
 // All forecast images have a timestamp of the current day
 // As we want a time-series of forecasts, we update the
