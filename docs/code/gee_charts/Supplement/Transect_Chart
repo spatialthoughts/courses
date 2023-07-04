@@ -1,0 +1,82 @@
+var transect = ee.Geometry.LineString([
+  [139.0, 35.67],
+  [140.5, 35.67]
+]);
+
+// Get VIIRS Annual NightTime Lights Image
+var ntlCollection = ee.ImageCollection('NOAA/VIIRS/DNB/ANNUAL_V21');
+var band = 'average';
+
+// Select a year
+var year = 2021;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+var image = ntlCollection
+  .filter(ee.Filter.date(startDate, endDate))
+  .select(band)
+  .first();
+// Rename the band to 'DN'
+var image = image.rename('DN');
+var resolution = image.projection().nominalScale();
+// Visualize the Image
+var palette =  ['000000', '584d9f','9c79c1','c98cbe','f2d192','e2ee82'];
+var visParams = {min: 0.0, max: 80.0, palette: palette}
+Map.addLayer(image, visParams, 'Night Lights ' + year);
+Map.addLayer(transect, {color: 'red'}, 'transect');
+
+// Generate Points along Line
+var projection = 'EPSG:4326' // WGS84
+var interval = 0.01 // Degrees
+var tolerance = 0.001;
+var totalLength = transect.length({proj: projection, maxError: tolerance});
+var distances = ee.List.sequence(0, totalLength, interval);
+
+// Divide the line into segments of equal length
+var parts = transect.cutLines({
+  distances: distances,
+  proj: projection,
+  maxError: tolerance});
+
+// The result is a MultiLine geometry
+// Get the individual geometries and create a point
+// from the start point of each line segment
+var points = ee.FeatureCollection(parts.geometries().map(function(part) {
+  var startPoint = ee.Geometry(part).coordinates().get(0);
+  var point = ee.Algorithms.GeometryConstructors.Point(startPoint);
+  var coords = point.coordinates(); 
+  return new ee.Feature(point, {'lat': coords.get(1), 'lon': coords.get(0)});
+}));
+
+Map.addLayer(points, {color: 'cyan'}, 'Points along transect');
+
+// Extract the pixel values at each point
+var samples = image.sampleRegions({
+  collection: points,
+  properties: ['lat', 'lon'],
+  scale: resolution,
+});
+print('Extracted Values', samples.first());
+
+// Plot the results
+var chart = ui.Chart.feature.byFeature({
+  features: samples,
+  xProperty: 'lon',
+  yProperties: 'DN'
+}).setChartType('AreaChart')
+  .setOptions({
+    lineWidth: 1,
+    pointSize: 0,
+    title: 'Latitudinal Transect of Night Time Lights',
+    titleTextStyle: {fontSize: 18},
+    vAxis: {title: 'DN', gridlines: {color: 'transparent'}},
+    hAxis: {title: 'Longitude', gridlines: {color: 'transparent'}},
+    series: {
+      0: {color: 'blue'},
+    },
+    legend: {position: 'none'},
+    curveType: 'function',
+    chartArea: {left: 100, right: 100},
+    backgroundColor: 'transparent'
+  })
+print(chart);
+  
