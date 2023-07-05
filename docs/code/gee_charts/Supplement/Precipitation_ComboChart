@@ -1,0 +1,121 @@
+// Plotting Monthly and Cumumlative Rainfall
+
+// Select a location
+var geometry = ee.Geometry.Point(77.5946, 12.9716)
+
+// Select a year
+var year = 2019
+
+// Use the CHIRPS precipitation dataset
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD');
+
+// Create a list of months
+var months = ee.List.sequence(1, 12)
+
+// Write a function that takes a month number
+// and returns a monthly image containing 2 bands
+var createMonthlyImage = function(month) {
+  var yearStartDate = ee.Date.fromYMD(year, 1, 1)
+  var monthStartDate = ee.Date.fromYMD(year, month, 1)
+  var monthEndDate = monthStartDate.advance(1, 'month')
+  
+  // Calculate Rainfall for the month
+  var monthTotal = chirps
+    .filter(ee.Filter.date(monthStartDate, monthEndDate))
+    .reduce(ee.Reducer.sum()).rename('monthly')
+  
+  // Calculate Cumulative Rainfall
+  var monthCumulative = chirps
+    .filter(ee.Filter.date(yearStartDate, monthEndDate))
+    .reduce(ee.Reducer.sum()).rename('cumulative');
+  
+  var image = ee.Image.cat([monthTotal, monthCumulative]);
+  return image.set({
+    'system:time_start': monthStartDate.millis(),
+    'system:time_end': monthEndDate.millis(),
+    'year': 2019,
+    'month': month,
+  });
+};
+
+// map() the function on the list  of months
+// This creates a list with images for each month in the list
+var monthlyImages = months.map(createMonthlyImage);
+
+// Create an imagecollection
+var monthlyCollection = ee.ImageCollection.fromImages(monthlyImages);
+print(monthlyCollection);
+
+// Create a ComboChart
+// We will plot monthly rainfall as Bars
+// and cumulative rainfall as a Line
+var chart = ui.Chart.image.series({
+  imageCollection: monthlyCollection,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 5566,
+}).setChartType('ComboChart')
+  .setOptions({
+      title: 'Monthly and Cumulative Rainfall for ' + year,
+      hAxis: {
+        title: 'Month',
+        titleTextStyle: {fontSize: 18},
+        format: 'MMM', // Display the month name
+        ticks: [
+          new Date(2019, 0),
+          new Date(2019, 1),
+          new Date(2019, 2),
+          new Date(2019, 3),
+          new Date(2019, 4),
+          new Date(2019, 5),
+          new Date(2019, 6),
+          new Date(2019, 7),
+          new Date(2019, 8),
+          new Date(2019, 9),
+          new Date(2019, 10),
+          new Date(2019, 11),
+          new Date(2019, 12),
+          ]
+      },
+      vAxes: {
+        0: {
+          title: 'Monthly Rainfall Depth (mm)', 
+          gridlines: {color: 'none'},
+          viewWindow: {min:0, max: 1200}
+        },
+        1: {
+          title: 'Cumulative Rainfall Depth (mm)', 
+          viewWindow: {min:0, max: 1200},
+          
+        },
+      },
+      seriesType: 'line',
+      series: {
+        0: {
+          type: 'line',
+          pointShape: 'triangle',
+          pointSize: 5,
+          lineWidth: 1,
+          lineDashStyle: [4, 4],
+          color: '#252525',
+          targetAxisIndex: 1
+        },
+        1: {
+          type: 'bars',
+          color: '#737373',
+          targetAxisIndex: 0
+        },
+      },
+      legend: {
+        position: 'top',
+        alignment: 'end'
+      },
+      backgroundColor: {
+          strokeWidth: 1
+      },
+      chartArea: {
+        width: '80%',
+        height: '80%'
+      }
+});
+print(chart);
