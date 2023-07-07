@@ -449,12 +449,14 @@ Trends</a></li>
 id="toc-population-time-series">Population Time Series</a></li>
 <li><a href="#precipitation-combo-chart"
 id="toc-precipitation-combo-chart">Precipitation Combo Chart</a></li>
-<li><a href="#stacked-bar-chart" id="toc-stacked-bar-chart">Stacked Bar
-Chart</a></li>
-<li><a href="#colored-bar-chart" id="toc-colored-bar-chart">Colored Bar
-Chart</a></li>
 <li><a href="#transect-chart" id="toc-transect-chart">Transect
 Chart</a></li>
+<li><a href="#stacked-bar-chart-datatable"
+id="toc-stacked-bar-chart-datatable">Stacked Bar Chart
+(DataTable)</a></li>
+<li><a href="#colored-bar-chart-datatable"
+id="toc-colored-bar-chart-datatable">Colored Bar Chart
+(DataTable)</a></li>
 </ul></li>
 <li><a href="#references" id="toc-references">References</a></li>
 <li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
@@ -2533,8 +2535,102 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb26-1"><a h
 <span id="cb26-120"><a href="#cb26-120" tabindex="-1"></a>})<span class="op">;</span></span>
 <span id="cb26-121"><a href="#cb26-121" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 </div>
-<div id="stacked-bar-chart" class="section level2">
-<h2>Stacked Bar Chart</h2>
+<div id="transect-chart" class="section level2">
+<h2>Transect Chart</h2>
+<p>You can sample values from an image along a line transect and
+generate a FeatureCollection with latitude, longitude and DN values.
+This can be then plotted to create a transect chart like below.</p>
+<p><img src="images/gee_charts/transect.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FTransect_Chart"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="kw">var</span> transect <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">LineString</span>([</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  [<span class="fl">139.0</span><span class="op">,</span> <span class="fl">35.67</span>]<span class="op">,</span></span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>  [<span class="fl">140.5</span><span class="op">,</span> <span class="fl">35.67</span>]</span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a></span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="co">// Get VIIRS Annual NightTime Lights Image</span></span>
+<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a><span class="kw">var</span> ntlCollection <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;NOAA/VIIRS/DNB/ANNUAL_V21&#39;</span>)<span class="op">;</span></span>
+<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a><span class="kw">var</span> band <span class="op">=</span> <span class="st">&#39;average&#39;</span><span class="op">;</span></span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a></span>
+<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a><span class="co">// Select a year</span></span>
+<span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a><span class="kw">var</span> year <span class="op">=</span> <span class="dv">2021</span><span class="op">;</span></span>
+<span id="cb27-12"><a href="#cb27-12" tabindex="-1"></a><span class="kw">var</span> startDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb27-13"><a href="#cb27-13" tabindex="-1"></a><span class="kw">var</span> endDate <span class="op">=</span> startDate<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">;</span></span>
+<span id="cb27-14"><a href="#cb27-14" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> ntlCollection</span>
+<span id="cb27-15"><a href="#cb27-15" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(startDate<span class="op">,</span> endDate))</span>
+<span id="cb27-16"><a href="#cb27-16" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(band)</span>
+<span id="cb27-17"><a href="#cb27-17" tabindex="-1"></a>  <span class="op">.</span><span class="fu">first</span>()<span class="op">;</span></span>
+<span id="cb27-18"><a href="#cb27-18" tabindex="-1"></a><span class="co">// Rename the band to &#39;DN&#39;</span></span>
+<span id="cb27-19"><a href="#cb27-19" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> image<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;DN&#39;</span>)<span class="op">;</span></span>
+<span id="cb27-20"><a href="#cb27-20" tabindex="-1"></a><span class="kw">var</span> resolution <span class="op">=</span> image<span class="op">.</span><span class="fu">projection</span>()<span class="op">.</span><span class="fu">nominalScale</span>()<span class="op">;</span></span>
+<span id="cb27-21"><a href="#cb27-21" tabindex="-1"></a><span class="co">// Visualize the Image</span></span>
+<span id="cb27-22"><a href="#cb27-22" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span>  [<span class="st">&#39;000000&#39;</span><span class="op">,</span> <span class="st">&#39;584d9f&#39;</span><span class="op">,</span><span class="st">&#39;9c79c1&#39;</span><span class="op">,</span><span class="st">&#39;c98cbe&#39;</span><span class="op">,</span><span class="st">&#39;f2d192&#39;</span><span class="op">,</span><span class="st">&#39;e2ee82&#39;</span>]<span class="op">;</span></span>
+<span id="cb27-23"><a href="#cb27-23" tabindex="-1"></a><span class="kw">var</span> visParams <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">80.0</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}</span>
+<span id="cb27-24"><a href="#cb27-24" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(transect)<span class="op">;</span></span>
+<span id="cb27-25"><a href="#cb27-25" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(image<span class="op">,</span> visParams<span class="op">,</span> <span class="st">&#39;Night Lights &#39;</span> <span class="op">+</span> year)<span class="op">;</span></span>
+<span id="cb27-26"><a href="#cb27-26" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(transect<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;red&#39;</span>}<span class="op">,</span> <span class="st">&#39;transect&#39;</span>)<span class="op">;</span></span>
+<span id="cb27-27"><a href="#cb27-27" tabindex="-1"></a></span>
+<span id="cb27-28"><a href="#cb27-28" tabindex="-1"></a><span class="co">// Generate Points along Line</span></span>
+<span id="cb27-29"><a href="#cb27-29" tabindex="-1"></a><span class="kw">var</span> projection <span class="op">=</span> <span class="st">&#39;EPSG:4326&#39;</span> <span class="co">// WGS84</span></span>
+<span id="cb27-30"><a href="#cb27-30" tabindex="-1"></a><span class="kw">var</span> interval <span class="op">=</span> <span class="fl">0.01</span> <span class="co">// Degrees</span></span>
+<span id="cb27-31"><a href="#cb27-31" tabindex="-1"></a><span class="kw">var</span> tolerance <span class="op">=</span> <span class="fl">0.001</span><span class="op">;</span></span>
+<span id="cb27-32"><a href="#cb27-32" tabindex="-1"></a><span class="kw">var</span> totalLength <span class="op">=</span> transect<span class="op">.</span><span class="fu">length</span>({<span class="dt">proj</span><span class="op">:</span> projection<span class="op">,</span> <span class="dt">maxError</span><span class="op">:</span> tolerance})<span class="op">;</span></span>
+<span id="cb27-33"><a href="#cb27-33" tabindex="-1"></a><span class="kw">var</span> distances <span class="op">=</span> ee<span class="op">.</span><span class="at">List</span><span class="op">.</span><span class="fu">sequence</span>(<span class="dv">0</span><span class="op">,</span> totalLength<span class="op">,</span> interval)<span class="op">;</span></span>
+<span id="cb27-34"><a href="#cb27-34" tabindex="-1"></a></span>
+<span id="cb27-35"><a href="#cb27-35" tabindex="-1"></a><span class="co">// Divide the line into segments of equal length</span></span>
+<span id="cb27-36"><a href="#cb27-36" tabindex="-1"></a><span class="kw">var</span> parts <span class="op">=</span> transect<span class="op">.</span><span class="fu">cutLines</span>({</span>
+<span id="cb27-37"><a href="#cb27-37" tabindex="-1"></a>  <span class="dt">distances</span><span class="op">:</span> distances<span class="op">,</span></span>
+<span id="cb27-38"><a href="#cb27-38" tabindex="-1"></a>  <span class="dt">proj</span><span class="op">:</span> projection<span class="op">,</span></span>
+<span id="cb27-39"><a href="#cb27-39" tabindex="-1"></a>  <span class="dt">maxError</span><span class="op">:</span> tolerance})<span class="op">;</span></span>
+<span id="cb27-40"><a href="#cb27-40" tabindex="-1"></a></span>
+<span id="cb27-41"><a href="#cb27-41" tabindex="-1"></a><span class="co">// The result is a MultiLine geometry</span></span>
+<span id="cb27-42"><a href="#cb27-42" tabindex="-1"></a><span class="co">// Get the individual geometries and create a point</span></span>
+<span id="cb27-43"><a href="#cb27-43" tabindex="-1"></a><span class="co">// from the start point of each line segment</span></span>
+<span id="cb27-44"><a href="#cb27-44" tabindex="-1"></a><span class="kw">var</span> points <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(parts<span class="op">.</span><span class="fu">geometries</span>()<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(part) {</span>
+<span id="cb27-45"><a href="#cb27-45" tabindex="-1"></a>  <span class="kw">var</span> startPoint <span class="op">=</span> ee<span class="op">.</span><span class="fu">Geometry</span>(part)<span class="op">.</span><span class="fu">coordinates</span>()<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb27-46"><a href="#cb27-46" tabindex="-1"></a>  <span class="kw">var</span> point <span class="op">=</span> ee<span class="op">.</span><span class="at">Algorithms</span><span class="op">.</span><span class="at">GeometryConstructors</span><span class="op">.</span><span class="fu">Point</span>(startPoint)<span class="op">;</span></span>
+<span id="cb27-47"><a href="#cb27-47" tabindex="-1"></a>  <span class="kw">var</span> coords <span class="op">=</span> point<span class="op">.</span><span class="fu">coordinates</span>()<span class="op">;</span> </span>
+<span id="cb27-48"><a href="#cb27-48" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> ee<span class="op">.</span><span class="fu">Feature</span>(point<span class="op">,</span> {<span class="st">&#39;lat&#39;</span><span class="op">:</span> coords<span class="op">.</span><span class="fu">get</span>(<span class="dv">1</span>)<span class="op">,</span> <span class="st">&#39;lon&#39;</span><span class="op">:</span> coords<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)})<span class="op">;</span></span>
+<span id="cb27-49"><a href="#cb27-49" tabindex="-1"></a>}))<span class="op">;</span></span>
+<span id="cb27-50"><a href="#cb27-50" tabindex="-1"></a></span>
+<span id="cb27-51"><a href="#cb27-51" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(points<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;cyan&#39;</span>}<span class="op">,</span> <span class="st">&#39;Points along transect&#39;</span>)<span class="op">;</span></span>
+<span id="cb27-52"><a href="#cb27-52" tabindex="-1"></a></span>
+<span id="cb27-53"><a href="#cb27-53" tabindex="-1"></a><span class="co">// Extract the pixel values at each point</span></span>
+<span id="cb27-54"><a href="#cb27-54" tabindex="-1"></a><span class="kw">var</span> samples <span class="op">=</span> image<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
+<span id="cb27-55"><a href="#cb27-55" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> points<span class="op">,</span></span>
+<span id="cb27-56"><a href="#cb27-56" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;lat&#39;</span><span class="op">,</span> <span class="st">&#39;lon&#39;</span>]<span class="op">,</span></span>
+<span id="cb27-57"><a href="#cb27-57" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> resolution<span class="op">,</span></span>
+<span id="cb27-58"><a href="#cb27-58" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb27-59"><a href="#cb27-59" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Extracted Values&#39;</span><span class="op">,</span> samples<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb27-60"><a href="#cb27-60" tabindex="-1"></a></span>
+<span id="cb27-61"><a href="#cb27-61" tabindex="-1"></a><span class="co">// Plot the results</span></span>
+<span id="cb27-62"><a href="#cb27-62" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byFeature</span>({</span>
+<span id="cb27-63"><a href="#cb27-63" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> samples<span class="op">,</span></span>
+<span id="cb27-64"><a href="#cb27-64" tabindex="-1"></a>  <span class="dt">xProperty</span><span class="op">:</span> <span class="st">&#39;lon&#39;</span><span class="op">,</span></span>
+<span id="cb27-65"><a href="#cb27-65" tabindex="-1"></a>  <span class="dt">yProperties</span><span class="op">:</span> <span class="st">&#39;DN&#39;</span></span>
+<span id="cb27-66"><a href="#cb27-66" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;AreaChart&#39;</span>)</span>
+<span id="cb27-67"><a href="#cb27-67" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb27-68"><a href="#cb27-68" tabindex="-1"></a>    <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb27-69"><a href="#cb27-69" tabindex="-1"></a>    <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb27-70"><a href="#cb27-70" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Latitudinal Transect of Night Time Lights&#39;</span><span class="op">,</span></span>
+<span id="cb27-71"><a href="#cb27-71" tabindex="-1"></a>    <span class="dt">titleTextStyle</span><span class="op">:</span> {<span class="dt">fontSize</span><span class="op">:</span> <span class="dv">18</span>}<span class="op">,</span></span>
+<span id="cb27-72"><a href="#cb27-72" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;DN&#39;</span><span class="op">,</span> <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}}<span class="op">,</span></span>
+<span id="cb27-73"><a href="#cb27-73" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Longitude&#39;</span><span class="op">,</span> <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}}<span class="op">,</span></span>
+<span id="cb27-74"><a href="#cb27-74" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb27-75"><a href="#cb27-75" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span>}<span class="op">,</span></span>
+<span id="cb27-76"><a href="#cb27-76" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb27-77"><a href="#cb27-77" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;none&#39;</span>}<span class="op">,</span></span>
+<span id="cb27-78"><a href="#cb27-78" tabindex="-1"></a>    <span class="dt">curveType</span><span class="op">:</span> <span class="st">&#39;function&#39;</span><span class="op">,</span></span>
+<span id="cb27-79"><a href="#cb27-79" tabindex="-1"></a>    <span class="dt">chartArea</span><span class="op">:</span> {<span class="dt">left</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span> <span class="dt">right</span><span class="op">:</span> <span class="dv">100</span>}<span class="op">,</span></span>
+<span id="cb27-80"><a href="#cb27-80" tabindex="-1"></a>    <span class="dt">backgroundColor</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span></span>
+<span id="cb27-81"><a href="#cb27-81" tabindex="-1"></a>  })</span>
+<span id="cb27-82"><a href="#cb27-82" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span>
+<span id="cb27-83"><a href="#cb27-83" tabindex="-1"></a>  </span></code></pre></div>
+</div>
+<div id="stacked-bar-chart-datatable" class="section level2">
+<h2>Stacked Bar Chart (DataTable)</h2>
 <p>You can use the <code>isStacked</code> option to <code>true</code> on
 charts of type <em>ColumnChart</em> or <em>BarChart</em> to create a
 stacked chart. We continue with the dataset from the section on <a
@@ -2546,84 +2642,84 @@ chart.</p>
 Regular vs. Stacked Bar Charts
 </p>
 </div>
-<p><a
-href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FStacked_BarChart"
-target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb27"><pre
-class="sourceCode js"><code class="sourceCode javascript"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="co">// Creating Stacked Bar Charts</span></span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a></span>
-<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a><span class="co">// We use the Big Earth Data - Survey 2019 data</span></span>
-<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a><span class="co">// https://zenodo.org/record/4075058</span></span>
-<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a></span>
-<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="co">// Create a DataTable</span></span>
-<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a><span class="kw">var</span> dataTable <span class="op">=</span> {</span>
-<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a>  <span class="dt">cols</span><span class="op">:</span> [</span>
-<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;modality&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Modality - Data Processing&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;always&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Always&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;alwaysAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Always&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-12"><a href="#cb27-12" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;sometimes&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Sometimes&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-13"><a href="#cb27-13" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;sometimesAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Sometimes&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-14"><a href="#cb27-14" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;never&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Never&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-15"><a href="#cb27-15" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;neverAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Never&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-16"><a href="#cb27-16" tabindex="-1"></a></span>
-<span id="cb27-17"><a href="#cb27-17" tabindex="-1"></a>  ]<span class="op">,</span></span>
-<span id="cb27-18"><a href="#cb27-18" tabindex="-1"></a>  <span class="dt">rows</span><span class="op">:</span> [</span>
-<span id="cb27-19"><a href="#cb27-19" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;Code-based processing on a local machine&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-20"><a href="#cb27-20" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">54.1</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;54.1&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="dv">32</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;32&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">7.4</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;7.4&#39;</span>}]}<span class="op">,</span></span>
-<span id="cb27-21"><a href="#cb27-21" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;Geospatial software on a local machine&#39;</span>}<span class="op">,</span> </span>
-<span id="cb27-22"><a href="#cb27-22" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">23.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;23.8&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">47.6</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;47.6&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">20.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;20.8&#39;</span>}]}<span class="op">,</span></span>
-<span id="cb27-23"><a href="#cb27-23" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;API accessing cloud-service&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-24"><a href="#cb27-24" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">8.7</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;8.7&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="dv">32</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;32&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">50.6</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;50.6&#39;</span>}]}<span class="op">,</span></span>
-<span id="cb27-25"><a href="#cb27-25" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;code editor in the cloud&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-26"><a href="#cb27-26" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">7.4</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;23.8&#39;</span>}<span class="op">,</span>{<span class="dt">v</span><span class="op">:</span> <span class="fl">37.2</span>}<span class="op">,</span>{<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;37.2&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">46.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;46.8&#39;</span>}<span class="op">,</span>]}<span class="op">,</span></span>
-<span id="cb27-27"><a href="#cb27-27" tabindex="-1"></a>    ]</span>
-<span id="cb27-28"><a href="#cb27-28" tabindex="-1"></a>}<span class="op">;</span></span>
-<span id="cb27-29"><a href="#cb27-29" tabindex="-1"></a></span>
-<span id="cb27-30"><a href="#cb27-30" tabindex="-1"></a><span class="co">// Use ui.Chart() to create a column chart</span></span>
-<span id="cb27-31"><a href="#cb27-31" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;ColumnChart&#39;</span>)</span>
-<span id="cb27-32"><a href="#cb27-32" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb27-33"><a href="#cb27-33" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality of handling and processing large volumes of data&#39;</span><span class="op">,</span></span>
-<span id="cb27-34"><a href="#cb27-34" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;%&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-35"><a href="#cb27-35" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality - data processing&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-36"><a href="#cb27-36" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-37"><a href="#cb27-37" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb27-38"><a href="#cb27-38" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;5ab4ac&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-39"><a href="#cb27-39" tabindex="-1"></a>      <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;f5f5f5&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-40"><a href="#cb27-40" tabindex="-1"></a>      <span class="dv">2</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;d8b365&#39;</span>}</span>
-<span id="cb27-41"><a href="#cb27-41" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb27-42"><a href="#cb27-42" tabindex="-1"></a>    <span class="dt">annotations</span><span class="op">:</span> {</span>
-<span id="cb27-43"><a href="#cb27-43" tabindex="-1"></a>      <span class="dt">textStyle</span><span class="op">:</span> {<span class="dt">bold</span><span class="op">:</span> <span class="kw">true</span>}<span class="op">,</span></span>
-<span id="cb27-44"><a href="#cb27-44" tabindex="-1"></a>    }</span>
-<span id="cb27-45"><a href="#cb27-45" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb27-46"><a href="#cb27-46" tabindex="-1"></a></span>
-<span id="cb27-47"><a href="#cb27-47" tabindex="-1"></a><span class="co">// Print the chart</span></span>
-<span id="cb27-48"><a href="#cb27-48" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span> </span>
-<span id="cb27-49"><a href="#cb27-49" tabindex="-1"></a></span>
-<span id="cb27-50"><a href="#cb27-50" tabindex="-1"></a></span>
-<span id="cb27-51"><a href="#cb27-51" tabindex="-1"></a><span class="co">// Use ui.Chart() to create a stacked bar chart</span></span>
-<span id="cb27-52"><a href="#cb27-52" tabindex="-1"></a><span class="co">// Set the option isStacked: true</span></span>
-<span id="cb27-53"><a href="#cb27-53" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;BarChart&#39;</span>)</span>
-<span id="cb27-54"><a href="#cb27-54" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb27-55"><a href="#cb27-55" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality of handling and processing large volumes of data&#39;</span><span class="op">,</span></span>
-<span id="cb27-56"><a href="#cb27-56" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;%&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-57"><a href="#cb27-57" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality - data processing&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-58"><a href="#cb27-58" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-59"><a href="#cb27-59" tabindex="-1"></a>    <span class="dt">isStacked</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
-<span id="cb27-60"><a href="#cb27-60" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb27-61"><a href="#cb27-61" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;5ab4ac&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-62"><a href="#cb27-62" tabindex="-1"></a>      <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;f5f5f5&#39;</span>}<span class="op">,</span></span>
-<span id="cb27-63"><a href="#cb27-63" tabindex="-1"></a>      <span class="dv">2</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;d8b365&#39;</span>}</span>
-<span id="cb27-64"><a href="#cb27-64" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb27-65"><a href="#cb27-65" tabindex="-1"></a>    <span class="dt">annotations</span><span class="op">:</span> {</span>
-<span id="cb27-66"><a href="#cb27-66" tabindex="-1"></a>      <span class="dt">textStyle</span><span class="op">:</span> {<span class="dt">bold</span><span class="op">:</span> <span class="kw">true</span>}<span class="op">,</span></span>
-<span id="cb27-67"><a href="#cb27-67" tabindex="-1"></a>    }</span>
-<span id="cb27-68"><a href="#cb27-68" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb27-69"><a href="#cb27-69" tabindex="-1"></a></span>
-<span id="cb27-70"><a href="#cb27-70" tabindex="-1"></a><span class="co">// Print the chart</span></span>
-<span id="cb27-71"><a href="#cb27-71" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span> </span></code></pre></div>
+<p>[Open in Code Editor ↗]<a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FDataTable_Stacked_BarChart"
+class="uri">https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FDataTable_Stacked_BarChart</a>){target=“_blank”}</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="co">// Creating Stacked Bar Charts</span></span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a><span class="co">// We use the Big Earth Data - Survey 2019 data</span></span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a><span class="co">// https://zenodo.org/record/4075058</span></span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a></span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="co">// Create a DataTable</span></span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="kw">var</span> dataTable <span class="op">=</span> {</span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a>  <span class="dt">cols</span><span class="op">:</span> [</span>
+<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;modality&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Modality - Data Processing&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-10"><a href="#cb28-10" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;always&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Always&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-11"><a href="#cb28-11" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;alwaysAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Always&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-12"><a href="#cb28-12" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;sometimes&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Sometimes&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-13"><a href="#cb28-13" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;sometimesAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Sometimes&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-14"><a href="#cb28-14" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;never&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Never&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-15"><a href="#cb28-15" tabindex="-1"></a>    {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;neverAnnotation&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Never&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;annotation&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-16"><a href="#cb28-16" tabindex="-1"></a></span>
+<span id="cb28-17"><a href="#cb28-17" tabindex="-1"></a>  ]<span class="op">,</span></span>
+<span id="cb28-18"><a href="#cb28-18" tabindex="-1"></a>  <span class="dt">rows</span><span class="op">:</span> [</span>
+<span id="cb28-19"><a href="#cb28-19" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;Code-based processing on a local machine&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-20"><a href="#cb28-20" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">54.1</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;54.1&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="dv">32</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;32&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">7.4</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;7.4&#39;</span>}]}<span class="op">,</span></span>
+<span id="cb28-21"><a href="#cb28-21" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;Geospatial software on a local machine&#39;</span>}<span class="op">,</span> </span>
+<span id="cb28-22"><a href="#cb28-22" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">23.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;23.8&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">47.6</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;47.6&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">20.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;20.8&#39;</span>}]}<span class="op">,</span></span>
+<span id="cb28-23"><a href="#cb28-23" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;API accessing cloud-service&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-24"><a href="#cb28-24" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">8.7</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;8.7&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="dv">32</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;32&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">50.6</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;50.6&#39;</span>}]}<span class="op">,</span></span>
+<span id="cb28-25"><a href="#cb28-25" tabindex="-1"></a>    {<span class="dt">c</span><span class="op">:</span> [ {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;code editor in the cloud&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-26"><a href="#cb28-26" tabindex="-1"></a>          {<span class="dt">v</span><span class="op">:</span> <span class="fl">7.4</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;23.8&#39;</span>}<span class="op">,</span>{<span class="dt">v</span><span class="op">:</span> <span class="fl">37.2</span>}<span class="op">,</span>{<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;37.2&#39;</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="fl">46.8</span>}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> <span class="st">&#39;46.8&#39;</span>}<span class="op">,</span>]}<span class="op">,</span></span>
+<span id="cb28-27"><a href="#cb28-27" tabindex="-1"></a>    ]</span>
+<span id="cb28-28"><a href="#cb28-28" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb28-29"><a href="#cb28-29" tabindex="-1"></a></span>
+<span id="cb28-30"><a href="#cb28-30" tabindex="-1"></a><span class="co">// Use ui.Chart() to create a column chart</span></span>
+<span id="cb28-31"><a href="#cb28-31" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;ColumnChart&#39;</span>)</span>
+<span id="cb28-32"><a href="#cb28-32" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb28-33"><a href="#cb28-33" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality of handling and processing large volumes of data&#39;</span><span class="op">,</span></span>
+<span id="cb28-34"><a href="#cb28-34" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;%&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-35"><a href="#cb28-35" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality - data processing&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-36"><a href="#cb28-36" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-37"><a href="#cb28-37" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb28-38"><a href="#cb28-38" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;5ab4ac&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-39"><a href="#cb28-39" tabindex="-1"></a>      <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;f5f5f5&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-40"><a href="#cb28-40" tabindex="-1"></a>      <span class="dv">2</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;d8b365&#39;</span>}</span>
+<span id="cb28-41"><a href="#cb28-41" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb28-42"><a href="#cb28-42" tabindex="-1"></a>    <span class="dt">annotations</span><span class="op">:</span> {</span>
+<span id="cb28-43"><a href="#cb28-43" tabindex="-1"></a>      <span class="dt">textStyle</span><span class="op">:</span> {<span class="dt">bold</span><span class="op">:</span> <span class="kw">true</span>}<span class="op">,</span></span>
+<span id="cb28-44"><a href="#cb28-44" tabindex="-1"></a>    }</span>
+<span id="cb28-45"><a href="#cb28-45" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb28-46"><a href="#cb28-46" tabindex="-1"></a></span>
+<span id="cb28-47"><a href="#cb28-47" tabindex="-1"></a><span class="co">// Print the chart</span></span>
+<span id="cb28-48"><a href="#cb28-48" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span> </span>
+<span id="cb28-49"><a href="#cb28-49" tabindex="-1"></a></span>
+<span id="cb28-50"><a href="#cb28-50" tabindex="-1"></a></span>
+<span id="cb28-51"><a href="#cb28-51" tabindex="-1"></a><span class="co">// Use ui.Chart() to create a stacked bar chart</span></span>
+<span id="cb28-52"><a href="#cb28-52" tabindex="-1"></a><span class="co">// Set the option isStacked: true</span></span>
+<span id="cb28-53"><a href="#cb28-53" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;BarChart&#39;</span>)</span>
+<span id="cb28-54"><a href="#cb28-54" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb28-55"><a href="#cb28-55" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality of handling and processing large volumes of data&#39;</span><span class="op">,</span></span>
+<span id="cb28-56"><a href="#cb28-56" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;%&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-57"><a href="#cb28-57" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Modality - data processing&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-58"><a href="#cb28-58" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-59"><a href="#cb28-59" tabindex="-1"></a>    <span class="dt">isStacked</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb28-60"><a href="#cb28-60" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb28-61"><a href="#cb28-61" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;5ab4ac&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-62"><a href="#cb28-62" tabindex="-1"></a>      <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;f5f5f5&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-63"><a href="#cb28-63" tabindex="-1"></a>      <span class="dv">2</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;d8b365&#39;</span>}</span>
+<span id="cb28-64"><a href="#cb28-64" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb28-65"><a href="#cb28-65" tabindex="-1"></a>    <span class="dt">annotations</span><span class="op">:</span> {</span>
+<span id="cb28-66"><a href="#cb28-66" tabindex="-1"></a>      <span class="dt">textStyle</span><span class="op">:</span> {<span class="dt">bold</span><span class="op">:</span> <span class="kw">true</span>}<span class="op">,</span></span>
+<span id="cb28-67"><a href="#cb28-67" tabindex="-1"></a>    }</span>
+<span id="cb28-68"><a href="#cb28-68" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb28-69"><a href="#cb28-69" tabindex="-1"></a></span>
+<span id="cb28-70"><a href="#cb28-70" tabindex="-1"></a><span class="co">// Print the chart</span></span>
+<span id="cb28-71"><a href="#cb28-71" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span> </span></code></pre></div>
 </div>
-<div id="colored-bar-chart" class="section level2">
-<h2>Colored Bar Chart</h2>
+<div id="colored-bar-chart-datatable" class="section level2">
+<h2>Colored Bar Chart (DataTable)</h2>
 <p>It is possible to assign a different color to each bar of a bar
 chart. You neeed to create a DataTable with a column having a
 <em>style</em> role and define the color for each row. Here we create a
@@ -2640,232 +2736,138 @@ Colored Bar Chart
 <p><a
 href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FDataTable_Colored_Bars"
 target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb28"><pre
-class="sourceCode js"><code class="sourceCode javascript"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="co">// Example script showing how to create a bar chart</span></span>
-<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a><span class="co">// with each bar having a different color.</span></span>
-<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a><span class="co">// We create a map of forest loss with each pixel </span></span>
-<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a><span class="co">// colored accoridng to the year in which the loss occurred.</span></span>
-<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="co">// The chart displays the total loss in the region by year</span></span>
-<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="co">// with the color or the bar matching the map.</span></span>
-<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a></span>
-<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a><span class="co">// Select a region</span></span>
-<span id="cb28-10"><a href="#cb28-10" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>([[</span>
-<span id="cb28-11"><a href="#cb28-11" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">66.31185532393005</span><span class="op">,</span> <span class="op">-</span><span class="fl">8.92550265818768</span>]<span class="op">,</span></span>
-<span id="cb28-12"><a href="#cb28-12" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">66.31185532393005</span><span class="op">,</span> <span class="op">-</span><span class="fl">9.687127927480695</span>]<span class="op">,</span></span>
-<span id="cb28-13"><a href="#cb28-13" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">65.2104759293988</span><span class="op">,</span> <span class="op">-</span><span class="fl">9.687127927480695</span>]<span class="op">,</span></span>
-<span id="cb28-14"><a href="#cb28-14" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">65.2104759293988</span><span class="op">,</span> <span class="op">-</span><span class="fl">8.92550265818768</span>]</span>
-<span id="cb28-15"><a href="#cb28-15" tabindex="-1"></a>]])<span class="op">;</span></span>
-<span id="cb28-16"><a href="#cb28-16" tabindex="-1"></a></span>
-<span id="cb28-17"><a href="#cb28-17" tabindex="-1"></a><span class="co">// Get the Hansen Global Forest Change dataset</span></span>
-<span id="cb28-18"><a href="#cb28-18" tabindex="-1"></a><span class="co">// This dataset is updated yearly, so we get the latest version.</span></span>
-<span id="cb28-19"><a href="#cb28-19" tabindex="-1"></a><span class="kw">var</span> gfc2022 <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;UMD/hansen/global_forest_change_2022_v1_10&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-20"><a href="#cb28-20" tabindex="-1"></a></span>
-<span id="cb28-21"><a href="#cb28-21" tabindex="-1"></a><span class="kw">var</span> lossYear <span class="op">=</span> gfc2022<span class="op">.</span><span class="fu">select</span>([<span class="st">&#39;lossyear&#39;</span>])<span class="op">;</span></span>
-<span id="cb28-22"><a href="#cb28-22" tabindex="-1"></a></span>
-<span id="cb28-23"><a href="#cb28-23" tabindex="-1"></a><span class="co">// The lossYear image contains pixel values from 0 to 22</span></span>
-<span id="cb28-24"><a href="#cb28-24" tabindex="-1"></a><span class="co">// indicating the year in which the loss occurred</span></span>
-<span id="cb28-25"><a href="#cb28-25" tabindex="-1"></a></span>
-<span id="cb28-26"><a href="#cb28-26" tabindex="-1"></a><span class="co">// We visualize this layer on the map.</span></span>
-<span id="cb28-27"><a href="#cb28-27" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [</span>
-<span id="cb28-28"><a href="#cb28-28" tabindex="-1"></a>  <span class="st">&#39;0083ba&#39;</span><span class="op">,</span> <span class="st">&#39;#4394b6&#39;</span><span class="op">,</span> <span class="st">&#39;#5ca5b2&#39;</span><span class="op">,</span> <span class="st">&#39;#74b6ad&#39;</span><span class="op">,</span> <span class="st">&#39;#8dc8a9&#39;</span><span class="op">,</span></span>
-<span id="cb28-29"><a href="#cb28-29" tabindex="-1"></a>  <span class="st">&#39;#a5d9a5&#39;</span><span class="op">,</span> <span class="st">&#39;#b7e2a8&#39;</span><span class="op">,</span> <span class="st">&#39;#c7e8ad&#39;</span><span class="op">,</span> <span class="st">&#39;#d7efb2&#39;</span><span class="op">,</span> <span class="st">&#39;#e7f5b7&#39;</span><span class="op">,</span></span>
-<span id="cb28-30"><a href="#cb28-30" tabindex="-1"></a>  <span class="st">&#39;#f7fcbc&#39;</span><span class="op">,</span> <span class="st">&#39;#fff7b6&#39;</span><span class="op">,</span> <span class="st">&#39;#fee8a4&#39;</span><span class="op">,</span> <span class="st">&#39;#fed890&#39;</span><span class="op">,</span> <span class="st">&#39;#fec980&#39;</span><span class="op">,</span></span>
-<span id="cb28-31"><a href="#cb28-31" tabindex="-1"></a>  <span class="st">&#39;#fdba6e&#39;</span><span class="op">,</span> <span class="st">&#39;#fba75e&#39;</span><span class="op">,</span> <span class="st">&#39;#f48b51&#39;</span><span class="op">,</span> <span class="st">&#39;#ed6e43&#39;</span><span class="op">,</span> <span class="st">&#39;#e5522a&#39;</span><span class="op">,</span></span>
-<span id="cb28-32"><a href="#cb28-32" tabindex="-1"></a>  <span class="st">&#39;#de3519&#39;</span><span class="op">,</span> <span class="st">&#39;#d7191c&#39;</span>]<span class="op">;</span></span>
-<span id="cb28-33"><a href="#cb28-33" tabindex="-1"></a></span>
-<span id="cb28-34"><a href="#cb28-34" tabindex="-1"></a><span class="kw">var</span> lossYearVis <span class="op">=</span> {</span>
-<span id="cb28-35"><a href="#cb28-35" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
-<span id="cb28-36"><a href="#cb28-36" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">22</span><span class="op">,</span></span>
-<span id="cb28-37"><a href="#cb28-37" tabindex="-1"></a>  <span class="dt">palette</span><span class="op">:</span> palette</span>
-<span id="cb28-38"><a href="#cb28-38" tabindex="-1"></a>}</span>
-<span id="cb28-39"><a href="#cb28-39" tabindex="-1"></a><span class="co">// Visualize the loss on the map</span></span>
-<span id="cb28-40"><a href="#cb28-40" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
-<span id="cb28-41"><a href="#cb28-41" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">setOptions</span>(<span class="st">&#39;SATELLITE&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-42"><a href="#cb28-42" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(geometry<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;Selected Region&#39;</span><span class="op">,</span> <span class="kw">true</span><span class="op">,</span> <span class="fl">0.6</span>)<span class="op">;</span></span>
-<span id="cb28-43"><a href="#cb28-43" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(lossYear<span class="op">,</span> lossYearVis<span class="op">,</span> <span class="st">&#39;Loss Year&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-44"><a href="#cb28-44" tabindex="-1"></a></span>
-<span id="cb28-45"><a href="#cb28-45" tabindex="-1"></a><span class="co">// Create an area image and convert to Hectares</span></span>
-<span id="cb28-46"><a href="#cb28-46" tabindex="-1"></a><span class="kw">var</span> areaImage <span class="op">=</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelArea</span>()<span class="op">.</span><span class="fu">divide</span>(<span class="fl">1e5</span>)<span class="op">;</span></span>
-<span id="cb28-47"><a href="#cb28-47" tabindex="-1"></a></span>
-<span id="cb28-48"><a href="#cb28-48" tabindex="-1"></a><span class="co">// Add the band containing yearly loss</span></span>
-<span id="cb28-49"><a href="#cb28-49" tabindex="-1"></a><span class="kw">var</span> areaImageWithYear <span class="op">=</span> areaImage<span class="op">.</span><span class="fu">addBands</span>(lossYear)<span class="op">;</span></span>
-<span id="cb28-50"><a href="#cb28-50" tabindex="-1"></a></span>
-<span id="cb28-51"><a href="#cb28-51" tabindex="-1"></a><span class="kw">var</span> areas <span class="op">=</span> areaImageWithYear<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
-<span id="cb28-52"><a href="#cb28-52" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">.</span><span class="fu">group</span>({</span>
-<span id="cb28-53"><a href="#cb28-53" tabindex="-1"></a>    <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb28-54"><a href="#cb28-54" tabindex="-1"></a>    <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;year&#39;</span></span>
-<span id="cb28-55"><a href="#cb28-55" tabindex="-1"></a>    })<span class="op">,</span></span>
-<span id="cb28-56"><a href="#cb28-56" tabindex="-1"></a>  <span class="dt">geometry</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb28-57"><a href="#cb28-57" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">30</span><span class="op">,</span></span>
-<span id="cb28-58"><a href="#cb28-58" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
-<span id="cb28-59"><a href="#cb28-59" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb28-60"><a href="#cb28-60" tabindex="-1"></a></span>
-<span id="cb28-61"><a href="#cb28-61" tabindex="-1"></a><span class="kw">var</span> yearAreas <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(areas<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))<span class="op">;</span></span>
-<span id="cb28-62"><a href="#cb28-62" tabindex="-1"></a></span>
-<span id="cb28-63"><a href="#cb28-63" tabindex="-1"></a><span class="co">// Process results to extract the areas and</span></span>
-<span id="cb28-64"><a href="#cb28-64" tabindex="-1"></a><span class="co">// create a list</span></span>
-<span id="cb28-65"><a href="#cb28-65" tabindex="-1"></a><span class="kw">var</span> yearAreasList <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(yearAreas<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
-<span id="cb28-66"><a href="#cb28-66" tabindex="-1"></a>  <span class="kw">var</span> areaDict <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">;</span></span>
-<span id="cb28-67"><a href="#cb28-67" tabindex="-1"></a>  <span class="kw">var</span> yearString <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;year&#39;</span>))<span class="op">.</span><span class="fu">format</span>(<span class="st">&#39;20%02d&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-68"><a href="#cb28-68" tabindex="-1"></a>  <span class="kw">var</span> area <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
-<span id="cb28-69"><a href="#cb28-69" tabindex="-1"></a>    areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;sum&#39;</span>))<span class="op">;</span></span>
-<span id="cb28-70"><a href="#cb28-70" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">List</span>([yearString<span class="op">,</span> area])</span>
-<span id="cb28-71"><a href="#cb28-71" tabindex="-1"></a>}))<span class="op">;</span></span>
-<span id="cb28-72"><a href="#cb28-72" tabindex="-1"></a></span>
-<span id="cb28-73"><a href="#cb28-73" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Year Areas&#39;</span><span class="op">,</span> yearAreasList)<span class="op">;</span></span>
-<span id="cb28-74"><a href="#cb28-74" tabindex="-1"></a></span>
-<span id="cb28-75"><a href="#cb28-75" tabindex="-1"></a></span>
-<span id="cb28-76"><a href="#cb28-76" tabindex="-1"></a><span class="co">// We create a list of rows in the DataTable format</span></span>
-<span id="cb28-77"><a href="#cb28-77" tabindex="-1"></a><span class="kw">var</span> rowList <span class="op">=</span> yearAreasList<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
-<span id="cb28-78"><a href="#cb28-78" tabindex="-1"></a>  <span class="kw">var</span> year <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)<span class="op">;</span></span>
-<span id="cb28-79"><a href="#cb28-79" tabindex="-1"></a>  <span class="kw">var</span> x <span class="op">=</span> ee<span class="op">.</span><span class="fu">String</span>(<span class="st">&#39;Date(&#39;</span>)</span>
-<span id="cb28-80"><a href="#cb28-80" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(year)</span>
-<span id="cb28-81"><a href="#cb28-81" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;, &#39;</span>)</span>
-<span id="cb28-82"><a href="#cb28-82" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;0&#39;</span>)</span>
-<span id="cb28-83"><a href="#cb28-83" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;, &#39;</span>)</span>
-<span id="cb28-84"><a href="#cb28-84" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;1&#39;</span>)</span>
-<span id="cb28-85"><a href="#cb28-85" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(ee<span class="op">.</span><span class="fu">String</span>(<span class="st">&#39;)&#39;</span>))</span>
-<span id="cb28-86"><a href="#cb28-86" tabindex="-1"></a>    </span>
-<span id="cb28-87"><a href="#cb28-87" tabindex="-1"></a>  <span class="kw">var</span> y <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="dv">1</span>)<span class="op">;</span></span>
-<span id="cb28-88"><a href="#cb28-88" tabindex="-1"></a>  <span class="co">// We will assign the color to each year from the palette</span></span>
-<span id="cb28-89"><a href="#cb28-89" tabindex="-1"></a>  <span class="kw">var</span> color <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(palette)<span class="op">.</span><span class="fu">get</span>(yearAreasList<span class="op">.</span><span class="fu">indexOf</span>(item))<span class="op">;</span></span>
-<span id="cb28-90"><a href="#cb28-90" tabindex="-1"></a>  <span class="kw">var</span> rowDict <span class="op">=</span> {</span>
-<span id="cb28-91"><a href="#cb28-91" tabindex="-1"></a>    <span class="dt">c</span><span class="op">:</span> [{<span class="dt">v</span><span class="op">:</span> x}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> y}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> color}]</span>
-<span id="cb28-92"><a href="#cb28-92" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb28-93"><a href="#cb28-93" tabindex="-1"></a>  <span class="cf">return</span> rowDict<span class="op">;</span></span>
-<span id="cb28-94"><a href="#cb28-94" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb28-95"><a href="#cb28-95" tabindex="-1"></a></span>
-<span id="cb28-96"><a href="#cb28-96" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Rows&#39;</span><span class="op">,</span> rowList)<span class="op">;</span></span>
-<span id="cb28-97"><a href="#cb28-97" tabindex="-1"></a></span>
-<span id="cb28-98"><a href="#cb28-98" tabindex="-1"></a><span class="co">// Create the DataTable</span></span>
-<span id="cb28-99"><a href="#cb28-99" tabindex="-1"></a>rowList<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(rowListClient) {</span>
-<span id="cb28-100"><a href="#cb28-100" tabindex="-1"></a>  <span class="kw">var</span> dataTable <span class="op">=</span> {</span>
-<span id="cb28-101"><a href="#cb28-101" tabindex="-1"></a>    <span class="dt">cols</span><span class="op">:</span> [</span>
-<span id="cb28-102"><a href="#cb28-102" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;date&#39;</span>}<span class="op">,</span></span>
-<span id="cb28-103"><a href="#cb28-103" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;area&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
-<span id="cb28-104"><a href="#cb28-104" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;style&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Style&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;style&#39;</span>}<span class="op">,</span></span>
-<span id="cb28-105"><a href="#cb28-105" tabindex="-1"></a></span>
-<span id="cb28-106"><a href="#cb28-106" tabindex="-1"></a>    ]<span class="op">,</span></span>
-<span id="cb28-107"><a href="#cb28-107" tabindex="-1"></a>    <span class="dt">rows</span><span class="op">:</span> rowListClient</span>
-<span id="cb28-108"><a href="#cb28-108" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb28-109"><a href="#cb28-109" tabindex="-1"></a>  </span>
-<span id="cb28-110"><a href="#cb28-110" tabindex="-1"></a>  <span class="kw">var</span> options <span class="op">=</span> {</span>
-<span id="cb28-111"><a href="#cb28-111" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Yearly Forest Loss&#39;</span><span class="op">,</span></span>
-<span id="cb28-112"><a href="#cb28-112" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {</span>
-<span id="cb28-113"><a href="#cb28-113" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area (Hectares)&#39;</span><span class="op">,</span> </span>
-<span id="cb28-114"><a href="#cb28-114" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb28-115"><a href="#cb28-115" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {</span>
-<span id="cb28-116"><a href="#cb28-116" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Year&#39;</span><span class="op">,</span></span>
-<span id="cb28-117"><a href="#cb28-117" tabindex="-1"></a>      <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}</span>
-<span id="cb28-118"><a href="#cb28-118" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb28-119"><a href="#cb28-119" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span><span class="st">&#39;none&#39;</span>}<span class="op">,</span></span>
-<span id="cb28-120"><a href="#cb28-120" tabindex="-1"></a>    <span class="dt">height</span><span class="op">:</span> <span class="st">&#39;400px&#39;</span><span class="op">,</span></span>
-<span id="cb28-121"><a href="#cb28-121" tabindex="-1"></a>    <span class="dt">width</span><span class="op">:</span> <span class="st">&#39;600px&#39;</span></span>
-<span id="cb28-122"><a href="#cb28-122" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb28-123"><a href="#cb28-123" tabindex="-1"></a>  </span>
-<span id="cb28-124"><a href="#cb28-124" tabindex="-1"></a>  <span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;ColumnChart&#39;</span><span class="op">,</span> options)<span class="op">;</span></span>
-<span id="cb28-125"><a href="#cb28-125" tabindex="-1"></a>  <span class="co">// Add the chart on the map</span></span>
-<span id="cb28-126"><a href="#cb28-126" tabindex="-1"></a>  <span class="kw">var</span> chartPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb28-127"><a href="#cb28-127" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">width</span><span class="op">:</span> <span class="st">&#39;600px&#39;</span><span class="op">,</span> <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span>}</span>
-<span id="cb28-128"><a href="#cb28-128" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb28-129"><a href="#cb28-129" tabindex="-1"></a>  chartPanel<span class="op">.</span><span class="fu">add</span>(chart)<span class="op">;</span></span>
-<span id="cb28-130"><a href="#cb28-130" tabindex="-1"></a>  <span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(chartPanel)<span class="op">;</span></span>
-<span id="cb28-131"><a href="#cb28-131" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
-</div>
-<div id="transect-chart" class="section level2">
-<h2>Transect Chart</h2>
-<p>You can sample values from an image along a line transect and
-generate a FeatureCollection with latitude, longitude and DN values.
-This can be then plotted to create a transect chart like below.</p>
-<p><img src="images/gee_charts/transect.png" width="75%" style="display: block; margin: auto;" /></p>
-<p><a
-href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Charts%3ASupplement%2FTransect_Chart"
-target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb29"><pre
-class="sourceCode js"><code class="sourceCode javascript"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="kw">var</span> transect <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">LineString</span>([</span>
-<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>  [<span class="fl">139.0</span><span class="op">,</span> <span class="fl">35.67</span>]<span class="op">,</span></span>
-<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  [<span class="fl">140.5</span><span class="op">,</span> <span class="fl">35.67</span>]</span>
-<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>])<span class="op">;</span></span>
-<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a></span>
-<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="co">// Get VIIRS Annual NightTime Lights Image</span></span>
-<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="kw">var</span> ntlCollection <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;NOAA/VIIRS/DNB/ANNUAL_V21&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="kw">var</span> band <span class="op">=</span> <span class="st">&#39;average&#39;</span><span class="op">;</span></span>
-<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a></span>
-<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a><span class="co">// Select a year</span></span>
-<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a><span class="kw">var</span> year <span class="op">=</span> <span class="dv">2021</span><span class="op">;</span></span>
-<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a><span class="kw">var</span> startDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
-<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a><span class="kw">var</span> endDate <span class="op">=</span> startDate<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> ntlCollection</span>
-<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(startDate<span class="op">,</span> endDate))</span>
-<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(band)</span>
-<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a>  <span class="op">.</span><span class="fu">first</span>()<span class="op">;</span></span>
-<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a><span class="co">// Rename the band to &#39;DN&#39;</span></span>
-<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> image<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;DN&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a><span class="kw">var</span> resolution <span class="op">=</span> image<span class="op">.</span><span class="fu">projection</span>()<span class="op">.</span><span class="fu">nominalScale</span>()<span class="op">;</span></span>
-<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a><span class="co">// Visualize the Image</span></span>
-<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span>  [<span class="st">&#39;000000&#39;</span><span class="op">,</span> <span class="st">&#39;584d9f&#39;</span><span class="op">,</span><span class="st">&#39;9c79c1&#39;</span><span class="op">,</span><span class="st">&#39;c98cbe&#39;</span><span class="op">,</span><span class="st">&#39;f2d192&#39;</span><span class="op">,</span><span class="st">&#39;e2ee82&#39;</span>]<span class="op">;</span></span>
-<span id="cb29-23"><a href="#cb29-23" tabindex="-1"></a><span class="kw">var</span> visParams <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">80.0</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}</span>
-<span id="cb29-24"><a href="#cb29-24" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(transect)<span class="op">;</span></span>
-<span id="cb29-25"><a href="#cb29-25" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(image<span class="op">,</span> visParams<span class="op">,</span> <span class="st">&#39;Night Lights &#39;</span> <span class="op">+</span> year)<span class="op">;</span></span>
-<span id="cb29-26"><a href="#cb29-26" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(transect<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;red&#39;</span>}<span class="op">,</span> <span class="st">&#39;transect&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-27"><a href="#cb29-27" tabindex="-1"></a></span>
-<span id="cb29-28"><a href="#cb29-28" tabindex="-1"></a><span class="co">// Generate Points along Line</span></span>
-<span id="cb29-29"><a href="#cb29-29" tabindex="-1"></a><span class="kw">var</span> projection <span class="op">=</span> <span class="st">&#39;EPSG:4326&#39;</span> <span class="co">// WGS84</span></span>
-<span id="cb29-30"><a href="#cb29-30" tabindex="-1"></a><span class="kw">var</span> interval <span class="op">=</span> <span class="fl">0.01</span> <span class="co">// Degrees</span></span>
-<span id="cb29-31"><a href="#cb29-31" tabindex="-1"></a><span class="kw">var</span> tolerance <span class="op">=</span> <span class="fl">0.001</span><span class="op">;</span></span>
-<span id="cb29-32"><a href="#cb29-32" tabindex="-1"></a><span class="kw">var</span> totalLength <span class="op">=</span> transect<span class="op">.</span><span class="fu">length</span>({<span class="dt">proj</span><span class="op">:</span> projection<span class="op">,</span> <span class="dt">maxError</span><span class="op">:</span> tolerance})<span class="op">;</span></span>
-<span id="cb29-33"><a href="#cb29-33" tabindex="-1"></a><span class="kw">var</span> distances <span class="op">=</span> ee<span class="op">.</span><span class="at">List</span><span class="op">.</span><span class="fu">sequence</span>(<span class="dv">0</span><span class="op">,</span> totalLength<span class="op">,</span> interval)<span class="op">;</span></span>
-<span id="cb29-34"><a href="#cb29-34" tabindex="-1"></a></span>
-<span id="cb29-35"><a href="#cb29-35" tabindex="-1"></a><span class="co">// Divide the line into segments of equal length</span></span>
-<span id="cb29-36"><a href="#cb29-36" tabindex="-1"></a><span class="kw">var</span> parts <span class="op">=</span> transect<span class="op">.</span><span class="fu">cutLines</span>({</span>
-<span id="cb29-37"><a href="#cb29-37" tabindex="-1"></a>  <span class="dt">distances</span><span class="op">:</span> distances<span class="op">,</span></span>
-<span id="cb29-38"><a href="#cb29-38" tabindex="-1"></a>  <span class="dt">proj</span><span class="op">:</span> projection<span class="op">,</span></span>
-<span id="cb29-39"><a href="#cb29-39" tabindex="-1"></a>  <span class="dt">maxError</span><span class="op">:</span> tolerance})<span class="op">;</span></span>
-<span id="cb29-40"><a href="#cb29-40" tabindex="-1"></a></span>
-<span id="cb29-41"><a href="#cb29-41" tabindex="-1"></a><span class="co">// The result is a MultiLine geometry</span></span>
-<span id="cb29-42"><a href="#cb29-42" tabindex="-1"></a><span class="co">// Get the individual geometries and create a point</span></span>
-<span id="cb29-43"><a href="#cb29-43" tabindex="-1"></a><span class="co">// from the start point of each line segment</span></span>
-<span id="cb29-44"><a href="#cb29-44" tabindex="-1"></a><span class="kw">var</span> points <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(parts<span class="op">.</span><span class="fu">geometries</span>()<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(part) {</span>
-<span id="cb29-45"><a href="#cb29-45" tabindex="-1"></a>  <span class="kw">var</span> startPoint <span class="op">=</span> ee<span class="op">.</span><span class="fu">Geometry</span>(part)<span class="op">.</span><span class="fu">coordinates</span>()<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)<span class="op">;</span></span>
-<span id="cb29-46"><a href="#cb29-46" tabindex="-1"></a>  <span class="kw">var</span> point <span class="op">=</span> ee<span class="op">.</span><span class="at">Algorithms</span><span class="op">.</span><span class="at">GeometryConstructors</span><span class="op">.</span><span class="fu">Point</span>(startPoint)<span class="op">;</span></span>
-<span id="cb29-47"><a href="#cb29-47" tabindex="-1"></a>  <span class="kw">var</span> coords <span class="op">=</span> point<span class="op">.</span><span class="fu">coordinates</span>()<span class="op">;</span> </span>
-<span id="cb29-48"><a href="#cb29-48" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> ee<span class="op">.</span><span class="fu">Feature</span>(point<span class="op">,</span> {<span class="st">&#39;lat&#39;</span><span class="op">:</span> coords<span class="op">.</span><span class="fu">get</span>(<span class="dv">1</span>)<span class="op">,</span> <span class="st">&#39;lon&#39;</span><span class="op">:</span> coords<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)})<span class="op">;</span></span>
-<span id="cb29-49"><a href="#cb29-49" tabindex="-1"></a>}))<span class="op">;</span></span>
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="co">// Example script showing how to create a bar chart</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="co">// with each bar having a different color.</span></span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a><span class="co">// We create a map of forest loss with each pixel </span></span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a><span class="co">// colored accoridng to the year in which the loss occurred.</span></span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="co">// The chart displays the total loss in the region by year</span></span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="co">// with the color or the bar matching the map.</span></span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a></span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="co">// Select a region</span></span>
+<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>([[</span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">66.31185532393005</span><span class="op">,</span> <span class="op">-</span><span class="fl">8.92550265818768</span>]<span class="op">,</span></span>
+<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">66.31185532393005</span><span class="op">,</span> <span class="op">-</span><span class="fl">9.687127927480695</span>]<span class="op">,</span></span>
+<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">65.2104759293988</span><span class="op">,</span> <span class="op">-</span><span class="fl">9.687127927480695</span>]<span class="op">,</span></span>
+<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">65.2104759293988</span><span class="op">,</span> <span class="op">-</span><span class="fl">8.92550265818768</span>]</span>
+<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>]])<span class="op">;</span></span>
+<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a></span>
+<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a><span class="co">// Get the Hansen Global Forest Change dataset</span></span>
+<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a><span class="co">// This dataset is updated yearly, so we get the latest version.</span></span>
+<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a><span class="kw">var</span> gfc2022 <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;UMD/hansen/global_forest_change_2022_v1_10&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a></span>
+<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a><span class="kw">var</span> lossYear <span class="op">=</span> gfc2022<span class="op">.</span><span class="fu">select</span>([<span class="st">&#39;lossyear&#39;</span>])<span class="op">;</span></span>
+<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a></span>
+<span id="cb29-23"><a href="#cb29-23" tabindex="-1"></a><span class="co">// The lossYear image contains pixel values from 0 to 22</span></span>
+<span id="cb29-24"><a href="#cb29-24" tabindex="-1"></a><span class="co">// indicating the year in which the loss occurred</span></span>
+<span id="cb29-25"><a href="#cb29-25" tabindex="-1"></a></span>
+<span id="cb29-26"><a href="#cb29-26" tabindex="-1"></a><span class="co">// We visualize this layer on the map.</span></span>
+<span id="cb29-27"><a href="#cb29-27" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [</span>
+<span id="cb29-28"><a href="#cb29-28" tabindex="-1"></a>  <span class="st">&#39;0083ba&#39;</span><span class="op">,</span> <span class="st">&#39;#4394b6&#39;</span><span class="op">,</span> <span class="st">&#39;#5ca5b2&#39;</span><span class="op">,</span> <span class="st">&#39;#74b6ad&#39;</span><span class="op">,</span> <span class="st">&#39;#8dc8a9&#39;</span><span class="op">,</span></span>
+<span id="cb29-29"><a href="#cb29-29" tabindex="-1"></a>  <span class="st">&#39;#a5d9a5&#39;</span><span class="op">,</span> <span class="st">&#39;#b7e2a8&#39;</span><span class="op">,</span> <span class="st">&#39;#c7e8ad&#39;</span><span class="op">,</span> <span class="st">&#39;#d7efb2&#39;</span><span class="op">,</span> <span class="st">&#39;#e7f5b7&#39;</span><span class="op">,</span></span>
+<span id="cb29-30"><a href="#cb29-30" tabindex="-1"></a>  <span class="st">&#39;#f7fcbc&#39;</span><span class="op">,</span> <span class="st">&#39;#fff7b6&#39;</span><span class="op">,</span> <span class="st">&#39;#fee8a4&#39;</span><span class="op">,</span> <span class="st">&#39;#fed890&#39;</span><span class="op">,</span> <span class="st">&#39;#fec980&#39;</span><span class="op">,</span></span>
+<span id="cb29-31"><a href="#cb29-31" tabindex="-1"></a>  <span class="st">&#39;#fdba6e&#39;</span><span class="op">,</span> <span class="st">&#39;#fba75e&#39;</span><span class="op">,</span> <span class="st">&#39;#f48b51&#39;</span><span class="op">,</span> <span class="st">&#39;#ed6e43&#39;</span><span class="op">,</span> <span class="st">&#39;#e5522a&#39;</span><span class="op">,</span></span>
+<span id="cb29-32"><a href="#cb29-32" tabindex="-1"></a>  <span class="st">&#39;#de3519&#39;</span><span class="op">,</span> <span class="st">&#39;#d7191c&#39;</span>]<span class="op">;</span></span>
+<span id="cb29-33"><a href="#cb29-33" tabindex="-1"></a></span>
+<span id="cb29-34"><a href="#cb29-34" tabindex="-1"></a><span class="kw">var</span> lossYearVis <span class="op">=</span> {</span>
+<span id="cb29-35"><a href="#cb29-35" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb29-36"><a href="#cb29-36" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">22</span><span class="op">,</span></span>
+<span id="cb29-37"><a href="#cb29-37" tabindex="-1"></a>  <span class="dt">palette</span><span class="op">:</span> palette</span>
+<span id="cb29-38"><a href="#cb29-38" tabindex="-1"></a>}</span>
+<span id="cb29-39"><a href="#cb29-39" tabindex="-1"></a><span class="co">// Visualize the loss on the map</span></span>
+<span id="cb29-40"><a href="#cb29-40" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb29-41"><a href="#cb29-41" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">setOptions</span>(<span class="st">&#39;SATELLITE&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-42"><a href="#cb29-42" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(geometry<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;Selected Region&#39;</span><span class="op">,</span> <span class="kw">true</span><span class="op">,</span> <span class="fl">0.6</span>)<span class="op">;</span></span>
+<span id="cb29-43"><a href="#cb29-43" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(lossYear<span class="op">,</span> lossYearVis<span class="op">,</span> <span class="st">&#39;Loss Year&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-44"><a href="#cb29-44" tabindex="-1"></a></span>
+<span id="cb29-45"><a href="#cb29-45" tabindex="-1"></a><span class="co">// Create an area image and convert to Hectares</span></span>
+<span id="cb29-46"><a href="#cb29-46" tabindex="-1"></a><span class="kw">var</span> areaImage <span class="op">=</span> ee<span class="op">.</span><span class="at">Image</span><span class="op">.</span><span class="fu">pixelArea</span>()<span class="op">.</span><span class="fu">divide</span>(<span class="fl">1e5</span>)<span class="op">;</span></span>
+<span id="cb29-47"><a href="#cb29-47" tabindex="-1"></a></span>
+<span id="cb29-48"><a href="#cb29-48" tabindex="-1"></a><span class="co">// Add the band containing yearly loss</span></span>
+<span id="cb29-49"><a href="#cb29-49" tabindex="-1"></a><span class="kw">var</span> areaImageWithYear <span class="op">=</span> areaImage<span class="op">.</span><span class="fu">addBands</span>(lossYear)<span class="op">;</span></span>
 <span id="cb29-50"><a href="#cb29-50" tabindex="-1"></a></span>
-<span id="cb29-51"><a href="#cb29-51" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(points<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;cyan&#39;</span>}<span class="op">,</span> <span class="st">&#39;Points along transect&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-52"><a href="#cb29-52" tabindex="-1"></a></span>
-<span id="cb29-53"><a href="#cb29-53" tabindex="-1"></a><span class="co">// Extract the pixel values at each point</span></span>
-<span id="cb29-54"><a href="#cb29-54" tabindex="-1"></a><span class="kw">var</span> samples <span class="op">=</span> image<span class="op">.</span><span class="fu">sampleRegions</span>({</span>
-<span id="cb29-55"><a href="#cb29-55" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> points<span class="op">,</span></span>
-<span id="cb29-56"><a href="#cb29-56" tabindex="-1"></a>  <span class="dt">properties</span><span class="op">:</span> [<span class="st">&#39;lat&#39;</span><span class="op">,</span> <span class="st">&#39;lon&#39;</span>]<span class="op">,</span></span>
-<span id="cb29-57"><a href="#cb29-57" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> resolution<span class="op">,</span></span>
-<span id="cb29-58"><a href="#cb29-58" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb29-59"><a href="#cb29-59" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Extracted Values&#39;</span><span class="op">,</span> samples<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb29-51"><a href="#cb29-51" tabindex="-1"></a><span class="kw">var</span> areas <span class="op">=</span> areaImageWithYear<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
+<span id="cb29-52"><a href="#cb29-52" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">sum</span>()<span class="op">.</span><span class="fu">group</span>({</span>
+<span id="cb29-53"><a href="#cb29-53" tabindex="-1"></a>    <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb29-54"><a href="#cb29-54" tabindex="-1"></a>    <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;year&#39;</span></span>
+<span id="cb29-55"><a href="#cb29-55" tabindex="-1"></a>    })<span class="op">,</span></span>
+<span id="cb29-56"><a href="#cb29-56" tabindex="-1"></a>  <span class="dt">geometry</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb29-57"><a href="#cb29-57" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">30</span><span class="op">,</span></span>
+<span id="cb29-58"><a href="#cb29-58" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
+<span id="cb29-59"><a href="#cb29-59" tabindex="-1"></a>})<span class="op">;</span></span>
 <span id="cb29-60"><a href="#cb29-60" tabindex="-1"></a></span>
-<span id="cb29-61"><a href="#cb29-61" tabindex="-1"></a><span class="co">// Plot the results</span></span>
-<span id="cb29-62"><a href="#cb29-62" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">feature</span><span class="op">.</span><span class="fu">byFeature</span>({</span>
-<span id="cb29-63"><a href="#cb29-63" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> samples<span class="op">,</span></span>
-<span id="cb29-64"><a href="#cb29-64" tabindex="-1"></a>  <span class="dt">xProperty</span><span class="op">:</span> <span class="st">&#39;lon&#39;</span><span class="op">,</span></span>
-<span id="cb29-65"><a href="#cb29-65" tabindex="-1"></a>  <span class="dt">yProperties</span><span class="op">:</span> <span class="st">&#39;DN&#39;</span></span>
-<span id="cb29-66"><a href="#cb29-66" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setChartType</span>(<span class="st">&#39;AreaChart&#39;</span>)</span>
-<span id="cb29-67"><a href="#cb29-67" tabindex="-1"></a>  <span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb29-68"><a href="#cb29-68" tabindex="-1"></a>    <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb29-69"><a href="#cb29-69" tabindex="-1"></a>    <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
-<span id="cb29-70"><a href="#cb29-70" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Latitudinal Transect of Night Time Lights&#39;</span><span class="op">,</span></span>
-<span id="cb29-71"><a href="#cb29-71" tabindex="-1"></a>    <span class="dt">titleTextStyle</span><span class="op">:</span> {<span class="dt">fontSize</span><span class="op">:</span> <span class="dv">18</span>}<span class="op">,</span></span>
-<span id="cb29-72"><a href="#cb29-72" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;DN&#39;</span><span class="op">,</span> <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}}<span class="op">,</span></span>
-<span id="cb29-73"><a href="#cb29-73" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Longitude&#39;</span><span class="op">,</span> <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}}<span class="op">,</span></span>
-<span id="cb29-74"><a href="#cb29-74" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb29-75"><a href="#cb29-75" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span>}<span class="op">,</span></span>
-<span id="cb29-76"><a href="#cb29-76" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb29-77"><a href="#cb29-77" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span> <span class="st">&#39;none&#39;</span>}<span class="op">,</span></span>
-<span id="cb29-78"><a href="#cb29-78" tabindex="-1"></a>    <span class="dt">curveType</span><span class="op">:</span> <span class="st">&#39;function&#39;</span><span class="op">,</span></span>
-<span id="cb29-79"><a href="#cb29-79" tabindex="-1"></a>    <span class="dt">chartArea</span><span class="op">:</span> {<span class="dt">left</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span> <span class="dt">right</span><span class="op">:</span> <span class="dv">100</span>}<span class="op">,</span></span>
-<span id="cb29-80"><a href="#cb29-80" tabindex="-1"></a>    <span class="dt">backgroundColor</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span></span>
-<span id="cb29-81"><a href="#cb29-81" tabindex="-1"></a>  })</span>
-<span id="cb29-82"><a href="#cb29-82" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span>
-<span id="cb29-83"><a href="#cb29-83" tabindex="-1"></a>  </span></code></pre></div>
+<span id="cb29-61"><a href="#cb29-61" tabindex="-1"></a><span class="kw">var</span> yearAreas <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(areas<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))<span class="op">;</span></span>
+<span id="cb29-62"><a href="#cb29-62" tabindex="-1"></a></span>
+<span id="cb29-63"><a href="#cb29-63" tabindex="-1"></a><span class="co">// Process results to extract the areas and</span></span>
+<span id="cb29-64"><a href="#cb29-64" tabindex="-1"></a><span class="co">// create a list</span></span>
+<span id="cb29-65"><a href="#cb29-65" tabindex="-1"></a><span class="kw">var</span> yearAreasList <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(yearAreas<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb29-66"><a href="#cb29-66" tabindex="-1"></a>  <span class="kw">var</span> areaDict <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">;</span></span>
+<span id="cb29-67"><a href="#cb29-67" tabindex="-1"></a>  <span class="kw">var</span> yearString <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;year&#39;</span>))<span class="op">.</span><span class="fu">format</span>(<span class="st">&#39;20%02d&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-68"><a href="#cb29-68" tabindex="-1"></a>  <span class="kw">var</span> area <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
+<span id="cb29-69"><a href="#cb29-69" tabindex="-1"></a>    areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;sum&#39;</span>))<span class="op">;</span></span>
+<span id="cb29-70"><a href="#cb29-70" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">List</span>([yearString<span class="op">,</span> area])</span>
+<span id="cb29-71"><a href="#cb29-71" tabindex="-1"></a>}))<span class="op">;</span></span>
+<span id="cb29-72"><a href="#cb29-72" tabindex="-1"></a></span>
+<span id="cb29-73"><a href="#cb29-73" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Year Areas&#39;</span><span class="op">,</span> yearAreasList)<span class="op">;</span></span>
+<span id="cb29-74"><a href="#cb29-74" tabindex="-1"></a></span>
+<span id="cb29-75"><a href="#cb29-75" tabindex="-1"></a></span>
+<span id="cb29-76"><a href="#cb29-76" tabindex="-1"></a><span class="co">// We create a list of rows in the DataTable format</span></span>
+<span id="cb29-77"><a href="#cb29-77" tabindex="-1"></a><span class="kw">var</span> rowList <span class="op">=</span> yearAreasList<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb29-78"><a href="#cb29-78" tabindex="-1"></a>  <span class="kw">var</span> year <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb29-79"><a href="#cb29-79" tabindex="-1"></a>  <span class="kw">var</span> x <span class="op">=</span> ee<span class="op">.</span><span class="fu">String</span>(<span class="st">&#39;Date(&#39;</span>)</span>
+<span id="cb29-80"><a href="#cb29-80" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(year)</span>
+<span id="cb29-81"><a href="#cb29-81" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;, &#39;</span>)</span>
+<span id="cb29-82"><a href="#cb29-82" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;0&#39;</span>)</span>
+<span id="cb29-83"><a href="#cb29-83" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;, &#39;</span>)</span>
+<span id="cb29-84"><a href="#cb29-84" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(<span class="st">&#39;1&#39;</span>)</span>
+<span id="cb29-85"><a href="#cb29-85" tabindex="-1"></a>    <span class="op">.</span><span class="fu">cat</span>(ee<span class="op">.</span><span class="fu">String</span>(<span class="st">&#39;)&#39;</span>))</span>
+<span id="cb29-86"><a href="#cb29-86" tabindex="-1"></a>    </span>
+<span id="cb29-87"><a href="#cb29-87" tabindex="-1"></a>  <span class="kw">var</span> y <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb29-88"><a href="#cb29-88" tabindex="-1"></a>  <span class="co">// We will assign the color to each year from the palette</span></span>
+<span id="cb29-89"><a href="#cb29-89" tabindex="-1"></a>  <span class="kw">var</span> color <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(palette)<span class="op">.</span><span class="fu">get</span>(yearAreasList<span class="op">.</span><span class="fu">indexOf</span>(item))<span class="op">;</span></span>
+<span id="cb29-90"><a href="#cb29-90" tabindex="-1"></a>  <span class="kw">var</span> rowDict <span class="op">=</span> {</span>
+<span id="cb29-91"><a href="#cb29-91" tabindex="-1"></a>    <span class="dt">c</span><span class="op">:</span> [{<span class="dt">v</span><span class="op">:</span> x}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> y}<span class="op">,</span> {<span class="dt">v</span><span class="op">:</span> color}]</span>
+<span id="cb29-92"><a href="#cb29-92" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb29-93"><a href="#cb29-93" tabindex="-1"></a>  <span class="cf">return</span> rowDict<span class="op">;</span></span>
+<span id="cb29-94"><a href="#cb29-94" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb29-95"><a href="#cb29-95" tabindex="-1"></a></span>
+<span id="cb29-96"><a href="#cb29-96" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Rows&#39;</span><span class="op">,</span> rowList)<span class="op">;</span></span>
+<span id="cb29-97"><a href="#cb29-97" tabindex="-1"></a></span>
+<span id="cb29-98"><a href="#cb29-98" tabindex="-1"></a><span class="co">// Create the DataTable</span></span>
+<span id="cb29-99"><a href="#cb29-99" tabindex="-1"></a>rowList<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(rowListClient) {</span>
+<span id="cb29-100"><a href="#cb29-100" tabindex="-1"></a>  <span class="kw">var</span> dataTable <span class="op">=</span> {</span>
+<span id="cb29-101"><a href="#cb29-101" tabindex="-1"></a>    <span class="dt">cols</span><span class="op">:</span> [</span>
+<span id="cb29-102"><a href="#cb29-102" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;date&#39;</span>}<span class="op">,</span></span>
+<span id="cb29-103"><a href="#cb29-103" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;area&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;number&#39;</span>}<span class="op">,</span></span>
+<span id="cb29-104"><a href="#cb29-104" tabindex="-1"></a>      {<span class="dt">id</span><span class="op">:</span> <span class="st">&#39;style&#39;</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Style&#39;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;string&#39;</span><span class="op">,</span> <span class="dt">role</span><span class="op">:</span> <span class="st">&#39;style&#39;</span>}<span class="op">,</span></span>
+<span id="cb29-105"><a href="#cb29-105" tabindex="-1"></a></span>
+<span id="cb29-106"><a href="#cb29-106" tabindex="-1"></a>    ]<span class="op">,</span></span>
+<span id="cb29-107"><a href="#cb29-107" tabindex="-1"></a>    <span class="dt">rows</span><span class="op">:</span> rowListClient</span>
+<span id="cb29-108"><a href="#cb29-108" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb29-109"><a href="#cb29-109" tabindex="-1"></a>  </span>
+<span id="cb29-110"><a href="#cb29-110" tabindex="-1"></a>  <span class="kw">var</span> options <span class="op">=</span> {</span>
+<span id="cb29-111"><a href="#cb29-111" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Yearly Forest Loss&#39;</span><span class="op">,</span></span>
+<span id="cb29-112"><a href="#cb29-112" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {</span>
+<span id="cb29-113"><a href="#cb29-113" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Area (Hectares)&#39;</span><span class="op">,</span> </span>
+<span id="cb29-114"><a href="#cb29-114" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb29-115"><a href="#cb29-115" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {</span>
+<span id="cb29-116"><a href="#cb29-116" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Year&#39;</span><span class="op">,</span></span>
+<span id="cb29-117"><a href="#cb29-117" tabindex="-1"></a>      <span class="dt">gridlines</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;transparent&#39;</span>}</span>
+<span id="cb29-118"><a href="#cb29-118" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb29-119"><a href="#cb29-119" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {<span class="dt">position</span><span class="op">:</span><span class="st">&#39;none&#39;</span>}<span class="op">,</span></span>
+<span id="cb29-120"><a href="#cb29-120" tabindex="-1"></a>    <span class="dt">height</span><span class="op">:</span> <span class="st">&#39;400px&#39;</span><span class="op">,</span></span>
+<span id="cb29-121"><a href="#cb29-121" tabindex="-1"></a>    <span class="dt">width</span><span class="op">:</span> <span class="st">&#39;600px&#39;</span></span>
+<span id="cb29-122"><a href="#cb29-122" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb29-123"><a href="#cb29-123" tabindex="-1"></a>  </span>
+<span id="cb29-124"><a href="#cb29-124" tabindex="-1"></a>  <span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="fu">Chart</span>(dataTable<span class="op">,</span> <span class="st">&#39;ColumnChart&#39;</span><span class="op">,</span> options)<span class="op">;</span></span>
+<span id="cb29-125"><a href="#cb29-125" tabindex="-1"></a>  <span class="co">// Add the chart on the map</span></span>
+<span id="cb29-126"><a href="#cb29-126" tabindex="-1"></a>  <span class="kw">var</span> chartPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb29-127"><a href="#cb29-127" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">width</span><span class="op">:</span> <span class="st">&#39;600px&#39;</span><span class="op">,</span> <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span>}</span>
+<span id="cb29-128"><a href="#cb29-128" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb29-129"><a href="#cb29-129" tabindex="-1"></a>  chartPanel<span class="op">.</span><span class="fu">add</span>(chart)<span class="op">;</span></span>
+<span id="cb29-130"><a href="#cb29-130" tabindex="-1"></a>  <span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(chartPanel)<span class="op">;</span></span>
+<span id="cb29-131"><a href="#cb29-131" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
 </div>
 </div>
 <div id="references" class="section level1">
