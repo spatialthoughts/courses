@@ -1,11 +1,27 @@
 var dmsp = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/dmsp');
 var viirs = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/viirs');
 var ntlCol = dmsp.merge(viirs);
-var lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
+// Using GeoBoundries admin boundaries
+var admin0 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM0");
+var admin1 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM1");
+var admin2 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM2");
 
-var country = 'Japan';
+// Select a Admin0 value
+print(admin0.aggregate_array('shapeName'));
+var admin0Name = 'India';
 
-var selected = lsib.filter(ee.Filter.eq('country_na', country));
+// Now we have admin0 values, fetch admin1 values for that country
+var selectedAdmin0 = admin0.filter(ee.Filter.eq('shapeName', admin0Name));
+var shapeID = ee.Feature(selectedAdmin0.first()).get('shapeID');
+var admin1Filtered = admin1.filter(ee.Filter.eq('ADM0_shape', shapeID));
+
+// Select a Admin1 value
+print(admin1Filtered.aggregate_array('shapeName'));
+var admin1Name = 'Karnataka';
+
+var selected = admin1Filtered
+        .filter(ee.Filter.eq('shapeName', admin1Name))
+        
 var geometry = selected.geometry();
 
 // This function creates charts for the given year
@@ -26,7 +42,7 @@ var createChart = function(year) {
     maxBuckets: 63,
     minBucketWidth: 1
     }).setOptions({
-      title: 'Night Time Lights Distribution for ' + country + ' ' + year,
+      title: 'Night Time Lights Distribution for ' + admin1Name + ' ' + year,
       vAxis: {
         title: 'Number of Grids', 
         gridlines: {color: 'transparent'}
@@ -34,7 +50,7 @@ var createChart = function(year) {
       hAxis: {
         title: 'Level of Observed Nighttime Lights',
         ticks: [0, 6, 13, 21, 29, 37, 45, 53, 61],
-        gridlines: {color: 'transparent'}
+        gridlines: {color: 'transparent'},
       },
       bar: { gap: 1 },
       legend: { position: 'none' },
@@ -48,9 +64,10 @@ var createChart = function(year) {
 // The code now has a function createChart that creates a chart
 // for the given year
 
-// a) Change the name of the country to your chosen country
+// a) Change the name of the admin0 and admin1 units to your chosen region
 // b) Call the function to create histograms for the year 2010 and 2020
-// c) Print the charts.
+// c) Print the charts. 
 
-print('All country  names', lsib.aggregate_array('country_na'));
+// Tip: Adjust the hAxis.viewWindow parameter to appropriate values
+//      for your chosen country
 

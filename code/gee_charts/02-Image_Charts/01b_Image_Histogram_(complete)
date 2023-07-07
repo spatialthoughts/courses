@@ -5,11 +5,28 @@ var viirs = ee.ImageCollection('projects/sat-io/open-datasets/Harmonized_NTL/vii
 // Merge both collections to create a single Night Lights Collection
 var ntlCol = dmsp.merge(viirs);
 
-// Using LSIB for country boundaries
-var lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
-    
-var country = 'Japan';
-var selected = lsib.filter(ee.Filter.eq('country_na', country));
+// Using GeoBoundries admin boundaries
+var admin0 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM0");
+var admin1 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM1");
+var admin2 = ee.FeatureCollection("projects/sat-io/open-datasets/geoboundaries/CGAZ_ADM2");
+
+// Select a Admin0 value
+print(admin0.aggregate_array('shapeName'));
+var admin0Name = 'Ghana';
+
+// Now we have admin0 values, fetch admin1 values for that country
+
+var selectedAdmin0 = admin0.filter(ee.Filter.eq('shapeName', admin0Name));
+var shapeID = ee.Feature(selectedAdmin0.first()).get('shapeID');
+var admin1Filtered = admin1.filter(ee.Filter.eq('ADM0_shape', shapeID));
+
+// Select a Admin1 value
+print(admin1Filtered.aggregate_array('shapeName'));
+var admin1Name = 'Greater Accra';
+
+var selected = admin1Filtered
+        .filter(ee.Filter.eq('shapeName', admin1Name))
+        
 var geometry = selected.geometry();
 
 var year = 2009;
@@ -26,7 +43,7 @@ var ntlImage = ee.Image(filtered.first()).unmask(0);
 var palette =['#253494','#2c7fb8','#41b6c4','#a1dab4','#ffffcc' ];
 var ntlVis = {min:0, max: 63,  palette: palette}
 
-Map.centerObject(geometry, 6);
+Map.centerObject(geometry, 10);
 Map.addLayer(ntlImage.clip(geometry), ntlVis, 'Night Time Lights ' + year);
 
 // Extract the native resolution of the image
@@ -52,10 +69,10 @@ var chart = ui.Chart.image.histogram({
   maxBuckets: 63,
   minBucketWidth: 1
 }).setOptions({
-    title: 'Night Time Lights Distribution for ' + country + ' ' + year,
+    title: 'Night Time Lights Distribution for ' + admin1Name + ' ' + year,
     vAxis: {
       title: 'Number of Grids', 
-      gridlines: {color: 'transparent'}
+      gridlines: {color: 'transparent'},
     },
     hAxis: {
       title: 'Level of Observed Nighttime Lights',
