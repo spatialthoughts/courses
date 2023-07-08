@@ -1,11 +1,11 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = /* color: #d63000 */ee.Geometry.Polygon(
-        [[[82.60642647743225, 27.16350437805251],
-          [82.60984897613525, 27.1618529901377],
-          [82.61088967323303, 27.163695288375266],
-          [82.60757446289062, 27.16517483230927]]]);
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script showing how to create a box plot with outliers.
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]]);
 
 Map.addLayer(geometry, {color: 'red'}, 'Farm');
 Map.centerObject(geometry);
@@ -38,22 +38,6 @@ function addNDVI(image) {
 // Map the function over the collection
 var withNdvi = filtered.map(addNDVI);
 
-// Plot the median NDVI values over time
-// Display a time-series chart
-var chart = ui.Chart.image.series({
-  imageCollection: withNdvi.select('ndvi'),
-  region: geometry,
-  reducer: ee.Reducer.median(),
-  scale: 10
-}).setOptions({
-      lineWidth: 1,
-      title: 'NDVI Time Series',
-      interpolateNulls: true,
-      vAxis: {title: 'NDVI'},
-      hAxis: {title: '', format: 'YYYY-MMM'}
-    })
-print(chart);
-
 // Extract the values from each image
 var values = withNdvi.map(function(image) {
   var ndvi = image.select('ndvi');
@@ -80,15 +64,15 @@ var values = withNdvi.map(function(image) {
     'p25': stats.get('ndvi_p25'),
     'p50': stats.get('ndvi_p50'),
     'p75': stats.get('ndvi_p75'),
-  };
-  return ee.Feature(null, properties);
+  }
+  return ee.Feature(null, properties)
   
-});
-
+})
 // Remove null values
 var values = values.filter(ee.Filter.notNull(
   ['median', 'min', 'max', 'p25', 'p50', 'p75']));
-  
+print(values)
+
 // Format the results as a list of DataTable rows
 
 // We need a list to map() over
@@ -99,29 +83,43 @@ var dateList = values.aggregate_array('date');
 // '2017-01-01' becomes 'Date(2017,0,1)'
 // month is indexed from 0 in Date String representation
 function formatDate(date) {
-  var year = ee.Date(date).get('year').format();
-  var month = ee.Date(date).get('month').subtract(1).format();
-  var day = ee.Date(date).get('day').format();
+  var year = ee.Date(date).get('year').format()
+  var month = ee.Date(date).get('month').subtract(1).format()
+  var day = ee.Date(date).get('day').format()
   return ee.String('Date(')
     .cat(year)
     .cat(', ')
     .cat(month)
     .cat(', ')
     .cat(day)
-    .cat(ee.String(', 1)'));
+    .cat(ee.String(')'));
 }
 
+// We will compute the values to display whiskers
+// at 1.5*(Inter-Quartile Range)
+// If the minimum or maximum values fall outside
+// if this range, they will be considered outliers.
 var rowList = dateList.map(function(date) {
   var f = values.filter(ee.Filter.eq('date', date)).first();
   var x = formatDate(date);
-  var median = f.get('median');
-  var min = f.get('min');
-  var max = f.get('max');
-  var p25 = f.get('p25');
-  var p50 = f.get('p50');
-  var p75 = f.get('p75');
+  var median = f.getNumber('median');
+  var p25 = f.getNumber('p25');
+  var p50 = f.getNumber('p50');
+  var p75 = f.getNumber('p75');
+  // Compute min/max as the Inter-Quartile Range (IQR)
+  var min = ee.Number.expression('p25 - 1.5*(p75-p25)', {
+    p75: ee.Number(p75),
+    p25: ee.Number(p25)})
+  var max = ee.Number.expression('p75 + 1.5*(p75-p25)', {
+    p75: ee.Number(p75),
+    p25: ee.Number(p25)})
+  var minValue = f.getNumber('min');
+  var maxValue = f.getNumber('max');
+  // Add the outlier if they are outside of IQR
+  var minOutlier = ee.Algorithms.If(minValue.lt(min), minValue, null);
+  var maxOutlier = ee.Algorithms.If(maxValue.gt(max), maxValue, null);
   var rowDict = {
-    c: [{v: x}, {v: median}, {v: min}, {v: max},
+    c: [{v: x}, {v: median}, {v: minOutlier}, {v: maxOutlier}, {v: min}, {v: max},
         {v: p25}, {v: p50}, {v: p75}]
   };
   return rowDict;
@@ -137,17 +135,20 @@ rowList.evaluate(function(rowListClient) {
     cols: [
       {id: 'x', type: 'date'},
       {id: 'median', type: 'number'},
+      {id: 'minOutlier', type: 'number', role: 'interval'},
+      {id: 'maxOutlier', type: 'number', role: 'interval'},
       {id: 'min', type: 'number', role: 'interval'},
       {id: 'max', type: 'number', role: 'interval'},
       {id: 'firstQuartile', type: 'number', role: 'interval'},
       {id: 'median', type: 'number', role: 'interval'},
-      {id: 'thirdQuartile', type:'number', role: 'interval'}
+      {id: 'thirdQuartile', type:'number', role: 'interval'},
+
     ],
     rows: rowListClient
   };
 
   var options = {
-    title:'NDVI Time-Series Box Plot',
+    title:'NDVI Time-Series Box Plot with Outliers',
     vAxis: {
       title: 'NDVI',
       gridlines: {
@@ -157,6 +158,7 @@ rowList.evaluate(function(rowListClient) {
         color: 'transparent'
       },
       viewWindow: {
+        min: -0.2,
         max: 1
       }
     },
@@ -194,7 +196,15 @@ rowList.evaluate(function(rowListClient) {
         style: 'bars',
         fillOpacity: 1,
         color: '#777777'
-      }
+      },
+      minOutlier: {
+        style: 'points',
+        pointSize: 2
+      },
+      maxOutlier: {
+        style: 'points',
+        pointSize: 2
+      },
     },
     chartArea: {left:100, right:100}
   };
@@ -202,11 +212,4 @@ rowList.evaluate(function(rowListClient) {
   var chart = ui.Chart(dataTable, 'LineChart', options);
   print(chart);
   });
-
-// Exercise
-
-// a) Delete the 'geometry' and add a polygon at your chosen location.
-// b) Modify the chart options hide the line connecting the bars.
-// c) Print the chart.
-
-// Hint: Set the lideWidth to 0.
+ 

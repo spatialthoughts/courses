@@ -80,10 +80,15 @@ var values = withNdvi.map(function(image) {
     'p25': stats.get('ndvi_p25'),
     'p50': stats.get('ndvi_p50'),
     'p75': stats.get('ndvi_p75'),
-  }
-  return ee.Feature(null, properties)
+  };
+  return ee.Feature(null, properties);
   
-})
+});
+
+// Remove null values
+var values = values.filter(ee.Filter.notNull(
+  ['median', 'min', 'max', 'p25', 'p50', 'p75']));
+  
 // Format the results as a list of DataTable rows
 
 // We need a list to map() over
@@ -94,9 +99,9 @@ var dateList = values.aggregate_array('date');
 // '2017-01-01' becomes 'Date(2017,0,1)'
 // month is indexed from 0 in Date String representation
 function formatDate(date) {
-  var year = ee.Date(date).get('year').format()
-  var month = ee.Date(date).get('month').subtract(1).format()
-  var day = ee.Date(date).get('day').format()
+  var year = ee.Date(date).get('year').format();
+  var month = ee.Date(date).get('month').subtract(1).format();
+  var day = ee.Date(date).get('day').format();
   return ee.String('Date(')
     .cat(year)
     .cat(', ')
@@ -143,8 +148,32 @@ rowList.evaluate(function(rowListClient) {
 
   var options = {
     title:'NDVI Time-Series Box Plot',
-    vAxis: {title: 'NDVI'},
-    hAxis: {title: '', format: 'YYYY-MMM'},
+    vAxis: {
+      title: 'NDVI',
+      gridlines: {
+        color: '#d9d9d9'
+      },
+      minorGridlines: {
+        color: 'transparent'
+      },
+      viewWindow: {
+        max: 1
+      }
+    },
+    hAxis: {
+      title: '',
+      format: 'YYYY-MMM',
+      viewWindow: {
+        min: new Date(2017, 0),
+        max: new Date(2018, 0)
+      },
+      gridlines: {
+        color: '#d9d9d9'
+      },
+      minorGridlines: {
+        color: 'transparent'
+      }
+    },
     legend: {position: 'none'},
     lineWidth: 1,
     series: [{'color': '#D3362D'}],
@@ -166,7 +195,8 @@ rowList.evaluate(function(rowListClient) {
         fillOpacity: 1,
         color: '#777777'
       }
-    }
+    },
+    chartArea: {left:100, right:100}
   };
     
   var chart = ui.Chart(dataTable, 'LineChart', options);
