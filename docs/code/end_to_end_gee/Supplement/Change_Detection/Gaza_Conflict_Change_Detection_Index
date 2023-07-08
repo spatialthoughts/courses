@@ -43,13 +43,21 @@ var nrgVis = {min: 0, max: 0.3, bands: ['B8', 'B4', 'B3']};
 Map.addLayer(beforeComposite.clip(geometry), {min: 0, max: 0.3, bands: ['B4', 'B3', 'B2']}, 'Before')
 Map.addLayer(afterComposite.clip(geometry), {min: 0, max: 0.4, bands: ['B4', 'B3', 'B2']}, 'After')
 
-var ndviBefore = beforeComposite.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
-var ndviAfter = afterComposite.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+var addIndices = function(image) {
+  var nbr = image.normalizedDifference(['B8', 'B12']).rename(['nbr']);
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi'])
+  return image.addBands(nbr).addBands(ndvi);
+}
 
-// Loss of NDVI
-var difference = ndviBefore.subtract(ndviAfter).clip(geometry)
+// You can try change detection with either NBR or NDVI
+var selectedIndex = 'nbr';
+var beforeNbr = addIndices(beforeComposite).select(selectedIndex);
+var afterNbr = addIndices(afterComposite).select(selectedIndex);
 
-var indexThreshold = 0.12;
+// Change in Index
+var difference = beforeNbr.subtract(afterNbr).clip(geometry)
+
+var indexThreshold = 0.25;
 var change = difference.gt(indexThreshold)
 
 // Mask Waterbodies using WorldCover
