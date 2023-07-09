@@ -7,7 +7,7 @@ import processing
 from processing.core.Processing import Processing
 Processing.initialize()
 
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_masterclass')
 
 filename = 'sf.gpkg|layername=zoning'
 uri = os.path.join(data_dir, filename)

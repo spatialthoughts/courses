@@ -1,5 +1,5 @@
 import os
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_masterclass')
 
 output_name = 'output.csv'
 output_path = os.path.join(data_dir, output_name)

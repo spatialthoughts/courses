@@ -8,7 +8,7 @@ import processing
 from processing.core.Processing import Processing
 Processing.initialize()
 
-data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_in_a_day')
+data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_masterclass')
 
 vector_layer = 'seismic_zones.shp'
 vector_layer_path = os.path.join(data_dir, vector_layer)
