@@ -9,10 +9,12 @@ def show_statistics():
     # Check if a layer is selected
     if not layer:
         iface.messageBar().pushMessage('Please select a layer',  level=Qgis.Critical) 
+        return None
     # Check if the selected layer is a raster layer
     if layer.type() != QgsMapLayer.RasterLayer:
         iface.messageBar().pushMessage('Please select a raster layer',  level=Qgis.Critical)
-      
+        return None
+        
     # Get the canvas extent
     mc = iface.mapCanvas()
     extent = mc.extent()
@@ -27,7 +29,7 @@ def show_statistics():
     # The value is NaN if there are no valid pixels in the extent
     if not math.isnan(mean):
         iface.messageBar().pushInfo(
-            'Processing done', f'Average Value in Extent {mean:.2f}')
+            'Average Value of Band 1 in Extent', f'{mean:.2f}')
     else:
         iface.messageBar().pushCritical(
         'Error', 'No pixels in current extent')
