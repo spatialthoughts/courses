@@ -2,7 +2,7 @@ import os
 import math
 
 qgis_dir = QgsApplication.prefixPath()
-icon_path = os.path.join(qgis_dir, 'svg', 'crosses', 'Cross2.svg')
+icon_path = os.path.join(qgis_dir, 'svg', 'crosses', 'Cross6.svg')
 
 def show_statistics():
     layer = iface.activeLayer()
