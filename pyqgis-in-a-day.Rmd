@@ -671,28 +671,60 @@ You can also do batch-processing by iterating through multiple layers and runnin
 
 ## Exercise 5
 
-Let's say we want to find the elevation of the highest point in San Francisco. We can use the DEM and QGIS Processing Algorithms to get the answer. Use the `qgis:rasterlayerstatistics` algorithm to calculate statistics on the clipped DEM and print the answer.
+Your data package contains a polygon layer of seismic zones in San Francisco. We want to calculate the average elevation within each seismic zone from this layer. The code below reads the vector layer `seismic_zones.shp` of seismic zones and the raster layer `srtm.tif` containing elevation values. The vector layer contains some invalid polygons, so we run the `native:fixgeometries` algorithm to fix them.
 
-Hint: The result of the `qgis:rasterlayerstatistics` algorithm is a dictionary. Printthe result to see iit and extract relevant value.
+Use the resulting layer with the fixes geometries and calculate Zonal Statistics algorithm `native:zonalstatisticsfb` to calculate the average elevation from the raster layer. 
 
 ```{python eval=FALSE}
 import os
 data_dir = os.path.join(os.path.expanduser('~'), 'Downloads', 'pyqgis_masterclass')
 
-filename = 'srtm.tif'
-srtm = os.path.join(data_dir, filename)
+vector_layer = 'seismic_zones.shp'
+vector_layer_path = os.path.join(data_dir, vector_layer)
 
-filename = 'shoreline.shp'
-shoreline = os.path.join(data_dir, filename)
+raster_layer = 'srtm.tif'
+raster_layer_path = os.path.join(data_dir, raster_layer)
 
-results = processing.run("gdal:cliprasterbymasklayer", 
-    {'INPUT':srtm,
-    'MASK': shoreline,
-    'OUTPUT':'TEMPORARY_OUTPUT'})
-clipped_dem = results['OUTPUT']
+# Input vector has invalid geometries
+# Fix them first
+results = processing.run("native:fixgeometries", {
+  'INPUT':vector_layer_path,
+  'METHOD': 0,
+  'OUTPUT':'TEMPORARY_OUTPUT'})
 
-# Use the qgis:rasterlayerstatistics algorithm on clipped_dem
+fixed_vector_layer = results['OUTPUT']
+
+# Run Zonal Statstics and load the resulting layer
+
 ```
+
+# Assignment 
+
+The following assignment is designed to help you practice the skills learnt so far in the course and explore the PyQGIS API.
+
+Your task is to write a PyQGIS Script to show the average value of the selected raster layer within the current map extent. For example, if you load the `srtm` layer from the data package, select it and click the button - it should calculate and display the average elevation within the canvas extent. If you zoom/pan the map and click the button again - it should compute the display the average elevation within the new extent. Here is the recommended structure for your script.
+
+* Add a button to the *Plugins Toolbar* called *Show Raster Statistics* with an icon of your choice.
+* Write a function named `show_statistics()` that is called when the button is clicked.
+* The function should obtain the current extent of the map canvas and calculate the raster statistics.
+* Once the statistics are computed, it should display a message in the message bar with the information.
+
+Hint: [`QgsRasterInterface`](https://qgis.org/pyqgis/3.28/core/QgsRasterInterface.html#module-QgsRasterInterface) class provides a `bandStatistics()` method for calculating statistics from a raster band. You can get the reference to the instance of this class for a raster layer using `layer.dataProvider()`.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/assignment1.png')
+```
+
+Extra credit if your script also does error checking and displays an error message on the message bar for the following conditions:
+
+* If the user has not selected any layer or the selected layer is not a raster layer, display an error.
+* If the current map canvas extent does not have any valid pixels, display an error.
+
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/assignment1_errors.png')
+```
+
 
 # 10. Advanced Python Concepts
 

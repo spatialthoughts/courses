@@ -462,6 +462,7 @@ id="toc-running-multiple-processing-algorithms">9.2 Running Multiple
 Processing Algorithms</a></li>
 <li><a href="#exercise-5" id="toc-exercise-5">Exercise 5</a></li>
 </ul></li>
+<li><a href="#assignment" id="toc-assignment">Assignment</a></li>
 <li><a href="#advanced-python-concepts"
 id="toc-advanced-python-concepts">10. Advanced Python Concepts</a>
 <ul>
@@ -1421,31 +1422,76 @@ for a complete example.</p>
 </div>
 <div id="exercise-5" class="section level2">
 <h2>Exercise 5</h2>
-<p>Let’s say we want to find the elevation of the highest point in San
-Francisco. We can use the DEM and QGIS Processing Algorithms to get the
-answer. Use the <code>qgis:rasterlayerstatistics</code> algorithm to
-calculate statistics on the clipped DEM and print the answer.</p>
-<p>Hint: The result of the <code>qgis:rasterlayerstatistics</code>
-algorithm is a dictionary. Printthe result to see iit and extract
-relevant value.</p>
+<p>Your data package contains a polygon layer of seismic zones in San
+Francisco. We want to calculate the average elevation within each
+seismic zone from this layer. The code below reads the vector layer
+<code>seismic_zones.shp</code> of seismic zones and the raster layer
+<code>srtm.tif</code> containing elevation values. The vector layer
+contains some invalid polygons, so we run the
+<code>native:fixgeometries</code> algorithm to fix them.</p>
+<p>Use the resulting layer with the fixes geometries and calculate Zonal
+Statistics algorithm <code>native:zonalstatisticsfb</code> to calculate
+the average elevation from the raster layer.</p>
 <div class="sourceCode" id="cb32"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a>data_dir <span class="op">=</span> os.path.join(os.path.expanduser(<span class="st">&#39;~&#39;</span>), <span class="st">&#39;Downloads&#39;</span>, <span class="st">&#39;pyqgis_masterclass&#39;</span>)</span>
 <span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a></span>
-<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;srtm.tif&#39;</span></span>
-<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a>srtm <span class="op">=</span> os.path.join(data_dir, filename)</span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>vector_layer <span class="op">=</span> <span class="st">&#39;seismic_zones.shp&#39;</span></span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a>vector_layer_path <span class="op">=</span> os.path.join(data_dir, vector_layer)</span>
 <span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a></span>
-<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;shoreline.shp&#39;</span></span>
-<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>shoreline <span class="op">=</span> os.path.join(data_dir, filename)</span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a>raster_layer <span class="op">=</span> <span class="st">&#39;srtm.tif&#39;</span></span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>raster_layer_path <span class="op">=</span> os.path.join(data_dir, raster_layer)</span>
 <span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a></span>
-<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a>results <span class="op">=</span> processing.run(<span class="st">&quot;gdal:cliprasterbymasklayer&quot;</span>, </span>
-<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a>    {<span class="st">&#39;INPUT&#39;</span>:srtm,</span>
-<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a>    <span class="st">&#39;MASK&#39;</span>: shoreline,</span>
-<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a>    <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span>})</span>
-<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a>clipped_dem <span class="op">=</span> results[<span class="st">&#39;OUTPUT&#39;</span>]</span>
-<span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a></span>
-<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a><span class="co"># Use the qgis:rasterlayerstatistics algorithm on clipped_dem</span></span></code></pre></div>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a><span class="co"># Input vector has invalid geometries</span></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a><span class="co"># Fix them first</span></span>
+<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a>results <span class="op">=</span> processing.run(<span class="st">&quot;native:fixgeometries&quot;</span>, {</span>
+<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>:vector_layer_path,</span>
+<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a>  <span class="st">&#39;METHOD&#39;</span>: <span class="dv">0</span>,</span>
+<span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span>})</span>
+<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a></span>
+<span id="cb32-17"><a href="#cb32-17" tabindex="-1"></a>fixed_vector_layer <span class="op">=</span> results[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb32-18"><a href="#cb32-18" tabindex="-1"></a></span>
+<span id="cb32-19"><a href="#cb32-19" tabindex="-1"></a><span class="co"># Run Zonal Statstics and load the resulting layer</span></span></code></pre></div>
 </div>
+</div>
+<div id="assignment" class="section level1">
+<h1>Assignment</h1>
+<p>The following assignment is designed to help you practice the skills
+learnt so far in the course and explore the PyQGIS API.</p>
+<p>Your task is to write a PyQGIS Script to show the average value of
+the selected raster layer within the current map extent. For example, if
+you load the <code>srtm</code> layer from the data package, select it
+and click the button - it should calculate and display the average
+elevation within the canvas extent. If you zoom/pan the map and click
+the button again - it should compute the display the average elevation
+within the new extent. Here is the recommended structure for your
+script.</p>
+<ul>
+<li>Add a button to the <em>Plugins Toolbar</em> called <em>Show Raster
+Statistics</em> with an icon of your choice.</li>
+<li>Write a function named <code>show_statistics()</code> that is called
+when the button is clicked.</li>
+<li>The function should obtain the current extent of the map canvas and
+calculate the raster statistics.</li>
+<li>Once the statistics are computed, it should display a message in the
+message bar with the information.</li>
+</ul>
+<p>Hint: <a
+href="https://qgis.org/pyqgis/3.28/core/QgsRasterInterface.html#module-QgsRasterInterface"><code>QgsRasterInterface</code></a>
+class provides a <code>bandStatistics()</code> method for calculating
+statistics from a raster band. You can get the reference to the instance
+of this class for a raster layer using
+<code>layer.dataProvider()</code>.</p>
+<p><img src="images/pyqgis/assignment1.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Extra credit if your script also does error checking and displays an
+error message on the message bar for the following conditions:</p>
+<ul>
+<li>If the user has not selected any layer or the selected layer is not
+a raster layer, display an error.</li>
+<li>If the current map canvas extent does not have any valid pixels,
+display an error.</li>
+</ul>
+<p><img src="images/pyqgis/assignment1_errors.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="advanced-python-concepts" class="section level1">
 <h1>10. Advanced Python Concepts</h1>
@@ -2028,26 +2074,27 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb45-1"><a h
 <span id="cb45-20"><a href="#cb45-20" tabindex="-1"></a><span class="co"># Fix them first</span></span>
 <span id="cb45-21"><a href="#cb45-21" tabindex="-1"></a>results <span class="op">=</span> processing.run(<span class="st">&quot;native:fixgeometries&quot;</span>, {</span>
 <span id="cb45-22"><a href="#cb45-22" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>:vector_layer_path,</span>
-<span id="cb45-23"><a href="#cb45-23" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span>})</span>
-<span id="cb45-24"><a href="#cb45-24" tabindex="-1"></a></span>
-<span id="cb45-25"><a href="#cb45-25" tabindex="-1"></a>fixed_vector_layer <span class="op">=</span> results[<span class="st">&#39;OUTPUT&#39;</span>]</span>
-<span id="cb45-26"><a href="#cb45-26" tabindex="-1"></a></span>
-<span id="cb45-27"><a href="#cb45-27" tabindex="-1"></a><span class="co"># Run Zonal Statistics</span></span>
-<span id="cb45-28"><a href="#cb45-28" tabindex="-1"></a></span>
-<span id="cb45-29"><a href="#cb45-29" tabindex="-1"></a><span class="co"># Save output to a geopackage</span></span>
-<span id="cb45-30"><a href="#cb45-30" tabindex="-1"></a>output_name <span class="op">=</span> <span class="st">&#39;seismic_zones_with_elevation.gpkg&#39;</span></span>
-<span id="cb45-31"><a href="#cb45-31" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_name)</span>
-<span id="cb45-32"><a href="#cb45-32" tabindex="-1"></a></span>
-<span id="cb45-33"><a href="#cb45-33" tabindex="-1"></a>processing.run(<span class="st">&quot;native:zonalstatisticsfb&quot;</span>, {</span>
-<span id="cb45-34"><a href="#cb45-34" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>: fixed_vector_layer,</span>
-<span id="cb45-35"><a href="#cb45-35" tabindex="-1"></a>  <span class="st">&#39;INPUT_RASTER&#39;</span>: raster_layer_path,</span>
-<span id="cb45-36"><a href="#cb45-36" tabindex="-1"></a>  <span class="st">&#39;RASTER_BAND&#39;</span>:<span class="dv">1</span>,</span>
-<span id="cb45-37"><a href="#cb45-37" tabindex="-1"></a>  <span class="st">&#39;COLUMN_PREFIX&#39;</span>:<span class="st">&#39;elevation_&#39;</span>,</span>
-<span id="cb45-38"><a href="#cb45-38" tabindex="-1"></a>  <span class="st">&#39;STATISTICS&#39;</span>:[<span class="dv">2</span>],</span>
-<span id="cb45-39"><a href="#cb45-39" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:output_path})</span>
-<span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a></span>
-<span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Output Layer Created&#39;</span>, output_path)</span>
-<span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a>qgs.exitQgis()</span></code></pre></div>
+<span id="cb45-23"><a href="#cb45-23" tabindex="-1"></a>  <span class="st">&#39;METHOD&#39;</span>: <span class="dv">0</span>,</span>
+<span id="cb45-24"><a href="#cb45-24" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:<span class="st">&#39;TEMPORARY_OUTPUT&#39;</span>})</span>
+<span id="cb45-25"><a href="#cb45-25" tabindex="-1"></a></span>
+<span id="cb45-26"><a href="#cb45-26" tabindex="-1"></a>fixed_vector_layer <span class="op">=</span> results[<span class="st">&#39;OUTPUT&#39;</span>]</span>
+<span id="cb45-27"><a href="#cb45-27" tabindex="-1"></a></span>
+<span id="cb45-28"><a href="#cb45-28" tabindex="-1"></a><span class="co"># Run Zonal Statistics</span></span>
+<span id="cb45-29"><a href="#cb45-29" tabindex="-1"></a></span>
+<span id="cb45-30"><a href="#cb45-30" tabindex="-1"></a><span class="co"># Save output to a geopackage</span></span>
+<span id="cb45-31"><a href="#cb45-31" tabindex="-1"></a>output_name <span class="op">=</span> <span class="st">&#39;seismic_zones_with_elevation.gpkg&#39;</span></span>
+<span id="cb45-32"><a href="#cb45-32" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(data_dir, output_name)</span>
+<span id="cb45-33"><a href="#cb45-33" tabindex="-1"></a></span>
+<span id="cb45-34"><a href="#cb45-34" tabindex="-1"></a>processing.run(<span class="st">&quot;native:zonalstatisticsfb&quot;</span>, {</span>
+<span id="cb45-35"><a href="#cb45-35" tabindex="-1"></a>  <span class="st">&#39;INPUT&#39;</span>: fixed_vector_layer,</span>
+<span id="cb45-36"><a href="#cb45-36" tabindex="-1"></a>  <span class="st">&#39;INPUT_RASTER&#39;</span>: raster_layer_path,</span>
+<span id="cb45-37"><a href="#cb45-37" tabindex="-1"></a>  <span class="st">&#39;RASTER_BAND&#39;</span>:<span class="dv">1</span>,</span>
+<span id="cb45-38"><a href="#cb45-38" tabindex="-1"></a>  <span class="st">&#39;COLUMN_PREFIX&#39;</span>:<span class="st">&#39;elevation_&#39;</span>,</span>
+<span id="cb45-39"><a href="#cb45-39" tabindex="-1"></a>  <span class="st">&#39;STATISTICS&#39;</span>:[<span class="dv">2</span>],</span>
+<span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a>  <span class="st">&#39;OUTPUT&#39;</span>:output_path})</span>
+<span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a></span>
+<span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Output Layer Created&#39;</span>, output_path)</span>
+<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a>qgs.exitQgis()</span></code></pre></div>
 <p>You will notice that the script has a few notable parts. First there
 is the import statement at the top, to explicitly import the required
 modules. Next, we create an instance of the <code>QgsApplication</code>

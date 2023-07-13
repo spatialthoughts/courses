@@ -20,6 +20,7 @@ raster_layer_path = os.path.join(data_dir, raster_layer)
 # Fix them first
 results = processing.run("native:fixgeometries", {
   'INPUT':vector_layer_path,
+  'METHOD': 0,
   'OUTPUT':'TEMPORARY_OUTPUT'})
 
 fixed_vector_layer = results['OUTPUT']
