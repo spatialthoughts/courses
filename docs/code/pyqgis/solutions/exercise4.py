@@ -1,11 +1,18 @@
-from qgis.utils import iface
-from qgis.core import QgsExpressionContextUtils
+crsToolbar = iface.addToolBar('CRS Toolbar')
 
-def customize():
-	version = QgsExpressionContextUtils.globalScope().variable('qgis_version')
-	title = iface.mainWindow().windowTitle()
-	iface.mainWindow().setWindowTitle('{} | {}'.format(title,version))
+label = QLabel('Enter a EPSG Code', parent=projectToolbar)
+crsTextBox = QLineEdit('4326', parent=projectToolbar)
+crsTextBox.setFixedWidth(80)
+button = QPushButton('Go!', parent=projectToolbar)
+
+crsToolbar.addWidget(label)
+crsToolbar.addWidget(crsTextBox)
+crsToolbar.addWidget(button)
 
 
-iface.newProjectCreated.connect(customize)
-iface.projectRead.connect(customize)
+def changeCrs(crsText):
+    crsText = int(crsTextBox.text())
+    crs = QgsCoordinateReferenceSystem(crsText)
+    QgsProject.instance().setCrs(crs)
+
+button.clicked.connect(changeCrs)
