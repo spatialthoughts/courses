@@ -460,7 +460,6 @@ iface.addVectorLayer(uri, 'zoning', 'ogr')
 knitr::include_graphics('images/pyqgis/vectorlayer.png')
 ```
 
-
 ### 6.1.9 Change name of a Layer
 
 ```{python eval=FALSE}
@@ -510,6 +509,56 @@ The code snippet below shows how to create a new toolbar with a label and a drop
 ```{python eval=FALSE, code=readLines('code/pyqgis/project_toolbar.py')}
 ```
 
+### 6.2.3 Create a New Vector Layer
+
+We will now create a temporary memory layer using PyQGIS. Memory layers are not saved to the disk and ideal to store intermediate results. The code snippet below creates a polygon layer with the extent of the current map canvas.
+
+```{python eval=FALSE}
+mc = iface.mapCanvas()
+extent = mc.extent()
+
+vlayer = QgsVectorLayer('Polygon', 'extent', 'memory')
+crs = QgsProject.instance().crs()
+vlayer.setCrs(crs)
+
+provider = vlayer.dataProvider()
+
+f = QgsFeature()
+geometry = QgsGeometry.fromRect(extent)
+f.setGeometry(geometry)
+
+provider.addFeature(f)
+vlayer.updateExtents() 
+
+QgsProject.instance().addMapLayer(vlayer)
+```
+
+### Exercise 4
+
+The following code snippet creates a toolbar called *CRS Toolbar* with a label, textbox and a button. When the button is clicked, the function `changeCRS` is called. Implement this function so that it changes the CRS of the current project to the EPSG code entered by the user.
+
+Hint: Use [`QgsProject.instance().setCrs()`](https://qgis.org/pyqgis/3.0/core/Project/QgsProject.html) method.
+
+```{python eval=FALSE}
+crsToolbar = iface.addToolBar('CRS Toolbar')
+
+label = QLabel('Enter a EPSG Code', parent=projectToolbar)
+crsTextBox = QLineEdit('4326', parent=projectToolbar)
+crsTextBox.setFixedWidth(80)
+button = QPushButton('Go!', parent=projectToolbar)
+
+crsToolbar.addWidget(label)
+crsToolbar.addWidget(crsTextBox)
+crsToolbar.addWidget(button)
+
+def changeCrs(crsText):
+    epsgCode = int(crsTextBox.text())
+    iface.messageBar().pushInfo('Function called', f'You entered {epsgCode}')
+    # Add code to change the project CRS to the EPSG code
+
+button.clicked.connect(changeCrs)
+```
+
 # 7. Running Python Code at QGIS Launch
 
 It is possible to execute some PyQGIS code every time QGIS starts. QGIS looks for a file named `startup.py` in the user's Python home directory, and if it is found, executes it. This file is very useful in customizing QGIS interface with techniques learnt in the previous section. 
@@ -535,50 +584,13 @@ knitr::include_graphics('images/pyqgis/customtitle.png')
 
 > Pro Tip: It is possible to put the `startup.py` file on a shared drive for enterprise deployment of QGIS customizations. [Learn more](https://gis.stackexchange.com/questions/319224/central-deployment-of-startup-py-in-qgis/319225).
 
-## Exercise 4
+## Exercise 5
 
 Trying opening a new project in QGIS after you have restarted GIS with `startup.py` file in place. You will notice that the custom title with the version name is replaced with the default title. 
 
 Make a change to your `startup.py` so that the customization is applied even when a new project is loaded.
 
-# 8. Creating Custom Python Actions
-
-[Actions](https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/vector_properties.html#actions-properties) in QGIS provide a quick and easy way to trigger custom behavior in response to a user's action - such as click on a feature in the canvas or an attribute value in the attribute table. 
-
-Actions provide an easy way to add custom behavior to QGIS without having to write plugins. Actions are integrated into the QGIS GUI and allow you to execute PyQGIS code on vector layers.
-
-Actions are defined at the layer level. We will define an action for the `parcels` layer so when a user clicks on a parcel, all parcels that belong to the same block will be selected. The parcel layer has an attribute **block_num** that refers to the block that parcel belongs to. 
-
-Load the `sf.qgz` project from your data package. Right-click the `parcels` layer, click *Properties* and switch to the *Actions* tab. Click *Add a new action* button. Select **Python** as the *Type*. Name the action as **Select all parcels from the same block**. This action is meant to be used for selecting features on the map canvas, so check the **Canvas** as the *Action Scope*. Enter the following code snippet in the *Action Text* and click *OK*. [^9]
-
-[^9]: Code reference: https://gis.stackexchange.com/a/340615/5160
-
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/action1.png')
-```
-
-```{python eval=FALSE}
-layer = QgsProject.instance().mapLayer('[% @layer_id %]')
-layer.selectByExpression('"block_num"=\'[% block_num %]\'')
-```
-
-Back in the main QGIS window, enable the `parcels` layer. Click the *Run feature action* button from the *Attributes Toolbar* and select **Select all parcels from the same block**. With the action enabled, click on any parcel and you will see all parcels from the block get selected.
-
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/pyqgis/action2.png')
-```
-
-## 8.1 Actions Deep Dive
-
-Learn about actions in the following video where I explain some powerful use cases.
-
-[![Video](images/pyqgis/actions_deep_dive.png){width="70%"}](https://www.youtube.com/watch?v=8rOe-9A84O8){target="_blank"}
-
-[View the Presentation &#8599;](https://docs.google.com/presentation/d/12J5XaJ8vVNvx8AfYywAk76rrxBxgn8Qyht6ouyB2_Yg/edit?usp=sharing){target="_blank"}
-
-# 9. Running Processing Algorithms
+# 8. Running Processing Algorithms
 
 While the PyQGIS API providers many functions to work with layers, features, attributes and geometry - it is a much better practice to use the built-in processing algorithms to alter the layers or do any analysis. This will give you better performance and result in much lesser code. Here are some examples on how to use processing algorithms from Python to do vector and raster layer editing. You will find more information about various options and techniques in the article [Using processing algorithms from the console](https://docs.qgis.org/testing/en/docs/user_manual/processing/console.html) of the QGIS User Guide 
 
@@ -586,7 +598,7 @@ While the PyQGIS API providers many functions to work with layers, features, att
 knitr::include_graphics('images/pyqgis/processing.png')
 ```
 
-## 9.1 Creating Hillshade from a DEM
+## 8.1 Creating Hillshade from a DEM
 
 To use any Processing Algorithm via Python, you need to know how to specify all the required parameters. This is easiest to obtain by running the algorithm via the GUI first. 
 
@@ -634,7 +646,7 @@ results = processing.runAndLoadResults("native:hillshade",
     'OUTPUT': 'TEMPORARY_OUTPUT'})
 ```
 
-## 9.2 Running Multiple Processing Algorithms
+## 8.2 Running Multiple Processing Algorithms
 
 We can also *chain* multiple processing tools to build a script to build a data processing pipeline. In the example below, we will do 2 steps
 
@@ -669,7 +681,7 @@ results = processing.runAndLoadResults("native:hillshade",
 
 You can also do batch-processing by iterating through multiple layers and running the processing algorithm in a for-loop. Doing it via Python allows you greater flexibility - such as combining the results into a single layer. See [Running Processing Algorithms via Python](https://www.qgistutorials.com/en/docs/3/processing_algorithms_pyqgis.html){target="_blank"} tutorial for a complete example.
 
-## Exercise 5
+## Exercise 6
 
 Your data package contains a polygon layer of seismic zones in San Francisco. We want to calculate the average elevation within each seismic zone from this layer. The code below reads the vector layer `seismic_zones.shp` of seismic zones and the raster layer `srtm.tif` containing elevation values. The vector layer contains some invalid polygons, so we run the `native:fixgeometries` algorithm to fix them.
 
@@ -726,9 +738,9 @@ knitr::include_graphics('images/pyqgis/assignment1_errors.png')
 ```
 
 
-# 10. Advanced Python Concepts
+# 9. Advanced Python Concepts
 
-## 10.1 Understanding Python Iterators
+## 9.1 Understanding Python Iterators
 
 An *Iterator* is a type of Python object that contains items that can be iterator upon. They are similar to other objects, like *lists* - but with a key difference. When you create an iterator, you don't store all the items in memory. The iterator loads a single item at a time and then fetches the next item when asked for it. This makes it very efficient for reading large amounts of data without having to read the entire dataset. QGIS implements iterators for many different object types. 
 
@@ -756,7 +768,7 @@ for f in features:
 print(ids)
 ```
 
-## 10.2 List Comprehensions
+## 9.2 List Comprehensions
 
 A common data processing task in Python is to read items from a list or an iterator, doing some processing on each item and creating a new list with the results. The regular way to do this is to first create an empty list, iterate over each item of the existing list, and append the results to the new empty list. Python provides a powerful alternative to this workflow in the form of *List Comprehension*. The snippet below shows the syntax.
 
@@ -764,7 +776,7 @@ A common data processing task in Python is to read items from a list or an itera
 ```{python eval=FALSE, code=readLines('code/pyqgis/list_comprehensions.py')}
 ```
 
-## Exercise 6
+## Exercise 7
 
 The following code creates a list of field names for the selected layer. Convert the code to use a list comprehension.
 
@@ -779,7 +791,7 @@ for field in fields:
 print(field_names)
 ```
 
-# 11. Writing Python Console Scripts
+# 10. Writing Python Console Scripts
 
 We will now see how can we write python scripts, save them and run them within QGIS. We will also see examples of best practices - such as validating inputs, writing files safely and communicating the status to the user.
 
@@ -800,14 +812,14 @@ Select the `blocks` layer and run this script by clicking the *Run Script* butto
 knitr::include_graphics('images/pyqgis/consolescriptrun.png')
 ```
 
-# 12. Processing Scripts
+# 11. Processing Scripts
 
 We saw how to write a Python script in the QGIS Python Console Code Editor. But there is another way - and it is the preferred approach to write scripts. Whenever you are writing a new script, consider using the built-in **Processing Framework**. This has several advantages. First, taking user input and writing output files is far easier because Processing Framework offers standardized user interface for these. Second, having your script in the Processing Toolbox also allows it to be part of any Processing Model or be run as a Batch job with multiple inputs. This tutorial will show how to write a custom python script that can be part of the Processing Framework in QGIS.
 
 We will now see how the Python Console script can be converted to a Processing script.
 
 
-## 12.2 Writing a Processing Script
+## 11.1 Writing a Processing Script
 
 To create a new processing script, go to **Processing &rarr; Processing Toolbox**. Click the *Scripts* button and select *Create New Script..*.
 
@@ -837,13 +849,13 @@ You can review additional information and tips in the [Writing new Processing al
 knitr::include_graphics('images/pyqgis/processingscriptrun.png')
 ```
 
-# 13. Writing Plugins
+# 12. Writing Plugins
 
 Plugins are a great way to extend the functionality of QGIS. You can write plugins using Python that can range from adding a simple button to sophisticated tool-kits. There are 2 broad categories of python plugins - Processing Plugins and GUI Plugins. We will cover both in this section.
 
 There is a plugin named [Plugin Builder](https://plugins.qgis.org/plugins/pluginbuilder/) that can help you generate a starter plugin. I have published step-by-step instructions for both [GUI plugins](https://www.qgistutorials.com/en/docs/3/building_a_python_plugin.html) and [Processing Plugins](https://www.qgistutorials.com/en/docs/3/processing_python_plugin.html) using the Plugin Builder method. While this method gives you an easy way to have a functional plugin, it is not the ideal way to learn plugin development. I prefer starting from a minimal template and adding elements as and when needed. Here we will learn the basics of plugin framework using a minimal plugin and learn how to add various element to make it a full plugin.
 
-## 13.1 A Minimal Plugin
+## 12.1 A Minimal Plugin
 
 Plugins are much more integrated into the QGIS system than Python Scripts. They are managed by **Plugin Manager** and are initialized when QGIS starts. To understand the required structure, let's see what a minimal plugin looks like. You can learn more about this structure at [QGIS Minimalist Plugin Skeleton](https://github.com/wonder-sk/qgis-minimal-plugin).
 
@@ -886,11 +898,11 @@ Now the *Hello from Plugin* message is displayed.
 knitr::include_graphics('images/pyqgis/pluginminimalshow2.png')
 ```
 
-## Exercise 7
+## Exercise 8
 
 Take the minimal plugin template from above and build a new plugin called **Show Time**. This plugin will add a button to the Plugin Toolbar which will display the current time when clicked. The code to add such a button is already covered in the [Add a button to a toolbar](#add-a-button-to-a-toolbar) section.
 
-## 13.2 Processing Plugin
+## 12.2 Processing Plugin
 
 The new and preferred way to write plugins in QGIS is using the Processing Framework. It removes the need for you to design the user interface. The resulting plugin integrates seamlessly in the Processing Toolbox and is inoperable with other processing algorithms.
 
@@ -933,8 +945,7 @@ Once reloaded, you can click on the toolbar button or **Plugin  &rarr; Save Attr
 knitr::include_graphics('images/pyqgis/pluginprocessingrun.png')
 ```
 
-
-# 14. Writing Standalone Python Scripts
+# 13. Writing Standalone Python Scripts
 
 Having the python script run within QGIS is useful and desired most of the time. But there is a way to write python scripts that run on your system without QGIS being open. Ability to run PyQGIS scripts in a headless mode allows you to automate your workflow and run it on a server without human intervention. Let's use some QGIS processing algorithms to carry out zonal statistics using a standalone python script.
 
@@ -983,6 +994,14 @@ On MacOS, you can set the required environment variables and run the script usin
 
 Open a Terminal and browse to the directory with the script. Type `bash run_script.sh` and press enter. The script will run and produce the output at the given path.
 
+
+# 14. QGIS Actions
+
+[Actions](https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/vector_properties.html#actions-properties) in QGIS provide a quick and easy way to trigger custom behavior in response to a user's action - such as click on a feature in the canvas or an attribute value in the attribute table. Actions are defined for a layer and are saved in QGIS projects. This makes actions the easiest way to add and distribute QGIS customizations without having to write plugins.
+
+[![View Presentation](images/pyqgis/actions.png){width="400px"}](https://docs.google.com/presentation/d/1wuGXVRBfZ2RxiiKY8zVs85JDKSgs0_NeZDS795hroCw/edit?usp=sharing){target="_blank"}
+
+[View the Presentation](https://docs.google.com/presentation/d/1wuGXVRBfZ2RxiiKY8zVs85JDKSgs0_NeZDS795hroCw/edit?usp=sharing){target="_blank"}
 
 # 15. Supplement
 
@@ -1240,26 +1259,6 @@ root.insertChildNode(1, rastergroup)
 
 ```{r echo=FALSE, fig.align='center', out.width='50%'}
 knitr::include_graphics('images/pyqgis/rasterlayer.png')
-```
-
-## Create a New Vector Layer
-
-A simple example showing how to create a point layer with 1 feature and 1 attribute. [^7]
-
-[^7]: Code reference https://anitagraser.com/pyqgis-101-introduction-to-qgis-python-programming-for-non-programmers/pyqgis101-creating-editing-a-new-vector-layer/
-
-```{python eval=FALSE}
-vlayer = QgsVectorLayer('Point?crs=EPSG:4326', 'point', 'memory')
-
-provider = vlayer.dataProvider()
-provider.addAttributes([QgsField('name', QVariant.String)])
-vlayer.updateFields() 
-f = QgsFeature()
-f.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(-122.41, 37.77)))
-f.setAttributes(['San Francisco'])
-provider.addFeature(f)
-vlayer.updateExtents() 
-QgsProject.instance().addMapLayer(vlayer)
 ```
 
 ## Saving Layers to Disk
