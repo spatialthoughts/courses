@@ -1,0 +1,205 @@
+// Script showing how to obtain a harmonized Landsat Time-Series
+// using Landsat Collection 2
+var geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]]);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Step 1: Select the Landsat dataset
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// We use "Landsat Level 2 Collection 2 Tier-1 Scenes"
+
+// Collection 2 -->
+// Landsat Collection 2 algorithm has improved
+// geometric and radiometric calibration that makes
+// the collections interoperable.
+// Learn more at https://www.usgs.gov/landsat-missions/landsat-collection-2
+
+// Level 2 -->
+// This is a surface reflectance product and 
+// have the highest level of interoperability through time.
+
+// Tier 1 -->
+// Highest quality scenes which are considered suitable
+// for time-series analysis
+var L5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2');
+var L7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
+var L8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2');
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Step 2: Data Pre-Processing and Cloud Masking
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Mapping of band-names to a uniform naming scheme
+var l5Bands = ['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'];
+var l5names = ['blue','green','red','nir','swir1','swir2'];
+
+var l7Bands = ['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'];
+var l7names = ['blue','green','red','nir','swir1','swir2'];
+
+var l8Bands = ['SR_B2','SR_B3','SR_B4','SR_B5','SR_B6','SR_B7'];
+var l8names = ['blue','green','red','nir','swir1','swir2'];
+
+// Cloud masking function for Landsat 4,5 and 7
+function maskL457sr(image) {
+  var qaMask = image.select('QA_PIXEL').bitwiseAnd(parseInt('11111', 2)).eq(0);
+  var saturationMask = image.select('QA_RADSAT').eq(0);
+
+  // Apply the scaling factors to the appropriate bands.
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBand = image.select('ST_B6').multiply(0.00341802).add(149.0);
+
+  // Replace the original bands with the scaled ones and apply the masks.
+  return image.addBands(opticalBands, null, true)
+      .addBands(thermalBand, null, true)
+      .updateMask(qaMask)
+      .updateMask(saturationMask)
+      .copyProperties(image, ['system:time_start']);
+}
+
+// Cloud masking function for Landsat 8
+function maskL8sr(image) {
+  var qaMask = image.select('QA_PIXEL').bitwiseAnd(parseInt('11111', 2)).eq(0);
+  var saturationMask = image.select('QA_RADSAT').eq(0);
+
+  // Apply the scaling factors to the appropriate bands.
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+
+  // Replace the original bands with the scaled ones and apply the masks.
+  return image.addBands(opticalBands, null, true)
+      .addBands(thermalBands, null, true)
+      .updateMask(qaMask)
+      .updateMask(saturationMask)
+      .copyProperties(image, ['system:time_start']);
+}
+
+// Apply cloud-mask and rename bands
+var L5 = L5
+  .map(maskL457sr)
+  .select(l5Bands,l5names)
+
+var L7 = L7
+  .map(maskL457sr)
+  .select(l7Bands,l7names)
+
+var L8 = L8
+  .map(maskL8sr)
+  .select(l8Bands,l8names)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Step 3a: Verify Radiometric Calibration
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// We plot band values from different satellites during
+// times when both were operational.
+
+// Compare L5 and L7
+var L5Filtered = L5
+  .filter(ee.Filter.date('2005-01-01', '2006-01-01'))
+  .select(['red', 'nir'], ['red_L5', 'nir_L5']);
+
+var L7Filtered = L7
+  .filter(ee.Filter.date('2005-01-01', '2006-01-01'))
+  .select(['red', 'nir'], ['red_L7', 'nir_L7']);
+
+var L5L7merged = L5Filtered.merge(L7Filtered)
+
+var chart = ui.Chart.image.series({
+  imageCollection: L5L7merged,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 30
+}).setChartType('LineChart')
+  .setOptions({
+    title: 'Landsat 5 vs Landsat 7',
+    interpolateNulls: true,
+    vAxis: {title: 'Reflectance', viewWindow: {min: 0, max: 0.5}},
+    hAxis: {title: '', format: 'YYYY-MM'},
+    lineWidth: 1,
+    pointSize: 4,
+    lineDashStyle: [4, 4]
+  })
+print(chart);
+
+// Compare L7 and L8
+var L7Filtered = L7
+  .filter(ee.Filter.date('2016-01-01', '2017-01-01'))
+  .select(['red', 'nir'], ['red_L7', 'nir_L7']);
+
+var L8Filtered = L8
+  .filter(ee.Filter.date('2016-01-01', '2017-01-01'))
+  .select(['red', 'nir'], ['red_L8', 'nir_L8']);
+
+var L7L8merged = L7Filtered.merge(L8Filtered)
+
+var chart = ui.Chart.image.series({
+  imageCollection: L7L8merged,
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 30
+}).setChartType('LineChart')
+  .setOptions({
+    title: 'Landsat 7 vs Landsat 8',
+    interpolateNulls: true,
+    vAxis: {title: 'Reflectance', viewWindow: {min: 0, max: 0.5}},
+    hAxis: {title: '', format: 'YYYY-MM'},
+    lineWidth: 1,
+    pointSize: 4,
+    lineDashStyle: [4, 4]
+  })
+print(chart);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Step 3b: Select Date Ranges, Filter and Merge
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// See the Landsat timeline for date ranges
+// https://www.usgs.gov/media/images/landsat-missions-timeline
+
+// Adjust the range depending on your 
+// application and location
+var l5Start = ee.Date.fromYMD(1990, 1, 1);
+var l5End = ee.Date.fromYMD(1999, 1, 1);
+
+var l7Start = ee.Date.fromYMD(1999, 1, 1);
+var l7End = ee.Date.fromYMD(2014, 1, 1);
+
+var l8Start = ee.Date.fromYMD(2014, 1, 1);
+var l8End = ee.Date.fromYMD(2023, 1, 1);
+
+var L5 = L5
+  .filter(ee.Filter.date(l5Start, l5End))
+  .filter(ee.Filter.bounds(geometry));
+
+var L7 = L7
+  .filter(ee.Filter.date(l7Start, l7End))
+  .filter(ee.Filter.bounds(geometry));
+
+var L8 = L8
+  .filter(ee.Filter.date(l8Start, l8End))
+  .filter(ee.Filter.bounds(geometry));
+  
+var merged = L5.merge(L7).merge(L8)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Step 4: Create Annual Composites
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+var years = ee.List.sequence(1990, 2023);
+
+var compositeImages = years.map(function(year) {
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate = startDate.advance(1, 'year');
+  var yearFiltered = merged.filter(ee.Filter.date(startDate, endDate));
+  var composite = yearFiltered.median();
+  return composite.set({
+    'year': year,
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+  })
+});
+
+var compositeCol = ee.ImageCollection.fromImages(compositeImages);
+print('Annual Landsat Composites', compositeCol);
