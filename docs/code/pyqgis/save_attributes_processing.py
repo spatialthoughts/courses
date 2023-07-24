@@ -2,7 +2,8 @@ from PyQt5.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFileDestination)
+                       QgsProcessingParameterFileDestination,
+                       QgsWkbTypes)
 
 
 class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
@@ -29,8 +30,19 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        source = self.parameterAsSource(parameters, self.INPUT, context)
-        csv = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
+        source = self.parameterAsSource(
+            parameters,
+            self.INPUT,
+            context)
+        
+        sink, output = self.parameterAsSink(
+            parameters,
+            self.OUTPUT,
+            context,
+            source.fields(),
+            QgsWkbTypes.NoGeometry,
+            source.sourceCrs()
+            )
 
         fieldnames = [field.name() for field in source.fields()]
 
@@ -39,30 +51,26 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
-        with open(csv, 'w') as output_file:
-          # write header
-          line = ','.join(name for name in fieldnames) + '\n'
-          output_file.write(line)
-          for current, f in enumerate(features):
-              # Stop the algorithm if cancel button has been clicked
-              if feedback.isCanceled():
-                  break
+    
+        for current, f in enumerate(features):
+            # Stop the algorithm if cancel button has been clicked
+            if feedback.isCanceled():
+                break
 
-              # Add a feature in the sink
-              line = ','.join(str(f[name]) for name in fieldnames) + '\n'
-              output_file.write(line)
+            # Add a feature in the sink
+            sink.addFeature(f)
 
-              # Update the progress bar
-              feedback.setProgress(int(current * total))
+            # Update the progress bar
+            feedback.setProgress(int(current * total))
 
-        return {self.OUTPUT: csv}
+        return {self.OUTPUT: output}
 
     def name(self):
         return 'save_attributes'
 
     def displayName(self):
         return self.tr('Save Attributes As CSV')
-
+ 
     def group(self):
         return self.tr(self.groupId())
 
