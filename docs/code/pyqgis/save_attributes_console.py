@@ -16,15 +16,6 @@ if layer.type() != QgsMapLayer.VectorLayer:
 output_name = 'output.csv'
 output_path = os.path.join(data_dir, output_name)
 
-# We will use QgsVectorFileWriter.create() method
-# It takes the following parameters
-# fileName: Path to the file
-# fields: Fields to write
-# geometryType: geometry type of output file
-# srs: CRS of the output file
-# transformContext: Datum transformation settings
-# options: Save Options such as format, encoding etc.
-
 # Define the options for saving the layer
 save_options = QgsVectorFileWriter.SaveVectorOptions()
 save_options.driverName = 'CSV'
@@ -40,7 +31,7 @@ writer = QgsVectorFileWriter.create(
     fields=layer.fields(),
     geometryType=QgsWkbTypes.NoGeometry,
     srs=layer.crs(),
-    transformContext=transform_context,
+    transformContext=QgsProject.instance().transformContext(),
     options=save_options)
 
 # Check if we were able to create the writer

@@ -2,20 +2,21 @@ from PyQt5.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterEnum,
                        QgsProcessingParameterFileDestination,
-                       QgsWkbTypes)
+                       QgsVectorFileWriter,
+                       QgsWkbTypes,
+                       QgsProject)
 
 
 class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
     """Saves the attributes of a vector layer to a CSV file."""
-    OUTPUT = 'OUTPUT'
-    INPUT = 'INPUT'
 
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.INPUT,
-                self.tr('Input layer'),
+                'INPUT',
+                'Input layer',
                 [QgsProcessing.TypeVectorAnyGeometry]
             )
         )
@@ -23,33 +24,41 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
         # We add a file output of type CSV.
         self.addParameter(
             QgsProcessingParameterFileDestination(
-                self.OUTPUT,
-                self.tr('Output File'),
+                'OUTPUT',
+                'Output File',
                 'CSV files (*.csv)',
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        source = self.parameterAsSource(
+        layer = self.parameterAsVectorLayer(
             parameters,
-            self.INPUT,
+            'INPUT',
             context)
-        
-        sink, output = self.parameterAsSink(
-            parameters,
-            self.OUTPUT,
-            context,
-            source.fields(),
-            QgsWkbTypes.NoGeometry,
-            source.sourceCrs()
-            )
 
-        fieldnames = [field.name() for field in source.fields()]
+        output = self.parameterAsFileOutput(
+            parameters,
+            'OUTPUT',
+            context)
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
-        features = source.getFeatures()
+        total = 100.0 / layer.featureCount() if layer.featureCount() else 0
+        features = layer.getFeatures()
+        
+        # Define the options for saving the layer
+        save_options = QgsVectorFileWriter.SaveVectorOptions()
+        save_options.driverName = 'CSV'
+        save_options.fileEncoding = 'UTF-8'
+
+        # Create the writer
+        writer = QgsVectorFileWriter.create(
+            fileName=output,
+            fields=layer.fields(),
+            geometryType=QgsWkbTypes.NoGeometry,
+            srs=layer.crs(),
+            transformContext=QgsProject.instance().transformContext(),
+            options=save_options)
 
     
         for current, f in enumerate(features):
@@ -58,12 +67,12 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
                 break
 
             # Add a feature in the sink
-            sink.addFeature(f)
+            writer.addFeature(f)
 
             # Update the progress bar
             feedback.setProgress(int(current * total))
 
-        return {self.OUTPUT: output}
+        return {'OUTPUT': output}
 
     def name(self):
         return 'save_attributes'
