@@ -1,0 +1,64 @@
+// Script showing how to add spatial context 
+// to classification training samples
+
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+var composite = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
+var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary");
+
+var geometry = boundary.geometry()
+Map.centerObject(geometry);
+
+// 1. Add Latitude and Longitude bands
+var composite = composite.addBands(ee.Image.pixelLonLat());
+
+// 2. Add Distance to features
+
+// We will add distance to nearest road segment
+var roads = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_osm_roads');
+Map.addLayer(roads, {color: 'gray'}, 'Roads', false);
+var distance = roads.distance({searchRadius: 1000}).rename('roads_distance');
+Map.addLayer(distance, {min:0, max:1000, palette: ['blue', 'white']}, 'Distance', false);
+
+var composite = composite.addBands(distance);
+
+// 3. Add Neighborhood bands
+var addNdvi = function(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+  return image.addBands(ndvi);
+};
+
+var composite = addNdvi(composite);
+
+var kernel = ee.Kernel.square({
+  radius: 1,
+  units: 'pixels',
+})
+var neighbors = composite.select('ndvi').neighborhoodToBands(kernel);
+
+var composite = composite.addBands(neighbors);
+
+// Overlay the point on the image to get training data.
+var training = composite.sampleRegions({
+  collection: gcp,
+  properties: ['landcover'],
+  scale: 30,
+  tileScale: 16
+});
+
+print(training)
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50)
+.train({
+  features: training,  
+  classProperty: 'landcover',
+  inputProperties: composite.bandNames()
+});
+
+// Classify the image.
+var classified = composite.classify(classifier);
+
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite, rgbVis, 'Composite')
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
+Map.addLayer(classified, {min: 0, max: 3, palette: palette}, 'Classified');

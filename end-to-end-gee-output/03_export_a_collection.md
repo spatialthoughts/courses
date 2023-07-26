@@ -1,5 +1,7 @@
 One of the most commonly asked questions by Earth Engine users is - *How do I download all images in a collection*? The Earth Engine Python API comes with a `ee.batch` module that allows you to launch batch exports and manage tasks. The recommended way to do batch exports like this is to use the Python API's `ee.batch.Export` functions and use a Python for-loop to iterate and export each image. The `ee.batch` module also gives you ability to control *Tasks* - allowing you to automate exports.
 
+> You can also export images in a collection using Javascript API in the Code Editor but this requires you to manually start the tasks for each image. This approach is fine for small number of images. You can check out the [recommended script](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3ASupplement%2FImage_Collections%2FExporting_ImageCollections).
+
 
 ```python
 import ee
@@ -148,8 +150,8 @@ for i, image_id in enumerate(image_ids):
     exportImage = ee.Image(filtered.filter(ee.Filter.eq('system:index', image_id)).first())
     # Clip the image to the region geometry
     clippedImage = exportImage.clip(geometry)
-    
+
     ## Create the export task using ee.batch.Export.image.toDrive()
-    
+
     ## Start the task
 ```

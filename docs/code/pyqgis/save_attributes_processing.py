@@ -66,7 +66,7 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 break
 
-            # Add a feature in the sink
+            # Add the feature
             writer.addFeature(f)
 
             # Update the progress bar
