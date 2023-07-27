@@ -17,12 +17,16 @@ class BasemapLoaderPlugin:
         self.action.triggered.connect(self.run)
       
     def unload(self):
-        del self.action
         self.iface.removeToolBarIcon(self.action)
+        del self.action
 
     def run(self):
         basemap_url = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-        uri = f'type=xyz&url={basemap_url}&zmax=19&zmin=0$crs=EPSG:3857'
+        zmin = 0
+        zmax = 19
+        crs = 'EPSG:3857'
+        
+        uri = f'type=xyz&url={basemap_url}&zmax={zmax}&zmin={zmin}$crs={crs}'
         rlayer = QgsRasterLayer(uri, 'OpenStreetMap', 'wms')
         if rlayer.isValid():
             QgsProject.instance().addMapLayer(rlayer)
