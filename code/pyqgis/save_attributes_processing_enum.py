@@ -2,6 +2,7 @@ from PyQt5.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterEnum,
                        QgsProcessingParameterFileDestination,
                        QgsVectorFileWriter,
                        QgsWkbTypes,
@@ -19,6 +20,16 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
                 [QgsProcessing.TypeVectorAnyGeometry]
             )
         )
+        
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                'SEPARATOR',
+                'Separator',
+                ['COMMA', 'SEMICOLON'],
+                False,
+                'COMMA'
+            )
+        )
 
         # We add a file output of type CSV.
         self.addParameter(
@@ -33,6 +44,10 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
         layer = self.parameterAsVectorLayer(
             parameters,
             'INPUT',
+            context)
+        separator = self.parameterAsEnum(
+            parameters, 
+            'SEPARATOR',
             context)
 
         output = self.parameterAsFileOutput(
@@ -49,6 +64,10 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
         save_options = QgsVectorFileWriter.SaveVectorOptions()
         save_options.driverName = 'CSV'
         save_options.fileEncoding = 'UTF-8'
+        if separator == 0:
+            save_options.layerOptions = ['SEPARATOR=COMMA']
+        else:
+            save_options.layerOptions = ['SEPARATOR=SEMICOLON']
 
         # Create the writer
         writer = QgsVectorFileWriter.create(
@@ -65,11 +84,12 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 break
 
-            # Add a feature in the sink
+            # Add the feature
             writer.addFeature(f)
 
             # Update the progress bar
             feedback.setProgress(int(current * total))
+
         return {'OUTPUT': output}
 
     def name(self):
