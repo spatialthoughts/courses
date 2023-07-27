@@ -18,6 +18,7 @@ class BasemapLoaderPlugin:
       
     def unload(self):
         del self.action
+        self.iface.removeToolBarIcon(self.action)
 
     def run(self):
         basemap_url = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
