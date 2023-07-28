@@ -12,7 +12,7 @@ class SaveAttributesProvider(QgsProcessingProvider):
         QgsProcessingProvider.__init__(self)
 
     def unload(self):
-        pass
+        QgsProcessingProvider.unload(self)
 
     def loadAlgorithms(self):
         self.addAlgorithm(SaveAttributesAlgorithm())
