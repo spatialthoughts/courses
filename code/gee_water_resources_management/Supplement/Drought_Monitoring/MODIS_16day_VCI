@@ -1,0 +1,104 @@
+// Example script showing VCI computation
+// for each 16-day period of MODIS composites
+
+var modis = ee.ImageCollection('MODIS/061/MOD13Q1');
+
+var startYear = 2001
+var endYear = 2023
+var startDate = ee.Date.fromYMD(startYear, 1, 1)
+var endDate = ee.Date.fromYMD(endYear, 12, 31)
+var filtered = modis
+  .filter(ee.Filter.date('2010-01-01', '2023-07-01'))
+print(filtered)
+// Cloud Masking
+var bitwiseExtract = function(input, fromBit, toBit) {
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+}
+
+var maskSnowAndClouds = function(image) {
+  var summaryQa = image.select('SummaryQA')
+  // Select pixels which are less than or equals to 1 (0 or 1)
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
+  var maskedImage = image.updateMask(qaMask)
+  return maskedImage.copyProperties(image, ['system:index', 'system:time_start'])
+}
+
+// Apply the function to all images in the collection
+var maskedCol = filtered.map(maskSnowAndClouds)
+
+var ndviCol = maskedCol.select('NDVI')
+// MODIS NDVI values come as NDVI x 10000 that need to be scaled by 0.0001
+var scaleNdvi = function(image) {
+  var scaled = image.divide(10000)
+  return scaled.copyProperties(image, ['system:index', 'system:time_start'])
+};
+var addImageNumber = function(image) {
+  var startDate = ee.Date(image.get('system:time_start'))
+  var difference = startDate.getRelative('day', 'year') 
+  var period = difference.divide(16).add(1);
+  return image.set('period', period).set('year',image.date().get('year'))
+          
+}
+var ndviScaled = ndviCol.map(scaleNdvi).map(addImageNumber)
+print(ndviScaled,'ndvi')
+
+var periods = ee.List.sequence(1, 23)
+
+var periodImages = periods.map(function(period) {
+    var filtered = ndviScaled
+      .filter(ee.Filter.eq('period', period))
+    var periodMin = filtered.min();
+    var periodMax = filtered.max();
+    var periodMean = filtered.mean();
+    var periodImage = ee.Image.cat([periodMin, periodMean, periodMax])
+      .rename(['ndvi_min', 'ndvi_mean', 'ndvi_max'])
+    return periodImage.set('period', period)
+      
+})
+var periodCol = ee.ImageCollection.fromImages(periodImages)
+print(periodCol)
+
+var currentYear = 2023
+
+var getColForYears = function(year) {
+  periods = ndviScaled
+    .filter(ee.Filter.eq('year', currentYear)).aggregate_array('period')
+
+  var result = periods.map(function(period) {
+    var filtered = ndviScaled
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.eq('period', period))
+
+    var periodNdvi = ee.Image(filtered.first());
+    var periodImage = ee.Image(periodCol.filter(
+      ee.Filter.eq('period', period)).first())
+    var periodMean = periodImage.select('ndvi_mean');
+    var periodMin = periodImage.select('ndvi_min');
+    var periodMax = periodImage.select('ndvi_max');
+
+    var periodVariance = periodNdvi.subtract(periodMean);
+  
+    var image = ee.Image.cat(
+      [periodNdvi, periodMean, periodVariance, periodMin, periodMax]).rename(
+      ['ndvi', 'mean', 'variance', 'min', 'max'])
+    var vci = image.expression('100*(NDVI-NDVImin)/(NDVImax-NDVImin)', {
+      'NDVI': image.select('ndvi'),
+      'NDVImin': image.select('min'),
+      'NDVImax': image.select('max'),
+    }).rename('vci');
+    var image = image.addBands(vci);
+    var imageId = ee.Number(year).format('%d')
+      .cat(ee.Number(period).format('%02d'))
+
+    return image.set('system:index', imageId,'year',year)
+  }) 
+  
+  return ee.ImageCollection.fromImages(result)
+}
+
+// Get images for a year
+var currentYearCol = getColForYears(currentYear);
+print(currentYearCol)
+
