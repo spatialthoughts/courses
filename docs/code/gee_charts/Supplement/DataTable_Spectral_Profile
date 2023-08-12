@@ -1,0 +1,261 @@
+// Example script showing how to create spectral profile
+// chart for different landcover classes that show
+// the spread of values using a box plot.
+
+// Select a region
+var geometry =   ee.Geometry.Polygon([[
+  [76.816, 13.006],[76.816, 12.901],
+  [76.899, 12.901],[76.899, 13.006]
+]]);
+
+Map.centerObject(geometry, 12);
+Map.addLayer(geometry, {color: 'gray'}, 'Selected Region');
+
+// We use Sentinel-2 Level-2A data
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+// Write a function for Cloud masking
+var maskS2clouds = function(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
+}
+
+// Write a function to scale the bands
+var scaleImage = function(image) {
+  return image
+    .multiply(0.0001)
+    .copyProperties(image, ['system:time_start'])
+}
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.date('2021-01-01', '2022-01-01'))
+  .map(maskS2clouds)
+  .map(scaleImage);
+  
+// Create a median composite for 2021
+var composite =  filtered.median();
+
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite.clip(geometry), rgbVis, '2020 Composite');
+
+// We use the ESA WorldCover 2021 dataset
+var worldcover = ee.ImageCollection('ESA/WorldCover/v200').first();
+
+// The image has 11 classes
+// Remap the class values to have continuous values
+// from 0 to 10
+var classified = worldcover.remap(
+  [10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100],
+  [0,  1 , 2,  3,  4,  5,  6,  7,  8,  9,  10]).rename('classification');
+
+// Define a list of class names
+var worldCoverClassNames= [
+  'Tree Cover', 'Shrubland', 'Grassland', 'Cropland', 'Built-up',
+  'Bare / sparse Vegetation', 'Snow and Ice', 
+  'Permanent Water Bodies', 'Herbaceous Wetland', 
+  'Mangroves', 'Moss and Lichen'];
+// Define a list of class colors
+var worldCoverPalette = [
+  '006400', 'ffbb22', 'ffff4c', 'f096ff', 'fa0000',
+  'b4b4b4', 'f0f0f0', '0064c8', '0096a0', '00cf75',
+  'fae6a0'];
+// We define a dictionary with class names
+var classNames = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverClassNames
+);
+// We define a dictionary with class colors
+var classColors = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverPalette
+);
+var worldCoverVisParams = {min:0, max:10, palette: worldCoverPalette};
+Map.addLayer(classified.clip(geometry), worldCoverVisParams, 'Landcover');
+
+// We sample spectral values from S2 image for each class
+var samples = composite.addBands(classified)
+  .stratifiedSample({
+    numPoints: 50,
+    classBand: 'classification',
+    region: geometry, 
+    scale: 10,
+    tileScale: 16,
+    geometries: true
+});
+  
+print('Stratified Samples', samples);
+Map.addLayer(samples, {color: 'red'}, 'Samples');
+
+// To create a box plot, we need minimum, maximum,
+// median and 25- and 75-percentile values for
+// each band for each class
+var bands = composite.bandNames();
+var properties = bands.add('classification');
+
+// Now we have multiple columns, so we have to repeat the reducer
+var numBands = bands.length();
+
+// We need the index of the group band
+var groupIndex = properties.indexOf('classification');
+
+// Create a combined reducer for all required statistics
+var allReducers = ee.Reducer.median()
+  .combine({reducer2: ee.Reducer.min(), sharedInputs: true} )
+  .combine({reducer2: ee.Reducer.max(), sharedInputs: true} )
+  .combine({reducer2: ee.Reducer.percentile([25]), sharedInputs: true} )
+  .combine({reducer2: ee.Reducer.percentile([75]), sharedInputs: true} )
+
+// Repeat the combined reducer for each band and
+// group results by class
+var stats = samples.reduceColumns({
+    selectors: properties,
+    reducer: allReducers.repeat(numBands).group({
+      groupField: groupIndex}),
+});
+var groupStats = ee.List(stats.get('groups'));
+print(groupStats);
+
+// We do some post-processing to format the results
+
+var spectralStats = ee.FeatureCollection(groupStats.map(function(item) {
+  var itemDict = ee.Dictionary(item);
+  var classNumber = itemDict.get('group');
+  // Extract the stats
+  // Create a featute for each statistics for each class
+  var stats = ee.List(['median', 'min', 'max', 'p25', 'p75']);
+  // Create a key such as B1_min, B1_max, etc.
+  var keys = stats.map(function(stat) {
+    var bandKeys = bands.map(function(bandName) {
+      return ee.String(stat).cat('_').cat(bandName);
+      })
+    return bandKeys;
+    }).flatten();
+  // Extract the values  
+  var values = stats.map(function(stat) {
+    return itemDict.get(stat);
+  }).flatten();
+  var properties = ee.Dictionary.fromLists(keys, values);
+  var withClass = properties
+    .set('class', classNames.get(classNumber))
+    .set('class_number', classNumber);
+  return ee.Feature(null, withClass);
+}));
+print('Average Spectral Values for Each Class', spectralStats);
+
+// Now we need to create a spectral signature chart
+// for each class.
+
+// Write a function to create a chart for each class
+var createChart = function(className) {
+  var classFeature = spectralStats.filter(ee.Filter.eq('class', className)).first();
+  var classNumber = classFeature.get('class_number');
+  var classColor = classColors.get(classNumber);
+  // X-Axis has Band Names, so we create a row per band
+  var rowList = bands.map(function(band) {
+    var stats = ee.List(['median', 'min', 'max', 'p25', 'p75']);
+    var values = stats.map(function(stat) {
+      var key = ee.String(stat).cat('_').cat(band);
+      var value = classFeature.get(key);
+      return {v: value}
+    });
+    // Row name is the first value
+    var rowValues = ee.List([{v: band}]);
+    // Append other values
+    rowValues = rowValues.cat(values);
+
+    var rowDict = {
+      c: rowValues
+    };
+  return rowDict;
+  });
+  // We need to convert the server-side rowList and 
+  // classColor objects to client-side javascript object
+  // use evaluate()
+  rowList.evaluate(function(rowListClient) {
+    classColor.evaluate(function(classColor) {
+       var dataTable = {
+        cols: [
+          {id: 'x', type: 'string', role: 'domain'},
+          {id: 'median', type: 'number', role: 'data'},
+          {id: 'min', type: 'number', role: 'interval'},
+          {id: 'max', type: 'number', role: 'interval'},
+          {id: 'firstQuartile', type: 'number', role: 'interval'},
+          {id: 'thirdQuartile', type:'number', role: 'interval'},
+        ],
+        rows: rowListClient
+      };
+    
+      var options = {
+        title:'Spectral Profile for Class: ' + className,
+        vAxis: {
+          title: 'Reflectance',
+          gridlines: {
+            color: '#d9d9d9'
+          },
+          minorGridlines: {
+            color: 'transparent'
+          },
+          viewWindow: {
+            min:0,
+            max:0.6
+          }
+        },
+        hAxis: {
+          title: 'Bands',
+          gridlines: {
+            color: '#d9d9d9'
+          },
+          minorGridlines: {
+            color: 'transparent'
+          }
+        },
+        legend: {position: 'none'},
+        lineWidth: 1,
+        interpolateNulls: true,
+        curveType: 'function',
+        series: [{'color': classColor}],
+        intervals: {
+          barWidth: 0.5,
+          boxWidth: 0.5,
+          lineWidth: 1,
+          style: 'boxes',
+          fillOpacity: 1,
+
+        },
+        interval: {
+          min: {
+            style: 'bars',
+          },
+          max: {
+            style: 'bars',
+          }
+      },
+        chartArea: {left:100, right:100}
+      };
+        
+      var chart = ui.Chart(dataTable, 'LineChart', options);
+      print(chart);
+      });
+
+    })
+   
+
+};
+
+// We get a list of classes
+var classNames = spectralStats.aggregate_array('class');
+// Call the function for each class name to create the chart
+print('Creating charts. Please wait...');
+classNames.evaluate(function(classNames) {
+  for (var i = 0; i < classNames.length; i++) {
+    createChart(classNames[i]);
+  }
+});

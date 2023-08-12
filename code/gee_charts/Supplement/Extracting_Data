@@ -1,0 +1,166 @@
+// Example script showing how to extract data
+// from images and imagecollections
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2');
+var admin2Filtered = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
+var geometry = admin2Filtered.geometry();
+
+// We use the MODIS 16-day Vegetation Indicies dataset
+var modis = ee.ImageCollection('MODIS/061/MOD13Q1');
+
+// Pre-Processing: Cloud Masking and Scaling
+
+// Function for Cloud Masking
+var bitwiseExtract = function(input, fromBit, toBit) {
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+}
+
+var maskSnowAndClouds = function(image) {
+  var summaryQa = image.select('SummaryQA')
+  // Select pixels which are less than or equals to 1 (0 or 1)
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
+  var maskedImage = image.updateMask(qaMask)
+  return maskedImage.copyProperties(
+    image, ['system:index', 'system:time_start'])
+}
+
+// Function for Scaling Pixel Values
+// MODIS NDVI values come as NDVI x 10000
+// that need to be scaled by 0.0001
+var ndviScaled = function(image) {
+  var scaled = image.divide(10000)
+  return scaled.copyProperties(
+    image, ['system:index', 'system:time_start'])
+};
+
+// Apply the functions and select the 'NDVI' band
+var processedCol = modis
+  .map(maskSnowAndClouds)
+  .map(ndviScaled)
+  .select('NDVI');
+
+// Extract Image Statistics
+
+// Filter the collection
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(1, 'year')
+
+var filtered = processedCol
+  .filter(ee.Filter.date(startDate, endDate))
+
+var image = filtered.mean();
+Map.addLayer(geometry, {}, 'Region');
+Map.centerObject(geometry);
+Map.addLayer(image.clip(geometry), {min:0, max:1, palette:['#FFFFFF', '#006400']}, 'MODIS NDVI')
+
+var samples = image.sample({
+  region: geometry,
+  scale: 250,
+  numPixels: 100,
+  geometries: true
+})
+print('Random Extract', samples)
+Map.addLayer(samples, {color: 'red'}, 'Random Samples');
+
+var modisLandcover = ee.ImageCollection('MODIS/061/MCD12Q1');
+var classification = 'LC_Type1';
+
+var landcoverFiltered = modisLandcover
+  .filter(ee.Filter.date(startDate, endDate))
+  .select(classification);
+var landCoverImage = landcoverFiltered.first().rename('classification');
+var igbpLandCoverVis = {
+  min: 1.0,
+  max: 17.0,
+  palette: [
+    '05450a', '086a10', '54a708', '78d203', '009900', 'c6b044', 'dcd159',
+    'dade48', 'fbff13', 'b6ff05', '27ff87', 'c24f44', 'a5a5a5', 'ff6d4c',
+    '69fff8', 'f9ffa4', '1c0dff'
+  ],
+};
+Map.addLayer(landCoverImage.clip(geometry), igbpLandCoverVis, 'MODIS LandCover');
+
+
+var stratifiedSamples = image.addBands(landCoverImage).stratifiedSample({
+  numPoints: 10,
+  classBand: 'classification',
+  region: geometry, 
+  scale: 250,
+  geometries: true
+})
+  
+print('Stratified Samples', stratifiedSamples)
+Map.addLayer(stratifiedSamples, {color: 'green'}, 'Stratified Samples');
+
+// Extracting Image Statistics
+
+var stats = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 250
+});
+print('Mean NDVI', stats.getNumber('NDVI'))
+
+var stats = image.addBands(landCoverImage).reduceRegion({
+    reducer: ee.Reducer.mean().group({
+      groupField: 1,
+      groupName: 'classification'}),
+    geometry: geometry,
+    scale: 250
+});
+print('Mean NDVI by Class', stats.get('groups'))
+
+// Post-process the result into a FeatureCollection
+var groupStats = ee.List(stats.get('groups'));
+var groupFc = ee.FeatureCollection(groupStats.map(function(item) {
+  return ee.Feature(geometry, item);
+}));
+print('Group Statistics FeatureCollection', groupFc);
+
+// Extracting Time Series
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(1, 'year')
+
+var filtered = processedCol
+  .filter(ee.Filter.date(startDate, endDate))
+    
+var extractData = function(image) {
+  var stats = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 250})
+  var ndvi = stats.getNumber('NDVI');
+  // Return a feature
+  var feature = ee.Feature(geometry, {
+    'ndvi': ndvi,
+    'date': image.date().format('YYYY-MM-dd')
+    })
+  return feature
+};
+
+var timeSeries = filtered.map(extractData);
+print('Time series at a single region', timeSeries);
+
+var admin2Filtered = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'));
+Map.addLayer(admin2Filtered, {color: 'gray'}, 'Selected Regions');
+
+print('Number of Regions', admin2Filtered.size());
+
+var extractData = function(image) {
+  var stats = image.reduceRegions({
+    collection: admin2Filtered,
+    reducer: ee.Reducer.mean(),
+    scale: 250})
+  // This is a feature collection
+  // Set date property for each feature
+  var results = stats.map(function(f) {
+    return f.set({
+      'date': image.date().format('YYYY-MM-dd')})
+  })
+  return results;
+};
+
+var timeSeries = filtered.map(extractData).flatten();
+print('Time series at a multiple regions', timeSeries);
