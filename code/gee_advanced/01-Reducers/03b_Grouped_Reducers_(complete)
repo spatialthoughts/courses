@@ -1,0 +1,126 @@
+// Select a region
+var point = ee.Geometry.Point([77.6045, 12.8992]);
+var bufferDistance = 5000;
+var geometry = point.buffer(bufferDistance);
+Map.centerObject(geometry, 12);
+Map.addLayer(geometry, {color: 'gray'}, 'Buffer Zone');
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR');
+
+// Write a function for Cloud masking
+var maskS2clouds = function(image) {
+  var qa = image.select('QA60')
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0))
+  return image.updateMask(mask)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
+}
+
+// Write a function to scale the bands
+var scaleImage = function(image) {
+  return image
+    .multiply(0.0001)
+    .copyProperties(image, ['system:time_start'])
+}
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.date('2021-01-01', '2022-01-01'))
+  .map(maskS2clouds)
+  .map(scaleImage);
+  
+// Create a median composite for 2021
+var composite =  filtered.median();
+
+var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite.clip(geometry), rgbVis, '2020 Composite');
+
+// We use the ESA WorldCover 2021 dataset
+var worldcover = ee.ImageCollection('ESA/WorldCover/v200').first();
+
+// The image has 11 classes
+// Remap the class values to have continuous values
+// from 0 to 10
+var classified = worldcover.remap(
+  [10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100],
+  [0,  1 , 2,  3,  4,  5,  6,  7,  8,  9,  10]).rename('classification');
+
+// Define a list of class names
+var worldCoverClassNames= [
+  'Tree Cover', 'Shrubland', 'Grassland', 'Cropland', 'Built-up',
+  'Bare / sparse Vegetation', 'Snow and Ice', 
+  'Permanent Water Bodies', 'Herbaceous Wetland', 
+  'Mangroves', 'Moss and Lichen'];
+// Define a list of class colors
+var worldCoverPalette = [
+  '006400', 'ffbb22', 'ffff4c', 'f096ff', 'fa0000',
+  'b4b4b4', 'f0f0f0', '0064c8', '0096a0', '00cf75',
+  'fae6a0'];
+// We define a dictionary with class names
+var classNames = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverClassNames
+);
+// We define a dictionary with class colors
+var classColors = ee.Dictionary.fromLists(
+  ['0','1','2','3','4','5','6','7','8','9', '10'],
+  worldCoverPalette
+);
+var worldCoverVisParams = {min:0, max:10, palette: worldCoverPalette};
+Map.addLayer(classified.clip(geometry), worldCoverVisParams, 'Landcover');
+
+var samples = composite.addBands(classified)
+  .stratifiedSample({
+    numPoints: 20,
+    classBand: 'classification',
+    region: geometry, 
+    scale: 10,
+    tileScale: 16
+});
+  
+print('Stratified Samples', samples)
+
+// We want to get average spectral value for a band
+// grouped by class
+var properties = ['B5', 'classification']
+var stats = samples.reduceColumns({
+    selectors: properties,
+    reducer: ee.Reducer.mean().group({
+      groupField: 1}),
+});
+var groupStats = ee.List(stats.get('groups'));
+print(groupStats);
+
+// Let's get average spectral value for every band
+var bands = composite.bandNames();
+var properties = bands.add('classification');
+
+// Now we have multiple columns, so we have to repeat the reducer
+var numBands = bands.length();
+
+// We need the index of the group band
+var groupIndex = properties.indexOf('classification');
+
+var stats = samples.reduceColumns({
+    selectors: properties,
+    reducer: ee.Reducer.mean().repeat(numBands).group({
+      groupField: groupIndex}),
+});
+var groupStats = ee.List(stats.get('groups'));
+print(groupStats);
+
+// We do some post-processing to format the results
+
+var fc = ee.FeatureCollection(groupStats.map(function(item) {
+  // Extract the means
+  var values = ee.Dictionary(item).get('mean')
+  var groupNumber = ee.Dictionary(item).get('group')
+  var properties = ee.Dictionary.fromLists(bands, values)
+  var withClass = properties.set('class', classNames.get(groupNumber))
+  return ee.Feature(null, withClass)
+}))
+print('Average Spectral Value for Each Class', fc)

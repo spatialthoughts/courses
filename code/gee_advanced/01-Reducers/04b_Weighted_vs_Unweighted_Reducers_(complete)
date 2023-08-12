@@ -1,0 +1,55 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var image = ee.Image("users/ujavalgandhi/public/test_image_ones"),
+    pixels = ee.FeatureCollection("users/ujavalgandhi/public/test_image_pixels"),
+    test_geometry = ee.FeatureCollection("users/ujavalgandhi/public/test_geometry");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script demonstrating the different between
+// weighted and un-weighted reducers in Earth Engine
+
+// We are using a 4x4 pixel test image having each pixel
+// value set to 1.
+// with 1km pixels in EPSG:32643
+// Code for generating such images is at 
+// https://github.com/spatialthoughts/python-tutorials/blob/main/raster_from_array.ipynb
+var visParams = {min:1, max:1, palette: ['white']};
+Map.addLayer(image, visParams, 'Test Image');
+Map.centerObject(image);
+
+Map.addLayer(pixels, {color: 'black'}, 'Pixel Boundaries');
+
+var centroids = image.sample({
+  scale: 1000,
+  region: image.geometry(),
+  geometries: true
+});
+Map.addLayer(centroids, {color: 'cyan'}, 'Pixel Centroids');
+
+
+var geometry = test_geometry.geometry();
+Map.addLayer(geometry, {color: 'red'}, 'Region');
+
+// 3rd party package for labelling
+var style = require('users/gena/packages:style');
+var textProperties = { textColor: 'ffffff', fontSize: 12, outlineColor: '000000'};
+var labels = style.Feature.label(centroids, 'b1', textProperties);
+
+Map.addLayer(labels, {}, 'labels');
+
+// Weighted reducers account for fractional area of 
+// each pixel covered by the geometry
+var stats = image.reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry: geometry,
+  scale: 1000,
+})
+print('Sum of Pixels in Polygon (Weighted)', stats.get('b1'));
+
+// Unweighted reducers count pixels as whole if their
+// centroid is covered by the geometry
+var stats = image.reduceRegion({
+  reducer: ee.Reducer.sum().unweighted(),
+  geometry: geometry,
+  scale: 1000,
+})
+print('Sum of Pixels in Polygon (Un-weighted)', stats.get('b1')); 
+ 
