@@ -1,0 +1,33 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var ecoregions = ee.FeatureCollection("RESOLVE/ECOREGIONS/2017"),
+    worldclim = ee.Image("WORLDCLIM/V1/BIO");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// We want to compute average temperature for each biome
+
+
+// Select temperature band and apply scaling factor
+var temperature = worldclim.select('bio01').multiply(0.1);
+
+// Visualize Temperature
+var palette = ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']
+Map.addLayer(temperature, {min:10, max:25, palette: palette}, 'Annual Mean Temparature')
+
+// The ecoregions table contains multiple polygons for biome
+// which represent an ecoregion.
+var biome = 2; // BIOME_NUM
+var filtered = ecoregions.filter(ee.Filter.eq('BIOME_NUM', biome));
+
+Map.addLayer(filtered, {color: 'blue'}, 'Selected Biome');
+
+// Get the native resolution of the image
+var scale = worldclim.projection().nominalScale()
+
+// Calculate Average Annual Mean Temperature per Ecoregion
+var zonalStats = temperature.reduceRegions({
+  collection: filtered,
+  reducer: ee.Reducer.mean().setOutputs(['temp']),
+  scale: scale})
+
+print(zonalStats.first())
+
+Map.addLayer(zonalStats, {color: 'green'}, 'Selected Biome with Stats');
