@@ -1,0 +1,55 @@
+// Example script showing how to extract data
+// from images and imagecollections
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2');
+var admin2Filtered = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
+var geometry = admin2Filtered.geometry();
+
+// We use the MODIS 16-day Vegetation Indicies dataset
+var modis = ee.ImageCollection('MODIS/061/MOD13Q1');
+
+// Pre-Processing: Cloud Masking and Scaling
+
+// Function for Cloud Masking
+var bitwiseExtract = function(input, fromBit, toBit) {
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+}
+
+var maskSnowAndClouds = function(image) {
+  var summaryQa = image.select('SummaryQA')
+  // Select pixels which are less than or equals to 1 (0 or 1)
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
+  var maskedImage = image.updateMask(qaMask)
+  return maskedImage.copyProperties(
+    image, ['system:index', 'system:time_start'])
+}
+
+// Function for Scaling Pixel Values
+// MODIS NDVI values come as NDVI x 10000
+// that need to be scaled by 0.0001
+var ndviScaled = function(image) {
+  var scaled = image.divide(10000)
+  return scaled.copyProperties(
+    image, ['system:index', 'system:time_start'])
+};
+
+// Apply the functions and select the 'NDVI' band
+var processedCol = modis
+  .map(maskSnowAndClouds)
+  .map(ndviScaled)
+  .select('NDVI');
+
+// Extracting Image Statistics
+
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(1, 'year')
+
+var filtered = processedCol
+  .filter(ee.Filter.date(startDate, endDate))
+
+var image = filtered.mean();
+
+Map.addLayer(geometry, {}, 'Region');
+Map.addLayer(image.clip(geometry), {min:0, max:1, palette:['#FFFFFF', '#006400']}, 'MODIS NDVI')
+Map.centerObject(geometry);
