@@ -845,39 +845,95 @@ target="_blank">Open in Code Editor ↗</a></p>
 <p><a
 href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Advanced%3A01-Reducers%2F05b_Zonal_Statistics_Vector_(complete)"
 target="_blank">Open in Code Editor ↗</a></p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">// We want to compute average temperature for each biome</span></span>
+<div class="sourceCode" id="cb5"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">// Vector Zonal Statistics</span></span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">// We use the EcoRegions FeatureCollection</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="kw">var</span> ecoregions <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&#39;RESOLVE/ECOREGIONS/2017&#39;</span>)<span class="op">;</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">// We use the WorldClim dataset</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="kw">var</span> worldclim <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;WORLDCLIM/V1/BIO&#39;</span>)<span class="op">;</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">// Select temperature band and apply scaling factor</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="kw">var</span> temperature <span class="op">=</span> worldclim<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;bio01&#39;</span>)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.1</span>)<span class="op">;</span></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">// Visualize Temperature</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;#4575b4&#39;</span><span class="op">,</span> <span class="st">&#39;#91bfdb&#39;</span><span class="op">,</span> <span class="st">&#39;#e0f3f8&#39;</span><span class="op">,</span> <span class="st">&#39;#ffffbf&#39;</span><span class="op">,</span> <span class="st">&#39;#fee090&#39;</span><span class="op">,</span> <span class="st">&#39;#fc8d59&#39;</span><span class="op">,</span> <span class="st">&#39;#d73027&#39;</span>]</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(temperature<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">10</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">25</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span> <span class="st">&#39;Annual Mean Temparature&#39;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">// We want to comptue the mean annual temperature</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">// for each ecoregion and each biome within a realm</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">// We use the EcoRegions FeatureCollection</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="kw">var</span> ecoregions <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&#39;RESOLVE/ECOREGIONS/2017&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">// The dataset contains multiple polygons for each ecoregion</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">// The layer contains polygons for -&gt; 846 Ecoregions</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">// Ecoregions are grouped into -&gt; 14 Biomes</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">// Biomes are groouped into -&gt; 8 Realms</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="fu">print</span>(ecoregions<span class="op">.</span><span class="fu">aggregate_array</span>(<span class="st">&#39;REALM&#39;</span>)<span class="op">.</span><span class="fu">distinct</span>())<span class="op">;</span></span>
 <span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">// The ecoregions table contains multiple polygons for biome</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">// which represent an ecoregion.</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="kw">var</span> biome <span class="op">=</span> <span class="dv">2</span><span class="op">;</span> <span class="co">// BIOME_NUM</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> ecoregions<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;BIOME_NUM&#39;</span><span class="op">,</span> biome))<span class="op">;</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(filtered<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span>}<span class="op">,</span> <span class="st">&#39;Selected Biome&#39;</span>)<span class="op">;</span></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">// Get the native resolution of the image</span></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="kw">var</span> scale <span class="op">=</span> worldclim<span class="op">.</span><span class="fu">projection</span>()<span class="op">.</span><span class="fu">nominalScale</span>()</span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a></span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">// Calculate Average Annual Mean Temperature per Ecoregion</span></span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="kw">var</span> zonalStats <span class="op">=</span> temperature<span class="op">.</span><span class="fu">reduceRegions</span>({</span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> filtered<span class="op">,</span></span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">setOutputs</span>([<span class="st">&#39;temp&#39;</span>])<span class="op">,</span></span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> scale})</span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a></span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="fu">print</span>(zonalStats<span class="op">.</span><span class="fu">first</span>())</span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a></span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(zonalStats<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;green&#39;</span>}<span class="op">,</span> <span class="st">&#39;Selected Biome with Stats&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">// Let&#39;s filter to ecoregions in a realm</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="kw">var</span> realm <span class="op">=</span> <span class="st">&#39;Australasia&#39;</span><span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> ecoregions<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;REALM&#39;</span><span class="op">,</span> realm))<span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">// We use the WorldClim V1 dataset that contains</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">// historical climate data from 1960-1990</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="kw">var</span> worldclim <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(<span class="st">&#39;WORLDCLIM/V1/BIO&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">// Select &#39;annual mean temperature&#39; band</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">// and apply scaling factor</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="kw">var</span> temperature <span class="op">=</span> worldclim<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;bio01&#39;</span>)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.1</span>)<span class="op">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">// Visualize Temperature and Ecoregions</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;#4575b4&#39;</span><span class="op">,</span> <span class="st">&#39;#91bfdb&#39;</span><span class="op">,</span> <span class="st">&#39;#e0f3f8&#39;</span><span class="op">,</span> </span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>  <span class="st">&#39;#ffffbf&#39;</span><span class="op">,</span> <span class="st">&#39;#fee090&#39;</span><span class="op">,</span> <span class="st">&#39;#fc8d59&#39;</span><span class="op">,</span> <span class="st">&#39;#d73027&#39;</span>]</span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(temperature<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">10</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">25</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">,</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>  <span class="st">&#39;Annual Mean Temparature&#39;</span>)</span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(filtered<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;REALM&#39;</span><span class="op">,</span> realm))<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;blue&#39;</span>}<span class="op">,</span> <span class="st">&#39;Ecoregions&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">// Calculate Average Annual Mean Temperature per Ecoregion</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">// Get the native resolution of the image</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="kw">var</span> scale <span class="op">=</span> worldclim<span class="op">.</span><span class="fu">projection</span>()<span class="op">.</span><span class="fu">nominalScale</span>()</span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="kw">var</span> zonalStats <span class="op">=</span> temperature<span class="op">.</span><span class="fu">reduceRegions</span>({</span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> filtered<span class="op">,</span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">setOutputs</span>([<span class="st">&#39;meantemp&#39;</span>])<span class="op">,</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> scale})</span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">// Output of reduceRegions() is a FeatureCollection</span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Ecoregions with Mean Temp&#39;</span><span class="op">,</span> zonalStats<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">// We have 1 polygon per ecoregion with its mean temperature</span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">// Group them by biome and compute mean temperature per biome</span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="kw">var</span> zonalGroupStats <span class="op">=</span> zonalStats<span class="op">.</span><span class="fu">reduceColumns</span>({</span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">setOutputs</span>([<span class="st">&#39;meantemp&#39;</span>])</span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a>    <span class="op">.</span><span class="fu">group</span>({<span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;biome&#39;</span>})<span class="op">,</span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a>  <span class="dt">selectors</span><span class="op">:</span> [<span class="st">&#39;meantemp&#39;</span><span class="op">,</span> <span class="st">&#39;BIOME_NAME&#39;</span>]})</span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Biomes with Mean Temp&#39;</span><span class="op">,</span> zonalGroupStats)<span class="op">;</span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">// Process the results</span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="kw">var</span> groups <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(zonalGroupStats<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))<span class="op">;</span></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="kw">var</span> results <span class="op">=</span> groups<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a>  <span class="co">// Extract the mean</span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a>  <span class="kw">var</span> meanTemp <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;meantemp&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a>  <span class="co">// The group name is what we specified in the grouped reducer</span></span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a>  <span class="kw">var</span> biomeName <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;biome&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a>  <span class="cf">return</span> ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> {</span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a>    <span class="st">&#39;BIOME_NAME&#39;</span><span class="op">:</span> biomeName<span class="op">,</span></span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a>    <span class="st">&#39;meantemp&#39;</span><span class="op">:</span> meanTemp})<span class="op">;</span></span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a></span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a><span class="kw">var</span> zonalGroupStatsFc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(results)<span class="op">;</span></span>
+<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Biomes with Mean Temp (Processed)&#39;</span><span class="op">,</span> zonalGroupStatsFc)<span class="op">;</span></span>
+<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a></span>
+<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">// Export the results</span></span>
+<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a>Export<span class="op">.</span><span class="at">table</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> zonalStats<span class="op">,</span></span>
+<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Mean_Temp_By_Ecoregion&#39;</span><span class="op">,</span></span>
+<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;mean_temp_by_ecoregion&#39;</span><span class="op">,</span></span>
+<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a>  <span class="dt">fileFormat</span><span class="op">:</span> <span class="st">&#39;CSV&#39;</span><span class="op">,</span></span>
+<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a>  <span class="dt">selectors</span><span class="op">:</span> [<span class="st">&#39;BIOME_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;ECO_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;meantemp&#39;</span>]</span>
+<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a>})</span>
+<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a></span>
+<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a>Export<span class="op">.</span><span class="at">table</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb5-83"><a href="#cb5-83" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> zonalGroupStatsFc<span class="op">,</span></span>
+<span id="cb5-84"><a href="#cb5-84" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Mean_Temp_By_Biome&#39;</span><span class="op">,</span></span>
+<span id="cb5-85"><a href="#cb5-85" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb5-86"><a href="#cb5-86" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;mean_temp_by_biome&#39;</span><span class="op">,</span></span>
+<span id="cb5-87"><a href="#cb5-87" tabindex="-1"></a>  <span class="dt">fileFormat</span><span class="op">:</span> <span class="st">&#39;CSV&#39;</span><span class="op">,</span></span>
+<span id="cb5-88"><a href="#cb5-88" tabindex="-1"></a>  <span class="dt">selectors</span><span class="op">:</span> [<span class="st">&#39;BIOME_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;meantemp&#39;</span>]</span>
+<span id="cb5-89"><a href="#cb5-89" tabindex="-1"></a>})</span></code></pre></div>
 </div>
 <div id="zonal-statistics---raster" class="section level2">
 <h2>06. Zonal Statistics - Raster</h2>
@@ -886,127 +942,131 @@ href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FG
 target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">// Raster Zonal Statistics</span></span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">// Create a composite for the selected region</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="kw">var</span> admin2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)<span class="op">;</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_SR_HARMONIZED&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">// We want to use unsupervised classification on a source image</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">// and automatically detect water cluster by picking the cluster</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">// with highest MNDWI value.</span></span>
 <span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="kw">var</span> selected <span class="op">=</span> admin2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM2_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Bangalore Urban&#39;</span>))</span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> selected<span class="op">.</span><span class="fu">geometry</span>()</span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a></span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">// Cloud masking function</span></span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="co">// Bits 10 and 11 are clouds and cirrus, respectively.</span></span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="co">// Both flags should be set to zero, indicating clear conditions.</span></span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="co">// Return the masked and scaled data, without the QA bands.</span></span>
-<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">.</span><span class="fu">divide</span>(<span class="dv">10000</span>)</span>
-<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>}</span>
-<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a></span>
-<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2020-01-01&#39;</span>))</span>
-<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)<span class="op">;</span></span>
-<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>  </span>
-<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">;</span> </span>
-<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a></span>
-<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a></span>
-<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">// Calculate  Normalized Difference Vegetation Index (NDWI)</span></span>
-<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">// &#39;GREEN&#39; (B3) and &#39;NIR&#39; (B8)</span></span>
-<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="kw">var</span> ndwi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B8&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;ndwi&#39;</span>])<span class="op">;</span></span>
-<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a> </span>
-<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">// Calculate Modified Normalized Difference Water Index (MNDWI)</span></span>
-<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">// &#39;GREEN&#39; (B3) and &#39;SWIR1&#39; (B11)</span></span>
-<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="kw">var</span> mndwi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B11&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;mndwi&#39;</span>])<span class="op">;</span> </span>
-<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a></span>
-<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="co">// Select the MIR (SWIR2) band (B12)</span></span>
-<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="kw">var</span> mir2 <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B12&#39;</span>)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;mir2&#39;</span>)</span>
-<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a></span>
-<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="kw">var</span> stackedImage <span class="op">=</span> ndwi<span class="op">.</span><span class="fu">addBands</span>(mndwi)<span class="op">.</span><span class="fu">addBands</span>(mir2)</span>
-<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a></span>
-<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="co">// Make the training dataset for unsupervised clustering</span></span>
-<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="kw">var</span> training <span class="op">=</span> stackedImage<span class="op">.</span><span class="fu">sample</span>({</span>
-<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
-<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a>  <span class="dt">numPixels</span><span class="op">:</span> <span class="dv">1000</span></span>
-<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a><span class="fu">print</span>(training<span class="op">.</span><span class="fu">first</span>())</span>
-<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a></span>
-<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a><span class="co">// Instantiate the clusterer and train it.</span></span>
-<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a><span class="kw">var</span> clusterer <span class="op">=</span> ee<span class="op">.</span><span class="at">Clusterer</span><span class="op">.</span><span class="fu">wekaCascadeKMeans</span>({</span>
-<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a>  <span class="dt">minClusters</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
-<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a>  <span class="dt">maxClusters</span><span class="op">:</span> <span class="dv">10</span>})<span class="op">.</span><span class="fu">train</span>(training)<span class="op">;</span></span>
-<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a></span>
-<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a><span class="co">// Cluster the stacked image</span></span>
-<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a><span class="kw">var</span> clustered <span class="op">=</span> stackedImage<span class="op">.</span><span class="fu">cluster</span>(clusterer)<span class="op">;</span></span>
-<span id="cb6-61"><a href="#cb6-61" tabindex="-1"></a></span>
-<span id="cb6-62"><a href="#cb6-62" tabindex="-1"></a><span class="co">// Visualize the results</span></span>
-<span id="cb6-63"><a href="#cb6-63" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">setCenter</span>(<span class="fl">77.61</span><span class="op">,</span> <span class="fl">13.08</span><span class="op">,</span> <span class="dv">14</span>)</span>
-<span id="cb6-64"><a href="#cb6-64" tabindex="-1"></a></span>
-<span id="cb6-65"><a href="#cb6-65" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
-<span id="cb6-66"><a href="#cb6-66" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
-<span id="cb6-67"><a href="#cb6-67" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(image<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Image&#39;</span>)<span class="op">;</span></span>
-<span id="cb6-68"><a href="#cb6-68" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(clustered<span class="op">.</span><span class="fu">randomVisualizer</span>()<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;clusters&#39;</span>)</span>
-<span id="cb6-69"><a href="#cb6-69" tabindex="-1"></a></span>
-<span id="cb6-70"><a href="#cb6-70" tabindex="-1"></a><span class="co">// We need to identify which of the clusters represent water</span></span>
-<span id="cb6-71"><a href="#cb6-71" tabindex="-1"></a><span class="co">// We use the MNDWI band and select the cluster with the </span></span>
-<span id="cb6-72"><a href="#cb6-72" tabindex="-1"></a><span class="co">// highest average MNDWI values of all pixels within the cluster</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">// Create a composite for the selected region</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="kw">var</span> admin2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_SR_HARMONIZED&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="kw">var</span> selected <span class="op">=</span> admin2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">eq</span>(<span class="st">&#39;ADM2_NAME&#39;</span><span class="op">,</span> <span class="st">&#39;Bangalore Urban&#39;</span>))</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> selected<span class="op">.</span><span class="fu">geometry</span>()</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">// Cloud masking function</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="co">// Bits 10 and 11 are clouds and cirrus, respectively.</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="co">// Both flags should be set to zero, indicating clear conditions.</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="co">// Return the masked and scaled data, without the QA bands.</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">.</span><span class="fu">divide</span>(<span class="dv">10000</span>)</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>}</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2019-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2020-01-01&#39;</span>))</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)<span class="op">;</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>  </span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="kw">var</span> image <span class="op">=</span> filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">;</span> </span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">// Calculate  Normalized Difference Vegetation Index (NDWI)</span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">// &#39;GREEN&#39; (B3) and &#39;NIR&#39; (B8)</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="kw">var</span> ndwi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B8&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;ndwi&#39;</span>])<span class="op">;</span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a> </span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="co">// Calculate Modified Normalized Difference Water Index (MNDWI)</span></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="co">// &#39;GREEN&#39; (B3) and &#39;SWIR1&#39; (B11)</span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="kw">var</span> mndwi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B11&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;mndwi&#39;</span>])<span class="op">;</span> </span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="co">// Select the MIR (SWIR2) band (B12)</span></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="kw">var</span> mir2 <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B12&#39;</span>)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;mir2&#39;</span>)</span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="kw">var</span> stackedImage <span class="op">=</span> ndwi<span class="op">.</span><span class="fu">addBands</span>(mndwi)<span class="op">.</span><span class="fu">addBands</span>(mir2)</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a></span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="co">// Make the training dataset for unsupervised clustering</span></span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a><span class="kw">var</span> training <span class="op">=</span> stackedImage<span class="op">.</span><span class="fu">sample</span>({</span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a>  <span class="dt">numPixels</span><span class="op">:</span> <span class="dv">1000</span></span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a><span class="fu">print</span>(training<span class="op">.</span><span class="fu">first</span>())</span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a></span>
+<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a><span class="co">// Instantiate the clusterer and train it.</span></span>
+<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a><span class="kw">var</span> clusterer <span class="op">=</span> ee<span class="op">.</span><span class="at">Clusterer</span><span class="op">.</span><span class="fu">wekaCascadeKMeans</span>({</span>
+<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a>  <span class="dt">minClusters</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb6-61"><a href="#cb6-61" tabindex="-1"></a>  <span class="dt">maxClusters</span><span class="op">:</span> <span class="dv">10</span>})<span class="op">.</span><span class="fu">train</span>(training)<span class="op">;</span></span>
+<span id="cb6-62"><a href="#cb6-62" tabindex="-1"></a></span>
+<span id="cb6-63"><a href="#cb6-63" tabindex="-1"></a><span class="co">// Cluster the stacked image</span></span>
+<span id="cb6-64"><a href="#cb6-64" tabindex="-1"></a><span class="kw">var</span> clustered <span class="op">=</span> stackedImage<span class="op">.</span><span class="fu">cluster</span>(clusterer)<span class="op">;</span></span>
+<span id="cb6-65"><a href="#cb6-65" tabindex="-1"></a></span>
+<span id="cb6-66"><a href="#cb6-66" tabindex="-1"></a><span class="co">// Visualize the results</span></span>
+<span id="cb6-67"><a href="#cb6-67" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">setCenter</span>(<span class="fl">77.61</span><span class="op">,</span> <span class="fl">13.08</span><span class="op">,</span> <span class="dv">14</span>)</span>
+<span id="cb6-68"><a href="#cb6-68" tabindex="-1"></a></span>
+<span id="cb6-69"><a href="#cb6-69" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry<span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb6-70"><a href="#cb6-70" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb6-71"><a href="#cb6-71" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(image<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Image&#39;</span>)<span class="op">;</span></span>
+<span id="cb6-72"><a href="#cb6-72" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(clustered<span class="op">.</span><span class="fu">randomVisualizer</span>()<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;clusters&#39;</span>)</span>
 <span id="cb6-73"><a href="#cb6-73" tabindex="-1"></a></span>
-<span id="cb6-74"><a href="#cb6-74" tabindex="-1"></a><span class="co">// Calculate the stats on MNDWI band, grouped by clusters</span></span>
-<span id="cb6-75"><a href="#cb6-75" tabindex="-1"></a><span class="kw">var</span> stats <span class="op">=</span> mndwi<span class="op">.</span><span class="fu">addBands</span>(clustered)<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
-<span id="cb6-76"><a href="#cb6-76" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">group</span>({</span>
-<span id="cb6-77"><a href="#cb6-77" tabindex="-1"></a>    <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb6-78"><a href="#cb6-78" tabindex="-1"></a>    <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;cluster&#39;</span><span class="op">,</span></span>
-<span id="cb6-79"><a href="#cb6-79" tabindex="-1"></a>  })<span class="op">,</span></span>
-<span id="cb6-80"><a href="#cb6-80" tabindex="-1"></a>  <span class="dt">geometry</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb6-81"><a href="#cb6-81" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span> <span class="co">// Approximate stats</span></span>
-<span id="cb6-82"><a href="#cb6-82" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e8</span></span>
-<span id="cb6-83"><a href="#cb6-83" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb6-84"><a href="#cb6-84" tabindex="-1"></a><span class="fu">print</span>(stats)</span>
-<span id="cb6-85"><a href="#cb6-85" tabindex="-1"></a></span>
-<span id="cb6-86"><a href="#cb6-86" tabindex="-1"></a><span class="co">// Extract the cluster-wise stats as a list of lists</span></span>
-<span id="cb6-87"><a href="#cb6-87" tabindex="-1"></a><span class="co">// We get a list in the following format</span></span>
-<span id="cb6-88"><a href="#cb6-88" tabindex="-1"></a><span class="co">// [[avg_mndwi, cluster_number], [avg_mndwi, cluster_number] ...]]</span></span>
-<span id="cb6-89"><a href="#cb6-89" tabindex="-1"></a><span class="kw">var</span> groupStats <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(stats<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))</span>
-<span id="cb6-90"><a href="#cb6-90" tabindex="-1"></a></span>
-<span id="cb6-91"><a href="#cb6-91" tabindex="-1"></a><span class="kw">var</span> groupStatsLists <span class="op">=</span> groupStats<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
-<span id="cb6-92"><a href="#cb6-92" tabindex="-1"></a>      <span class="kw">var</span> areaDict <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)</span>
-<span id="cb6-93"><a href="#cb6-93" tabindex="-1"></a>      <span class="kw">var</span> clusterNumber <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
-<span id="cb6-94"><a href="#cb6-94" tabindex="-1"></a>        areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;cluster&#39;</span>))</span>
-<span id="cb6-95"><a href="#cb6-95" tabindex="-1"></a>      <span class="kw">var</span> mndwi <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
-<span id="cb6-96"><a href="#cb6-96" tabindex="-1"></a>        areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;mean&#39;</span>))</span>
-<span id="cb6-97"><a href="#cb6-97" tabindex="-1"></a>      <span class="cf">return</span> ee<span class="op">.</span><span class="fu">List</span>([mndwi<span class="op">,</span> clusterNumber])</span>
-<span id="cb6-98"><a href="#cb6-98" tabindex="-1"></a>    })</span>
-<span id="cb6-99"><a href="#cb6-99" tabindex="-1"></a>    </span>
-<span id="cb6-100"><a href="#cb6-100" tabindex="-1"></a><span class="co">// Use the ee.Reducer.max() on the list of lists</span></span>
-<span id="cb6-101"><a href="#cb6-101" tabindex="-1"></a><span class="co">// It will pick the list with the highest MNDWI</span></span>
-<span id="cb6-102"><a href="#cb6-102" tabindex="-1"></a><span class="kw">var</span> waterClusterList <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(ee<span class="op">.</span><span class="fu">List</span>(groupStatsLists)<span class="op">.</span><span class="fu">reduce</span>(ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">2</span>)))</span>
-<span id="cb6-103"><a href="#cb6-103" tabindex="-1"></a></span>
-<span id="cb6-104"><a href="#cb6-104" tabindex="-1"></a><span class="co">// Extract the cluster number</span></span>
-<span id="cb6-105"><a href="#cb6-105" tabindex="-1"></a><span class="kw">var</span> waterCluster <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(waterClusterList<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;max1&#39;</span>))</span>
-<span id="cb6-106"><a href="#cb6-106" tabindex="-1"></a></span>
-<span id="cb6-107"><a href="#cb6-107" tabindex="-1"></a><span class="co">// Select all pixels from the water cluster and mask everything else</span></span>
-<span id="cb6-108"><a href="#cb6-108" tabindex="-1"></a><span class="kw">var</span> water <span class="op">=</span> clustered<span class="op">.</span><span class="fu">eq</span>(waterCluster)<span class="op">.</span><span class="fu">selfMask</span>()</span>
-<span id="cb6-109"><a href="#cb6-109" tabindex="-1"></a></span>
-<span id="cb6-110"><a href="#cb6-110" tabindex="-1"></a><span class="kw">var</span> waterVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span>]}</span>
-<span id="cb6-111"><a href="#cb6-111" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(water<span class="op">,</span> waterVis<span class="op">,</span> <span class="st">&#39;water&#39;</span>)</span>
-<span id="cb6-112"><a href="#cb6-112" tabindex="-1"></a></span>
-<span id="cb6-113"><a href="#cb6-113" tabindex="-1"></a><span class="co">// Interactive visualization may time-out for large images</span></span>
-<span id="cb6-114"><a href="#cb6-114" tabindex="-1"></a><span class="co">// Export the image to use the batch processing mode</span></span>
-<span id="cb6-115"><a href="#cb6-115" tabindex="-1"></a>Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
-<span id="cb6-116"><a href="#cb6-116" tabindex="-1"></a>  <span class="dt">image</span><span class="op">:</span> water<span class="op">,</span></span>
-<span id="cb6-117"><a href="#cb6-117" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Water_Cluster&#39;</span><span class="op">,</span></span>
-<span id="cb6-118"><a href="#cb6-118" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
-<span id="cb6-119"><a href="#cb6-119" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;water_cluster&#39;</span><span class="op">,</span></span>
-<span id="cb6-120"><a href="#cb6-120" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb6-121"><a href="#cb6-121" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">20</span><span class="op">,</span></span>
-<span id="cb6-122"><a href="#cb6-122" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span>}) </span>
-<span id="cb6-123"><a href="#cb6-123" tabindex="-1"></a>  </span></code></pre></div>
+<span id="cb6-74"><a href="#cb6-74" tabindex="-1"></a><span class="co">// We need to identify which of the clusters represent water</span></span>
+<span id="cb6-75"><a href="#cb6-75" tabindex="-1"></a><span class="co">// We use the MNDWI band and select the cluster with the </span></span>
+<span id="cb6-76"><a href="#cb6-76" tabindex="-1"></a><span class="co">// highest average MNDWI values of all pixels within the cluster</span></span>
+<span id="cb6-77"><a href="#cb6-77" tabindex="-1"></a></span>
+<span id="cb6-78"><a href="#cb6-78" tabindex="-1"></a><span class="co">// Calculate the stats on MNDWI band, grouped by clusters</span></span>
+<span id="cb6-79"><a href="#cb6-79" tabindex="-1"></a><span class="kw">var</span> stats <span class="op">=</span> mndwi<span class="op">.</span><span class="fu">addBands</span>(clustered)<span class="op">.</span><span class="fu">reduceRegion</span>({</span>
+<span id="cb6-80"><a href="#cb6-80" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">.</span><span class="fu">group</span>({</span>
+<span id="cb6-81"><a href="#cb6-81" tabindex="-1"></a>    <span class="dt">groupField</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb6-82"><a href="#cb6-82" tabindex="-1"></a>    <span class="dt">groupName</span><span class="op">:</span> <span class="st">&#39;cluster&#39;</span><span class="op">,</span></span>
+<span id="cb6-83"><a href="#cb6-83" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb6-84"><a href="#cb6-84" tabindex="-1"></a>  <span class="dt">geometry</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb6-85"><a href="#cb6-85" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span> <span class="co">// Approximate stats</span></span>
+<span id="cb6-86"><a href="#cb6-86" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e8</span></span>
+<span id="cb6-87"><a href="#cb6-87" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb6-88"><a href="#cb6-88" tabindex="-1"></a><span class="fu">print</span>(stats)</span>
+<span id="cb6-89"><a href="#cb6-89" tabindex="-1"></a></span>
+<span id="cb6-90"><a href="#cb6-90" tabindex="-1"></a><span class="co">// Extract the cluster-wise stats as a list of lists</span></span>
+<span id="cb6-91"><a href="#cb6-91" tabindex="-1"></a><span class="co">// We get a list in the following format</span></span>
+<span id="cb6-92"><a href="#cb6-92" tabindex="-1"></a><span class="co">// [[avg_mndwi, cluster_number], [avg_mndwi, cluster_number] ...]]</span></span>
+<span id="cb6-93"><a href="#cb6-93" tabindex="-1"></a><span class="kw">var</span> groupStats <span class="op">=</span> ee<span class="op">.</span><span class="fu">List</span>(stats<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;groups&#39;</span>))</span>
+<span id="cb6-94"><a href="#cb6-94" tabindex="-1"></a></span>
+<span id="cb6-95"><a href="#cb6-95" tabindex="-1"></a><span class="kw">var</span> groupStatsLists <span class="op">=</span> groupStats<span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(item) {</span>
+<span id="cb6-96"><a href="#cb6-96" tabindex="-1"></a>      <span class="kw">var</span> areaDict <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(item)</span>
+<span id="cb6-97"><a href="#cb6-97" tabindex="-1"></a>      <span class="kw">var</span> clusterNumber <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
+<span id="cb6-98"><a href="#cb6-98" tabindex="-1"></a>        areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;cluster&#39;</span>))</span>
+<span id="cb6-99"><a href="#cb6-99" tabindex="-1"></a>      <span class="kw">var</span> mndwi <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(</span>
+<span id="cb6-100"><a href="#cb6-100" tabindex="-1"></a>        areaDict<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;mean&#39;</span>))</span>
+<span id="cb6-101"><a href="#cb6-101" tabindex="-1"></a>      <span class="cf">return</span> ee<span class="op">.</span><span class="fu">List</span>([mndwi<span class="op">,</span> clusterNumber])</span>
+<span id="cb6-102"><a href="#cb6-102" tabindex="-1"></a>    })</span>
+<span id="cb6-103"><a href="#cb6-103" tabindex="-1"></a>    </span>
+<span id="cb6-104"><a href="#cb6-104" tabindex="-1"></a><span class="co">// Use the ee.Reducer.max() on the list of lists</span></span>
+<span id="cb6-105"><a href="#cb6-105" tabindex="-1"></a><span class="co">// It will pick the list with the highest MNDWI</span></span>
+<span id="cb6-106"><a href="#cb6-106" tabindex="-1"></a><span class="kw">var</span> waterClusterList <span class="op">=</span> ee<span class="op">.</span><span class="fu">Dictionary</span>(ee<span class="op">.</span><span class="fu">List</span>(groupStatsLists)<span class="op">.</span><span class="fu">reduce</span>(ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">2</span>)))</span>
+<span id="cb6-107"><a href="#cb6-107" tabindex="-1"></a></span>
+<span id="cb6-108"><a href="#cb6-108" tabindex="-1"></a><span class="co">// Extract the cluster number</span></span>
+<span id="cb6-109"><a href="#cb6-109" tabindex="-1"></a><span class="kw">var</span> waterCluster <span class="op">=</span> ee<span class="op">.</span><span class="fu">Number</span>(waterClusterList<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;max1&#39;</span>))</span>
+<span id="cb6-110"><a href="#cb6-110" tabindex="-1"></a></span>
+<span id="cb6-111"><a href="#cb6-111" tabindex="-1"></a><span class="co">// Select all pixels from the water cluster and mask everything else</span></span>
+<span id="cb6-112"><a href="#cb6-112" tabindex="-1"></a><span class="kw">var</span> water <span class="op">=</span> clustered<span class="op">.</span><span class="fu">eq</span>(waterCluster)<span class="op">.</span><span class="fu">selfMask</span>()</span>
+<span id="cb6-113"><a href="#cb6-113" tabindex="-1"></a></span>
+<span id="cb6-114"><a href="#cb6-114" tabindex="-1"></a><span class="kw">var</span> waterVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;blue&#39;</span>]}</span>
+<span id="cb6-115"><a href="#cb6-115" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(water<span class="op">,</span> waterVis<span class="op">,</span> <span class="st">&#39;water&#39;</span>)</span>
+<span id="cb6-116"><a href="#cb6-116" tabindex="-1"></a></span>
+<span id="cb6-117"><a href="#cb6-117" tabindex="-1"></a><span class="co">// Interactive visualization may time-out for large images</span></span>
+<span id="cb6-118"><a href="#cb6-118" tabindex="-1"></a><span class="co">// Export the image to use the batch processing mode</span></span>
+<span id="cb6-119"><a href="#cb6-119" tabindex="-1"></a>Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb6-120"><a href="#cb6-120" tabindex="-1"></a>  <span class="dt">image</span><span class="op">:</span> water<span class="op">,</span></span>
+<span id="cb6-121"><a href="#cb6-121" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Water_Cluster&#39;</span><span class="op">,</span></span>
+<span id="cb6-122"><a href="#cb6-122" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb6-123"><a href="#cb6-123" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;water_cluster&#39;</span><span class="op">,</span></span>
+<span id="cb6-124"><a href="#cb6-124" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb6-125"><a href="#cb6-125" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">20</span><span class="op">,</span></span>
+<span id="cb6-126"><a href="#cb6-126" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span>}) </span>
+<span id="cb6-127"><a href="#cb6-127" tabindex="-1"></a>  </span></code></pre></div>
 </div>
 </div>
 <div id="joins" class="section level1">

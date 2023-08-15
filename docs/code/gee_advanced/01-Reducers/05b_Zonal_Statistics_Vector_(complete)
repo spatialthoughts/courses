@@ -1,33 +1,89 @@
-// We want to compute average temperature for each biome
+// Vector Zonal Statistics
+
+// We want to comptue the mean annual temperature
+// for each ecoregion and each biome within a realm
 
 // We use the EcoRegions FeatureCollection
 var ecoregions = ee.FeatureCollection('RESOLVE/ECOREGIONS/2017');
-// We use the WorldClim dataset
+
+// The dataset contains multiple polygons for each ecoregion
+// The layer contains polygons for -> 846 Ecoregions
+// Ecoregions are grouped into -> 14 Biomes
+// Biomes are groouped into -> 8 Realms
+print(ecoregions.aggregate_array('REALM').distinct());
+
+// Let's filter to ecoregions in a realm
+var realm = 'Australasia';
+var filtered = ecoregions.filter(ee.Filter.eq('REALM', realm));
+
+// We use the WorldClim V1 dataset that contains
+// historical climate data from 1960-1990
 var worldclim = ee.Image('WORLDCLIM/V1/BIO');
 
-// Select temperature band and apply scaling factor
+// Select 'annual mean temperature' band
+// and apply scaling factor
 var temperature = worldclim.select('bio01').multiply(0.1);
 
-// Visualize Temperature
-var palette = ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']
-Map.addLayer(temperature, {min:10, max:25, palette: palette}, 'Annual Mean Temparature')
+// Visualize Temperature and Ecoregions
+var palette = ['#4575b4', '#91bfdb', '#e0f3f8', 
+  '#ffffbf', '#fee090', '#fc8d59', '#d73027']
+Map.addLayer(temperature, {min:10, max:25, palette: palette},
+  'Annual Mean Temparature')
+Map.addLayer(filtered.filter(ee.Filter.eq('REALM', realm)), {color: 'blue'}, 'Ecoregions');
 
-// The ecoregions table contains multiple polygons for biome
-// which represent an ecoregion.
-var biome = 2; // BIOME_NUM
-var filtered = ecoregions.filter(ee.Filter.eq('BIOME_NUM', biome));
-
-Map.addLayer(filtered, {color: 'blue'}, 'Selected Biome');
+// Calculate Average Annual Mean Temperature per Ecoregion
 
 // Get the native resolution of the image
 var scale = worldclim.projection().nominalScale()
 
-// Calculate Average Annual Mean Temperature per Ecoregion
 var zonalStats = temperature.reduceRegions({
   collection: filtered,
-  reducer: ee.Reducer.mean().setOutputs(['temp']),
+  reducer: ee.Reducer.mean().setOutputs(['meantemp']),
   scale: scale})
 
-print(zonalStats.first())
+// Output of reduceRegions() is a FeatureCollection
+print('Ecoregions with Mean Temp', zonalStats.first());
 
-Map.addLayer(zonalStats, {color: 'green'}, 'Selected Biome with Stats');
+// We have 1 polygon per ecoregion with its mean temperature
+// Group them by biome and compute mean temperature per biome
+var zonalGroupStats = zonalStats.reduceColumns({
+  reducer: ee.Reducer.mean().setOutputs(['meantemp'])
+    .group({groupField: 1, groupName: 'biome'}),
+  selectors: ['meantemp', 'BIOME_NAME']})
+
+print('Biomes with Mean Temp', zonalGroupStats);
+
+// Process the results
+var groups = ee.List(zonalGroupStats.get('groups'));
+
+var results = groups.map(function(item) {
+  // Extract the mean
+  var meanTemp = ee.Dictionary(item).get('meantemp');
+  // The group name is what we specified in the grouped reducer
+  var biomeName = ee.Dictionary(item).get('biome');
+  return ee.Feature(null, {
+    'BIOME_NAME': biomeName,
+    'meantemp': meanTemp});
+});
+
+var zonalGroupStatsFc = ee.FeatureCollection(results);
+print('Biomes with Mean Temp (Processed)', zonalGroupStatsFc);
+
+// Export the results
+Export.table.toDrive({
+  collection: zonalStats,
+  description: 'Mean_Temp_By_Ecoregion',
+  folder: 'earthengine',
+  fileNamePrefix: 'mean_temp_by_ecoregion',
+  fileFormat: 'CSV',
+  selectors: ['BIOME_NAME', 'ECO_NAME', 'meantemp']
+})
+
+Export.table.toDrive({
+  collection: zonalGroupStatsFc,
+  description: 'Mean_Temp_By_Biome',
+  folder: 'earthengine',
+  fileNamePrefix: 'mean_temp_by_biome',
+  fileFormat: 'CSV',
+  selectors: ['BIOME_NAME', 'meantemp']
+})

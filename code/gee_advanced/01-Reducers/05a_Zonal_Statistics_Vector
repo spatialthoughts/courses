@@ -1,20 +1,34 @@
-// We want to compute average temperature for each biome
+// Vector Zonal Statistics
+
+// We want to comptue the mean annual temperature
+// for each ecoregion and each biome within a realm
 
 // We use the EcoRegions FeatureCollection
 var ecoregions = ee.FeatureCollection('RESOLVE/ECOREGIONS/2017');
-// We use the WorldClim dataset
+
+// The dataset contains multiple polygons for each ecoregion
+// The layer contains polygons for -> 846 Ecoregions
+// Ecoregions are grouped into -> 14 Biomes
+// Biomes are groouped into -> 8 Realms
+print(ecoregions.aggregate_array('REALM').distinct());
+
+// Let's filter to ecoregions in a realm
+var realm = 'Australasia';
+var filtered = ecoregions.filter(ee.Filter.eq('REALM', realm));
+
+// We use the WorldClim V1 dataset that contains
+// historical climate data from 1960-1990
 var worldclim = ee.Image('WORLDCLIM/V1/BIO');
 
-// Select temperature band and apply scaling factor
+// Select 'annual mean temperature' band
+// and apply scaling factor
 var temperature = worldclim.select('bio01').multiply(0.1);
 
-// Visualize Temperature
-var palette = ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']
-Map.addLayer(temperature, {min:10, max:25, palette: palette}, 'Annual Mean Temparature')
+// Visualize Temperature and Ecoregions
+var palette = ['#4575b4', '#91bfdb', '#e0f3f8', 
+  '#ffffbf', '#fee090', '#fc8d59', '#d73027']
+Map.addLayer(temperature, {min:10, max:25, palette: palette},
+  'Annual Mean Temparature')
+Map.addLayer(filtered.filter(ee.Filter.eq('REALM', realm)), {color: 'blue'}, 'Ecoregions');
 
-// The ecoregions table contains multiple polygons for biome
-// which represent an ecoregion.
-var biome = 2; // BIOME_NUM
-var filtered = ecoregions.filter(ee.Filter.eq('BIOME_NUM', biome));
-
-Map.addLayer(filtered, {color: 'blue'}, 'Selected Biome');
+// Calculate Average Annual Mean Temperature per Ecoregion
