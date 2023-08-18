@@ -1,0 +1,75 @@
+var geometry = ee.Geometry.Polygon([[
+    [77.4783, 13.0848],
+    [77.4783, 12.8198],
+    [77.7502, 12.8198],
+    [77.7502, 13.0848]]
+]);
+          
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+Map.addLayer(geometry, {color: 'red'}, 'Selected Region');
+Map.centerObject(geometry);
+
+var filtered = s2
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start']);
+}
+
+print('Total images', filtered.size());
+
+// Add a function that adds a property to each image
+// with the cloud cover in the chosen geometry
+var calculateCloudCover = function(image) {
+  // Apply the cloud mask function
+  var maskedImage = ee.Image(maskS2clouds(image));
+  // The image now has some pixels that are masked
+  // We count the number of unmasked pixels
+  // Select any band, since all bands have the same mask
+  // Working with a single band maes the analysis simpler
+  var bandName = 'B1';
+  var band = maskedImage.select(bandName);
+  var withMaskStats = band.reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: geometry,
+    scale: 10
+  });
+  var cloudFreePixels = withMaskStats.getNumber(bandName);
+  
+  // Remove the mask and count all pixels
+  var withoutMaskStats = band.unmask(0).reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: geometry,
+    scale: 10
+  });
+  
+  var totalPixels = withoutMaskStats.getNumber('B1');
+  
+  var cloudCoverPercentage = ee.Number.expression(
+    '100*(totalPixels-cloudFreePixels)/totalPixels', {
+      totalPixels: totalPixels,
+      cloudFreePixels: cloudFreePixels
+    });
+  return image.set({
+    'CLOUDY_PIXEL_PERCENTAGE_REGION': cloudCoverPercentage
+  });
+};
+
+var filteredWithCount = filtered.map(calculateCloudCover);
+
+print(filteredWithCount.first());
+
+// Filter using the newly created property
+var cloudFreeImages = filteredWithCount
+  .filter(ee.Filter.eq('CLOUDY_PIXEL_PERCENTAGE_REGION', 0));
+print('Cloud Free Images in Region', cloudFreeImages.size());
