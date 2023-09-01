@@ -1,7 +1,7 @@
 var geometry = ee.Geometry.Point([77.5979, 13.00896]);
 Map.centerObject(geometry, 10)
 
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 var rgbVis = {
   min: 0.0,
   max: 0.3,
@@ -24,8 +24,8 @@ function maskS2clouds(image) {
   var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
              qa.bitwiseAnd(cirrusBitMask).eq(0))
   return image.updateMask(mask).divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
+      .select('B.*')
+      .copyProperties(image, ['system:time_start'])
 }
 
 
@@ -60,6 +60,7 @@ var chartPanel = ui.Panel();
 var selectionPanel = ui.Panel({
   layout: ui.Panel.Layout.flow('horizontal'),
 });
+var downloadPanel = ui.Panel();
 
 resultsPanel.style().set({
   width: '400px',
@@ -69,15 +70,17 @@ resultsPanel.style().set({
 var resetPanel = ui.Panel();
 
 
-resultsPanel.add(selectionPanel)
-resultsPanel.add(chartPanel)
-resultsPanel.add(resetPanel)
+resultsPanel.add(selectionPanel);
+resultsPanel.add(chartPanel);
+resultsPanel.add(downloadPanel);
+resultsPanel.add(resetPanel);
 
 // Function to reset the app to initial state
 var resetEverything = function() {
-  chartPanel.clear()
-  selectionPanel.clear()
-  resetPanel.clear()
+  chartPanel.clear();
+  selectionPanel.clear();
+  downloadPanel.clear();
+  resetPanel.clear();
 
   Map.clear()
 
@@ -104,7 +107,7 @@ var displayChart = function(point) {
   
   var filtered = s2
     .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50))
+    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
     .map(maskS2clouds)
     .map(addNDVI)
     .filter(ee.Filter.bounds(geometry))
@@ -116,7 +119,10 @@ var displayChart = function(point) {
     scale: 20}).setOptions({
       title: 'NDVI Time Series',
       vAxis: {title: 'NDVI'},
-      hAxis: {title: 'Date', gridlines: {count: 12}}
+      hAxis: {title: 'Date', gridlines: {count: 12}},
+      interpolateNulls: true,
+      pointSize: 2,
+      lineWidth: 1
     })
       
   chartPanel.clear()
@@ -124,27 +130,68 @@ var displayChart = function(point) {
   selectionPanel.add(ui.Label('Choose an image to display:'))
   chartPanel.add(chart)
   
+  // S2 collection has overlapping granules for same dates
+  // Add a 'date' property so we can merge data for the same date
+  var filtered = filtered.map(function(image) {
+    var dateString = ee.Date(image.date()).format('YYYY-MM-dd')
+    return image.set('date', dateString);
+  });
   
   var addNdviLayer = function(dateString) {
     var date = ee.Date.parse('YYYY-MM-dd', dateString)
-    var image = ee.Image(filtered.filter(ee.Filter.date(date, date.advance(1, 'day'))).mosaic())
+    var image = filtered
+      .filter(ee.Filter.date(date, date.advance(1, 'day')))
+      .mosaic();
     Map.addLayer(image.select('ndvi'), ndviVis, 'NDVI Image -' + dateString)
   }
 
-
-  filtered.aggregate_array('system:time_start').evaluate(function(ids) {
-    var dates = ee.List(ids).distinct().map(function(timestamp) {
-      return ee.Date(timestamp).format('YYYY-MM-dd')
-    })
-    dates.evaluate(function(dateList){
+  var dates = filtered.aggregate_array('date').distinct();
+  
+  // Add dates to a dropdown selector
+  dates.evaluate(function(dateList){
       selectionPanel.add(ui.Select({
       items: dateList,
       onChange: addNdviLayer,
       placeholder: 'Select a date'
     }))
     })
+    
+  // Extract the NDVI values as a FeatureCollection
+  var ndviFc = ee.FeatureCollection(dates.map(function(dateString) {
+    var date = ee.Date.parse('YYYY-MM-dd', dateString)
+    var image = filtered
+      .filter(ee.Filter.date(date, date.advance(1, 'day')))
+      .mosaic();
+    
+    var ndviImage = image.select('ndvi');
+    var stats = ndviImage.reduceRegion({
+      reducer: ee.Reducer.mean().setOutputs(['ndvi']),
+      geometry: geometry,
+      scale: 20
+    });
+    // Add date as wel as lat/lon columns
+    var properties = stats.combine({
+      'date': dateString,
+      'longitude': point['lon'],
+      'latitude': point['lat']
+    })
+    return ee.Feature(null, properties);
+  }));
+  
+  // Prepare the collection to download
+  var downloadReady = function(url) {
+    var label = ui.Label({
+      value: 'Download CSV',
+      targetUrl: url})
+    downloadPanel.add(label);
+  }
+  ndviFc.getDownloadURL({
+    format: 'CSV',
+    selectors: ['date', 'latitude', 'longitude', 'ndvi'],
+    filename: 'ndvi_time_series', 
+    callback: downloadReady})
 
-});
+//});
 
 }
 // Call the function to build the initial UI state.
