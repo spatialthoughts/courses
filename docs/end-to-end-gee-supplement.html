@@ -2849,7 +2849,7 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb19-1"><a h
 <span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a></span>
 <span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="co">// We create a NDVI time-series and export each</span></span>
 <span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="co">// image as a separate GeoTiff file</span></span>
-<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_HARMONIZED/&quot;</span>)<span class="op">;</span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_HARMONIZED&quot;</span>)<span class="op">;</span></span>
 <span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>([[</span>
 <span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>  [<span class="fl">82.60642647743225</span><span class="op">,</span> <span class="fl">27.16350437805251</span>]<span class="op">,</span></span>
 <span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>  [<span class="fl">82.60984897613525</span><span class="op">,</span> <span class="fl">27.1618529901377</span>]<span class="op">,</span></span>
@@ -2888,43 +2888,42 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb19-1"><a h
 <span id="cb19-47"><a href="#cb19-47" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
 <span id="cb19-48"><a href="#cb19-48" tabindex="-1"></a></span>
 <span id="cb19-49"><a href="#cb19-49" tabindex="-1"></a><span class="kw">var</span> exportCol <span class="op">=</span> withNdvi<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
-<span id="cb19-50"><a href="#cb19-50" tabindex="-1"></a></span>
-<span id="cb19-51"><a href="#cb19-51" tabindex="-1"></a><span class="co">// The function below exports the collection</span></span>
-<span id="cb19-52"><a href="#cb19-52" tabindex="-1"></a><span class="co">// The key is to use &#39;evaluate()&#39; to asynchronously get a list</span></span>
-<span id="cb19-53"><a href="#cb19-53" tabindex="-1"></a><span class="co">// if image ids and start an export task for each image</span></span>
-<span id="cb19-54"><a href="#cb19-54" tabindex="-1"></a></span>
-<span id="cb19-55"><a href="#cb19-55" tabindex="-1"></a><span class="kw">var</span> doExport <span class="op">=</span> <span class="kw">function</span>() {</span>
-<span id="cb19-56"><a href="#cb19-56" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">&#39;Working&#39;</span>)</span>
-<span id="cb19-57"><a href="#cb19-57" tabindex="-1"></a>  <span class="kw">var</span> ids <span class="op">=</span> exportCol<span class="op">.</span><span class="fu">aggregate_array</span>(<span class="st">&#39;system:index&#39;</span>)<span class="op">;</span></span>
-<span id="cb19-58"><a href="#cb19-58" tabindex="-1"></a>  <span class="co">// evaluate() will not block the UI and once the result is available</span></span>
-<span id="cb19-59"><a href="#cb19-59" tabindex="-1"></a>  <span class="co">// will be passed-on to the callback function where we will call</span></span>
-<span id="cb19-60"><a href="#cb19-60" tabindex="-1"></a>  <span class="co">// Export.image.toDrive()</span></span>
-<span id="cb19-61"><a href="#cb19-61" tabindex="-1"></a>  ids<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(imageIds) {</span>
-<span id="cb19-62"><a href="#cb19-62" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Total number of images&#39;</span><span class="op">,</span> imageIds<span class="op">.</span><span class="at">length</span>)</span>
-<span id="cb19-63"><a href="#cb19-63" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Exporting now... (see Tasks tab)&#39;</span>)</span>
-<span id="cb19-64"><a href="#cb19-64" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.&#39;</span>)</span>
-<span id="cb19-65"><a href="#cb19-65" tabindex="-1"></a>    <span class="cf">for</span>(<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> imageIds<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
-<span id="cb19-66"><a href="#cb19-66" tabindex="-1"></a>      </span>
-<span id="cb19-67"><a href="#cb19-67" tabindex="-1"></a>      <span class="co">// Filter using the image id</span></span>
-<span id="cb19-68"><a href="#cb19-68" tabindex="-1"></a>      <span class="kw">var</span> image <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(exportCol<span class="op">.</span><span class="fu">toList</span>(<span class="dv">1</span><span class="op">,</span> i)<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>))<span class="op">;</span></span>
-<span id="cb19-69"><a href="#cb19-69" tabindex="-1"></a></span>
-<span id="cb19-70"><a href="#cb19-70" tabindex="-1"></a>      Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
-<span id="cb19-71"><a href="#cb19-71" tabindex="-1"></a>        <span class="dt">image</span><span class="op">:</span> image<span class="op">,</span></span>
-<span id="cb19-72"><a href="#cb19-72" tabindex="-1"></a>        <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb19-73"><a href="#cb19-73" tabindex="-1"></a>        <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
-<span id="cb19-74"><a href="#cb19-74" tabindex="-1"></a>        <span class="dt">fileNamePrefix</span><span class="op">:</span> imageIds[i]<span class="op">,</span></span>
-<span id="cb19-75"><a href="#cb19-75" tabindex="-1"></a>        <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
-<span id="cb19-76"><a href="#cb19-76" tabindex="-1"></a>        <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Export_&#39;</span> <span class="op">+</span> i <span class="op">+</span> <span class="st">&#39;_&#39;</span> <span class="op">+</span> imageIds[i]<span class="op">,</span></span>
-<span id="cb19-77"><a href="#cb19-77" tabindex="-1"></a>      })</span>
-<span id="cb19-78"><a href="#cb19-78" tabindex="-1"></a>      }</span>
-<span id="cb19-79"><a href="#cb19-79" tabindex="-1"></a>  })</span>
-<span id="cb19-80"><a href="#cb19-80" tabindex="-1"></a>  </span>
-<span id="cb19-81"><a href="#cb19-81" tabindex="-1"></a>}</span>
-<span id="cb19-82"><a href="#cb19-82" tabindex="-1"></a></span>
-<span id="cb19-83"><a href="#cb19-83" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Click button below to start export&#39;</span>)</span>
-<span id="cb19-84"><a href="#cb19-84" tabindex="-1"></a><span class="kw">var</span> button <span class="op">=</span> ui<span class="op">.</span><span class="fu">Button</span>({<span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Export&#39;</span><span class="op">,</span> <span class="dt">onClick</span><span class="op">:</span> doExport})</span>
-<span id="cb19-85"><a href="#cb19-85" tabindex="-1"></a><span class="fu">print</span>(button)</span>
-<span id="cb19-86"><a href="#cb19-86" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry)<span class="op">;</span></span></code></pre></div>
+<span id="cb19-50"><a href="#cb19-50" tabindex="-1"></a><span class="co">// The function below exports the collection</span></span>
+<span id="cb19-51"><a href="#cb19-51" tabindex="-1"></a><span class="co">// The key is to use &#39;evaluate()&#39; to asynchronously get a list</span></span>
+<span id="cb19-52"><a href="#cb19-52" tabindex="-1"></a><span class="co">// if image ids and start an export task for each image</span></span>
+<span id="cb19-53"><a href="#cb19-53" tabindex="-1"></a></span>
+<span id="cb19-54"><a href="#cb19-54" tabindex="-1"></a><span class="kw">var</span> doExport <span class="op">=</span> <span class="kw">function</span>() {</span>
+<span id="cb19-55"><a href="#cb19-55" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">&#39;Working&#39;</span>)</span>
+<span id="cb19-56"><a href="#cb19-56" tabindex="-1"></a>  <span class="kw">var</span> ids <span class="op">=</span> exportCol<span class="op">.</span><span class="fu">aggregate_array</span>(<span class="st">&#39;system:index&#39;</span>)<span class="op">;</span></span>
+<span id="cb19-57"><a href="#cb19-57" tabindex="-1"></a>  <span class="co">// evaluate() will not block the UI and once the result is available</span></span>
+<span id="cb19-58"><a href="#cb19-58" tabindex="-1"></a>  <span class="co">// will be passed-on to the callback function where we will call</span></span>
+<span id="cb19-59"><a href="#cb19-59" tabindex="-1"></a>  <span class="co">// Export.image.toDrive()</span></span>
+<span id="cb19-60"><a href="#cb19-60" tabindex="-1"></a>  ids<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(imageIds) {</span>
+<span id="cb19-61"><a href="#cb19-61" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Total number of images&#39;</span><span class="op">,</span> imageIds<span class="op">.</span><span class="at">length</span>)</span>
+<span id="cb19-62"><a href="#cb19-62" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Exporting now... (see Tasks tab)&#39;</span>)</span>
+<span id="cb19-63"><a href="#cb19-63" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&#39;Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.&#39;</span>)</span>
+<span id="cb19-64"><a href="#cb19-64" tabindex="-1"></a>    <span class="cf">for</span>(<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> imageIds<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb19-65"><a href="#cb19-65" tabindex="-1"></a>      </span>
+<span id="cb19-66"><a href="#cb19-66" tabindex="-1"></a>      <span class="co">// Filter using the image id</span></span>
+<span id="cb19-67"><a href="#cb19-67" tabindex="-1"></a>      <span class="kw">var</span> image <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(exportCol<span class="op">.</span><span class="fu">toList</span>(<span class="dv">1</span><span class="op">,</span> i)<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>))<span class="op">;</span></span>
+<span id="cb19-68"><a href="#cb19-68" tabindex="-1"></a></span>
+<span id="cb19-69"><a href="#cb19-69" tabindex="-1"></a>      Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb19-70"><a href="#cb19-70" tabindex="-1"></a>        <span class="dt">image</span><span class="op">:</span> image<span class="op">,</span></span>
+<span id="cb19-71"><a href="#cb19-71" tabindex="-1"></a>        <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb19-72"><a href="#cb19-72" tabindex="-1"></a>        <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb19-73"><a href="#cb19-73" tabindex="-1"></a>        <span class="dt">fileNamePrefix</span><span class="op">:</span> imageIds[i]<span class="op">,</span></span>
+<span id="cb19-74"><a href="#cb19-74" tabindex="-1"></a>        <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb19-75"><a href="#cb19-75" tabindex="-1"></a>        <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Export_&#39;</span> <span class="op">+</span> i <span class="op">+</span> <span class="st">&#39;_&#39;</span> <span class="op">+</span> imageIds[i]<span class="op">,</span></span>
+<span id="cb19-76"><a href="#cb19-76" tabindex="-1"></a>      })</span>
+<span id="cb19-77"><a href="#cb19-77" tabindex="-1"></a>      }</span>
+<span id="cb19-78"><a href="#cb19-78" tabindex="-1"></a>  })</span>
+<span id="cb19-79"><a href="#cb19-79" tabindex="-1"></a>  </span>
+<span id="cb19-80"><a href="#cb19-80" tabindex="-1"></a>}</span>
+<span id="cb19-81"><a href="#cb19-81" tabindex="-1"></a></span>
+<span id="cb19-82"><a href="#cb19-82" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Click button below to start export&#39;</span>)</span>
+<span id="cb19-83"><a href="#cb19-83" tabindex="-1"></a><span class="kw">var</span> button <span class="op">=</span> ui<span class="op">.</span><span class="fu">Button</span>({<span class="dt">label</span><span class="op">:</span> <span class="st">&#39;Export&#39;</span><span class="op">,</span> <span class="dt">onClick</span><span class="op">:</span> doExport})</span>
+<span id="cb19-84"><a href="#cb19-84" tabindex="-1"></a><span class="fu">print</span>(button)</span>
+<span id="cb19-85"><a href="#cb19-85" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry)<span class="op">;</span></span></code></pre></div>
 </div>
 <div id="get-pixelwise-dates-for-composites" class="section level2">
 <h2>Get Pixelwise Dates for Composites</h2>
