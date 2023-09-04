@@ -1954,59 +1954,63 @@ NDVI Time-series showing Dual-Cropping Cycle
 href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3A02-Earth-Engine-Intermediate%2F06b_Time_Series_Charts_(complete)"
 target="_blank">Open in Code Editor ↗</a></p>
 <div class="sourceCode" id="cb29"><pre
-class="sourceCode js"><code class="sourceCode javascript"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>([[</span>
-<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  [<span class="fl">82.60642647743225</span><span class="op">,</span> <span class="fl">27.16350437805251</span>]<span class="op">,</span></span>
-<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>  [<span class="fl">82.60984897613525</span><span class="op">,</span> <span class="fl">27.1618529901377</span>]<span class="op">,</span></span>
-<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  [<span class="fl">82.61088967323303</span><span class="op">,</span> <span class="fl">27.163695288375266</span>]<span class="op">,</span></span>
-<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  [<span class="fl">82.60757446289062</span><span class="op">,</span> <span class="fl">27.16517483230927</span>]</span>
-<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>]])<span class="op">;</span></span>
-<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(geometry<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;red&#39;</span>}<span class="op">,</span> <span class="st">&#39;Farm&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry)<span class="op">;</span></span>
-<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
-<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a></span>
-<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2017-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2018-01-01&#39;</span>))</span>
-<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))<span class="op">;</span></span>
-<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a></span>
-<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb29-23"><a href="#cb29-23" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))<span class="op">;</span></span>
-<span id="cb29-24"><a href="#cb29-24" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
-<span id="cb29-25"><a href="#cb29-25" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb29-26"><a href="#cb29-26" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&#39;system:time_start&#39;</span>])<span class="op">;</span></span>
-<span id="cb29-27"><a href="#cb29-27" tabindex="-1"></a>}</span>
-<span id="cb29-28"><a href="#cb29-28" tabindex="-1"></a></span>
-<span id="cb29-29"><a href="#cb29-29" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(maskS2clouds)<span class="op">;</span></span>
-<span id="cb29-30"><a href="#cb29-30" tabindex="-1"></a><span class="co">// Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb29-31"><a href="#cb29-31" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addNDVI</span>(image) {</span>
-<span id="cb29-32"><a href="#cb29-32" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
-<span id="cb29-33"><a href="#cb29-33" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">;</span></span>
-<span id="cb29-34"><a href="#cb29-34" tabindex="-1"></a>}</span>
-<span id="cb29-35"><a href="#cb29-35" tabindex="-1"></a></span>
-<span id="cb29-36"><a href="#cb29-36" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
-<span id="cb29-37"><a href="#cb29-37" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
-<span id="cb29-38"><a href="#cb29-38" tabindex="-1"></a></span>
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="co">/**** Start of imports. If edited, may not auto-convert in the playground. ****/</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> <span class="co">/* color: #999900 */</span>ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>        [[[<span class="fl">39.51413410130889</span><span class="op">,</span> <span class="op">-</span><span class="fl">4.377779992694821</span>]<span class="op">,</span></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>          [<span class="fl">39.51911228124053</span><span class="op">,</span> <span class="op">-</span><span class="fl">4.379876706407149</span>]<span class="op">,</span></span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>          [<span class="fl">39.52007787648589</span><span class="op">,</span> <span class="op">-</span><span class="fl">4.377801387762363</span>]<span class="op">,</span></span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>          [<span class="fl">39.51507823888213</span><span class="op">,</span> <span class="op">-</span><span class="fl">4.375640482851704</span>]]])<span class="op">;</span></span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="co">/***** End of imports. If edited, may not auto-convert in the playground. *****/</span></span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;COPERNICUS/S2_SR_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a></span>
+<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(geometry<span class="op">,</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;red&#39;</span>}<span class="op">,</span> <span class="st">&#39;Mangrove&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry)<span class="op">;</span></span>
+<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a></span>
+<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))</span>
+<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">35</span>))</span>
+<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))<span class="op">;</span></span>
+<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a></span>
+<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
+<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskCloudAndShadowsSR</span>(image) {</span>
+<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a>  <span class="kw">var</span> cloudProb <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;MSK_CLDPRB&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a>  <span class="kw">var</span> snowProb <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;MSK_SNWPRB&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-23"><a href="#cb29-23" tabindex="-1"></a>  <span class="kw">var</span> cloud <span class="op">=</span> cloudProb<span class="op">.</span><span class="fu">lt</span>(<span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb29-24"><a href="#cb29-24" tabindex="-1"></a>  <span class="kw">var</span> snow <span class="op">=</span> snowProb<span class="op">.</span><span class="fu">lt</span>(<span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb29-25"><a href="#cb29-25" tabindex="-1"></a>  <span class="kw">var</span> scl <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;SCL&#39;</span>)<span class="op">;</span> </span>
+<span id="cb29-26"><a href="#cb29-26" tabindex="-1"></a>  <span class="kw">var</span> shadow <span class="op">=</span> scl<span class="op">.</span><span class="fu">eq</span>(<span class="dv">3</span>)<span class="op">;</span> <span class="co">// 3 = cloud shadow</span></span>
+<span id="cb29-27"><a href="#cb29-27" tabindex="-1"></a>  <span class="kw">var</span> cirrus <span class="op">=</span> scl<span class="op">.</span><span class="fu">eq</span>(<span class="dv">10</span>)<span class="op">;</span> <span class="co">// 10 = cirrus</span></span>
+<span id="cb29-28"><a href="#cb29-28" tabindex="-1"></a>  <span class="co">// Cloud probability less than 5% or cloud shadow classification</span></span>
+<span id="cb29-29"><a href="#cb29-29" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> (cloud<span class="op">.</span><span class="fu">and</span>(snow))<span class="op">.</span><span class="fu">and</span>(cirrus<span class="op">.</span><span class="fu">neq</span>(<span class="dv">1</span>))<span class="op">.</span><span class="fu">and</span>(shadow<span class="op">.</span><span class="fu">neq</span>(<span class="dv">1</span>))<span class="op">;</span></span>
+<span id="cb29-30"><a href="#cb29-30" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb29-31"><a href="#cb29-31" tabindex="-1"></a>}</span>
+<span id="cb29-32"><a href="#cb29-32" tabindex="-1"></a></span>
+<span id="cb29-33"><a href="#cb29-33" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(maskCloudAndShadowsSR)<span class="op">;</span></span>
+<span id="cb29-34"><a href="#cb29-34" tabindex="-1"></a><span class="co">// Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb29-35"><a href="#cb29-35" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addNDVI</span>(image) {</span>
+<span id="cb29-36"><a href="#cb29-36" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
+<span id="cb29-37"><a href="#cb29-37" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">;</span></span>
+<span id="cb29-38"><a href="#cb29-38" tabindex="-1"></a>}</span>
 <span id="cb29-39"><a href="#cb29-39" tabindex="-1"></a></span>
-<span id="cb29-40"><a href="#cb29-40" tabindex="-1"></a><span class="co">// Display a time-series chart</span></span>
-<span id="cb29-41"><a href="#cb29-41" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
-<span id="cb29-42"><a href="#cb29-42" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> withNdvi<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">,</span></span>
-<span id="cb29-43"><a href="#cb29-43" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb29-44"><a href="#cb29-44" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">,</span></span>
-<span id="cb29-45"><a href="#cb29-45" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span></span>
-<span id="cb29-46"><a href="#cb29-46" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb29-47"><a href="#cb29-47" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb29-48"><a href="#cb29-48" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI Time Series&#39;</span><span class="op">,</span></span>
-<span id="cb29-49"><a href="#cb29-49" tabindex="-1"></a>      <span class="dt">interpolateNulls</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
-<span id="cb29-50"><a href="#cb29-50" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI&#39;</span>}<span class="op">,</span></span>
-<span id="cb29-51"><a href="#cb29-51" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MMM&#39;</span>}</span>
-<span id="cb29-52"><a href="#cb29-52" tabindex="-1"></a>    })</span>
-<span id="cb29-53"><a href="#cb29-53" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
+<span id="cb29-40"><a href="#cb29-40" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
+<span id="cb29-41"><a href="#cb29-41" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
+<span id="cb29-42"><a href="#cb29-42" tabindex="-1"></a></span>
+<span id="cb29-43"><a href="#cb29-43" tabindex="-1"></a></span>
+<span id="cb29-44"><a href="#cb29-44" tabindex="-1"></a><span class="co">// Display a time-series chart</span></span>
+<span id="cb29-45"><a href="#cb29-45" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
+<span id="cb29-46"><a href="#cb29-46" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> withNdvi<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">,</span></span>
+<span id="cb29-47"><a href="#cb29-47" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb29-48"><a href="#cb29-48" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">,</span></span>
+<span id="cb29-49"><a href="#cb29-49" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span></span>
+<span id="cb29-50"><a href="#cb29-50" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb29-51"><a href="#cb29-51" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb29-52"><a href="#cb29-52" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI Time Series&#39;</span><span class="op">,</span></span>
+<span id="cb29-53"><a href="#cb29-53" tabindex="-1"></a>      <span class="dt">interpolateNulls</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb29-54"><a href="#cb29-54" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI&#39;</span><span class="op">,</span> <span class="dt">viewWindow</span><span class="op">:</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">1</span>}}<span class="op">,</span></span>
+<span id="cb29-55"><a href="#cb29-55" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MMM&#39;</span>}</span>
+<span id="cb29-56"><a href="#cb29-56" tabindex="-1"></a>    })</span>
+<span id="cb29-57"><a href="#cb29-57" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-13" class="section level3">
 <h3>Exercise</h3>
 <p><a
