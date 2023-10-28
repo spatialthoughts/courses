@@ -1,0 +1,41 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
+    admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
+
+var geometry = filteredAdmin2.geometry();
+
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+
+print('Number of images', filteredS2.size())
+
+// Write a function that computes NDVI for an image and adds it as a band
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+}
+
+// Map the function over the collection
+var withNdvi = filteredS2.map(addNDVI);
+
+// Apply a Median reducer
+var medianComposite = withNdvi
+  .reduce(ee.Reducer.median()).regexpRename('_median', '')
+  .clip(geometry);
+
+var ndviComposite = medianComposite.select('ndvi');
+
+var palette = ['#a6611a','#dfc27d','#f5f5f5','#80cdc1','#018571'];
+var ndviVis = {min:0, max:0.5, palette: palette };
+Map.addLayer(geometry, {}, 'Selected Region');
+Map.addLayer(ndviComposite.clip(geometry), ndviVis, 'ndvi');
+
+// Exercise
+// Change the filters to select the Admin2 region of your choice
+// Compute a Maximum NDVI Composite and add it to the Map

@@ -1,0 +1,45 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
+    geometry = /* color: #d63000 */ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Sort the collection and pick the least cloudy image
+var filteredS2Sorted = filteredS2.sort('CLOUDY_PIXEL_PERCENTAGE');
+var image = filteredS2Sorted.first()
+
+// Calculate  Normalized Difference Vegetation Index (NDVI)
+// 'NIR' (B8) and 'RED' (B4)
+var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
+
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// Calculate Soil-adjusted Vegetation Index (SAVI)
+// 1.5 * ((NIR - RED) / (NIR + RED + 0.5))
+
+// For more complex indices, you can use the expression() function
+
+// Note: 
+// For the SAVI formula, the pixel values need to converted to reflectances
+// Multiplyng the pixel values by 'scale' gives us the reflectance value
+// The scale value is 0.0001 for Sentinel-2 dataset
+
+var savi = image.expression(
+    '1.5 * ((NIR - RED) / (NIR + RED + 0.5))', {
+      'NIR': image.select('B8').multiply(0.0001),
+      'RED': image.select('B4').multiply(0.0001),
+}).rename('savi');
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+var ndviVis = {min:0, max:1, palette: ['white', 'green']};
+var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']};
+
+Map.centerObject(geometry, 10)
+Map.addLayer(image, rgbVis, 'Image');
+Map.addLayer(ndvi, ndviVis, 'NDVI');
+Map.addLayer(mndwi, ndwiVis, 'MNDWI');
+Map.addLayer(savi, ndviVis, 'SAVI');

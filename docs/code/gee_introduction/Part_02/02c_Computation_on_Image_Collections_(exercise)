@@ -1,0 +1,43 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
+    admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
+
+var geometry = filteredAdmin2.geometry();
+
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+
+// This function calculates both NDVI and NDWI indices
+// and returns an image with 2 new bands added to the original image.
+function addIndices(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  var ndwi = image.normalizedDifference(['B3', 'B8']).rename('ndwi');
+  return image.addBands(ndvi).addBands(ndwi);
+}
+
+// Map the function over the collection
+var withIndices = filteredS2.map(addIndices);
+
+// Composite
+var composite = withIndices.median();
+print(composite);
+
+var ndviComposite = composite.select('ndvi')
+var palette = ['#a6611a','#dfc27d','#f5f5f5','#80cdc1','#018571'];
+var ndviVis = {min:0, max:0.5, palette: palette };
+Map.centerObject(geometry, 10);
+Map.addLayer(geometry, {}, 'Selected Region');
+Map.addLayer(ndviComposite.clip(geometry), ndviVis, 'ndvi');
+
+// Exercise
+// Change the filters to select the Admin2 region of your choice
+// Extract the 'ndwi' band and display a NDWI map
+// use the palette ['white', 'blue']
+// Hint: Use .select() function to select a band
+

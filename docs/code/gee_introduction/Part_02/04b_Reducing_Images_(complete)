@@ -1,0 +1,33 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
+    geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[82.60642647743225, 27.16350437805251],
+          [82.60984897613525, 27.1618529901377],
+          [82.61088967323303, 27.163695288375266],
+          [82.60757446289062, 27.16517483230927]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Sort the collection and pick the least cloudy image
+var filteredS2Sorted = filteredS2.sort('CLOUDY_PIXEL_PERCENTAGE');
+var image = filteredS2Sorted.first().select('B.*')
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.centerObject(geometry);
+Map.addLayer(image, rgbVis, 'Image');
+
+// If we want to compute the average value in each band,
+// we can use reduceRegion instead
+var stats = image.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10
+  });
+print('Average values of image bands in geometry', stats);
+
+// Result of reduceRegion is a dictionary. 
+// We can extract the values using .get() function
+print('Average value of B4 in geometry', stats.get('B4'));
