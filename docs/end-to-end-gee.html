@@ -14,8 +14,8 @@
 
 <title>End-to-End Google Earth Engine (Full Course Material)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -51,6 +51,7 @@
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
     </style>
+
 
 
 <style type="text/css">
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -3048,20 +3056,27 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb39-1"><a h
 <div id="calculating-area" class="section level2">
 <h2>05. Calculating Area</h2>
 <p>Now that we have the results of our classification, we will learn how
-to calculate the area for pixels in each class. Calculating area for
-features is done using the <code>area()</code> function and for images
-using the <code>ee.Image.pixelArea()</code> function. The
-<code>ee.Image.pixelArea()</code> function creates an image where each
-pixel’s value is the area of the pixel. We multiply this pixel area
-image with our image and sum up the area using the
-<code>reduceRegion()</code> function.</p>
-<blockquote>
-<p>The <code>ee.Image.pixelArea()</code> function uses a custom
-equal-area projection for area calculation. The result is area in square
-meters regardless of the projection of the input image. <a
+to calculate the area for pixels in each class. The functions used for
+area computations are different for vectors and raster data.</p>
+<ul>
+<li><strong>Area of Polygons</strong>: Calculating area for polygons is
+done using the <code>area()</code> function. It computes area on a
+sphere (ignoring the ellipsoid flattening) and gives you the area in
+square meters. You can optionally supply <code>proj</code> and a
+non-zero <code>maxError</code> parameters to calculate area in a
+specific projected CRS. For example,
+<code>area({proj:'EPSG:32643', maxError: 1})</code> will calculate the
+area of the polygon after reprojecting it to the <em>WGS 84/UTM Zone
+43</em> CRS with a tolerance of 1 meter.</li>
+<li><strong>Area of Image Pixels</strong>: Area of image pixels is
+computed using the <code>ee.Image.pixelArea()</code> function. This
+function computes the area inside the 4 corners of each pixel using the
+WGS84 ellipsoid. The <code>ee.Image.pixelArea()</code> function uses a
+custom equal-area projection for area calculation. The result is area in
+square meters regardless of the projection of the input image. <a
 href="https://groups.google.com/g/google-earth-engine-developers/c/Ccaorx-obVw/m/_ZQdP2wVAgAJ">Learn
-more</a></p>
-</blockquote>
+more</a>.</li>
+</ul>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/area_calculation.png" alt="Calculating Green Cover from Classified Image" width="75%" />
 <p class="caption">
@@ -3124,7 +3139,8 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb40-1"><a h
 <blockquote>
 <p>If you want to compute area covered by each class, you can use a <a
 href="https://developers.google.com/earth-engine/reducers_grouping">Grouped
-Reducer</a>. See the <a href="#calculating-area-by-class">Supplement</a>
+Reducer</a>. See the <a
+href="end-to-end-gee-supplement.html#calculating-area-by-class">Supplement</a>
 to see a code snippet.</p>
 </blockquote>
 <div id="exercise-18" class="section level3">
