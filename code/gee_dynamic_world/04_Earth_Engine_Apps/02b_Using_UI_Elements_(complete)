@@ -1,0 +1,65 @@
+// You can add any widgets from the ui.* module to the map
+var startYears = ['2017', '2018', '2019', '2020', '2021', '2022'];
+var endYears = ['2018', '2019', '2020', '2021', '2022', '2023'];
+// Let's create a ui.Select() dropdown with the above values
+var startYearSelector = ui.Select({
+  items: startYears,
+  value: '2017',
+  placeholder: 'Select start year',
+  })
+Map.add(startYearSelector);
+
+var endYearSelector = ui.Select({
+  items: endYears,
+  value: '2023',
+  placeholder: 'Select start year',
+  })
+Map.add(endYearSelector);
+
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+var bandSelector = ui.Select({
+  items: probabilityBands,
+  value: 'built'
+})
+Map.add(bandSelector);
+
+
+var loadImages = function() {
+  
+  var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2');
+  var kenyaAdmin2 = admin2.filter(ee.Filter.eq('ADM0_NAME', 'Kenya'));
+  var geometry = kenyaAdmin2.geometry();
+  
+  var startYear = startYearSelector.getValue();
+  var endYear = endYearSelector.getValue();
+  var band = bandSelector.getValue();
+  var beforeStart = ee.Date.fromYMD(ee.Number.parse(startYear), 1, 1);
+  var beforeEnd = beforeStart.advance(1, 'year');
+  
+  var afterStart = ee.Date.fromYMD(ee.Number.parse(endYear), 1, 1);
+  var afterEnd = afterStart.advance(1, 'year');
+  
+  var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+    .select(band);
+
+  var beforeDw = dw
+    .filter(ee.Filter.date(beforeStart, beforeEnd))
+    .mean();
+    
+  var afterDw = dw
+    .filter(ee.Filter.date(afterStart, afterEnd))
+    .mean();
+    
+  var probabilityVis = {min:0, max:1};
+  Map.addLayer(beforeDw.clip(geometry), probabilityVis, 'Before Probability');
+  Map.addLayer(afterDw.clip(geometry), probabilityVis, 'After Probability');
+};
+
+var button = ui.Button({
+  label: 'Click to Load Images',
+  onClick: loadImages,
+  });
+Map.add(button);

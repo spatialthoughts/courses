@@ -1,0 +1,55 @@
+// Introduction to Dynamic World
+
+// Filter the Dynamic World NRT collection
+// for the year 2020 over the selected region.
+var startDate = '2020-01-01';
+var endDate = '2021-01-01';
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(ee.Filter.date(startDate, endDate))
+
+// Create a Mode Composite
+var classification = dw.select('label')
+var dwComposite = classification.reduce(ee.Reducer.mode());
+
+var dwVisParams = {
+  min: 0,
+  max: 8,
+  palette: ['#419BDF', '#397D49', '#88B053', '#7A87C6',
+    '#E49635', '#DFC35A', '#C4281B', '#A59B8F', '#B39FE1']
+};
+
+// Clip the composite and add it to the Map
+Map.addLayer(dwComposite, dwVisParams, 'Classified Composite') 
+
+// Create a Top-1 Probability Hillshade Visualization
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+
+// Select probability bands 
+var probabilityCol = dw.select(probabilityBands)
+
+// Create a multi-band image with the average pixel-wise probability 
+// for each band across the time-period
+var meanProbability = probabilityCol.reduce(ee.Reducer.mean())
+
+// Composites have a default projection that is not suitable
+// for hillshade computation.
+// Set a EPSG:3857 projection with 10m scale
+var projection = ee.Projection('EPSG:3857').atScale(10)
+var meanProbability = meanProbability.setDefaultProjection(projection)
+
+// Create the Top1 Probability Hillshade
+var top1Probability = meanProbability.reduce(ee.Reducer.max())
+var top1Confidence = top1Probability.multiply(100).int()
+var hillshade = ee.Terrain.hillshade(top1Confidence).divide(255)
+var rgbImage = dwComposite.visualize(dwVisParams).divide(255);
+var probabilityHillshade = rgbImage.multiply(hillshade)
+
+var hillshadeVisParams = {min:0, max:0.8}
+Map.addLayer(probabilityHillshade,
+  hillshadeVisParams, 'Probability Hillshade')
+
+Map.setCenter(-89.375, 43.0831, 12); 

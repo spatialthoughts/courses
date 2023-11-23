@@ -1,0 +1,74 @@
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED");
+var admin4 = ee.FeatureCollection('users/ujavalgandhi/kenya/kenya_admin4');
+var filtered = admin4.filter(ee.Filter.eq('LOCNAME', 'LANGATA'));
+var geometry = filtered.geometry();
+Map.centerObject(geometry);
+
+// Detect newly urbanized regions from the year 2019 to 2020.
+var beforeYear = 2020;
+var afterYear = 2022;
+
+// Create start and end dates for the before and after periods.
+var beforeStart = ee.Date.fromYMD(beforeYear, 1 , 1);
+var beforeEnd = beforeStart.advance(1, 'year');
+
+var afterStart = ee.Date.fromYMD(afterYear, 1 , 1);
+var afterEnd = afterStart.advance(1, 'year');
+
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+
+// Create a median composite from sentinel-2 images.
+var beforeS2 = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+.filter(ee.Filter.date(beforeStart, beforeEnd))
+.median();
+
+var afterS2 = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.date(afterStart, afterEnd))
+  .median();
+  
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000};
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2');
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2');
+
+
+// Filter the Dynamic World collection and select the 'built' band.
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filterBounds(geometry).select('built');
+
+// Create a mean composite indicating the average probability through the year.
+var beforeDw = dw.filterDate(beforeStart, beforeEnd).mean();
+  
+var afterDw = dw.filterDate(afterStart, afterEnd).mean();
+
+// Select all pixels that are
+// < 0.2 'built' probability before
+// > 0.5 'built' probability after
+
+
+// Filter the Dynamic World collection and select the 'built' band.
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filterBounds(geometry).select('built');
+
+// Create a mean composite indicating the average probability through the year.
+var beforeDw = dw.filterDate(beforeStart, beforeEnd).mean();
+  
+var afterDw = dw.filterDate(afterStart, afterEnd).mean();
+
+// Select all pixels that are
+// < 0.2 'built' probability before
+// > 0.5 'built' probability after
+var newUrban = beforeDw.lt(0.2).and(afterDw.gt(0.5));
+
+var changeVisParams = {min: 0, max: 1, palette: ['white', 'red']};
+Map.addLayer(newUrban.clip(geometry), changeVisParams, 'New Urban');
+
+// Exercise
+// Change the script to find urban growth in your selected
+// admin4 region

@@ -1,0 +1,66 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #00ff00 */ee.Geometry.Polygon(
+        [[[36.62513180012346, -1.2332928138897847],
+          [36.62499232525469, -1.2339685738967323],
+          [36.62524981732012, -1.234011479288199],
+          [36.62541074986101, -1.2334322564449516]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Charting Class Probabilities Over Time
+
+Map.addLayer(geometry, {color: 'red'}, 'Selected Location')
+Map.centerObject(geometry, 16)
+
+// Filter the Dynamic World collection for the time period and
+// location of interest.
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+
+// Select all probability bands
+var dwTimeSeries = dw.select(probabilityBands)
+
+// Plot the time series for a single class
+var chart = ui.Chart.image.series({
+  imageCollection: dwTimeSeries.select('crops'),
+  region: geometry,
+  scale: 10
+}).setOptions({
+      lineWidth: 0.5,
+      pointSize: 1,
+      title: 'Dynamic World Class Probability (Crops)',
+      interpolateNulls: true,
+      vAxis: {title: 'Probability', viewWindow: {min:0, max:1}},
+      hAxis: {title: '', format: 'YYYY-MMM'},
+      series: {
+        0: {color: 'green'}
+      }
+    })
+print(chart)
+
+// Plot the time series for a multiple classes
+
+var chart = ui.Chart.image.series({
+  imageCollection: dwTimeSeries.select(['crops', 'shrub_and_scrub']),
+  region: geometry,
+  scale: 10
+}).setOptions({
+      lineWidth: 0.5,
+      pointSize: 1,
+      title: 'Dynamic World Class Probabilities',
+      interpolateNulls: true,
+      vAxis: {title: 'Probability', viewWindow: {min:0, max:1}},
+      hAxis: {title: '', format: 'YYYY-MMM'},
+      series: {
+        0: {color: 'green'},
+        1: {color: 'yellow'}
+      }
+    });
+print(chart);

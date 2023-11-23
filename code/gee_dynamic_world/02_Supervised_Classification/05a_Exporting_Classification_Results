@@ -1,0 +1,138 @@
+var gcps = ee.FeatureCollection('users/ujavalgandhi/kenya/mangroves_gcps');
+var coastline = ee.FeatureCollection('users/ujavalgandhi/kenya/kenya_coastline');
+
+var geometry = coastline.geometry();
+Map.centerObject(geometry, 10);
+Map.addLayer(coastline.draw({color: '#fff7bc', strokeWidth: 1}), {}, 'Area of Interest');
+
+var mangroves = gcps.filter(ee.Filter.eq('landcover', 1));
+var water = gcps.filter(ee.Filter.eq('landcover', 2));
+var other = gcps.filter(ee.Filter.eq('landcover', 3));
+Map.addLayer(mangroves, {color: 'green'}, 'Magrove GCPs', false);
+Map.addLayer(water, {color: 'blue'}, 'Water GCPs', false);
+Map.addLayer(other, {color: 'gray'}, 'Other GCPs', false);
+
+// Create Sentinel-2 Composite
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+// Function to remove cloud and snow pixels from Sentinel-2 SR image
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+            qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .multiply(0.0001)
+      .copyProperties(image, ['system:time_start']);
+}
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .map(maskS2clouds)
+  .select('B.*');
+
+var composite = filtered.median();
+
+// Display the input composite.
+var rgbVis = {min: 0, max: 0.3, bands: ['B4', 'B3', 'B2']};
+var swirVis = {min: 0.03, max: 0.4, bands: ['B11', 'B8', 'B4']};
+Map.centerObject(geometry);
+Map.addLayer(composite.clip(geometry), rgbVis, 'S2 Composite (RGB)', false);
+Map.addLayer(composite.clip(geometry), swirVis, 'S2 Composite (False Color)');
+
+
+// Create Dynamic World Probability Bands Composite
+
+// Dynamic World
+
+// Create a Probability Hillshade Visualization
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+var dwfiltered = dw
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select(probabilityBands)
+  
+var probabilityImage = dwfiltered.mean();
+
+//************************************************************************** 
+// Accuracy Assessment
+//************************************************************************** 
+  
+// Add a random column and split the GCPs into training and validation set
+var gcps = gcps.randomColumn();
+
+var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
+
+print('Total GCPs', gcps.size());
+print('Training GCPs', trainingGcp.size());
+print('Validation GCPs', validationGcp.size());
+
+// Function to train a classifier and classify an input image
+var classifyImage = function(image, label) {
+  
+  // Overlay the point on the image to get training data.
+  var training = image.sampleRegions({
+    collection: trainingGcp,
+    properties: ['landcover'],
+    scale: 10,
+    tileScale: 16
+  });
+  print(label + ' Training Feature', training.first())
+  // Train a classifier.
+  var classifier = ee.Classifier.smileRandomForest(50)
+  .train({
+    features: training,  
+    classProperty: 'landcover',
+    inputProperties: image.bandNames()
+  });
+  
+  // Classify the image.
+  var classified = image.classify(classifier);
+  
+
+  // Use classification map to assess accuracy using the validation fraction
+  // of the overall training set created above.
+  var test = classified.sampleRegions({
+    collection: validationGcp,
+    properties: ['landcover'],
+    tileScale: 16,
+    scale: 10,
+  });
+  
+  var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+  print(label + ' Confusion Matrix', testConfusionMatrix);
+  print(label + ' Test Accuracy', testConfusionMatrix.accuracy());
+  
+  //************************************************************************** 
+  // Exporting Results
+  //************************************************************************** 
+  
+  // Create a Feature with null geometry and the value we want to export.
+  // Use .array() to convert Confusion Matrix to an Array so it can be
+  // exported in a CSV file
+  
+  return classified;
+
+}
+
+// Classify S2 Composite
+var classified = classifyImage(composite, 'S2_Bands');
+var classVis = {min:1, max:3, palette: ['green', 'blue', 'gray']}
+
+Map.addLayer(classified.clip(geometry), classVis, '2020 (S2)');
+
+// Classify DW Composite
+var classified = classifyImage(probabilityImage, 'DW_Bands');
+Map.addLayer(classified.clip(geometry), classVis, '2020 (DW)');
+ 

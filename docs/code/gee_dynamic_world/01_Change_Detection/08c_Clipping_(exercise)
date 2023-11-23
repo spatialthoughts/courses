@@ -1,0 +1,46 @@
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED");
+var admin4 = ee.FeatureCollection('users/ujavalgandhi/kenya/kenya_admin4');
+var filtered = admin4.filter(ee.Filter.eq('LOCNAME', 'LANGATA'));
+var geometry = filtered.geometry();
+Map.centerObject(geometry);
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+var image = filtered.median(); 
+
+
+var clipped = image.clip(geometry);
+Map.addLayer(clipped, rgbVis, 'Clipped Composite');
+
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1');
+
+var dwFiltered = dw
+    .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+    .filter(ee.Filter.bounds(geometry));
+    
+var probabilityBands = [
+  'water', 'trees', 'grass', 'flooded_vegetation', 'crops', 'shrub_and_scrub',
+  'built', 'bare', 'snow_and_ice'
+];
+
+var dwProbability = dwFiltered.select(probabilityBands);
+
+var dwComposite = dwProbability.mean();
+
+var dwVis = {
+  min: 0,
+  max: 1,
+  bands: ['built'],
+  palette: ['white', 'red']
+};
+
+// Change the Admin4 region to your region of choice
+// Clip the dwComposite and display the 'built' probability on the Map

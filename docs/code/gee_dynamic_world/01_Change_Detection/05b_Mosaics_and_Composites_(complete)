@@ -1,0 +1,43 @@
+var geometry = ee.Geometry.Point([36.800, -1.266])
+Map.centerObject(geometry, 10)
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+var medianComposite = filtered.median();
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+
+Map.addLayer(medianComposite, rgbVis, 'Median Composite');
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1');
+
+var dwFiltered = dw
+    .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+    .filter(ee.Filter.bounds(geometry));
+    
+var probabilityBands = [
+  'water', 'trees', 'grass', 'flooded_vegetation', 'crops', 'shrub_and_scrub',
+  'built', 'bare', 'snow_and_ice'
+];
+
+var dwProbability = dwFiltered.select(probabilityBands);
+
+var dwComposite = dwProbability.mean();
+
+var dwVis = {
+  min: 0,
+  max: 1,
+  bands: ['built'],
+  palette: ['white', 'red']
+};
+
+Map.addLayer(dwComposite, dwVis, 'Built Probability')
+

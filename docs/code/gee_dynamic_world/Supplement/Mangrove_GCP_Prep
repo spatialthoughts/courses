@@ -1,0 +1,148 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var aoi = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[39.19974759779212, -1.6713255840099857],
+          [39.19974759779212, -4.691668023633792],
+          [41.638787348385165, -4.691668023633792],
+          [41.638787348385165, -1.6713255840099857]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Script to preare Coastline AOI and Training Samples
+// for mangrove classification
+
+// Prepare a Coastline Buffer Geometry
+
+// Using LSIB for country boundaries
+var lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
+
+// Select a country and change the 'aoi' to be a rectangle 
+// covering the coastline of the chosen country.
+var country = 'Kenya';
+var selected = lsib.filter(ee.Filter.eq('country_na', country));
+var geometry = selected.geometry();
+
+
+// Define the distance in meters
+var landDistance = 5000;
+var oceanDistance = 2000;
+
+// Buffer each polygon inwards by the distance and compute the difference
+// The result will be a buffer region for the entire polygon
+var buffer1 = geometry.symmetricDifference(geometry.buffer(oceanDistance));
+var buffer2 = geometry.symmetricDifference(geometry.buffer(-1*landDistance));
+
+// Put both in a collection
+var result = ee.FeatureCollection([buffer1, buffer2]);
+
+var coastline = result.geometry().dissolve({maxError:100});
+
+var geometry = coastline.intersection({
+  right: aoi,
+  maxError: 100});
+Map.addLayer(geometry)
+
+var coastlineFc = ee.FeatureCollection([
+  ee.Feature(geometry, {
+    'land_distance': landDistance,
+    'ocean_distance': oceanDistance
+  })
+]);
+
+Export.table.toAsset({
+  collection: coastlineFc,
+  description: 'Coastline',
+  assetId: 'users/ujavalgandhi/kenya/kenya_coastline'
+});
+
+// Prepare Trainin Samples
+
+// Use Global Mangrove Watch Dataset
+// for sampling mangrove GCPs
+var mangrovesVector = ee.FeatureCollection(
+  'projects/earthengine-legacy/assets/projects/sat-io/open-datasets/GMW/extent/gmw_v3_2020_vec');
+Map.addLayer(mangrovesVector, {color:'gray'}, 'Mangroves (vector)', false)
+
+var mangroveRaster = mangrovesVector.reduceToImage({
+  properties: ['PXLVAL'],
+  reducer: ee.Reducer.first()
+});
+var mangroveRaster = mangroveRaster.rename('landcover');
+var classVis = {min:0, max:1, palette: ['white', 'green']}
+
+Map.addLayer(mangroveRaster.clip(geometry), classVis, 'Mangroves Original', false)
+
+// Use Global Surface Water Dataset
+// for sampling water GCPs
+var gswYearly = ee.ImageCollection('JRC/GSW1_4/YearlyHistory');
+
+var filtered = gswYearly.filter(ee.Filter.eq('year', 2020))
+var gsw2020 = ee.Image(filtered.first())
+
+// Select permanent water
+var water = gsw2020.eq(3)
+var waterVis = {min:0, max:1, palette: ['white', 'blue']}
+
+Map.addLayer(water.clip(geometry), waterVis, 'Water Original', false)
+
+// Combine both images to create a 3 class image
+
+var classified = ee.Image(3)
+  .where(mangroveRaster.eq(1), 1)
+  .where(water.eq(1), 2)
+  .rename('landcover')
+
+var classVis = {min:1, max:3, palette: ['green', 'blue', 'gray']}
+
+Map.addLayer(classified.clip(geometry),classVis, 'Classified' )
+
+var mangroves = classified.eq(1);
+var water = classified.eq(2);
+var other = classified.eq(3);
+
+// Perform a dilation to identify core areas.
+// This avoids samples from the edges
+var processImage = function(image) {
+  var imageProcessed = image.focalMin({
+    radius: 10,
+    kernelType: 'circle',
+    units: 'meters',
+    iterations: 1});
+  return imageProcessed;
+};
+
+// Apply processing
+var mangrovesProcessed = processImage(mangroves);
+var waterProcessed = processImage(water);
+var otherProcessed = processImage(other);
+
+
+// Combine all images
+var processedImage = mangrovesProcessed
+  .add(waterProcessed.multiply(2))
+  .add(otherProcessed.multiply(3))
+  .selfMask()
+
+
+Map.addLayer(processedImage.clip(geometry), classVis, 'Core areas to sample' );
+
+// Sample points
+var gcps = processedImage.stratifiedSample({
+  numPoints: 250,
+  classBand: 'landcover', 
+  region: geometry,
+  scale: 10,
+  geometries: true,
+  dropNulls: true
+});
+Map.addLayer(gcps, {color: 'yellow'}, 'Samples', false);
+
+Export.table.toAsset({
+  collection: gcps,
+  description: 'Samples',
+  assetId: 'users/ujavalgandhi/kenya/mangroves_gcps'});

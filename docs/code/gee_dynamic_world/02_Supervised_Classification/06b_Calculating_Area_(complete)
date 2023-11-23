@@ -1,0 +1,60 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[39.4926285922204, -4.398315001988073],
+          [39.4926285922204, -4.4739620180298845],
+          [39.54910518523798, -4.4739620180298845],
+          [39.54910518523798, -4.398315001988073]]], null, false),
+    classified = ee.Image("users/ujavalgandhi/kenya/mangroves_classified");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+Map.addLayer(geometry, {color: 'blue'}, 'AOI');
+
+var palette = ['green', 'blue', 'gray'];
+Map.addLayer(classified, {min: 1, max: 3, palette: palette}, 'Classified Image');
+
+// Calculate Area for Vectors
+
+// .area() function calculates the area in square meters
+var aoiArea = geometry.area({maxError: 1});
+
+// We can cast the result to a ee.Number() and calculate the
+// area in square kilometers
+var aoiAreaSqKm = ee.Number(aoiArea).divide(1e6).round();
+print(aoiAreaSqKm);
+
+// Area Calculation for Images
+var mangroves = classified.eq(1);
+// If the image contains values 0 or 1, we can calculate the
+// total area using reduceRegion() function
+
+// The result of .eq() operation is a binary image with pixels
+// values of 1 where the condition matched and 0 where it didn't
+Map.addLayer(mangroves, {min:0, max:1, palette: ['white', 'black']}, 'Mangroves');
+
+// Since our image has only 0 and 1 pixel values, the vegetation
+// pixels will have values equal to their area
+var areaImage = mangroves.multiply(ee.Image.pixelArea());
+
+
+// Now that each pixel for vegetation class in the image has the value
+// equal to its area, we can sum up all the values in the region
+// to get the total green cover.
+
+var area = areaImage.reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10
+});
+// The result of the reduceRegion() function is a dictionary with the key
+// being the band name. We can extract the area number and convert it to
+// square kilometers
+var mangrovesAreaSqKm = area.getNumber('classification').divide(1e6).round();
+print(mangrovesAreaSqKm);

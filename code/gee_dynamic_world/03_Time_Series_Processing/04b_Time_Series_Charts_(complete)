@@ -1,0 +1,57 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #00ff00 */ee.Geometry.Polygon(
+        [[[36.62513180012346, -1.2332928138897847],
+          [36.62499232525469, -1.2339685738967323],
+          [36.62524981732012, -1.234011479288199],
+          [36.62541074986101, -1.2334322564449516]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+Map.addLayer(geometry, {color: 'red'}, 'Farm');
+Map.centerObject(geometry);
+
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filtered = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.bounds(geometry));
+  
+// Write a function for Cloud masking
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start']);
+}
+
+var filtered = filtered.map(maskS2clouds);
+// Write a function that computes NDVI for an image and adds it as a band
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+}
+
+// Map the function over the collection
+var withNdvi = filtered.map(addNDVI);
+
+// Display a time-series chart
+var chart = ui.Chart.image.series({
+  imageCollection: withNdvi.select('ndvi'),
+  region: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 10
+}).setOptions({
+      lineWidth: 0.5,
+      pointSize: 1,
+      title: 'NDVI Time Series',
+      interpolateNulls: true,
+      vAxis: {title: 'NDVI', viewWindow: {min:0, max:1}},
+      hAxis: {title: '', format: 'YYYY-MMM'}
+    })
+print(chart);
