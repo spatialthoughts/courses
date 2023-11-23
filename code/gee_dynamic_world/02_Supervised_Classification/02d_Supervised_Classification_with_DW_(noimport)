@@ -1,0 +1,98 @@
+// Create a Sentinel-2 Compsite for Visualization
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+// The following collections were created using the 
+// Drawing Tools in the code editor and exported as assets.
+var mangroves = ee.FeatureCollection('users/ujavalgandhi/kenya/basic_gcps_mangroves');
+var water = ee.FeatureCollection('users/ujavalgandhi/kenya/basic_gcps_water');
+var other = ee.FeatureCollection('users/ujavalgandhi/kenya/basic_gcps_other'); 
+
+var geometry = ee.Geometry.Polygon([[
+  [39.4926285922204, -4.398315001988073],
+  [39.4926285922204, -4.4739620180298845],
+  [39.54910518523798, -4.4739620180298845],
+  [39.54910518523798, -4.398315001988073]
+]]);
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+
+var composite = filtered.median();
+print(composite)
+// Display the input composite.
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.centerObject(geometry);
+Map.addLayer(composite.clip(geometry), rgbVis, 'S2 Composite (RGB)');
+
+var gcps = mangroves.merge(water).merge(other);
+
+// ####### S2-based Supervised Classification #######
+
+// Overlay the point on the image to get training data.
+var training = composite.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: composite.bandNames()
+});
+// // Classify the image.
+var classified = composite.classify(classifier);
+// Choose a 3-color palette
+// Assign a color for each class in the following order
+// Mangrove, Water, Other
+var palette = ['green', 'blue', 'gray'];
+
+Map.addLayer(classified.clip(geometry), {min: 1, max: 3, palette: palette}, 'S2 Classification');
+
+// ####### DW-based Supervised Classification #######
+
+// Create a Dynamic World Composite to use as input to classification
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+var dwfiltered = dw
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select(probabilityBands)
+  
+var dwComposite = dwfiltered.mean();
+
+// Overlay the point on the image to get training data.
+var training = dwComposite.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: dwComposite.bandNames()
+});
+// // Classify the Dynamic World image.
+var classified = dwComposite.classify(classifier);
+// Choose a 3-color palette
+// Assign a color for each class in the following order
+// Mangrove, Water, Other
+var palette = ['green', 'blue', 'gray'];
+
+Map.addLayer(
+  classified.clip(geometry),
+  {min: 1, max: 3, palette: palette}, 
+  'DW Classified');
