@@ -1,0 +1,138 @@
+// Example script showing how to calculate and plot
+// a time-series of surface water area over a region
+// using the Global Surface Water (GSW) Dataset.
+// Define the area of interest
+var geometry = ee.Geometry.Polygon([[
+  [77.4762, 13.1789],
+  [77.4762, 13.1398],
+  [77.5045, 13.1398],
+  [77.5045, 13.1789]
+]]);
+Map.centerObject(geometry);
+Map.addLayer(geometry, {color: 'grey'}, 'Area of Interest');
+
+// Use the GSW Yearly dataset
+// We have yearly images from 1984 to 2021
+var gswYearly = ee.ImageCollection('JRC/GSW1_4/YearlyHistory');
+
+var startYear = 1995;
+var endYear = 2005;
+
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+
+var filtered = gswYearly.filter(
+  ee.Filter.date(startDate, endDate));
+
+// Each image has a band named waterClass with 4 values
+// | Value | Description     |
+// |-------|-----------------|
+// | 0     | No Data         |
+// | 1     | Not Water       |
+// | 2     | Seasonal Water  | 
+// | 3     | Permanent Water |
+
+// We map() a function to select all pixels
+// with value 2 and 3 (seasonal and permanent water)
+
+var waterCol = filtered.map(function(image) {
+  var water = image.eq(2).or(image.eq(3));
+  // Unmask it to fill nodata with 0
+  return water.unmask(0)
+    .copyProperties(image, ['system:time_start']);
+});
+
+// Now we have binary images for each year
+// Water pixels are value 1
+// Visualize an image
+var image = waterCol.first();
+var waterVis = {min:0, max:1, palette: ['white', 'blue']};
+Map.addLayer(image.clip(geometry), waterVis, 'Surface Water');
+
+// We now multiply each image with ee.Image.pixelArea()
+var waterColArea = waterCol.map(function(image) {
+  var waterAreaImage = image.multiply(ee.Image.pixelArea());
+  // The area is in square meters. Convert to hectares
+  return waterAreaImage.divide(10000)
+    .copyProperties(image, ['system:time_start']);
+});
+
+// Now we create a time-series chart 
+// We use ee.Reducer.sum() to get total surface water
+// area for the Y-Axis
+var chart = ui.Chart.image.series({
+  imageCollection: waterColArea,
+  region: geometry,
+  reducer: ee.Reducer.sum(),
+  scale: 30,
+}).setChartType('LineChart')
+  .setOptions({
+    title: 'Total Surface Water Area',
+    color: '#3690c0',
+    pointSize: 0,
+    lineWidth: 3,
+    vAxis: {
+      title: 'Area (hectares)',
+    },
+    hAxis: {
+      title: 'Year',
+      gridlines: {color: 'none'},
+    },
+    legend: {
+      position: 'none'
+    },
+    backgroundColor: '#fff7fb',
+    chartArea: {left:100, right:100}
+    
+});
+print(chart);
+
+// The default chart has unwanted X-Axis labels 
+// These are month abbreviations such as 'J' (January),
+// 'S' (September etc.) 
+// To remove these, we must supply the list of 'ticks'
+// with dates that we want labeled.
+// Since charts are client side, we have to create 
+// this list of dates using Javascript.
+
+// We generate list of years to use for charting
+var years = ee.List.sequence(startYear, endYear);
+
+// evaluate() to get the year list on the client-side
+years.evaluate(function(yearsList) {
+  var clientSideDates = [];
+  for (var i = 0; i < yearsList.length; i++) {
+    var date = new Date(yearsList[i], 0);
+    clientSideDates.push(date);
+  }
+  // Create the chart
+  
+  var chart = ui.Chart.image.series({
+    imageCollection: waterColArea,
+    region: geometry,
+    reducer: ee.Reducer.sum(),
+    scale: 30,
+  }).setChartType('LineChart')
+    .setOptions({
+      title: 'Total Surface Water Area',
+      color: '#3690c0',
+      pointSize: 0,
+      lineWidth: 3,
+      vAxis: {
+        title: 'Area (hectares)',
+      },
+      hAxis: {
+        title: 'Year',
+        gridlines: {color: 'none'},
+        ticks: clientSideDates,
+        format: 'YYYY'
+      },
+      legend: {
+        position: 'none'
+      },
+      backgroundColor: '#fff7fb',
+      chartArea: {left:100, right:100}
+      
+  });
+  print(chart);
+})
