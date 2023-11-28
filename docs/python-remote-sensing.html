@@ -368,21 +368,14 @@ dataset using XArray, Dask and STAC.</h3>
 id="toc-local-data-local-compute">1. Local Data Local Compute</a>
 <ul>
 <li><a href="#computing-indices" id="toc-computing-indices">Computing
-Indices</a>
-<ul>
-<li><a href="#overview" id="toc-overview">Overview</a></li>
-<li><a href="#setup-and-data-download"
-id="toc-setup-and-data-download">Setup and Data Download</a></li>
-<li><a href="#data-pre-processing" id="toc-data-pre-processing">Data
-Pre-Processing</a></li>
-<li><a href="#visualization"
-id="toc-visualization">Visualization</a></li>
-<li><a href="#calculating-indices"
-id="toc-calculating-indices">Calculating Indices</a></li>
-<li><a href="#saving-the-results" id="toc-saving-the-results">Saving the
-results</a></li>
-<li><a href="#exercise" id="toc-exercise">Exercise</a></li>
+Indices</a></li>
 </ul></li>
+<li><a href="#cloud-data-local-compute"
+id="toc-cloud-data-local-compute">2. Cloud Data Local Compute</a>
+<ul>
+<li><a href="#calculating-zonal-statistics"
+id="toc-calculating-zonal-statistics">Calculating Zonal
+Statistics</a></li>
 </ul></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
@@ -678,6 +671,184 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb25-1"><a h
 <p>Calculate the Normalized Difference Built-Up Index (NDBI) for the
 image and visualize the built-up area using a ‘red’ palette</p>
 <p>Hint: <code>NDBI = (SWIR1 – NIR) / (SWIR1 + NIR)</code></p>
+</div>
+</div>
+</div>
+<div id="cloud-data-local-compute" class="section level1">
+<h1>2. Cloud Data Local Compute</h1>
+<div id="calculating-zonal-statistics" class="section level2">
+<h2>Calculating Zonal Statistics</h2>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/zonal_statistics.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<div id="overview-1" class="section level3">
+<h3>Overview</h3>
+<p>Zonal Statistics is used to summarises the values of a raster dataset
+within the zones of a vector dataset. Here we select all Admin1 units of
+a country and calculate a sum of nighttime light pixel intensities over
+multiple years. This is a large computation that is enabled by
+cloud-hosted NightTime Lights data in the Cloud-Optimized GeoTIFF (COG)
+format and parallel computing on a local dask cluster.</p>
+</div>
+<div id="setup-and-data-download-1" class="section level3">
+<h3>Setup and Data Download</h3>
+<p>The following blocks of code will install the required packages and
+download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>    <span class="op">!</span>apt install libspatialindex<span class="op">-</span>dev</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>    <span class="op">!</span>pip install fiona shapely pyproj rtree</span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>    <span class="op">!</span>pip install geopandas</span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a>    <span class="op">!</span>pip install rioxarray</span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a>    <span class="op">!</span>pip install regionmask</span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime</span>
+<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a><span class="im">import</span> dask</span>
+<span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a><span class="im">import</span> regionmask</span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a><span class="im">import</span> rasterio</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>warnings.filterwarnings(<span class="st">&quot;ignore&quot;</span>, category<span class="op">=</span>rasterio.RasterioDeprecationWarning)</span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client, progress</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>dask.config.<span class="bu">set</span>({<span class="st">&quot;array.slicing.split_large_chunks&quot;</span>: <span class="va">False</span>})</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>dask.config.<span class="bu">set</span>({<span class="st">&#39;array.chunk-size&#39;</span>: <span class="st">&#39;32MiB&#39;</span>})</span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Downloaded &#39;</span> <span class="op">+</span> local)</span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a></span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>admin1_zipfile <span class="op">=</span> <span class="st">&#39;ne_10m_admin_1_states_provinces.zip&#39;</span></span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a>admin1_url <span class="op">=</span> <span class="st">&#39;https://naciscdn.org/naturalearth/10m/cultural/&#39;</span></span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a>download(admin1_url <span class="op">+</span> admin1_zipfile)</span></code></pre></div>
+</div>
+<div id="data-pre-processing-1" class="section level3">
+<h3>Data Pre-Processing</h3>
+<p>First we will read the GDL shapefile and filter to a country. The
+‘adm1_code’ column contains a unique id for all the counties present in
+the state, but it is of <code>object</code> type. We need to convert it
+to <code>int</code> type to be used in xarray.</p>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a>country_code <span class="op">=</span> <span class="st">&#39;LK&#39;</span></span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a>admin1_file_path <span class="op">=</span> os.path.join(data_folder, admin1_zipfile)</span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a>admin1_df <span class="op">=</span> gpd.read_file(admin1_file_path)</span>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a>zones <span class="op">=</span> admin1_df[admin1_df[<span class="st">&#39;iso_a2&#39;</span>] <span class="op">==</span> country_code][[<span class="st">&#39;adm1_code&#39;</span>, <span class="st">&#39;name&#39;</span>, <span class="st">&#39;iso_a2&#39;</span>, <span class="st">&#39;geometry&#39;</span>]].copy()</span>
+<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a>zones[<span class="st">&#39;id&#39;</span>] <span class="op">=</span> zones.reset_index().index <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a>zones</span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a>bbox <span class="op">=</span> zones.total_bounds</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a>bbox</span></code></pre></div>
+<p>Next we read the NTL files and create an XArray object.</p>
+<p>These files were download from <a
+href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YGIVCD">Harvard
+Dataverse</a> and converted to Cloud-Optimized GeoTIFFs using GDAL.</p>
+<p>Example command
+<code>gdalwarp -of COG -co COMPRESS=DEFLATE -co PREDICTOR=2 -co NUM_THREADS=ALL_CPUS 2021_HasMask/LongNTL_2021.tif 2021.tif -te -180 -90 180 90 -dstnodata 0</code></p>
+<p>The resulting files are now hosted on a Google Cloud Storage
+bucket.</p>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a>start_year <span class="op">=</span> <span class="dv">2015</span></span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>end_year <span class="op">=</span> <span class="dv">2020</span></span></code></pre></div>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a></span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>ntl_folder <span class="op">=</span> <span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data/ntl/npp_viirs_ntl&#39;</span></span>
+<span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" tabindex="-1"></a>da_list <span class="op">=</span> []</span>
+<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a></span>
+<span id="cb36-6"><a href="#cb36-6" tabindex="-1"></a><span class="cf">for</span> year <span class="kw">in</span> <span class="bu">range</span>(start_year, end_year <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb36-7"><a href="#cb36-7" tabindex="-1"></a>  cog_url <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>ntl_folder<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">.tif&#39;</span></span>
+<span id="cb36-8"><a href="#cb36-8" tabindex="-1"></a>  da <span class="op">=</span> rxr.open_rasterio(</span>
+<span id="cb36-9"><a href="#cb36-9" tabindex="-1"></a>      cog_url,</span>
+<span id="cb36-10"><a href="#cb36-10" tabindex="-1"></a>      chunks<span class="op">=</span><span class="va">True</span>).rio.clip_box(<span class="op">*</span>bbox)</span>
+<span id="cb36-11"><a href="#cb36-11" tabindex="-1"></a>  dt <span class="op">=</span> pd.to_datetime(year, <span class="bu">format</span><span class="op">=</span><span class="st">&#39;%Y&#39;</span>)</span>
+<span id="cb36-12"><a href="#cb36-12" tabindex="-1"></a>  da <span class="op">=</span> da.assign_coords(time <span class="op">=</span> dt)</span>
+<span id="cb36-13"><a href="#cb36-13" tabindex="-1"></a>  da <span class="op">=</span> da.expand_dims(dim<span class="op">=</span><span class="st">&quot;time&quot;</span>)</span>
+<span id="cb36-14"><a href="#cb36-14" tabindex="-1"></a>  da_list.append(da)</span></code></pre></div>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" tabindex="-1"></a>ntl_datacube <span class="op">=</span> xr.concat(da_list, dim<span class="op">=</span><span class="st">&#39;time&#39;</span>).chunk(<span class="st">&#39;auto&#39;</span>)</span>
+<span id="cb37-2"><a href="#cb37-2" tabindex="-1"></a>ntl_datacube</span></code></pre></div>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" tabindex="-1"></a>ntl_datacube <span class="op">=</span> ntl_datacube.sel(band<span class="op">=</span><span class="dv">1</span>, drop<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+</div>
+<div id="zonal-stats" class="section level3">
+<h3>Zonal Stats</h3>
+<p>Now we will extract the sum of the raster pixel values for every
+admin1 region in the selected countrey.</p>
+<p>First, we need to convert the GeoDataFrame to a XArray Dataset. We
+will be using the <code>regionmask</code> module for that. It takes
+geodataframe, it’s unique value as integer and converts the geodataframe
+into a <code>xarray dataset</code> having dimension and coordinates same
+as of given input xarray dataset</p>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" tabindex="-1"></a><span class="co"># Create mask of multiple regions from shapefile</span></span>
+<span id="cb39-2"><a href="#cb39-2" tabindex="-1"></a>mask <span class="op">=</span> regionmask.mask_3D_geopandas(</span>
+<span id="cb39-3"><a href="#cb39-3" tabindex="-1"></a>        zones,</span>
+<span id="cb39-4"><a href="#cb39-4" tabindex="-1"></a>        ntl_datacube.x,</span>
+<span id="cb39-5"><a href="#cb39-5" tabindex="-1"></a>        ntl_datacube.y,</span>
+<span id="cb39-6"><a href="#cb39-6" tabindex="-1"></a>        drop<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb39-7"><a href="#cb39-7" tabindex="-1"></a>        numbers<span class="op">=</span><span class="st">&quot;id&quot;</span>,</span>
+<span id="cb39-8"><a href="#cb39-8" tabindex="-1"></a>        overlap<span class="op">=</span><span class="va">True</span></span>
+<span id="cb39-9"><a href="#cb39-9" tabindex="-1"></a>    )</span></code></pre></div>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" tabindex="-1"></a>ntl_datacube <span class="op">=</span> ntl_datacube.where(mask).chunk(<span class="st">&#39;auto&#39;</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" tabindex="-1"></a>ntl_datacube</span></code></pre></div>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a>grouped <span class="op">=</span> ntl_datacube.groupby(<span class="st">&#39;time&#39;</span>).<span class="bu">sum</span>([<span class="st">&#39;x&#39;</span>,<span class="st">&#39;y&#39;</span>])</span>
+<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a>grouped</span></code></pre></div>
+<div class="sourceCode" id="cb42"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a><span class="op">%</span>time grouped <span class="op">=</span> grouped.compute()</span></code></pre></div>
+<div class="sourceCode" id="cb43"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" tabindex="-1"></a>stats <span class="op">=</span> grouped.drop(<span class="st">&#39;spatial_ref&#39;</span>).to_dataframe(<span class="st">&#39;sum&#39;</span>).reset_index()</span>
+<span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a>stats</span></code></pre></div>
+<div class="sourceCode" id="cb44"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a>stats[<span class="st">&#39;year&#39;</span>] <span class="op">=</span> stats.time.dt.year</span>
+<span id="cb44-2"><a href="#cb44-2" tabindex="-1"></a>stats <span class="op">=</span> stats.rename(columns<span class="op">=</span>{<span class="st">&#39;region&#39;</span>: <span class="st">&#39;id&#39;</span>})</span>
+<span id="cb44-3"><a href="#cb44-3" tabindex="-1"></a>stats</span></code></pre></div>
+<div class="sourceCode" id="cb45"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" tabindex="-1"></a>results <span class="op">=</span> zones.merge(stats, on<span class="op">=</span><span class="st">&#39;id&#39;</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" tabindex="-1"></a>results</span></code></pre></div>
+<p>Finally, we save the result to disk.</p>
+<div class="sourceCode" id="cb46"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" tabindex="-1"></a>output <span class="op">=</span> results[[<span class="st">&#39;adm1_code&#39;</span>, <span class="st">&#39;name&#39;</span>, <span class="st">&#39;iso_a2&#39;</span>, <span class="st">&#39;year&#39;</span>, <span class="st">&#39;sum&#39;</span>]]</span>
+<span id="cb46-2"><a href="#cb46-2" tabindex="-1"></a>output</span></code></pre></div>
+<div class="sourceCode" id="cb47"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" tabindex="-1"></a>output_file <span class="op">=</span> <span class="st">&#39;output.csv&#39;</span></span>
+<span id="cb47-2"><a href="#cb47-2" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
+<span id="cb47-3"><a href="#cb47-3" tabindex="-1"></a></span>
+<span id="cb47-4"><a href="#cb47-4" tabindex="-1"></a>output.to_csv(output_path, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb47-5"><a href="#cb47-5" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Successfully written output file at </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(output_path))</span></code></pre></div>
+</div>
+<div id="exercise-1" class="section level3">
+<h3>Exercise</h3>
+<p>Change the code to calculate the Zonal Statistics for all admin1
+units in your chosen country.</p>
 <hr />
 </div>
 </div>
