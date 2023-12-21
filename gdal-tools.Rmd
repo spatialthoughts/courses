@@ -1440,6 +1440,43 @@ gdal_translate -of JPEG <input_tile>.tif <input_tile>.jpg -co WORLDFILE=YES
 
 This will create a sidecar file with the `.wld` extension that will store the georeferencing information for each tile. GDAL will automatically apply the georeferencing information to the JPEG tile as long this file exists in the same directory. This way, you can make inference using the JPG tiles, and use the `.wld` files with your output to automatically georeference and mosaic the results.
 
+## Extracting Projection Information from a Raster
+
+Sometimes you may need to extract and preserve georeferencing information from a raster to be used later or with a different file. A typical use case is Deep Learning - where you need to convert your georeferenced tile (i.e. a GeoTIFF file) into a PNG or JPEG tile. If you used `gdal_retile.py` as shown in the [previous section](#splitting-a-mosaic-into-tiles), you will have a *World File* accompanying each tile. But many times, you only have the original GeoTIFF file and the resulting PNG tile. To copy the georeferencing information from the GeoTIFF and apply it to the PNG, you can use the following process.
+
+Let's say we have a georeferenced tile named `tile_1_1.tif` and a annotated version of this tile from a training dataset as a non-georeferenced tile `tile_1_1_annotated.png`. We want to georeference this PNG file using the projection and extent of the GeoTIFF file.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/extract_projection.png')
+```
+
+We can extract the extent and resolution of the original GeoTIFF using the [`listgeo`](http://geotiff.maptools.org/listgeo.html) tool. This tool is already part of the standard GDAL conda distribution. We will extract the world file using the `-tfw` flag that generates an ESRI world file.
+
+```
+listgeo -tfw tile_1_1.tif
+```
+
+You will see that a new file named `tile_1_1.tfw` is generated alongside the original GeoTIFF. Next we extract the projecton information using [`gdalsrsinfo`](https://gdal.org/programs/gdalsrsinfo.html) command. This command prints the projection information in a variety of supported formats. We save the output to a file with a `.prj` extension.
+
+```
+gdalsrsinfo tile_1_1.tif > tile_1_1.prj
+```
+
+The `tile_1_1.tfw` and `tile_1_1.prj` contain all the information we need to georeference the PNG tile. 
+
+Let's convert the PNG to a GeoTIFF file and assign the projection of the original tile.
+
+```
+gdal_translate -a_srs tile_1_1.prj tile_1_1_annotated.png tile_1_1_annotated.tif
+```
+
+The resulting file contains the projection but the extents are not correct. We can use the [`geotifcp`](http://geotiff.maptools.org/geotifcp.html) tool to apply the extents from the world file to the GeoTIFF. This tool is also part of the standard GDAL conda distribution.
+
+```
+geotifcp -e tile_1_1.tfw tile_1_1_annotated.tif tile_1_1_annotated_georeferenced.tif
+```
+
+
 ## Merging Files with Different Resolutions
 
 If you had a bunch of tiles that you wanted to merge, but some tiles had a different resolution, you can use specify the `-resolution` flag with `gdalbuildvrt` to ensure the output file has the expected resolution.

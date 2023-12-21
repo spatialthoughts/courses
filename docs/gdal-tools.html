@@ -535,6 +535,9 @@ Artifacts</a></li>
 <li><a href="#splitting-a-mosaic-into-tiles"
 id="toc-splitting-a-mosaic-into-tiles">Splitting a Mosaic into
 Tiles</a></li>
+<li><a href="#extracting-projection-information-from-a-raster"
+id="toc-extracting-projection-information-from-a-raster">Extracting
+Projection Information from a Raster</a></li>
 <li><a href="#merging-files-with-different-resolutions"
 id="toc-merging-files-with-different-resolutions">Merging Files with
 Different Resolutions</a></li>
@@ -2289,6 +2292,52 @@ long this file exists in the same directory. This way, you can make
 inference using the JPG tiles, and use the <code>.wld</code> files with
 your output to automatically georeference and mosaic the results.</p>
 </div>
+<div id="extracting-projection-information-from-a-raster"
+class="section level2">
+<h2>Extracting Projection Information from a Raster</h2>
+<p>Sometimes you may need to extract and preserve georeferencing
+information from a raster to be used later or with a different file. A
+typical use case is Deep Learning - where you need to convert your
+georeferenced tile (i.e. a GeoTIFF file) into a PNG or JPEG tile. If you
+used <code>gdal_retile.py</code> as shown in the <a
+href="#splitting-a-mosaic-into-tiles">previous section</a>, you will
+have a <em>World File</em> accompanying each tile. But many times, you
+only have the original GeoTIFF file and the resulting PNG tile. To copy
+the georeferencing information from the GeoTIFF and apply it to the PNG,
+you can use the following process.</p>
+<p>Let’s say we have a georeferenced tile named
+<code>tile_1_1.tif</code> and a annotated version of this tile from a
+training dataset as a non-georeferenced tile
+<code>tile_1_1_annotated.png</code>. We want to georeference this PNG
+file using the projection and extent of the GeoTIFF file.</p>
+<p><img src="images/gdal/extract_projection.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>We can extract the extent and resolution of the original GeoTIFF
+using the <a
+href="http://geotiff.maptools.org/listgeo.html"><code>listgeo</code></a>
+tool. This tool is already part of the standard GDAL conda distribution.
+We will extract the world file using the <code>-tfw</code> flag that
+generates an ESRI world file.</p>
+<pre><code>listgeo -tfw tile_1_1.tif</code></pre>
+<p>You will see that a new file named <code>tile_1_1.tfw</code> is
+generated alongside the original GeoTIFF. Next we extract the projecton
+information using <a
+href="https://gdal.org/programs/gdalsrsinfo.html"><code>gdalsrsinfo</code></a>
+command. This command prints the projection information in a variety of
+supported formats. We save the output to a file with a <code>.prj</code>
+extension.</p>
+<pre><code>gdalsrsinfo tile_1_1.tif &gt; tile_1_1.prj</code></pre>
+<p>The <code>tile_1_1.tfw</code> and <code>tile_1_1.prj</code> contain
+all the information we need to georeference the PNG tile.</p>
+<p>Let’s convert the PNG to a GeoTIFF file and assign the projection of
+the original tile.</p>
+<pre><code>gdal_translate -a_srs tile_1_1.prj tile_1_1_annotated.png tile_1_1_annotated.tif</code></pre>
+<p>The resulting file contains the projection but the extents are not
+correct. We can use the <a
+href="http://geotiff.maptools.org/geotifcp.html"><code>geotifcp</code></a>
+tool to apply the extents from the world file to the GeoTIFF. This tool
+is also part of the standard GDAL conda distribution.</p>
+<pre><code>geotifcp -e tile_1_1.tfw tile_1_1_annotated.tif tile_1_1_annotated_georeferenced.tif</code></pre>
+</div>
 <div id="merging-files-with-different-resolutions"
 class="section level2">
 <h2>Merging Files with Different Resolutions</h2>
@@ -2752,6 +2801,9 @@ href="#fnref1" class="footnote-back">↩︎</a></p></li>
 </div>
 
 <!-- Comment Section Powered by utterances -->
+<div id="comments">
+  <hr />
+  <p>If you want to report any issues with this page, please comment below.</p>
 <script src="https://utteranc.es/client.js"
         repo="spatialthoughts/courses"
         issue-term="title"
@@ -2760,6 +2812,7 @@ href="#fnref1" class="footnote-back">↩︎</a></p></li>
         crossorigin="anonymous"
         async>
 </script>
+</div>
 
 
 
