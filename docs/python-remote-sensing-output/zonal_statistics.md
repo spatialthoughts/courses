@@ -107,8 +107,14 @@ Next we read the NTL files and create an XArray object.
 
 These files were download from [Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YGIVCD) and converted to Cloud-Optimized GeoTIFFs using GDAL.
 
- Example command `gdalwarp -of COG -co COMPRESS=DEFLATE -co PREDICTOR=2 -co NUM_THREADS=ALL_CPUS 2021_HasMask/LongNTL_2021.tif 2021.tif -te -180 -90 180 90 -dstnodata 0`
-  
+ Example command
+
+ ```
+ gdalwarp -of COG 2021_HasMask/LongNTL_2021.tif 2021.tif \
+  -te -180 -90 180 90 -dstnodata 0 \
+  -co COMPRESS=DEFLATE -co PREDICTOR=2 -co NUM_THREADS=ALL_CPUS
+```
+
 The resulting files are now hosted on a Google Cloud Storage bucket.
 
 
