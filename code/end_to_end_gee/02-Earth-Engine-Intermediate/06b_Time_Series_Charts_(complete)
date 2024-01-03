@@ -1,36 +1,32 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var geometry = /* color: #999900 */ee.Geometry.Polygon(
-        [[[39.51413410130889, -4.377779992694821],
-          [39.51911228124053, -4.379876706407149],
-          [39.52007787648589, -4.377801387762363],
-          [39.51507823888213, -4.375640482851704]]]);
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
-var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-
-Map.addLayer(geometry, {color: 'red'}, 'Mangrove');
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Polygon([[
+  [82.60642647743225, 27.16350437805251],
+  [82.60984897613525, 27.1618529901377],
+  [82.61088967323303, 27.163695288375266],
+  [82.60757446289062, 27.16517483230927]
+]]);
+Map.addLayer(geometry, {color: 'red'}, 'Farm');
 Map.centerObject(geometry);
 var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
 
 var filtered = s2
-  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
-  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.date('2017-01-01', '2018-01-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry));
 
 // Write a function for Cloud masking
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(5);
-  var snow = snowProb.lt(5);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 5% or cloud shadow classification
-  var mask = (cloud.and(snow)).and(cirrus.neq(1)).and(shadow.neq(1));
-  return image.updateMask(mask);
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask).multiply(0.0001)
+      .select('B.*')
+      .copyProperties(image, ['system:time_start']);
 }
 
-var filtered = filtered.map(maskCloudAndShadowsSR);
+var filtered = filtered.map(maskS2clouds);
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
@@ -51,7 +47,7 @@ var chart = ui.Chart.image.series({
       lineWidth: 1,
       title: 'NDVI Time Series',
       interpolateNulls: true,
-      vAxis: {title: 'NDVI', viewWindow: {min:0, max:1}},
+      vAxis: {title: 'NDVI'},
       hAxis: {title: '', format: 'YYYY-MMM'}
     })
 print(chart);

@@ -1,6 +1,11 @@
 // Example script showing how to export ImageCollections
 // using client-side code for batch image exports.
 
+// This script shows 2 options for exporting ImageCollections
+// Option 1: Export Individual Images to Drive
+// Option 2: Export ImageCollection to Asset
+
+
 // If you want to export large number of images, or
 // want to automate batch exports, please check 
 // the notebook using Python API
@@ -31,7 +36,7 @@ function maskS2clouds(image) {
   var cirrusBitMask = 1 << 11;
   var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
              qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)//.divide(10000)
+  return image.updateMask(mask)
       .select("B.*")
       .copyProperties(image, ["system:time_start"])
 }
@@ -47,20 +52,27 @@ function addNDVI(image) {
 var withNdvi = filtered.map(addNDVI);
 
 var exportCol = withNdvi.select('ndvi');
-// The function below exports the collection
+
+// *************************************************************
+// Option 1: Export Individual Images to Drive
+// *************************************************************
+
+// The function below exports the images in the collection
+// as individual GeoTIFF files to Google Drive
+
 // The key is to use 'evaluate()' to asynchronously get a list
 // if image ids and start an export task for each image
 
-var doExport = function() {
+var doExportDrive = function() {
   print('Working')
   var ids = exportCol.aggregate_array('system:index');
   // evaluate() will not block the UI and once the result is available
   // will be passed-on to the callback function where we will call
   // Export.image.toDrive()
   ids.evaluate(function(imageIds) {
-    print('Total number of images', imageIds.length)
-    print('Exporting now... (see Tasks tab)')
-    print('Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.')
+    print('Total number of images', imageIds.length);
+    print('Exporting now... (see Tasks tab)');
+    print('Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.');
     for(var i = 0; i < imageIds.length; i++) {
       
       // Filter using the image id
@@ -72,14 +84,68 @@ var doExport = function() {
         scale: 10,
         fileNamePrefix: imageIds[i],
         folder: 'earthengine',
-        description: 'Export_' + i + '_' + imageIds[i],
+        description: 'Export_Drive_' + i + '_' + imageIds[i],
       })
       }
   })
   
 }
 
-print('Click button below to start export')
-var button = ui.Button({label: 'Export', onClick: doExport})
+print('Click button below to start export to Drive')
+var button = ui.Button({label: 'Export to Drive', onClick: doExportDrive})
 print(button)
 Map.centerObject(geometry);
+
+// *************************************************************
+// Option 2: Export ImageCollection to Asset
+// *************************************************************
+
+// If you want to use the collection in another script
+// it is better to export the images as assets.
+
+// This is also recommended for collections that require large
+// computation and may time-out. Exporting to Asset will
+// result in a pre-computed collection that can be imported and 
+// used without these errors.
+
+// First create a new empty collection
+// Go to Assets Tab -> New -> Image collection
+
+// Once created, replace below with your own image collection id
+var exportAssetColId = 'users/ujavalgandhi/e2e/ndvi_col';
+
+// Next we will export images as assets into this collection
+var doExportAsset = function() {
+  print('Working');
+  var ids = exportCol.aggregate_array('system:index');
+  // evaluate() will not block the UI and once the result is available
+  // will be passed-on to the callback function where we will call
+  // Export.image.toAsset()
+  ids.evaluate(function(imageIds) {
+    print('Total number of images', imageIds.length);
+    print('Exporting now... (see Tasks tab)');
+    print('Tip: Use Ctrl+Click/Cmd+Click on tasks to skip confirmation.');
+    for(var i = 0; i < imageIds.length; i++) {
+      
+      // Filter using the image id
+      var image = ee.Image(exportCol.toList(1, i).get(0));
+
+      Export.image.toAsset({
+        image: image,
+        description: 'Export_Asset_' + i + '_' + imageIds[i],
+        assetId: exportAssetColId + '/' + imageIds[i],
+        region: geometry,
+        scale: 10
+      });
+    }
+  });
+  
+};
+
+print('Click button below to start export to Asset');
+var button = ui.Button({label: 'Export to Asset', onClick: doExportAsset});
+print(button);
+
+// Once all the exports finish, you can use the resulting collection
+// in other scripts just like a regular GEE collection
+var exportAssetCol = ee.ImageCollection(exportAssetColId);
