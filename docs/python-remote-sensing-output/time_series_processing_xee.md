@@ -20,6 +20,7 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
+
 import ee
 import xarray
 import rioxarray as rxr
@@ -93,6 +94,8 @@ withNdvi = filtered.map(addNDVI)
 
 Now we have an ImageCollection that we want to get it as a XArray Dataset. We define the region of interest and extract the ImageCollection using the 'ee' engine.
 
+`scale` in XEE behaves differently than in GEE API. The value of the `scale` is in the units of the CRS. So to get the data at 10 meters resolution, we must also specify a CRS that has the unit of meters.
+
 
 ```python
 ds = xarray.open_dataset(
@@ -109,11 +112,22 @@ ds = xarray.open_dataset(
 ds
 ```
 
+Since we want to work with coordinates in latitude and longitude, we reproject the raster to `EPSG:4326`. This requires renaming and reordering the dimentions to those expected by rioxarray.
+
+
+```python
+ds_reprojected = ds\
+  .rename({'Y': 'y', 'X': 'x'}) \
+  .transpose('time', 'y', 'x') \
+  .rio.reproject('EPSG:4326')
+ds_reprojected
+```
+
 Select the `ndvi` variable. Split the datacube into 'chunks' to allow parallel processing using Dask.
 
 
 ```python
-original_time_series = ds.ndvi.chunk('auto')
+original_time_series = ds_reprojected.ndvi.chunk('auto')
 original_time_series
 ```
 
@@ -133,8 +147,8 @@ Plot and Extract the Time-Series at a Single Location
 
 
 ```python
-original_ts = original_time_series.interp(X=82.607376, Y=27.164335).compute()
-aggregated_ts = time_series_aggregated.interp(X=82.607376, Y=27.164335).compute()
+original_ts = original_time_series.interp(x=82.607376, y=27.164335).compute()
+aggregated_ts = time_series_aggregated.interp(x=82.607376, y=27.164335).compute()
 ```
 
 
@@ -155,7 +169,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/time_series_processing_xee_files/time_series_processing_xee_19_0.png)
+![](python-remote-sensing-output/time_series_processing_xee_files/time_series_processing_xee_21_0.png)
     
 
 
@@ -167,12 +181,6 @@ Save the processed monthly NDVI images using `rioxarray` as GeoTIFF files.
 ```python
 for time in time_series_aggregated.time.values:
   image = time_series_aggregated.sel(time=time)
-  # transform the image to suit rioxarray format
-  image = image \
-    .rename({'Y': 'y', 'X': 'x'}) \
-    .transpose('y', 'x') \
-    .rio.write_crs('EPSG:4326')
-
   date = np.datetime_as_string(time, unit='M')
   output_file = f'{date}.tif'
   output_path = os.path.join(output_folder, output_file)
