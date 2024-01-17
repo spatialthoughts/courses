@@ -1,0 +1,59 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[73.55833843987628, 21.30221866314927],
+          [73.55833843987628, 21.16269103558375],
+          [73.80278424065753, 21.16269103558375],
+          [73.80278424065753, 21.30221866314927]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script showing how to compute
+// Normalized Difference Chlorophyll Index (NDCI) to detect
+// Algal Blooms in inland waters
+
+// This example shows the algal bloom in the
+// Ukai Dam Reservoir, Gujarat, India
+// during February, 2022
+// More info at https://x.com/rajbhagatt/status/1497212432195809280
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+var startDate = ee.Date.fromYMD(2022, 2, 15);
+var endDate = startDate.advance(10, 'day');
+
+var filtered = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+
+var image = filtered.first(); 
+
+
+// Calculate Normalized Difference Chlorophyll Index (NDCI)
+// NDCI is an index that aims to predict the chlorophyll content
+// in turbid productive waters.
+// 'RED EDGE' (B5) and 'RED' (B4)
+var ndci = image.normalizedDifference(['B5', 'B4']).rename(['ndci']);
+
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// Select all pixels with high NDCI and high MNDWI
+// you may have to adjust the thresholds for your region
+var algae = ndci.gt(0.1).and(mndwi.gt(0.5));
+
+var rgbVis = {min: 500, max: 2500, bands: ['B4', 'B3', 'B2']};
+var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']};
+var ndciVis = {min:0, max:0.5, palette: ['white', 'red']};
+var algaeVis = {min:0, max:1, palette: ['white', '#31a354']};
+
+Map.centerObject(geometry, 12);
+Map.addLayer(image.clip(geometry), rgbVis, 'Image');
+Map.addLayer(mndwi.clip(geometry), ndwiVis, 'MNDWI', false);
+Map.addLayer(ndci.clip(geometry), ndciVis, 'NDCI', false);
+Map.addLayer(algae.clip(geometry).selfMask(), algaeVis, 'Algal Bloom');

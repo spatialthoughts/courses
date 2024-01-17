@@ -2,10 +2,12 @@
 var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7"),
     gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var boundary = arkavathy.geometry()
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
 
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -14,18 +16,18 @@ var rgbVis = {
  
 var filtered = s2
 .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-  .filter(ee.Filter.bounds(boundary))
-  .select('B.*')
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
 
-var composite = filtered.median().clip(boundary) 
+var composite = filtered.median();
 
 // Display the input composite.
-Map.addLayer(composite, rgbVis, 'image');
+Map.addLayer(composite.clip(geometry), rgbVis, 'image');
 
 
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn()
+var gcp = gcp.randomColumn();
 
 // This being a simpler classification, we take 60% points
 // for validation. Normal recommended ratio is
@@ -52,7 +54,8 @@ var classifier = ee.Classifier.smileRandomForest(50)
 // Classify the image.
 var classified = composite.classify(classifier);
 
-Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, '2019');
 
 //************************************************************************** 
 // Accuracy Assessment
@@ -67,7 +70,8 @@ var test = classified.sampleRegions({
   tileScale: 16
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
+
 // Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy());

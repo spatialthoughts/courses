@@ -1,6 +1,9 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
 var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary"),
-    urban = /* color: #cad6c9 */ee.FeatureCollection(
+    urban = 
+    /* color: #cc6d8f */
+    /* shown: false */
+    ee.FeatureCollection(
         [ee.Feature(
             ee.Geometry.Point([77.65618319730623, 12.95477448092164]),
             {
@@ -79,7 +82,10 @@ var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_bounda
               "landcover": 0,
               "system:index": "12"
             })]),
-    bare = /* color: #aa7233 */ee.FeatureCollection(
+    bare = 
+    /* color: #ffc107 */
+    /* shown: false */
+    ee.FeatureCollection(
         [ee.Feature(
             ee.Geometry.Point([77.57875318746432, 12.90030448811505]),
             {
@@ -122,7 +128,10 @@ var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_bounda
               "landcover": 1,
               "system:index": "6"
             })]),
-    water = /* color: #0b4a8b */ee.FeatureCollection(
+    water = 
+    /* color: #1e88e5 */
+    /* shown: false */
+    ee.FeatureCollection(
         [ee.Feature(
             ee.Geometry.Point([77.58402702188951, 12.946465216050397]),
             {
@@ -153,7 +162,10 @@ var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_bounda
               "landcover": 2,
               "system:index": "4"
             })]),
-    vegetation = /* color: #4dff5e */ee.FeatureCollection(
+    vegetation = 
+    /* color: #004d40 */
+    /* shown: false */
+    ee.FeatureCollection(
         [ee.Feature(
             ee.Geometry.Point([77.5929834739004, 12.973819098281412]),
             {
@@ -203,7 +215,8 @@ var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_bounda
               "system:index": "7"
             })]);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var geometry = bangalore.geometry();
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -211,18 +224,17 @@ var rgbVis = {
 };
  
 var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-  .filter(ee.Filter.bounds(bangalore))
-  .select('B.*')
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
 
-var composite = filtered.median().clip(bangalore) 
+var composite = filtered.median();
 
 // Display the input composite.
-Map.centerObject(bangalore)
-Map.addLayer(composite, rgbVis, 'image');
+Map.addLayer(composite.clip(geometry), rgbVis, 'image');
 
-var gcps = urban.merge(bare).merge(water).merge(vegetation)
+var gcps = urban.merge(bare).merge(water).merge(vegetation);
 
 // Overlay the point on the image to get training data.
 var training = composite.sampleRegions({
@@ -240,8 +252,12 @@ var classifier = ee.Classifier.smileRandomForest(50).train({
 });
 // // Classify the image.
 var classified = composite.classify(classifier);
-Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
+Map.centerObject(geometry);
+// Choose a 4-color palette
+// Assign a color for each class in the following order
+// Urban, Bare, Water, Vegetation
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
 
-// landcover=2 is water
-var waterClass = classified.eq(2)
-Map.addLayer(waterClass, {min: 0, max: 1, palette: ['white', 'blue']}, 'Water');
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, '2019');
+
+
