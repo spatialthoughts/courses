@@ -1,0 +1,43 @@
+var gsw = ee.Image("JRC/GSW1_2/GlobalSurfaceWater");
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var hydrosheds = ee.Image("WWF/HydroSHEDS/03VFDEM");
+    
+var beforeStart = '2018-07-15'
+var beforeEnd = '2018-08-10'
+var afterStart = '2018-08-10'
+var afterEnd = '2018-08-23'
+
+var ernakulam = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Ernakulam'))
+var geometry = ernakulam.geometry()
+Map.addLayer(geometry, {color: 'grey'}, 'Ernakulam District')
+
+var collection= ee.ImageCollection('COPERNICUS/S1_GRD')
+  .filter(ee.Filter.eq('instrumentMode','IW'))
+  .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+  .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING')) 
+  .filter(ee.Filter.eq('resolution_meters',10))
+  .filter(ee.Filter.bounds(geometry))
+  .select('VH');
+
+var beforeCollection = collection
+  .filter(ee.Filter.date(beforeStart, beforeEnd))
+
+var afterCollection = collection
+  .filter(ee.Filter.date(afterStart, afterEnd))
+
+var before = beforeCollection.mosaic().clip(geometry);
+var after = afterCollection.mosaic().clip(geometry);
+
+Map.centerObject(geometry, 10)
+Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
+Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
+
+// Exercise
+// A simple method for filtering speckles is using
+// a focal median filter.
+
+// Apply a Focal Median filter on both before and after images
+// Use a Circle kernel with a 30 meter radius
+// Add the filtered images to the map.
+
+// Hint: Use the focalMedian() function
