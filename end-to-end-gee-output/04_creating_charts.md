@@ -8,33 +8,28 @@ References:
 - geemap [Example notebook](https://geemap.org/notebooks/63_charts/)
 
 
+#### Initialization
+
+First of all, you need to run the following cells to initialize the API and authorize your account. You must have a Google Cloud Project associated with your GEE account. Replace the `cloud_project` with your own project from [Google Cloud Console](https://console.cloud.google.com/).
+
 
 ```python
+import geemap
 import ee
 ```
 
 
 ```python
+cloud_project = 'spatialthoughts'
+
 try:
-    import geemap
-except ModuleNotFoundError:
-    if 'google.colab' in str(get_ipython()):
-        print('geemap not found, installing via pip in Google Colab...')
-        !pip install geemap --quiet
-        import geemap
-    else:
-        print('geemap not found, please install via conda in your environment')
+    ee.Initialize(project=cloud_project)
+except:
+    ee.Authenticate()
+    ee.Initialize(project=cloud_project)
 ```
 
-
-```python
-ee.Authenticate()
-```
-
-
-```python
-ee.Initialize()
-```
+#### Load and Process the Data
 
 Load the TerraClimate collection and select the 'tmmx' band.
 
@@ -75,7 +70,7 @@ To chart an image series in Python, we must first extract the values from each i
 
 ```python
 def extract_data(image):
-    stats = image.reduceRegion(**{ 
+    stats = image.reduceRegion(**{
         'reducer':ee.Reducer.mean(),
         'geometry':geometry,
         'scale':5000
@@ -94,7 +89,7 @@ data = ee.FeatureCollection(filtered.map(extract_data))
 print(data.first().getInfo())
 ```
 
-### Create an Interactive Chart using geemap
+#### Create an Interactive Chart using geemap
 
 
 ```python
@@ -104,7 +99,7 @@ from geemap import chart
 
 ```python
 options = {
-    'title': 'Max Monthly Temperature at Bangalore', 
+    'title': 'Max Monthly Temperature at Bangalore',
     'legend_location': 'top-right',
     'height': '500px',
     'ylabel': 'Temperature (C)',
@@ -118,7 +113,7 @@ options = {
 chart.feature_byFeature(data, 'month', ['tmmx'], **options)
 ```
 
-### Create a chart using Matplotlib
+#### Create a chart using Matplotlib
 
 We can convert a FeatureCollection to a DataFrame using `geemap` helper function `ee_to_pandas`.
 

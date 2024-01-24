@@ -4,7 +4,9 @@ Coming from the programming in Earth Engine through the Code Editor, you will ne
 
 #### Initialization
 
-First of all, you need to run the following cells to initialize the API and authorize your account. You will be prompted to sign-in to the account and allow access to *View and Manage your Earth Engine data*. Once you approve, you will get an a verification code that needs to be entered at the prompt. This step needs to be done just once per session.
+First of all, you need to run the following cells to initialize the API and authorize your account. You must have a Google Cloud Project associated with your GEE account. Replace the `cloud_project` with your own project from [Google Cloud Console](https://console.cloud.google.com/).
+
+You will be prompted to allow the notebook to access your Google credentials to sign-in to the account and allow access to *Google Drive and Google Cloud data*. Once you approve, it will proceed to initialize the Earth Engine API. This step needs to be done just once per session.
 
 
 ```python
@@ -13,12 +15,14 @@ import ee
 
 
 ```python
-ee.Authenticate()
-```
+cloud_project = 'spatialthoughts'
 
+try:
+    ee.Initialize(project=cloud_project)
+except:
+    ee.Authenticate()
+    ee.Initialize(project=cloud_project)
 
-```python
-ee.Initialize()
 ```
 
 #### Variables

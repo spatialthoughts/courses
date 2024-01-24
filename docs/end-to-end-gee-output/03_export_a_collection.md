@@ -2,6 +2,10 @@ One of the most commonly asked questions by Earth Engine users is - *How do I do
 
 > You can also export images in a collection using Javascript API in the Code Editor but this requires you to manually start the tasks for each image. This approach is fine for small number of images. You can check out the [recommended script](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FEnd-to-End-GEE%3ASupplement%2FImage_Collections%2FExporting_ImageCollections).
 
+#### Initialization
+
+First of all, you need to run the following cells to initialize the API and authorize your account. You must have a Google Cloud Project associated with your GEE account. Replace the `cloud_project` with your own project from [Google Cloud Console](https://console.cloud.google.com/).
+
 
 ```python
 import ee
@@ -9,12 +13,13 @@ import ee
 
 
 ```python
-ee.Authenticate()
-```
+cloud_project = 'spatialthoughts'
 
-
-```python
-ee.Initialize()
+try:
+    ee.Initialize(project=cloud_project)
+except:
+    ee.Authenticate()
+    ee.Initialize(project=cloud_project)
 ```
 
 #### Create a Collection

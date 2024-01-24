@@ -1,23 +1,107 @@
-[geemap](https://github.com/giswqs/geemap) is an open-source Python package that comes with many helpful features that help you use Earth Engine effectively in Python. 
+[geemap](https://github.com/giswqs/geemap) is an open-source Python package that comes with many helpful features that help you use Earth Engine effectively in Python.
 
 It comes with a function that can help you translate your javascript earth engine code to Python automatically.
 
-Google Colab doesn't come pre-installed with the package, so we install it via pip.
+The `geemap` package is pre-installed in Colab.
 
 
 ```python
-try:
-    import geemap
-except ModuleNotFoundError:
-    if 'google.colab' in str(get_ipython()):
-        print('geemap not found, installing via pip in Google Colab...')
-        !pip install geemap --quiet
-        import geemap
-    else:
-        print('geemap not found, please install via conda in your environment')
+import geemap
+import ee
 ```
 
-The automatic conversion of code is done by calling the `geemap.js_snippet_to_py()` function. We first create a string with the javascript code.
+#### Initialization
+
+First of all, you need to run the following cells to initialize the API and authorize your account. You must have a Google Cloud Project associated with your GEE account. Replace the `cloud_project` with your own project from [Google Cloud Console](https://console.cloud.google.com/).
+
+
+```python
+cloud_project = 'spatialthoughts'
+
+try:
+    ee.Initialize(project=cloud_project)
+except:
+    ee.Authenticate()
+    ee.Initialize(project=cloud_project)
+```
+
+#### Automatic Conversion using GUI
+
+`geemap` comes with a user interface that can be used to interactively do code conversion. Let's try to convert the following Javascript code to Python.
+
+```
+var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+  
+var medianComposite = filtered.median();
+
+Map.centerObject(geometry, 10);
+Map.addLayer(medianComposite, rgbVis, 'Median Composite');
+```
+
+Run the cell below to load the map widget. Once the map widget loads, click the *Toolbar* icon in the top-right corner and select the *Convert Earth Engine Javascript to Python* tool. Paste your Javascript code and click *Convert*.
+
+
+```python
+m = geemap.Map(width=800)
+m
+```
+
+
+```python
+geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
+s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+
+rgbVis = {'min': 0.0, 'max': 3000, 'bands': ['B4', 'B3', 'B2']}
+
+filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
+  .filter(ee.Filter.bounds(geometry))
+
+medianComposite = filtered.median()
+
+m.centerObject(geometry, 10)
+m.addLayer(medianComposite, rgbVis, 'Median Composite')
+
+```
+
+You will see the auto-converted code displayed. Copy and paste it into a new cell and run it. Your code will be run using the GEE Python API. If your code loads any layers, they will be loadded on the map widget. To display it, open a new code cell and just type `m` to display the widget.
+
+
+
+
+```python
+m
+```
+
+> Note The auto-conversion is almost perfect and works flawlessly on most GEE code. One place it misses is during the conversion of function arguments specified as a dicitonary. You will need to prefix the resulting code with `**` to specify them as `**kwargs`. For example, the `geemap` converter produces code such as below.
+  ```
+  stats = image.reduceRegion({
+    'reducer': ee.Reducer.mean(),
+    'geometry': geometry,
+    'scale': 10,
+    'maxPixels': 1e10
+    })
+  ```
+To make this valid GEE Python API code - prefix the argument dictionary with `**`.
+  ```
+  stats = image.reduceRegion(**{
+    'reducer': ee.Reducer.mean(),
+    'geometry': geometry,
+    'scale': 10,
+    'maxPixels': 1e10
+    })
+  ```
+
+#### Automatic Conversion using Code
+
+`geemap` offers a function `js_snippet_to_py()` that can be used to perform the conversion using code. This is useful for batch conversions. To use this, we first create a string with the javascript code.
 
 
 ```python
@@ -42,12 +126,12 @@ function maskS2clouds(image) {
       .select("B.*")
       .copyProperties(image, ["system:time_start"])
 }
- 
+
 var filtered = s2
   .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
   .filter(ee.Filter.bounds(geometry))
   .map(maskS2clouds)
-  
+
 
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
@@ -84,10 +168,10 @@ The automatic conversion works great. Review it and paste it to the cell below.
 ```python
 import ee
 import geemap
-Map = geemap.Map()
+m = geemap.Map()
 
 geometry = ee.Geometry.Point([107.61303468448624, 12.130969369851766])
-Map.centerObject(geometry, 12)
+m.centerObject(geometry, 12)
 s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 rgbVis = {
   'min': 0.0,
@@ -125,8 +209,8 @@ palette = [
   '004C00', '023B01', '012E01', '011D01', '011301']
 
 ndviVis = {'min':0, 'max':0.5, 'palette': palette }
-Map.addLayer(withNdvi.select('ndvi'), ndviVis, 'NDVI Composite')
-Map
+m.addLayer(withNdvi.select('ndvi'), ndviVis, 'NDVI Composite')
+m
 ```
 
 ### Exercise
