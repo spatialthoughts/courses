@@ -3,7 +3,13 @@ import ee
 import csv
 import os
 
-ee.Initialize()
+cloud_project = 'spatialthoughts'
+
+try:
+    ee.Initialize(project=cloud_project)
+except:
+    ee.Authenticate()
+    ee.Initialize(project=cloud_project)
 
 # Get current date and convert to milliseconds 
 start_date = ee.Date.fromYMD(2022, 1, 1)
