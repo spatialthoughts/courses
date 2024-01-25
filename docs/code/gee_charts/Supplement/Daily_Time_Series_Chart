@@ -1,0 +1,113 @@
+// Example script showing how to use Sentinel-5p
+// data and create a daily time-series of
+// atmospheric concentrations for a chosen variable
+// over a region.
+
+// Choose the location
+var geometry = ee.Geometry.Point([77.4294, 13.0708]);
+
+// Choose the collection
+var NO2 = ee.ImageCollection('COPERNICUS/S5P/NRTI/L3_NO2');
+
+// Choose the start and end dates
+
+// Default timezone for the dates is Earth Engine is UTC.
+// Charts are created with your local timezone.
+
+// For hourly or daily time-series, it is important to make
+// sure the timezone for dates matches your browser timezone.
+// otherwise you will see the data points shifted in the chart.
+
+// You can specify your local timezone as IANA zone id
+// https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+// Here we specify the dates in timezone for India
+var tz = 'Asia/Kolkata';
+var startDate = ee.Date.fromYMD(2022, 4, 1, tz);
+var endDate = ee.Date.fromYMD(2022, 5, 1, tz);
+
+var NO2Filtered = NO2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+  .select('tropospheric_NO2_column_number_density');
+  
+// S5P captures multiple images in a single day
+// Aggregate the collection to daily images
+
+// Get a list of number of days
+var days = endDate.difference(startDate, 'day');
+var daysList = ee.List.sequence(0, days);
+
+var result = daysList.map(function(day) {
+  var dayStart = startDate.advance(day, 'day', tz);
+  var dayEnd = dayStart.advance(1, 'day', tz);
+  var dayFiltered = NO2Filtered
+    .filter(ee.Filter.date(dayStart, dayEnd));
+  
+  var dayMeanImage = dayFiltered.mean().rename('no2');
+  // Extract the spatial mean over the region
+  // Specify maxPixels and tileScale to enable
+  // computation over large region
+  var stats = dayMeanImage.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 1113.2,
+    maxPixels: 1e10,
+    tileScale: 16
+  });
+  // Some time periods have no matching images
+  // or they have nodata values
+  // We need to handle both these cases and 
+  // set a nodata value of -9999
+  var dayMeanNO2 = ee.List([stats.get('no2', -9999), -9999])
+      .reduce(ee.Reducer.firstNonNull())
+  // Create a feature with the extracted value and date as properties
+  var f = ee.Feature(geometry, {
+    'no2': dayMeanNO2,
+    'date': dayStart.format('YYYY-MM-dd', tz),
+    'system:time_start': dayStart.millis()
+  });
+  return f;
+});
+
+// Remove any No Data values before charting
+var no2Fc = ee.FeatureCollection(result)
+  .filter(ee.Filter.neq('no2', -9999));
+
+print('Collection with Nulls Removed', no2Fc);
+
+// Create a chart
+var chart = ui.Chart.feature.byFeature({
+  features: no2Fc,
+  xProperty: 'system:time_start',
+  yProperties: ['no2']}) 
+  .setChartType('LineChart')
+  .setOptions({
+    interpolateNulls: false,
+    lineWidth: 2,
+    pointSize: 3,
+    series: {
+      0: {color: '#31a354'},
+    },
+    legend: 'none',
+    curveType: 'function',
+    title: 'NO2 Time-Series',
+    vAxis: {title: 'NO2 (mol/m^2)', viewWindow: {min:0}},
+    hAxis: {
+      title: '', 
+      // Apply a rotation to display vertical labels on X-Axis
+      slantedText: true,
+      slantedTextAngle: 90,
+      gridlines: {
+        units: {
+          days: {format: ['MM-dd']},
+        },
+      },
+      minorGridlines: {
+        count:0
+      },
+    },
+    chartArea: {left:150, right:50}
+  });
+
+print(chart);

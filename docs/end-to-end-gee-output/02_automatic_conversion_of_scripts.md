@@ -53,6 +53,10 @@ m = geemap.Map(width=800)
 m
 ```
 
+You will see the auto-converted code displayed. Copy and paste it into a new cell and run it. Your code will be run using the GEE Python API.
+
+
+
 
 ```python
 geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
@@ -71,16 +75,16 @@ m.addLayer(medianComposite, rgbVis, 'Median Composite')
 
 ```
 
-You will see the auto-converted code displayed. Copy and paste it into a new cell and run it. Your code will be run using the GEE Python API. If your code loads any layers, they will be loadded on the map widget. To display it, open a new code cell and just type `m` to display the widget.
-
-
+If your code loads any layers, they will be loaded on the map widget. To display it, open a new code cell and just type `m` to display the widget.
 
 
 ```python
 m
 ```
 
-> Note The auto-conversion is almost perfect and works flawlessly on most GEE code. One place it misses is during the conversion of function arguments specified as a dicitonary. You will need to prefix the resulting code with `**` to specify them as `**kwargs`. For example, the `geemap` converter produces code such as below.
+The auto-conversion is almost perfect and works flawlessly on most GEE code.
+
+One place it misses is during the conversion of function arguments specified as a dicitonary. You will need to prefix the resulting code with `**` to specify them as `**kwargs`. For example, the `geemap` converter produces code such as below.
   ```
   stats = image.reduceRegion({
     'reducer': ee.Reducer.mean(),
