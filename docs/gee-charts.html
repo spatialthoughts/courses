@@ -817,73 +817,76 @@ target="_blank">Open in Code Editor ↗</a></p>
 <span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
 <span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">// Get the forecasts for today</span></span>
 <span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">// Forecasts are generated every 6 hours</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">// To account for ingestion delay, we get the forests</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">// generated in past 10 hours</span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="kw">var</span> now <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>())<span class="op">;</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> now<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">10</span><span class="op">,</span> <span class="st">&#39;hour&#39;</span>)<span class="op">;</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> forecast</span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(before<span class="op">,</span> now))<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">// To account for ingestion delay, we get the forests</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">// generated in past 12 hours</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">// If you still get an error, increase the number of hours</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="kw">var</span> periodHours <span class="op">=</span> <span class="dv">12</span><span class="op">;</span> </span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="kw">var</span> now <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>())<span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> now<span class="op">.</span><span class="fu">advance</span>(periodHours<span class="op">,</span> <span class="st">&#39;hour&#39;</span>)<span class="op">;</span></span>
 <span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">// All forecast images have a timestamp of the current day</span></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">// As we want a time-series of forecasts, we update the</span></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">// timestamp to the date the image is forecasting.</span></span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> filtered<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;temperature_2m_above_ground&#39;</span>)</span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(image) {</span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>    <span class="kw">var</span> forecastTime <span class="op">=</span> image<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;forecast_time&#39;</span>)<span class="op">;</span></span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>    <span class="cf">return</span> image<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;system:time_start&#39;</span><span class="op">,</span> forecastTime)<span class="op">;</span></span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a></span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">// Create a chart of forecast at a single location</span></span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> filtered<span class="op">,</span></span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry1<span class="op">,</span></span>
-<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">first</span>()<span class="op">,</span></span>
-<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">27830</span>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>    <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a>    <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
-<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature Forecast at a Single Location&#39;</span><span class="op">,</span></span>
-<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temparature (°C)&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MM-dd&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#fc8d62&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a>    }<span class="op">,</span></span>
-<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {</span>
-<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a>      <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;none&#39;</span></span>
-<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a>    }</span>
-<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span>
-<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a></span>
-<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a></span>
-<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">// For plotting multiple locations, we need a FeatureCollection</span></span>
-<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="kw">var</span> locations <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>([</span>
-<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(geometry1<span class="op">,</span> {<span class="st">&#39;name&#39;</span><span class="op">:</span> <span class="st">&#39;Ahmedabad&#39;</span>})<span class="op">,</span></span>
-<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(geometry2<span class="op">,</span> {<span class="st">&#39;name&#39;</span><span class="op">:</span> <span class="st">&#39;Bengaluru&#39;</span>})</span>
-<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a>  ])<span class="op">;</span></span>
-<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a>  </span>
-<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">// Create a chart of forecasted temperatures</span></span>
-<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a></span>
-<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">seriesByRegion</span>({</span>
-<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> filtered<span class="op">,</span></span>
-<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a>  <span class="dt">regions</span><span class="op">:</span> locations<span class="op">,</span></span>
-<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">first</span>()<span class="op">,</span></span>
-<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">27830</span><span class="op">,</span></span>
-<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a>  <span class="dt">seriesProperty</span><span class="op">:</span> <span class="st">&#39;name&#39;</span></span>
-<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a>      <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
-<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature Forecast at Multiple Locations&#39;</span><span class="op">,</span></span>
-<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature (°C)&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MM-dd&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a>      <span class="dt">series</span><span class="op">:</span> {</span>
-<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a>        <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#fc8d62&#39;</span>}<span class="op">,</span></span>
-<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a>        <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#8da0cb&#39;</span>}</span>
-<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a>      }<span class="op">,</span></span>
-<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a>      <span class="dt">legend</span><span class="op">:</span> {</span>
-<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a>        <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span></span>
-<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a>      }</span>
-<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a>    })<span class="op">;</span></span>
-<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> forecast</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(before<span class="op">,</span> now))<span class="op">;</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">// All forecast images have a timestamp of the current day</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">// As we want a time-series of forecasts, we update the</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">// timestamp to the date the image is forecasting.</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> filtered<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;temperature_2m_above_ground&#39;</span>)</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(<span class="kw">function</span>(image) {</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>    <span class="kw">var</span> forecastTime <span class="op">=</span> image<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;forecast_time&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>    <span class="cf">return</span> image<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;system:time_start&#39;</span><span class="op">,</span> forecastTime)<span class="op">;</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">// Create a chart of forecast at a single location</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> filtered<span class="op">,</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry1<span class="op">,</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">first</span>()<span class="op">,</span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">27830</span>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>    <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>    <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>    <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature Forecast at a Single Location&#39;</span><span class="op">,</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>    <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temparature (°C)&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a>    <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MM-dd&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a>    <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a>      <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#fc8d62&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a>    <span class="dt">legend</span><span class="op">:</span> {</span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a>      <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;none&#39;</span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a>    }</span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a></span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">// For plotting multiple locations, we need a FeatureCollection</span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="kw">var</span> locations <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>([</span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(geometry1<span class="op">,</span> {<span class="st">&#39;name&#39;</span><span class="op">:</span> <span class="st">&#39;Ahmedabad&#39;</span>})<span class="op">,</span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(geometry2<span class="op">,</span> {<span class="st">&#39;name&#39;</span><span class="op">:</span> <span class="st">&#39;Bengaluru&#39;</span>})</span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a>  ])<span class="op">;</span></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a>  </span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">// Create a chart of forecasted temperatures</span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">seriesByRegion</span>({</span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> filtered<span class="op">,</span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a>  <span class="dt">regions</span><span class="op">:</span> locations<span class="op">,</span></span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">first</span>()<span class="op">,</span></span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">27830</span><span class="op">,</span></span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a>  <span class="dt">seriesProperty</span><span class="op">:</span> <span class="st">&#39;name&#39;</span></span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a>      <span class="dt">pointSize</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature Forecast at Multiple Locations&#39;</span><span class="op">,</span></span>
+<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;Temperature (°C)&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MM-dd&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a>      <span class="dt">series</span><span class="op">:</span> {</span>
+<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a>        <span class="dv">0</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#fc8d62&#39;</span>}<span class="op">,</span></span>
+<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a>        <span class="dv">1</span><span class="op">:</span> {<span class="dt">color</span><span class="op">:</span> <span class="st">&#39;#8da0cb&#39;</span>}</span>
+<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a>      }<span class="op">,</span></span>
+<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a>      <span class="dt">legend</span><span class="op">:</span> {</span>
+<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a>        <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;top&#39;</span></span>
+<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a>      }</span>
+<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-2" class="section level3">
 <h3>Exercise</h3>
 <p><a
