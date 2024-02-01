@@ -295,7 +295,7 @@ knitr::include_graphics('images/gee_water_resources_management/clipping.png')
 
 Spectral Indices are central to many aspects of remote sensing. For almost all research/work, you will need to compute one spectral indices. The most commonly used formula for calculating an index is computing the *Normalized Difference* between 2 bands. Earth Engine provides a helper function `normalizedDifference()` to help calculate normalized indices, such as Normalized Difference Vegetation Index (NDVI) or Modified Normalized Difference Water Index (MNDWI). 
 
-Some indices - such as the Automated Water Extraction Index (AWEI) - require calculation using a more complex formula.In such cases, you can use the `expression()` function which allow you to to construct formula with common arithmatic operators. The script below shows how to implement common water-related indices in Earth Engine. Note that the AWEI formula expects the pixel values to be reflectances, so we need to apply a scaling factor of 0.0001 to convert the Sentinel-2 band values to reflectances.
+Some indices - such as the Automated Water Extraction Index (AWEI) - require calculation using a more complex formula.In such cases, you can use the `expression()` function which allow you to to construct formula with common arithmetic operators. The script below shows how to implement common water-related indices in Earth Engine. Note that the AWEI formula expects the pixel values to be reflectances, so we need to apply a scaling factor of 0.0001 to convert the Sentinel-2 band values to reflectances.
 
 [Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F07b_Calculating_Indices_(complete)){target="_blank"}
 
@@ -319,7 +319,7 @@ We have implemented both versions of AWEI in the script. Add them to the map and
 
 ## 08. Computation on Images
 
-Inspecting the MNDWI or AWEI index images, you will see that water pixels have a higher value than other pixels. If we wanted to extract those pixels, we can apply a threshold value to select all pixels above a certain value. The result will be a binary image with pixel values 1 or 0. For all the pixels that matched the condition, the resulting value will be 1, and for other pixels it will be 0. The conditions can be written using the *logical operators* like greater than `.gt()`, lesser than `.lt()`, equal to `.eq()`, greater than or equal to `.gte()`, etc. We can also combine multiple layers to create a condition using the *boolean operators* like AND `.and()`, OR `.or()` functions. The script below shows how to implement static thresholding in Earth Engine.
+Inspecting the MNDWI or AWEI index images, you will see that water pixels have a higher value than other pixels. If we wanted to extract those pixels, we can apply a threshold value to select all pixels above a certain value. The result will be a binary image with pixel values 1 or 0. For all the pixels that matched the condition, the resulting value will be 1, and for other pixels it will be 0. The conditions can be written using the *conditional operators* like greater than `.gt()`, lesser than `.lt()`, equal to `.eq()`, greater than or equal to `.gte()`, etc. We can also combine multiple layers to create a condition using the *boolean operators* like AND `.and()`, OR `.or()` functions. The script below shows how to implement static thresholding in Earth Engine.
 
 [Open in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A01-Earth_Engine_Basics%2F08b_Computation_on_Images_(complete)){target="_blank"}
 ```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Extracting Waterbodies using a Simple Threshold'}
@@ -375,7 +375,7 @@ Export the ```waterMndwi``` image to your drive.
 
 # Module 2: Surface Water Mapping
 
-In this Module, we will learn create an vectore surface water map for a water shed boundary in [HydroSheds](https://www.hydrosheds.org/page/hydrobasins) using [JRC - Global Surface Water](https://global-surface-water.appspot.com/#features). This data contains more accurate global-level surface water information. Using this, we will map the surface water, then learn to water mask and get specific information, execute morphological operations, and create a vector map for a river basin. 
+In this Module, we will learn how to extract surface water polygons from a chosen watershed. We will be using in [HydroSheds](https://www.hydrosheds.org/page/hydrobasins) and [JRC - Global Surface Water](https://global-surface-water.appspot.com/#features) datasets. We will map the surface water for a chosen year, mask non-water pixels,  apply morphological filters to remove fill holes and convert the raster image into polygons.
 
 
 [![Watch the video](https://img.youtube.com/vi/sUzt55WGArc/mqdefault.jpg)](https://www.youtube.com/watch?v=sUzt55WGArc&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=21){target="_blank"}
@@ -386,7 +386,7 @@ In this Module, we will learn create an vectore surface water map for a water sh
 
 ## 01. Load Global Surface Water Data
 
-Lets load the [JRC Global Surface Water Mapping Layers](https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_3_GlobalSurfaceWater). This data is the Spatio-temporal distribution of surface water. It is a single image with 7 bands, where each band contains unique information. Let's use the `occurrence` band, which includes information on the frequency of the water present from 1984-2020. The pixel value ranges from 0-100, where 0 represents No trace of water in any year, and 100 represents water present in all 36 years.
+Lets load the [JRC Global Surface Water Mapping Layers](https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_3_GlobalSurfaceWater). This data contains the spatio-temporal distribution of surface water. It is a single image with 7 bands, where each band contains unique information. Let's use the `occurrence` band, which includes information on the frequency of the water present from 1984-2020. The pixel value ranges from 0-100, where 0 represents No trace of water in any year, and 100 represents water present in all 36 years.
 
 Use the Inspector to find the frequency of water present in the location. 
 
@@ -517,6 +517,7 @@ knitr::include_graphics('images/gee_water_resources_management/morphological_ope
 ```
 
 ### Exercise
+
 [Try in Code Editor &#8599;](https://code.earthengine.google.com/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A02-Surface_Water_Mapping%2F06c_Create_a_Surface_Water_Map_(exercise)){target="_blank"}
 
 By default, the total iteration is 1. We can increase it as required, so the kernel will pass through the image to perform the operation as many times as required. 
@@ -548,21 +549,27 @@ Use the *eq* filter and filter the water bodies alone.
 
 # Module 3: Precipitation Time Series Analysis 
 
-The main advantage of the gridded precipitation dataset is that they offer a consistent long-term time-series. We will cover the basics of gridded rainfall datasets, how to aggregate them to the requirement temporal resolution and prepare a time-series for trend analysis.
+The main advantage of the gridded precipitation datasets is that they offer a consistent long-term time-series. We will cover the basics of gridded rainfall datasets, how to aggregate them to the requirement temporal resolution, prepare a time-series and perform pixel-wise trend analysis.
+
+
+But to fully leverage the computation power of Earth Engine for our analysis, we must first learn about techniques for writing efficient parallel computing code. The Earth Engine API uses [Map/Reduce](https://en.wikipedia.org/wiki/MapReduce) paradigm for parallel computing. 
+
+<!-- Map/Reduce Video -->
 
 [![Watch the video](https://img.youtube.com/vi/frYZf17QyIc/mqdefault.jpg)](https://www.youtube.com/watch?v=frYZf17QyIc&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=37){target="_blank"}
 
 [Watch the Video &#8599;](https://www.youtube.com/watch?v=frYZf17QyIc&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=37){target="_blank"}
 
-[View the Presentation &#8599;](https://docs.google.com/presentation/d/1G-v9Nz90DGGQ2OfTPxwD5j-HspPcIYUu9UB-nkNnGn4/edit?usp=sharing){target="_blank"}
-
-But to fully leverage the computation power of Earth Engine for our analysis, we must first learn about techniques for writing efficient paralell computing code. The Earth Engine API uses [Map/Reduce](https://en.wikipedia.org/wiki/MapReduce) paradigm for parallel computing. 
-
-In this module, we will first learn about earth engine objects, creating user-defined functions, mapping a function, and using reducers. We will then apply these technique to create a time series chart and carry out spatio-temporal trend analysis of precipitation.
-
-[![View Presentation](images/gee_water_resources_management/map_reduce.png){width="400px"}](https://docs.google.com/presentation/d/1F_yRyBkItQdpbm-TXOTc4CkMXxynulfKY2p1TG0xS-g/edit?usp=sharing){target="_blank"}
-
 [View the Presentation &#8599;](https://docs.google.com/presentation/d/1F_yRyBkItQdpbm-TXOTc4CkMXxynulfKY2p1TG0xS-g/edit?usp=sharing){target="_blank"}
+
+----
+<!-- Precipitation Time-Series Video -->
+
+[![Watch the video](https://img.youtube.com/vi/t73sL6DPiiY/mqdefault.jpg)](https://www.youtube.com/watch?v=t73sL6DPiiY&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=42){target="_blank"}
+
+[Watch the Video &#8599;](https://www.youtube.com/watch?v=t73sL6DPiiY&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=42){target="_blank"}
+
+[View the Presentation &#8599;](https://docs.google.com/presentation/d/1G-v9Nz90DGGQ2OfTPxwD5j-HspPcIYUu9UB-nkNnGn4/edit?usp=sharing){target="_blank"}
 
 
 ## 01. Mapping a Function
@@ -667,7 +674,7 @@ knitr::include_graphics('images/gee_water_resources_management/charting_monthly_
 ### Exercise
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F05c_Charting_Monthly_Rainfall_(exercise)){target="_blank"}
 
-Change the geometry to your location, comput the monthly total rainfall. Download the timeseries chart generated.
+Change the geometry to your location, compute the monthly total rainfall. Download the timeseries chart generated.
 
 ```{js eval=FALSE}
 // Create a chart of monthly rainfall at your selected location
@@ -689,7 +696,7 @@ knitr::include_graphics('images/gee_water_resources_management/upload.png')
 ### Exercise
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A03-Time_Series_Analysis%2F06c_Import_(exercise)){target="_blank"}
 
-Explore the uploaded Feature Collection, `SHAPE_STAr` property contains the area in meter_square, using `addArea` function area is converted into kilometer_square and stored as `area_sqkm`. Using this property filter all regions with area greater than 1000 kmsq. 
+Explore the uploaded Feature Collection, `SHAPE_STAr` property contains the area in meter_square, using `addArea` function area is converted into kilometer_square and stored as `area_sqkm`. Using this property filter all regions with area greater than 1000 sq km. 
 
 
 ```{js eval=FALSE, code=readLines('code/gee_water_resources_management/03-Time_Series_Analysis/06c_Import_(exercise)')}
@@ -741,7 +748,7 @@ The trend analysis is done for a particular season. Change the filter dates to c
 
 # Module 4: Land Use Land Cover Classification
 
-Supervised classification is a classical machine learning technique in remote sensing. There is a variety of applications that can be performed using this technique. Google Earth Engine is uniquely suited for supervised classification at a large scale, and it has all the resources pre-loaded for convenience. The interactive nature of Earth Engine development allows for iterative development of supervised classification workflows by combining many different datasets into the model. This module covers basic supervised classification workflow, accuracy assessment, hyperparameter tuning, and using the ESA world cover data. 
+Supervised classification is one of the most popular machine learning technique used in remote sensing. Google Earth Engine is uniquely suited for supervised classification at a large scale and offers a flexible data model that allows you to easily incorporate variables from multiple data sources. The interactive nature of Earth Engine development allows for iterative development of supervised classification workflows by combining many different datasets into the model. This module covers basic supervised classification workflow, accuracy assessment, and area calculation.
 
 [![Watch the video](https://img.youtube.com/vi/G1TpZ7SrQQc/mqdefault.jpg)](https://www.youtube.com/watch?v=G1TpZ7SrQQc&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=56){target="_blank"}
 
@@ -853,7 +860,7 @@ knitr::include_graphics('images/gee_water_resources_management/export_classifica
 
 ## 05. Using Existing Landcover Datasets
 
-One of the ambitious projects was creating a global landcover data with many classes for many years. This type of data is essential as in expect few countries, the landcover data of terrain is not available / not shared publically by the local governments. Hence creating a global land cover has been attempted by a few organizations One among them is *European Space Agency*. The ESA has created the 10m global landcover called [WorldCover](https://esa-worldcover.org/en) with 10 classes. At present, this data is available for the year 2020 and, ESA has promised to develop and release this data every year following 2020. [Watch the launch event](https://vimeo.com/637205140) to know more about this data and the methodology used to create this.
+One of the ambitious projects was creating a global landcover data with many classes for many years. This type of data is essential as in expect few countries, the landcover data of terrain is not available / not shared publicly by the local governments. Hence creating a global land cover has been attempted by a few organizations One among them is *European Space Agency*. The ESA has created the 10m global landcover called [WorldCover](https://esa-worldcover.org/en) with 10 classes. At present, this data is available for the year 2020 and, ESA has promised to develop and release this data every year following 2020. [Watch the launch event](https://vimeo.com/637205140) to know more about this data and the methodology used to create this.
 
 We can use the `eq` operator to extract a particular class, extract the water class, and create a surface water map for the Arkavathy region.
 
@@ -868,14 +875,14 @@ knitr::include_graphics('images/gee_water_resources_management/esa_worldcover.pn
 ### Exercise 
 [Open in Code Editor &#8599;](https://code.earthengine.google.com/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A04-Land_Use_Land_Cover_Classification%2F05c_Using_Existing_Landcover_Datasets_(exercise)){target="_blank"}
 
-Use the WorldView data and extract the `Cropland` class for Arkavathy region. Then add it to map with *green* palette. 
+Use the WorldCover data and extract the `Cropland` class for Arkavathy region. Then add it to map with *green* palette. 
 
 ```{js eval=FALSE, code=readLines('code/gee_water_resources_management/04-Land_Use_Land_Cover_Classification/05c_Using_Existing_Landcover_Datasets_(exercise)')}
 ```
 
 ## 06. Calculating Area
 
-Now that we have extracted the open water from WorldView, we will learn how to calculate the area for pixels in each class. Calculating area for features is done using the `area()` function and for images using the `ee.Image.pixelArea()` function. The `ee.Image.pixelArea()` function creates an image where each pixel's value is the area of the pixel. We multiply this pixel area image with our image and sum up the area using the `reduceRegion()` function.
+Now that we have extracted the open water from WorldCover, we will learn how to calculate the area for pixels in each class. Calculating area for features is done using the `area()` function and for images using the `ee.Image.pixelArea()` function. The `ee.Image.pixelArea()` function creates an image where each pixel's value is the area of the pixel. We multiply this pixel area image with our image and sum up the area using the `reduceRegion()` function.
 
 > The `ee.Image.pixelArea()` function uses a custom equal-area projection for area calculation. The result is area in square meters regardless of the projection of the input image. [Learn more](https://groups.google.com/g/google-earth-engine-developers/c/Ccaorx-obVw/m/_ZQdP2wVAgAJ)
 
@@ -906,9 +913,9 @@ Extract the area value as a number and convert it as hectares.
 
 # Module 5: Flood Mapping
 
-This module lets us map the flooded regions and calculate the flooded area during the [2018 Kerala Floods](https://en.wikipedia.org/wiki/2018_Kerala_floods) in Ernakulam district.
+This module covers the change detection techniques for mapping floods. We will work with Sentinel-1 dataset and calculate the flooded area during the [2018 Kerala Floods](https://en.wikipedia.org/wiki/2018_Kerala_floods) in Ernakulam district in India.
 
-We will use the Sentinel 1 GRD (Ground Range Detected) data. This satellite is an active remote sensing platform that uses the microwave C-band to collect data. The main advantage of using microwave data is that it can penetrate through clouds and capture reflectance value both day and night since it is not dependent on Sunlight for reflectance. The spatial resolution of this data is 10m, and the temporal resolution varies between 6-12 days, depending on the location. 
+Sentinel-1 is an active remote sensing platform that uses the microwave C-band to collect data. The main advantage of using microwave data is that it can penetrate through clouds and capture reflectance value both day and night since it is not dependent on Sunlight for reflectance. The spatial resolution of this data is 10m, and the temporal resolution varies between 6-12 days, depending on the location. 
 
 [![Watch the video](https://img.youtube.com/vi/JWq_WepA5DY/mqdefault.jpg)](https://www.youtube.com/watch?v=JWq_WepA5DY&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=69){target="_blank"}
 
@@ -969,11 +976,11 @@ knitr::include_graphics('images/gee_water_resources_management/flood_change.png'
 
 ## 03. Apply Speckle Filter
 
-Any SAR image will be with noise. Speckle is like salt and pepper noise in the image. Before performing any operation, a filter is applied over the image to smooth it and reduce the noise. There are many types of filters. *RefinedLee* filter is a more scientific approach in filtering the noise.
+Any SAR image will be with noise. Speckle is like salt and pepper noise in the image. Before performing any operation, a filter is applied over the image to smooth it and reduce the noise. There are many types of filters. *Refined Lee* filter is a more scientific approach in filtering the noise.
 
-The raw image should be passed into the `RefinedLee` function. Hence, the log image is converted to raw using the `toNatural` function. The resulting image from RefinedLee is again converted to log scale by passing it `toDB` function.
+The raw image should be passed into the `Refined Lee` function. Hence, the log image is converted to raw using the `toNatural` function. The resulting image from Refined Lee is again converted to log scale by passing it `toDB` function.
 
-> Guido Lemoine implemented the RefinedLee filter in GEE. Keeping the Speckle filtering function at the end of any SAR processing script can be very handy for conversions and save time.
+> Guido Lemoine implemented the Refined Lee filter in GEE. Keeping the Speckle filtering function at the end of any SAR processing script can be very handy for conversions and save time.
 
 [Open in Code Editor &#8599;](https://code.earthengine.google.com/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A05-Flood_Mapping%2F03b_Apply_Speckle_Filter_(complete)){target="_blank"}
 ```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Speckle Filter'}
@@ -1009,7 +1016,7 @@ knitr::include_graphics('images/gee_water_resources_management/flood_initialArea
 
 This exercise script is adopted from UN-SPIDER's recommended approach to computing the flooded region. 
 
-Compute the *difference* image by finding the difference between the after and before images. Use a threshold od -3 (arbitrary value) to identify the initial flooded regions. Click *Try in Code Editor* to view the complete script.
+Compute the *difference* image by finding the difference between the after and before images. Use a threshold of -3 (arbitrary value) to identify the initial flooded regions. Click *Try in Code Editor* to view the complete script.
 
 ```{js eval=FALSE}
 // There is an alternate way to detect change
@@ -1087,7 +1094,7 @@ Printing the results in the console may timeout for more extensive computations.
 
 # Module 6: Drought Monitoring
 
-There are many definitions for drought, depending on the context used. Monitoring and calculating the impact of drought in large sales is quite tedious without remote sensing data. In this module, we will learn to calculate the *Impact of Hydrological drought* using the MODIS data product.
+There are many definitions for drought, depending on the context used. Monitoring and calculating the impact of drought in large sales is quite tedious without remote sensing data. In this module, we will learn how to monitor the impact of meteorological drought on natural vegetation by implementing the Vegetation Condition Index (VCI) using the MODIS dataset.
 
 [![Watch the video](https://img.youtube.com/vi/Kx39XL7BfOA/mqdefault.jpg)](https://www.youtube.com/watch?v=Kx39XL7BfOA&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=82){target="_blank"}
 
@@ -1269,7 +1276,7 @@ Extract all pixels representing Poor VCI (Value = 1) from the classified VCI ima
 
 # Module 7: Earth Engine Apps
 
-A simple yet powerful application of GEE is the building App. We can build these apps to share the work with others as a working model instead of a static report. Earth Engine Apps uses JavaScript internally. This module will introduce you to GEE Apps by creating Surface Water Explorer App.
+The Earth Engine Javascript API includes a `ui` module that allows you to build interactive web-mapping apps easily. Earth Engine also provides free cloud-hosting to host the app that can be shared with stakeholders. This module will introduce you to GEE Apps by creating a simple [Surface Water Explorer App](https://ujavalgandhi.users.earthengine.app/view/surface-water-explorer).
 
 [![Watch the video](https://img.youtube.com/vi/gQKSoPpXf4k/mqdefault.jpg)](https://www.youtube.com/watch?v=gQKSoPpXf4k&list=PLppGmFLhQ1HI0YeA5zQHxdNlmxihvBawF&index=97){target="_blank"}
 
@@ -1317,7 +1324,7 @@ knitr::include_graphics('images/gee_water_resources_management/apps_creation.png
 Create the app for your location. 
 
 ```{js eval=FALSE}
-// Change the ADM2_NAME to a State/Provice in your region
+// Change the ADM2_NAME to a State/Province in your region
 // Change the Map.setCenter to center the map on the chosen region
 // Test the App
 
@@ -1340,7 +1347,7 @@ knitr::include_graphics('images/gee_water_resources_management/apps_calculation.
 ### Exercise 
 [Try in Code Editor &#8599;](https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Water-Resources-Management%3A07-Earth_Engine_Apps%2F03c_Performing_Calculations_(exercise)){target="_blank"}
 
-Before publishing your app, add your name as Autor. 
+Before publishing your app, add your name as Author. 
 
 ```{js eval=FALSE}
 // Add a new panel called authorPanel
