@@ -68,7 +68,7 @@ my_string = "It's a beautiful day!"
 
 What if our string contains both single and double quotes?
 
-We can use triple-quotes! Enclosing the string in triple quotes ensures both single and double quotes are treated correctly. 
+We can use triple-quotes! Enclosing the string in triple quotes ensures both single and double quotes are treated correctly.
 
 
 ```python
@@ -96,11 +96,15 @@ print(path)
 
 ## Printing Strings
 
-Modern way of creating strings from variables is using the `format()` method
+Python provides a few different ways to create strings from variables. Let's learn about the two preferred methods.
+
+### String `format()` Method
+
+We can use the string `format()` method to create a string with curly-braces and specify the values to fill in each field.
 
 
 ```python
-city = 'San Fransico'
+city = 'San Francisco'
 population = 881549
 output = 'Population of {} is {}.'.format(city, population)
 print(output)
@@ -116,6 +120,31 @@ longitude = -122.4194
 coordinates = '{:.2f},{:.2f}'.format(latitude, longitude)
 print(coordinates)
 ```
+
+### F-Strings
+
+Since Python 3.6, we have an improved way for string formatting called *f-strings* - which stands for *formatted string literals*. It works similarly to the `format()` function but provides a more concise syntax. We create an f-string by adding a prefix `f` to any string. The variables within curly-braces inside a f-string are replaced with their values.
+
+
+```python
+city = 'San Francisco'
+population = 881549
+output = f'Population of {city} is {population}.'
+print(output)
+```
+
+The same formatting operators we saw earlier works with f-strings.
+
+
+```python
+latitude = 37.7749
+longitude = -122.4194
+
+coordinates = f'{latitude:.2f},{longitude:.2f}'
+print(coordinates)
+```
+
+We find that while f-strings are modern and concise - beginners find it more intuitive to use the `format()` method, so we will prefer `format()` over f-strings in this course. But you are free to use any method of your choice.
 
 ----
 
