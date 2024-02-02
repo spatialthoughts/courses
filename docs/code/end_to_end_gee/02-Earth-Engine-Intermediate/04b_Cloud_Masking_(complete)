@@ -1,4 +1,19 @@
-var image = ee.Image('COPERNICUS/S2_HARMONIZED/20190703T050701_20190703T052312_T43PGP')
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
+    
+var filteredS2 = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Sort the collection and pick the most cloudy image
+var filteredS2Sorted = filteredS2.sort({
+  property: 'CLOUDY_PIXEL_PERCENTAGE',
+  ascending: false
+});
+
+var image = filteredS2Sorted.first();
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -20,5 +35,5 @@ function maskS2clouds(image) {
       .copyProperties(image, ['system:time_start']);
 }
 
-var maskedImage = ee.Image(maskS2clouds(image));
-Map.addLayer(maskedImage, rgbVis, 'Masked Image');
+var imageMasked = ee.Image(maskS2clouds(image));
+Map.addLayer(imageMasked, rgbVis, 'Masked Image');
