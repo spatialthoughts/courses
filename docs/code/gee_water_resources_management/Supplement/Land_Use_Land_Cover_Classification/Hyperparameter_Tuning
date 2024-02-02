@@ -237,5 +237,30 @@ Export.table.toDrive({
   description: 'Multiple_Parameter_Tuning_Results',
   folder: 'earthengine',
   fileNamePrefix: 'numtrees_bagfraction',
-  fileFormat: 'CSV'}) 
-  
+  fileFormat: 'CSV'});
+
+// Alternatively we can automatically pick the parameters
+// that result in the highest accuracy
+var resultFcSorted = resultFc.sort('accuracy', false);
+var highestAccuracyFeature = resultFcSorted.first();
+var highestAccuracy = highestAccuracyFeature.getNumber('accuracy');
+var optimalNumTrees = highestAccuracyFeature.getNumber('numberOfTrees');
+var optimalBagFraction = highestAccuracyFeature.getNumber('bagFraction');
+
+// Use the optimal parameters in a model and perform final classification
+var optimalModel = ee.Classifier.smileRandomForest({
+  numberOfTrees: optimalNumTrees,
+  bagFraction: optimalBagFraction
+}).train({
+  features: training,  
+  classProperty: 'landcover',
+  inputProperties: composite.bandNames()
+});
+
+var finalClassification = composite.classify(optimalModel);
+
+// Printing or Displaying the image may time out as it requires
+// extensive computation to find the optimal parameters
+
+// Export the 'finalClassification' to Asset and import the
+// result to view it.

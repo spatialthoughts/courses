@@ -1,0 +1,90 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[76.34126435905577, 12.554469163611136],
+          [76.34126435905577, 12.353322685551209],
+          [76.6447616735089, 12.353322685551209],
+          [76.6447616735089, 12.554469163611136]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script showing how to extract water pixels
+// from the Dynamic World dataset.
+
+// Choose a time period
+// Some months may not have enough cloud-free observations
+// Increase the time period if you have gaps in your results
+var year = 2023;
+var month = 1; 
+var startDate = ee.Date.fromYMD(year, month, 1);
+var endDate = startDate.advance(1, 'month');
+
+// Create and Visualize the Dynamic World probability composite
+// for the chosen region and time period
+
+// Filter the Dynamic World collection
+var dwFiltered = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Select probability bands and compute mean probability during the period
+
+var probabilityBands = [
+  'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+  'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+];
+
+var probabilityImage = dwFiltered.select(probabilityBands).mean();
+
+// Create and Visualize the Sentinel-2 composite
+// for the chosen region and time period
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var medianComposite = filtered.median();
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+
+Map.centerObject(geometry);
+Map.addLayer(medianComposite.clip(geometry), rgbVis, 'S2 Image');
+
+// Visualize water probability
+var probabilityVis = {
+  min:0, 
+  max:1,
+  bands: ['water'],
+  palette: ['#f1eef6','#bdc9e1','#74a9cf','#2b8cbe','#045a8d']};
+  
+Map.addLayer(probabilityImage.clip(geometry), probabilityVis, 'Water Probability');
+
+
+// **************************************************************
+// 2. Extract Water
+// **************************************************************
+
+// Select a threshold for water probability
+var waterThreshold = 0.5;
+
+// Select all pixels where 'water' probability is > threshold
+// The result is a binary image
+var water = probabilityImage.select('water').gt(waterThreshold);
+
+// [Optional] Include riparian vegetation around the banks
+// var floodedVegetationThreshold = 0.3;
+// var water = probabilityImage.select('water').gt(waterThreshold)
+//   .or(probabilityImage.select('flooded_vegetation').gt(floodedVegetationThreshold));
+
+// Visualize the water image
+var waterVis = {min:0, max:1, palette: ['white', 'blue']};
+Map.addLayer(water.clip(geometry), waterVis, 'Detected Water');

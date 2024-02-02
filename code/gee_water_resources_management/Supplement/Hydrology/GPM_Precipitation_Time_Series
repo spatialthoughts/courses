@@ -22,6 +22,10 @@ var filtered = filtered.map(function(image) {
 var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241])
 
 // Display a time-series chart
+
+// Note: Earth Engine converts chart timestamps
+// to local timezone automatically
+
 var chart = ui.Chart.image.series({
   imageCollection: filtered,
   region: geometry,
@@ -35,3 +39,44 @@ var chart = ui.Chart.image.series({
     })
 print(chart);
 
+// Export the time-series as a CSV
+
+var timeSeries = ee.FeatureCollection(filtered.map(function(image) {
+  var stats = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 11132,
+    maxPixels: 1e10
+  })
+  // reduceRegion doesn't return any output if the image doesn't intersect
+  // with the point or if the image is masked out due to cloud
+  // If there was no value found, we set the ndvi to a NoData value -9999
+  var value = ee.List([stats.get('precipitationCal'), -9999])
+    .reduce(ee.Reducer.firstNonNull())
+ 
+  // Remember timestamps are in UTC
+  // Convert to the preferred timezone
+  // You can specify your local timezone as IANA zone id
+  // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+  // Here we specify the dates in timezone for India
+  var tz = 'Asia/Kolkata';
+  var date = ee.Date(image.get('system:time_start'));
+  // Create a feature with null geometry and NDVI value and date as properties
+  var f = ee.Feature(null, {'precipitation': value,
+    'time': date.format('YYYY-MM-dd HH:mm:ss', tz)
+  });
+  return f
+}))
+ 
+// Check the results
+print(timeSeries.first())
+ 
+// Export to CSV
+Export.table.toDrive({
+    collection: timeSeries,
+    description: 'GPM_Time_Series_Export',
+    folder: 'earthengine',
+    fileNamePrefix: 'gpm_time_series',
+    fileFormat: 'CSV'
+})
