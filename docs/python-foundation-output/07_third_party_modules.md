@@ -14,6 +14,8 @@ For this course, we are using Anancoda platform - which comes with its own packa
 
 See this [comparison of pip and conda](https://www.anaconda.com/blog/understanding-conda-and-pip) to understand the differences.
 
+You may also use [Mamba](https://mamba.readthedocs.io/en/latest/index.html) as an alternate open-source package manager that is fully compatible with conda.
+
 ## Calculating Distance
 
 We have already installed the `geopy` package in our environment. `geopy` comes with functions that have already implemented many distance calculation formulae.

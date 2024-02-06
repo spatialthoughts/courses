@@ -1,8 +1,8 @@
 # Using Web APIs
 
-An API, or Application Program Interface, allows one program to *talk* to another program. Many websites or services provide an API so you can query for information in an automated way. 
+An API, or Application Program Interface, allows one program to *talk* to another program. Many websites or services provide an API so you can query for information in an automated way.
 
-For mapping and spatial analysis, being able to use APIs is critical. For the longest time, Google Maps API was the most popular API on the web. APIs allow you to query web servers and get results without downloading data or running computation on your machine. 
+For mapping and spatial analysis, being able to use APIs is critical. For the longest time, Google Maps API was the most popular API on the web. APIs allow you to query web servers and get results without downloading data or running computation on your machine.
 
 Common use cases for using APIs for spatial analysis are
 
@@ -22,7 +22,7 @@ JSON stands for **J**ava**S**cript **O**bject **N**otation. It is a format for s
 
 Python has a built-in `json` module that has methods for reading json data and converting it to Python objects, and vice-versa. In this example, we are using the `requests` module for querying the API which conveniently does the conversion for us. But it is useful to learn the basics of working with JSON in Python.
 
-The GeoJSON data contains *features*, where each feature has some *properties* and a *geometry*. 
+The GeoJSON data contains *features*, where each feature has some *properties* and a *geometry*.
 
 
 ```python
@@ -70,7 +70,7 @@ print(city_name, city_coordinates)
 
 ## The `requests` module
 
-To query a server, we send a **GET** request with some parameters and the server sends a response back. The `requests` module allows you to send HTTP requests and parse the responses using Python. 
+To query a server, we send a **GET** request with some parameters and the server sends a response back. The `requests` module allows you to send HTTP requests and parse the responses using Python.
 
 The response contains the data received from the server. It contains the HTTP *status_code* which tells us if the request was successful. HTTP code 200 stands for *Sucess OK*.
 
@@ -86,7 +86,7 @@ print(response.status_code)
 
 ## Calculating Distance using OpenRouteService API
 
-![](images/python_foundation/ors_direction.png)
+![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/ors_direction.png?raw=1)
 
 [OpenRouteService (ORS)](https://openrouteservice.org/) provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.
 
@@ -132,7 +132,7 @@ We can read the `response` in JSON format by calling `json()` method on it.
 data = response.json()
 ```
 
-The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index **0**. The feature's property contains `summary` information which has the data we need. 
+The response is a GeoJSON object representing the driving direction between the 2 points. The object is a feature collection with just 1 feature. We can access it using the index **0**. The feature's property contains `summary` information which has the data we need.
 
 
 ```python
@@ -186,9 +186,9 @@ print(summary)
 
 ## API Rate Limiting
 
-Many web APIs enforce *rate limiting* - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent. 
+Many web APIs enforce *rate limiting* - allowing a limited number of requests over time. With computers it is easy to write a for loop, or have multiple programs send hundrends or thousands of queries per second. The server may not be configured to handle such volume. So the providers specify the limits on how many and how fast the queries can be sent.
 
-OpenRouteService lists several [API Restrictions](https://openrouteservice.org/plans/). The free plan allows for upto 40 direction requests/minute. 
+OpenRouteService lists several [API Restrictions](https://openrouteservice.org/plans/). The free plan allows for upto 40 direction requests/minute.
 
 There are many libraries available to implement various strategies for rate limiting. But we can use the built-in `time` module to implement a very simple rate limiting method.
 
@@ -210,10 +210,9 @@ Below cell contains a dictionary with 3 destination cities and their coordinates
 
 
 ```python
-import csv
-import os
 import requests
 import time
+
 ORS_API_KEY = 'replace this with your key'
 
 def get_driving_distance(source_coordinates, dest_coordinates):
