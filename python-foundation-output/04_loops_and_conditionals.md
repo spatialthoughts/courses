@@ -40,7 +40,7 @@ for x in range(1, 10, 2):
     print(x)
 ```
 
-# Conditionals
+## Conditionals
 
 Python supports logical conditions such as equals, not equals, greater than etc. These conditions can be used in several ways, most commonly in *if statements* and loops.
 
@@ -66,7 +66,7 @@ for city in cities:
         print('This is not Atlanta')
 ```
 
-Python relies on indentation (whitespace at the beginning of a line) to define scope in the for loop and if statements. So make sure your code is properly indented. 
+Python relies on indentation (whitespace at the beginning of a line) to define scope in the for loop and if statements. So make sure your code is properly indented.
 
 You can evaluate a series of conditions using the `elif` keyword.
 
@@ -92,7 +92,7 @@ for city, population in cities_population.items():
 
 ## Control Statements
 
-A for-loop iterates over each item in the sequence. Sometimes is desirable to stop the execution, or skip certain parts of the for-loops. Python has special statements, `break`, `continue` and `pass`. 
+A for-loop iterates over each item in the sequence. Sometimes is desirable to stop the execution, or skip certain parts of the for-loops. Python has special statements, `break`, `continue` and `pass`.
 
 A `break` statement will stop the loop and exit out of it
 
