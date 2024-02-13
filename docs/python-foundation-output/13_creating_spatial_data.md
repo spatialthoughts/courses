@@ -63,7 +63,7 @@ print(gdf.info())
 
 ## Writing Files
 
-We can write the resulting GeoDataFrame to any of the supported vector data format. Here we are writing it as a new GeoPackage file.
+We can write the resulting GeoDataFrame to any of the supported vector data format. The format is inferred from the file extension. Use `.shp` if you want to save the results as a shapefile. Here we are writing it as a new GeoPackage file so we use the `.gpkg` extension.
 
 You can open the resulting geopackage in a GIS and view the data.
 
@@ -73,7 +73,7 @@ output_dir = 'output'
 output_filename = 'mountains.gpkg'
 output_path = os.path.join(output_dir, output_filename)
 
-gdf.to_file(driver='GPKG', filename=output_path, encoding='utf-8')
+gdf.to_file(filename=output_path, encoding='utf-8')
 print('Successfully written output file at {}'.format(output_path))
 ```
 
