@@ -4,7 +4,7 @@ A common operation in spatial analysis is to take non-spatial data, such as CSV 
 
 We will read a tab-delimited file of places, filter it to a feature class, create a GeoDataFrame and export it as a GeoPackage file.
 
-![](images/python_foundation/geonames_mountains.png)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/geonames_mountains.png?raw=1)
 
 
 ```python
@@ -29,7 +29,7 @@ We specify the separator as **\\t** (tab) as an argument to the `read_csv()` met
 
 ```python
 column_names = [
-    'geonameid', 'name', 'asciiname', 'alternatenames', 
+    'geonameid', 'name', 'asciiname', 'alternatenames',
     'latitude', 'longitude', 'feature class', 'feature code',
     'country code', 'cc2', 'admin1 code', 'admin2 code',
     'admin3 code', 'admin4 code', 'population', 'elevation',
@@ -79,18 +79,9 @@ print('Successfully written output file at {}'.format(output_path))
 
 ## Exercise
 
-The data package contains multiple geonames text files from different countries in the `geonames/` folder. Write code to read all the files, merge them and extract the mountain features to a single geopackage.
+The data package contains multiple geonames text files from different countries in the `geonames/` folder. We have the code below that reads all the files, extract the mountain features and merges them in a single DataFrame using the `pd.concat()` function.
 
-- Example Workflow:
-    - 1. Create an empty list called `dataframes`
-    - 2. Iterate over the filenames and within the loop
-        - a. Construct the path to the file
-        - b. Read it using pandas
-        - c. Filter it for the mountain features
-        - d. Append to the list `dataframes`. 
-    - Use pd.concat() function to merge the list of dataframes.
-    - Create a GeoDataFrame
-    - Write the GeoDataFrame to a file.
+The exercise is to convert the merged DataFrame to a GeoDataFrame as save it as a shapefile.
 
 
 ```python
@@ -101,8 +92,27 @@ import geopandas as gpd
 data_pkg_path = 'data/geonames/'
 files = os.listdir(data_pkg_path)
 
+column_names = [
+    'geonameid', 'name', 'asciiname', 'alternatenames',
+    'latitude', 'longitude', 'feature class', 'feature code',
+    'country code', 'cc2', 'admin1 code', 'admin2 code',
+    'admin3 code', 'admin4 code', 'population', 'elevation',
+    'dem', 'timezone', 'modification date'
+]
+
+dataframes = []
 for file in files:
-    print(file)
+    path = os.path.join(data_pkg_path, file)
+    df = pd.read_csv(path, sep='\t', names=column_names)
+    mountains = df[df['feature class']=='T']
+    dataframes.append(mountains)
+
+merged = pd.concat(dataframes)
+```
+
+
+```python
+merged
 ```
 
 ----
