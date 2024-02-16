@@ -7,34 +7,44 @@ Map.centerObject(geometry)
 
 var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED");
 
-// Write a function for Cloud masking
-var maskS2clouds = function(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)//.divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
-}
-
 // Write a function to scale the bands
 var scaleImage = function(image) {
   return image
     .multiply(0.0001)
     .copyProperties(image, ["system:time_start"])
-}
+};
 
 var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry))
-  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
-  .map(maskS2clouds)
-  .map(scaleImage);
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'));
+  
+  
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
+
+var filteredMaskedScaled = filteredMasked.map(scaleImage);
   
 // Create a median composite for 2020
-var composite =  filtered.median();
+var composite =  filteredMaskedScaled.median();
 
 var rgbVis = {min: 0.0, max: 0.3, bands: ['B4', 'B3', 'B2']};
 Map.addLayer(composite.clip(geometry), rgbVis, '2020 Composite');

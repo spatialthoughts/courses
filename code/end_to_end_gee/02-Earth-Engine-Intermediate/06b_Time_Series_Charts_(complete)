@@ -14,20 +14,27 @@ var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry));
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60');
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0));
-  return image.updateMask(mask).multiply(0.0001)
-      .select('B.*')
-      .copyProperties(image, ['system:time_start']);
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
 }
 
-var filtered = filtered.map(maskS2clouds);
 
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
@@ -35,7 +42,7 @@ function addNDVI(image) {
 }
 
 // Map the function over the collection
-var withNdvi = filtered.map(addNDVI);
+var withNdvi = filteredMasked.map(addNDVI);
 
 
 // Display a time-series chart

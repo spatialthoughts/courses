@@ -12,49 +12,57 @@ var rgbVis = {
   bands: ['B4', 'B3', 'B2'],
 };
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)//.divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
-} 
-
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
   .select('B.*')
-  
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
+
 var dateOfIncident = ee.Date('2018-12-15')
-var before = filtered
+var before = filteredMasked
   .filter(ee.Filter.date(
     dateOfIncident.advance(-2, 'year'), dateOfIncident))
   .filter(ee.Filter.calendarRange(12, 12, 'month'))
   .median()
   
-var after = filtered
+var after = filteredMasked
   .filter(ee.Filter.date(
     dateOfIncident, dateOfIncident.advance(1, 'month')))
   .median()
 
 
-Map.addLayer(before, rgbVis, 'Before')
-Map.addLayer(after, rgbVis, 'After')
+Map.addLayer(before.clip(geometry), rgbVis, 'Before')
+Map.addLayer(after.clip(geometry), rgbVis, 'After')
 
 // Use the spectralDistnace() function to get spectral distance measures
 
 // Use the metric 'Spectral Angle Mapper (SAM)
 // The result is the spectral angle in radians
 var angle = after.spectralDistance(before, 'sam');
-Map.addLayer(angle, {min: 0, max: 1, palette: ['white', 'purple']}, 'Spectral Angle');
+Map.addLayer(angle.clip(geometry), {min: 0, max: 1, palette: ['white', 'purple']}, 'Spectral Angle');
 
 // Use the metric 'Squared Euclidian Distance (SED)'
 var sed = after.spectralDistance(before, 'sed');
 // Take square root to get euclidian distance
 var distance = sed.sqrt();
 
-Map.addLayer(distance, {min: 0, max: 1500, palette: ['white', 'red']}, 'spectral distance');
+Map.addLayer(distance.clip(geometry), {min: 0, max: 1500, palette: ['white', 'red']}, 'spectral distance');

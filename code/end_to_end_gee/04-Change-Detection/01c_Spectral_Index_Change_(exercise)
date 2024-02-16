@@ -12,31 +12,40 @@ Map.centerObject(geometry, 10)
 
 var s2 = ee.ImageCollection("COPERNICUS/S2")
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)//.divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
-} 
 
-// Apply filters and cloud mask
+// Apply filters 
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
   .select('B.*')
 
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
+
 // Create Before and After composites
-var before = filtered
+var before = filteredMasked
   .filter(ee.Filter.date(
     fireStart.advance(-2, 'month'), fireStart))
   .median()
 
-var after = filtered
+var after = filteredMasked
   .filter(ee.Filter.date(
     fireEnd, fireEnd.advance(1, 'month')))
   .median()
@@ -57,7 +66,7 @@ var change = beforeNbr.subtract(afterNbr)
 
 var dnbrPalette = ['#ffffb2','#fecc5c','#fd8d3c','#f03b20','#bd0026'];
 // Display the change image
-Map.addLayer(change, {min:0.1, max: 0.7, palette: dnbrPalette},
+Map.addLayer(change.clip(geometry), {min:0.1, max: 0.7, palette: dnbrPalette},
   'Change in NBR')
 
 // We can also classify the change image according to

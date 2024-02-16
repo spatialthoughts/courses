@@ -2039,45 +2039,52 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb28-1"><a h
 <span id="cb28-14"><a href="#cb28-14" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
 <span id="cb28-15"><a href="#cb28-15" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))<span class="op">;</span></span>
 <span id="cb28-16"><a href="#cb28-16" tabindex="-1"></a></span>
-<span id="cb28-17"><a href="#cb28-17" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb28-18"><a href="#cb28-18" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb28-19"><a href="#cb28-19" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-20"><a href="#cb28-20" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb28-21"><a href="#cb28-21" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb28-22"><a href="#cb28-22" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb28-23"><a href="#cb28-23" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))<span class="op">;</span></span>
-<span id="cb28-24"><a href="#cb28-24" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
-<span id="cb28-25"><a href="#cb28-25" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb28-26"><a href="#cb28-26" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&#39;system:time_start&#39;</span>])<span class="op">;</span></span>
-<span id="cb28-27"><a href="#cb28-27" tabindex="-1"></a>}</span>
-<span id="cb28-28"><a href="#cb28-28" tabindex="-1"></a></span>
-<span id="cb28-29"><a href="#cb28-29" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(maskS2clouds)<span class="op">;</span></span>
-<span id="cb28-30"><a href="#cb28-30" tabindex="-1"></a></span>
-<span id="cb28-31"><a href="#cb28-31" tabindex="-1"></a><span class="co">// Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb28-32"><a href="#cb28-32" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addNDVI</span>(image) {</span>
-<span id="cb28-33"><a href="#cb28-33" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
-<span id="cb28-34"><a href="#cb28-34" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">;</span></span>
-<span id="cb28-35"><a href="#cb28-35" tabindex="-1"></a>}</span>
-<span id="cb28-36"><a href="#cb28-36" tabindex="-1"></a></span>
-<span id="cb28-37"><a href="#cb28-37" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
-<span id="cb28-38"><a href="#cb28-38" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filtered<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
-<span id="cb28-39"><a href="#cb28-39" tabindex="-1"></a></span>
-<span id="cb28-40"><a href="#cb28-40" tabindex="-1"></a></span>
-<span id="cb28-41"><a href="#cb28-41" tabindex="-1"></a><span class="co">// Display a time-series chart</span></span>
-<span id="cb28-42"><a href="#cb28-42" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
-<span id="cb28-43"><a href="#cb28-43" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> withNdvi<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">,</span></span>
-<span id="cb28-44"><a href="#cb28-44" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb28-45"><a href="#cb28-45" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">,</span></span>
-<span id="cb28-46"><a href="#cb28-46" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span></span>
-<span id="cb28-47"><a href="#cb28-47" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
-<span id="cb28-48"><a href="#cb28-48" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
-<span id="cb28-49"><a href="#cb28-49" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI Time Series&#39;</span><span class="op">,</span></span>
-<span id="cb28-50"><a href="#cb28-50" tabindex="-1"></a>      <span class="dt">interpolateNulls</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
-<span id="cb28-51"><a href="#cb28-51" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI&#39;</span>}<span class="op">,</span></span>
-<span id="cb28-52"><a href="#cb28-52" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MMM&#39;</span>}</span>
-<span id="cb28-53"><a href="#cb28-53" tabindex="-1"></a>    })<span class="op">;</span></span>
-<span id="cb28-54"><a href="#cb28-54" tabindex="-1"></a>    </span>
-<span id="cb28-55"><a href="#cb28-55" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
+<span id="cb28-17"><a href="#cb28-17" tabindex="-1"></a></span>
+<span id="cb28-18"><a href="#cb28-18" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb28-19"><a href="#cb28-19" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb28-20"><a href="#cb28-20" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb28-21"><a href="#cb28-21" tabindex="-1"></a></span>
+<span id="cb28-22"><a href="#cb28-22" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb28-23"><a href="#cb28-23" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb28-24"><a href="#cb28-24" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb28-25"><a href="#cb28-25" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb28-26"><a href="#cb28-26" tabindex="-1"></a></span>
+<span id="cb28-27"><a href="#cb28-27" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb28-28"><a href="#cb28-28" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb28-29"><a href="#cb28-29" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb28-30"><a href="#cb28-30" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb28-31"><a href="#cb28-31" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb28-32"><a href="#cb28-32" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb28-33"><a href="#cb28-33" tabindex="-1"></a>}</span>
+<span id="cb28-34"><a href="#cb28-34" tabindex="-1"></a></span>
+<span id="cb28-35"><a href="#cb28-35" tabindex="-1"></a></span>
+<span id="cb28-36"><a href="#cb28-36" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb28-37"><a href="#cb28-37" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb28-38"><a href="#cb28-38" tabindex="-1"></a><span class="co">// Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb28-39"><a href="#cb28-39" tabindex="-1"></a><span class="kw">function</span> <span class="fu">addNDVI</span>(image) {</span>
+<span id="cb28-40"><a href="#cb28-40" tabindex="-1"></a>  <span class="kw">var</span> ndvi <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>])<span class="op">.</span><span class="fu">rename</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">;</span></span>
+<span id="cb28-41"><a href="#cb28-41" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(ndvi)<span class="op">;</span></span>
+<span id="cb28-42"><a href="#cb28-42" tabindex="-1"></a>}</span>
+<span id="cb28-43"><a href="#cb28-43" tabindex="-1"></a></span>
+<span id="cb28-44"><a href="#cb28-44" tabindex="-1"></a><span class="co">// Map the function over the collection</span></span>
+<span id="cb28-45"><a href="#cb28-45" tabindex="-1"></a><span class="kw">var</span> withNdvi <span class="op">=</span> filteredMasked<span class="op">.</span><span class="fu">map</span>(addNDVI)<span class="op">;</span></span>
+<span id="cb28-46"><a href="#cb28-46" tabindex="-1"></a></span>
+<span id="cb28-47"><a href="#cb28-47" tabindex="-1"></a></span>
+<span id="cb28-48"><a href="#cb28-48" tabindex="-1"></a><span class="co">// Display a time-series chart</span></span>
+<span id="cb28-49"><a href="#cb28-49" tabindex="-1"></a><span class="kw">var</span> chart <span class="op">=</span> ui<span class="op">.</span><span class="at">Chart</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">series</span>({</span>
+<span id="cb28-50"><a href="#cb28-50" tabindex="-1"></a>  <span class="dt">imageCollection</span><span class="op">:</span> withNdvi<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;ndvi&#39;</span>)<span class="op">,</span></span>
+<span id="cb28-51"><a href="#cb28-51" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb28-52"><a href="#cb28-52" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">,</span></span>
+<span id="cb28-53"><a href="#cb28-53" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span></span>
+<span id="cb28-54"><a href="#cb28-54" tabindex="-1"></a>})<span class="op">.</span><span class="fu">setOptions</span>({</span>
+<span id="cb28-55"><a href="#cb28-55" tabindex="-1"></a>      <span class="dt">lineWidth</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb28-56"><a href="#cb28-56" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI Time Series&#39;</span><span class="op">,</span></span>
+<span id="cb28-57"><a href="#cb28-57" tabindex="-1"></a>      <span class="dt">interpolateNulls</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb28-58"><a href="#cb28-58" tabindex="-1"></a>      <span class="dt">vAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;NDVI&#39;</span>}<span class="op">,</span></span>
+<span id="cb28-59"><a href="#cb28-59" tabindex="-1"></a>      <span class="dt">hAxis</span><span class="op">:</span> {<span class="dt">title</span><span class="op">:</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&#39;YYYY-MMM&#39;</span>}</span>
+<span id="cb28-60"><a href="#cb28-60" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb28-61"><a href="#cb28-61" tabindex="-1"></a>    </span>
+<span id="cb28-62"><a href="#cb28-62" tabindex="-1"></a><span class="fu">print</span>(chart)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-13" class="section level3">
 <h3>Exercise</h3>
 <p><a
@@ -2341,12 +2348,7 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb32-1"><a h
 <span id="cb32-63"><a href="#cb32-63" tabindex="-1"></a><span class="co">// // Urban, Bare, Water, Vegetation</span></span>
 <span id="cb32-64"><a href="#cb32-64" tabindex="-1"></a><span class="co">// var palette = [&#39;#cc6d8f&#39;, &#39;#ffc107&#39;, &#39;#1e88e5&#39;, &#39;#004d40&#39; ];</span></span>
 <span id="cb32-65"><a href="#cb32-65" tabindex="-1"></a></span>
-<span id="cb32-66"><a href="#cb32-66" tabindex="-1"></a><span class="co">// Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, &#39;2019&#39;);</span></span>
-<span id="cb32-67"><a href="#cb32-67" tabindex="-1"></a></span>
-<span id="cb32-68"><a href="#cb32-68" tabindex="-1"></a><span class="co">// // Select the Water class</span></span>
-<span id="cb32-69"><a href="#cb32-69" tabindex="-1"></a><span class="co">// var water = classified.eq(2);</span></span>
-<span id="cb32-70"><a href="#cb32-70" tabindex="-1"></a><span class="co">// var waterVis = {min:0, max:1, palette: [&#39;white&#39;, &#39;blue&#39;]};</span></span>
-<span id="cb32-71"><a href="#cb32-71" tabindex="-1"></a><span class="co">// Map.addLayer(water.clip(geometry), waterVis, &#39;Water&#39;);</span></span></code></pre></div>
+<span id="cb32-66"><a href="#cb32-66" tabindex="-1"></a><span class="co">// Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, &#39;2019&#39;);</span></span></code></pre></div>
 </div>
 </div>
 <div id="accuracy-assessment" class="section level2">
@@ -2934,37 +2936,40 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb37-1"><a h
 <span id="cb37-159"><a href="#cb37-159" tabindex="-1"></a><span class="co">// we cast the image to floating point data type which</span></span>
 <span id="cb37-160"><a href="#cb37-160" tabindex="-1"></a><span class="co">// allows the masked values to be saved as NaN values</span></span>
 <span id="cb37-161"><a href="#cb37-161" tabindex="-1"></a><span class="co">// in the GeoTIFF format.</span></span>
-<span id="cb37-162"><a href="#cb37-162" tabindex="-1"></a>Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
-<span id="cb37-163"><a href="#cb37-163" tabindex="-1"></a>  <span class="dt">image</span><span class="op">:</span> classified<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">.</span><span class="fu">toFloat</span>()<span class="op">,</span></span>
-<span id="cb37-164"><a href="#cb37-164" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Classified_Image_Export&#39;</span><span class="op">,</span></span>
-<span id="cb37-165"><a href="#cb37-165" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
-<span id="cb37-166"><a href="#cb37-166" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;classified&#39;</span><span class="op">,</span></span>
-<span id="cb37-167"><a href="#cb37-167" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
-<span id="cb37-168"><a href="#cb37-168" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
-<span id="cb37-169"><a href="#cb37-169" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
-<span id="cb37-170"><a href="#cb37-170" tabindex="-1"></a>})</span>
-<span id="cb37-171"><a href="#cb37-171" tabindex="-1"></a></span>
-<span id="cb37-172"><a href="#cb37-172" tabindex="-1"></a><span class="co">// Export the results of accuracy asssessment</span></span>
-<span id="cb37-173"><a href="#cb37-173" tabindex="-1"></a></span>
-<span id="cb37-174"><a href="#cb37-174" tabindex="-1"></a><span class="co">// Create a Feature with null geometry and the value we want to export.</span></span>
-<span id="cb37-175"><a href="#cb37-175" tabindex="-1"></a><span class="co">// Use .array() to convert Confusion Matrix to an Array so it can be</span></span>
-<span id="cb37-176"><a href="#cb37-176" tabindex="-1"></a><span class="co">// exported in a CSV file</span></span>
-<span id="cb37-177"><a href="#cb37-177" tabindex="-1"></a><span class="kw">var</span> fc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>([</span>
-<span id="cb37-178"><a href="#cb37-178" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> {</span>
-<span id="cb37-179"><a href="#cb37-179" tabindex="-1"></a>    <span class="st">&#39;accuracy&#39;</span><span class="op">:</span> testConfusionMatrix<span class="op">.</span><span class="fu">accuracy</span>()<span class="op">,</span></span>
-<span id="cb37-180"><a href="#cb37-180" tabindex="-1"></a>    <span class="st">&#39;matrix&#39;</span><span class="op">:</span> testConfusionMatrix<span class="op">.</span><span class="fu">array</span>()</span>
-<span id="cb37-181"><a href="#cb37-181" tabindex="-1"></a>  })</span>
-<span id="cb37-182"><a href="#cb37-182" tabindex="-1"></a>])<span class="op">;</span></span>
-<span id="cb37-183"><a href="#cb37-183" tabindex="-1"></a></span>
-<span id="cb37-184"><a href="#cb37-184" tabindex="-1"></a><span class="fu">print</span>(fc)<span class="op">;</span></span>
-<span id="cb37-185"><a href="#cb37-185" tabindex="-1"></a></span>
-<span id="cb37-186"><a href="#cb37-186" tabindex="-1"></a>Export<span class="op">.</span><span class="at">table</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
-<span id="cb37-187"><a href="#cb37-187" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> fc<span class="op">,</span></span>
-<span id="cb37-188"><a href="#cb37-188" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Accuracy_Assessment_Export&#39;</span><span class="op">,</span></span>
-<span id="cb37-189"><a href="#cb37-189" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
-<span id="cb37-190"><a href="#cb37-190" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;accuracy&#39;</span><span class="op">,</span></span>
-<span id="cb37-191"><a href="#cb37-191" tabindex="-1"></a>  <span class="dt">fileFormat</span><span class="op">:</span> <span class="st">&#39;CSV&#39;</span></span>
-<span id="cb37-192"><a href="#cb37-192" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<span id="cb37-162"><a href="#cb37-162" tabindex="-1"></a><span class="co">// You can set these to actual NoData values using</span></span>
+<span id="cb37-163"><a href="#cb37-163" tabindex="-1"></a><span class="co">// GDAL tools after the export</span></span>
+<span id="cb37-164"><a href="#cb37-164" tabindex="-1"></a><span class="co">// gdal_translate -a_nodata &#39;nan&#39; input.tif output.tif</span></span>
+<span id="cb37-165"><a href="#cb37-165" tabindex="-1"></a>Export<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb37-166"><a href="#cb37-166" tabindex="-1"></a>  <span class="dt">image</span><span class="op">:</span> classified<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">.</span><span class="fu">toFloat</span>()<span class="op">,</span></span>
+<span id="cb37-167"><a href="#cb37-167" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Classified_Image_Export&#39;</span><span class="op">,</span></span>
+<span id="cb37-168"><a href="#cb37-168" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb37-169"><a href="#cb37-169" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;classified&#39;</span><span class="op">,</span></span>
+<span id="cb37-170"><a href="#cb37-170" tabindex="-1"></a>  <span class="dt">region</span><span class="op">:</span> geometry<span class="op">,</span></span>
+<span id="cb37-171"><a href="#cb37-171" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb37-172"><a href="#cb37-172" tabindex="-1"></a>  <span class="dt">maxPixels</span><span class="op">:</span> <span class="fl">1e10</span></span>
+<span id="cb37-173"><a href="#cb37-173" tabindex="-1"></a>})</span>
+<span id="cb37-174"><a href="#cb37-174" tabindex="-1"></a></span>
+<span id="cb37-175"><a href="#cb37-175" tabindex="-1"></a><span class="co">// Export the results of accuracy asssessment</span></span>
+<span id="cb37-176"><a href="#cb37-176" tabindex="-1"></a></span>
+<span id="cb37-177"><a href="#cb37-177" tabindex="-1"></a><span class="co">// Create a Feature with null geometry and the value we want to export.</span></span>
+<span id="cb37-178"><a href="#cb37-178" tabindex="-1"></a><span class="co">// Use .array() to convert Confusion Matrix to an Array so it can be</span></span>
+<span id="cb37-179"><a href="#cb37-179" tabindex="-1"></a><span class="co">// exported in a CSV file</span></span>
+<span id="cb37-180"><a href="#cb37-180" tabindex="-1"></a><span class="kw">var</span> fc <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>([</span>
+<span id="cb37-181"><a href="#cb37-181" tabindex="-1"></a>  ee<span class="op">.</span><span class="fu">Feature</span>(<span class="kw">null</span><span class="op">,</span> {</span>
+<span id="cb37-182"><a href="#cb37-182" tabindex="-1"></a>    <span class="st">&#39;accuracy&#39;</span><span class="op">:</span> testConfusionMatrix<span class="op">.</span><span class="fu">accuracy</span>()<span class="op">,</span></span>
+<span id="cb37-183"><a href="#cb37-183" tabindex="-1"></a>    <span class="st">&#39;matrix&#39;</span><span class="op">:</span> testConfusionMatrix<span class="op">.</span><span class="fu">array</span>()</span>
+<span id="cb37-184"><a href="#cb37-184" tabindex="-1"></a>  })</span>
+<span id="cb37-185"><a href="#cb37-185" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb37-186"><a href="#cb37-186" tabindex="-1"></a></span>
+<span id="cb37-187"><a href="#cb37-187" tabindex="-1"></a><span class="fu">print</span>(fc)<span class="op">;</span></span>
+<span id="cb37-188"><a href="#cb37-188" tabindex="-1"></a></span>
+<span id="cb37-189"><a href="#cb37-189" tabindex="-1"></a>Export<span class="op">.</span><span class="at">table</span><span class="op">.</span><span class="fu">toDrive</span>({</span>
+<span id="cb37-190"><a href="#cb37-190" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> fc<span class="op">,</span></span>
+<span id="cb37-191"><a href="#cb37-191" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Accuracy_Assessment_Export&#39;</span><span class="op">,</span></span>
+<span id="cb37-192"><a href="#cb37-192" tabindex="-1"></a>  <span class="dt">folder</span><span class="op">:</span> <span class="st">&#39;earthengine&#39;</span><span class="op">,</span></span>
+<span id="cb37-193"><a href="#cb37-193" tabindex="-1"></a>  <span class="dt">fileNamePrefix</span><span class="op">:</span> <span class="st">&#39;accuracy&#39;</span><span class="op">,</span></span>
+<span id="cb37-194"><a href="#cb37-194" tabindex="-1"></a>  <span class="dt">fileFormat</span><span class="op">:</span> <span class="st">&#39;CSV&#39;</span></span>
+<span id="cb37-195"><a href="#cb37-195" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
 <div id="exercise-17" class="section level3">
 <h3>Exercise</h3>
 <p>It is also a good idea to export the classified image as an Asset.
@@ -3319,69 +3324,78 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb42-1"><a h
 <span id="cb42-19"><a href="#cb42-19" tabindex="-1"></a></span>
 <span id="cb42-20"><a href="#cb42-20" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
 <span id="cb42-21"><a href="#cb42-21" tabindex="-1"></a></span>
-<span id="cb42-22"><a href="#cb42-22" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb42-23"><a href="#cb42-23" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb42-24"><a href="#cb42-24" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb42-25"><a href="#cb42-25" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb42-26"><a href="#cb42-26" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb42-27"><a href="#cb42-27" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb42-28"><a href="#cb42-28" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb42-29"><a href="#cb42-29" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb42-30"><a href="#cb42-30" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb42-31"><a href="#cb42-31" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb42-32"><a href="#cb42-32" tabindex="-1"></a>} </span>
-<span id="cb42-33"><a href="#cb42-33" tabindex="-1"></a></span>
-<span id="cb42-34"><a href="#cb42-34" tabindex="-1"></a><span class="co">// Apply filters and cloud mask</span></span>
-<span id="cb42-35"><a href="#cb42-35" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb42-36"><a href="#cb42-36" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb42-37"><a href="#cb42-37" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb42-38"><a href="#cb42-38" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb42-39"><a href="#cb42-39" tabindex="-1"></a></span>
-<span id="cb42-40"><a href="#cb42-40" tabindex="-1"></a><span class="co">// Create Before and After composites</span></span>
-<span id="cb42-41"><a href="#cb42-41" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filtered</span>
-<span id="cb42-42"><a href="#cb42-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb42-43"><a href="#cb42-43" tabindex="-1"></a>    fireStart<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)<span class="op">,</span> fireStart))</span>
-<span id="cb42-44"><a href="#cb42-44" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb42-22"><a href="#cb42-22" tabindex="-1"></a></span>
+<span id="cb42-23"><a href="#cb42-23" tabindex="-1"></a><span class="co">// Apply filters </span></span>
+<span id="cb42-24"><a href="#cb42-24" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb42-25"><a href="#cb42-25" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb42-26"><a href="#cb42-26" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb42-27"><a href="#cb42-27" tabindex="-1"></a></span>
+<span id="cb42-28"><a href="#cb42-28" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb42-29"><a href="#cb42-29" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb42-30"><a href="#cb42-30" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb42-31"><a href="#cb42-31" tabindex="-1"></a></span>
+<span id="cb42-32"><a href="#cb42-32" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb42-33"><a href="#cb42-33" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb42-34"><a href="#cb42-34" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb42-35"><a href="#cb42-35" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb42-36"><a href="#cb42-36" tabindex="-1"></a></span>
+<span id="cb42-37"><a href="#cb42-37" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb42-38"><a href="#cb42-38" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb42-39"><a href="#cb42-39" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb42-40"><a href="#cb42-40" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb42-41"><a href="#cb42-41" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb42-42"><a href="#cb42-42" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb42-43"><a href="#cb42-43" tabindex="-1"></a>}</span>
+<span id="cb42-44"><a href="#cb42-44" tabindex="-1"></a></span>
 <span id="cb42-45"><a href="#cb42-45" tabindex="-1"></a></span>
-<span id="cb42-46"><a href="#cb42-46" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filtered</span>
-<span id="cb42-47"><a href="#cb42-47" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb42-48"><a href="#cb42-48" tabindex="-1"></a>    fireEnd<span class="op">,</span> fireEnd<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
-<span id="cb42-49"><a href="#cb42-49" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb42-50"><a href="#cb42-50" tabindex="-1"></a></span>
-<span id="cb42-51"><a href="#cb42-51" tabindex="-1"></a><span class="co">// Freshly burnt regions appeat bright in SWIR-bands</span></span>
-<span id="cb42-52"><a href="#cb42-52" tabindex="-1"></a><span class="co">// Use a False Color Visualization</span></span>
-<span id="cb42-53"><a href="#cb42-53" tabindex="-1"></a><span class="kw">var</span> swirVis <span class="op">=</span> {</span>
-<span id="cb42-54"><a href="#cb42-54" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
-<span id="cb42-55"><a href="#cb42-55" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
-<span id="cb42-56"><a href="#cb42-56" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B12&#39;</span><span class="op">,</span> <span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>]<span class="op">,</span></span>
-<span id="cb42-57"><a href="#cb42-57" tabindex="-1"></a>}<span class="op">;</span></span>
-<span id="cb42-58"><a href="#cb42-58" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">,</span> swirVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
-<span id="cb42-59"><a href="#cb42-59" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">,</span> swirVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
-<span id="cb42-60"><a href="#cb42-60" tabindex="-1"></a></span>
-<span id="cb42-61"><a href="#cb42-61" tabindex="-1"></a><span class="co">// Write a function to calculate  Normalized Burn Ratio (NBR)</span></span>
-<span id="cb42-62"><a href="#cb42-62" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;SWIR-2&#39; (B12)</span></span>
-<span id="cb42-63"><a href="#cb42-63" tabindex="-1"></a><span class="kw">var</span> addNBR <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb42-64"><a href="#cb42-64" tabindex="-1"></a>  <span class="kw">var</span> nbr <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B12&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;nbr&#39;</span>])<span class="op">;</span></span>
-<span id="cb42-65"><a href="#cb42-65" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(nbr)</span>
-<span id="cb42-66"><a href="#cb42-66" tabindex="-1"></a>}</span>
-<span id="cb42-67"><a href="#cb42-67" tabindex="-1"></a></span>
-<span id="cb42-68"><a href="#cb42-68" tabindex="-1"></a><span class="kw">var</span> beforeNbr <span class="op">=</span> <span class="fu">addNBR</span>(before)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
-<span id="cb42-69"><a href="#cb42-69" tabindex="-1"></a><span class="kw">var</span> afterNbr <span class="op">=</span> <span class="fu">addNBR</span>(after)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
-<span id="cb42-70"><a href="#cb42-70" tabindex="-1"></a></span>
-<span id="cb42-71"><a href="#cb42-71" tabindex="-1"></a><span class="kw">var</span> nbrVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="op">-</span><span class="fl">0.5</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;black&#39;</span>]}</span>
-<span id="cb42-72"><a href="#cb42-72" tabindex="-1"></a></span>
-<span id="cb42-73"><a href="#cb42-73" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(beforeNbr<span class="op">,</span> nbrVis<span class="op">,</span> <span class="st">&#39;Prefire NBR&#39;</span>)<span class="op">;</span></span>
-<span id="cb42-74"><a href="#cb42-74" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(afterNbr<span class="op">,</span> nbrVis<span class="op">,</span> <span class="st">&#39;Postfire NBR&#39;</span>)<span class="op">;</span></span>
-<span id="cb42-75"><a href="#cb42-75" tabindex="-1"></a></span>
-<span id="cb42-76"><a href="#cb42-76" tabindex="-1"></a><span class="co">// Calculate Change in NBR (dNBR)</span></span>
-<span id="cb42-77"><a href="#cb42-77" tabindex="-1"></a><span class="kw">var</span> change <span class="op">=</span> beforeNbr<span class="op">.</span><span class="fu">subtract</span>(afterNbr)</span>
-<span id="cb42-78"><a href="#cb42-78" tabindex="-1"></a></span>
-<span id="cb42-79"><a href="#cb42-79" tabindex="-1"></a><span class="co">// Apply a threshold</span></span>
-<span id="cb42-80"><a href="#cb42-80" tabindex="-1"></a><span class="kw">var</span> threshold <span class="op">=</span> <span class="fl">0.3</span></span>
+<span id="cb42-46"><a href="#cb42-46" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb42-47"><a href="#cb42-47" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb42-48"><a href="#cb42-48" tabindex="-1"></a></span>
+<span id="cb42-49"><a href="#cb42-49" tabindex="-1"></a><span class="co">// Create Before and After composites</span></span>
+<span id="cb42-50"><a href="#cb42-50" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filteredMasked</span>
+<span id="cb42-51"><a href="#cb42-51" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb42-52"><a href="#cb42-52" tabindex="-1"></a>    fireStart<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)<span class="op">,</span> fireStart))</span>
+<span id="cb42-53"><a href="#cb42-53" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb42-54"><a href="#cb42-54" tabindex="-1"></a></span>
+<span id="cb42-55"><a href="#cb42-55" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filteredMasked</span>
+<span id="cb42-56"><a href="#cb42-56" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb42-57"><a href="#cb42-57" tabindex="-1"></a>    fireEnd<span class="op">,</span> fireEnd<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
+<span id="cb42-58"><a href="#cb42-58" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb42-59"><a href="#cb42-59" tabindex="-1"></a></span>
+<span id="cb42-60"><a href="#cb42-60" tabindex="-1"></a><span class="co">// Freshly burnt regions appeat bright in SWIR-bands</span></span>
+<span id="cb42-61"><a href="#cb42-61" tabindex="-1"></a><span class="co">// Use a False Color Visualization</span></span>
+<span id="cb42-62"><a href="#cb42-62" tabindex="-1"></a><span class="kw">var</span> swirVis <span class="op">=</span> {</span>
+<span id="cb42-63"><a href="#cb42-63" tabindex="-1"></a>  <span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb42-64"><a href="#cb42-64" tabindex="-1"></a>  <span class="dt">max</span><span class="op">:</span> <span class="dv">3000</span><span class="op">,</span></span>
+<span id="cb42-65"><a href="#cb42-65" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B12&#39;</span><span class="op">,</span> <span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B4&#39;</span>]<span class="op">,</span></span>
+<span id="cb42-66"><a href="#cb42-66" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb42-67"><a href="#cb42-67" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> swirVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
+<span id="cb42-68"><a href="#cb42-68" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> swirVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
+<span id="cb42-69"><a href="#cb42-69" tabindex="-1"></a></span>
+<span id="cb42-70"><a href="#cb42-70" tabindex="-1"></a><span class="co">// Write a function to calculate  Normalized Burn Ratio (NBR)</span></span>
+<span id="cb42-71"><a href="#cb42-71" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;SWIR-2&#39; (B12)</span></span>
+<span id="cb42-72"><a href="#cb42-72" tabindex="-1"></a><span class="kw">var</span> addNBR <span class="op">=</span> <span class="kw">function</span>(image) {</span>
+<span id="cb42-73"><a href="#cb42-73" tabindex="-1"></a>  <span class="kw">var</span> nbr <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B12&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;nbr&#39;</span>])<span class="op">;</span></span>
+<span id="cb42-74"><a href="#cb42-74" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(nbr)</span>
+<span id="cb42-75"><a href="#cb42-75" tabindex="-1"></a>}</span>
+<span id="cb42-76"><a href="#cb42-76" tabindex="-1"></a></span>
+<span id="cb42-77"><a href="#cb42-77" tabindex="-1"></a><span class="kw">var</span> beforeNbr <span class="op">=</span> <span class="fu">addNBR</span>(before)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
+<span id="cb42-78"><a href="#cb42-78" tabindex="-1"></a><span class="kw">var</span> afterNbr <span class="op">=</span> <span class="fu">addNBR</span>(after)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
+<span id="cb42-79"><a href="#cb42-79" tabindex="-1"></a></span>
+<span id="cb42-80"><a href="#cb42-80" tabindex="-1"></a><span class="kw">var</span> nbrVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="op">-</span><span class="fl">0.5</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;black&#39;</span>]}</span>
 <span id="cb42-81"><a href="#cb42-81" tabindex="-1"></a></span>
-<span id="cb42-82"><a href="#cb42-82" tabindex="-1"></a><span class="co">// Display Burned Areas</span></span>
-<span id="cb42-83"><a href="#cb42-83" tabindex="-1"></a><span class="kw">var</span> burned <span class="op">=</span> change<span class="op">.</span><span class="fu">gt</span>(threshold)</span>
-<span id="cb42-84"><a href="#cb42-84" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(burned<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Burned&#39;</span><span class="op">,</span> <span class="kw">false</span>) </span></code></pre></div>
+<span id="cb42-82"><a href="#cb42-82" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(beforeNbr<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> nbrVis<span class="op">,</span> <span class="st">&#39;Prefire NBR&#39;</span>)<span class="op">;</span></span>
+<span id="cb42-83"><a href="#cb42-83" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(afterNbr<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> nbrVis<span class="op">,</span> <span class="st">&#39;Postfire NBR&#39;</span>)<span class="op">;</span></span>
+<span id="cb42-84"><a href="#cb42-84" tabindex="-1"></a></span>
+<span id="cb42-85"><a href="#cb42-85" tabindex="-1"></a><span class="co">// Calculate Change in NBR (dNBR)</span></span>
+<span id="cb42-86"><a href="#cb42-86" tabindex="-1"></a><span class="kw">var</span> change <span class="op">=</span> beforeNbr<span class="op">.</span><span class="fu">subtract</span>(afterNbr)</span>
+<span id="cb42-87"><a href="#cb42-87" tabindex="-1"></a></span>
+<span id="cb42-88"><a href="#cb42-88" tabindex="-1"></a><span class="co">// Apply a threshold</span></span>
+<span id="cb42-89"><a href="#cb42-89" tabindex="-1"></a><span class="kw">var</span> threshold <span class="op">=</span> <span class="fl">0.3</span></span>
+<span id="cb42-90"><a href="#cb42-90" tabindex="-1"></a></span>
+<span id="cb42-91"><a href="#cb42-91" tabindex="-1"></a><span class="co">// Display Burned Areas</span></span>
+<span id="cb42-92"><a href="#cb42-92" tabindex="-1"></a><span class="kw">var</span> burned <span class="op">=</span> change<span class="op">.</span><span class="fu">gt</span>(threshold)</span>
+<span id="cb42-93"><a href="#cb42-93" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(burned<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Burned&#39;</span><span class="op">,</span> <span class="kw">false</span>) </span></code></pre></div>
 <div id="exercise-19" class="section level3">
 <h3>Exercise</h3>
 <div class="figure" style="text-align: center">
@@ -3408,92 +3422,101 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb43-1"><a h
 <span id="cb43-12"><a href="#cb43-12" tabindex="-1"></a></span>
 <span id="cb43-13"><a href="#cb43-13" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2&quot;</span>)</span>
 <span id="cb43-14"><a href="#cb43-14" tabindex="-1"></a></span>
-<span id="cb43-15"><a href="#cb43-15" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb43-16"><a href="#cb43-16" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb43-17"><a href="#cb43-17" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb43-18"><a href="#cb43-18" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb43-19"><a href="#cb43-19" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb43-20"><a href="#cb43-20" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb43-21"><a href="#cb43-21" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb43-22"><a href="#cb43-22" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb43-23"><a href="#cb43-23" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb43-24"><a href="#cb43-24" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb43-25"><a href="#cb43-25" tabindex="-1"></a>} </span>
-<span id="cb43-26"><a href="#cb43-26" tabindex="-1"></a></span>
-<span id="cb43-27"><a href="#cb43-27" tabindex="-1"></a><span class="co">// Apply filters and cloud mask</span></span>
-<span id="cb43-28"><a href="#cb43-28" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb43-29"><a href="#cb43-29" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb43-30"><a href="#cb43-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb43-31"><a href="#cb43-31" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb43-32"><a href="#cb43-32" tabindex="-1"></a></span>
-<span id="cb43-33"><a href="#cb43-33" tabindex="-1"></a><span class="co">// Create Before and After composites</span></span>
-<span id="cb43-34"><a href="#cb43-34" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filtered</span>
-<span id="cb43-35"><a href="#cb43-35" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb43-36"><a href="#cb43-36" tabindex="-1"></a>    fireStart<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)<span class="op">,</span> fireStart))</span>
-<span id="cb43-37"><a href="#cb43-37" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb43-15"><a href="#cb43-15" tabindex="-1"></a></span>
+<span id="cb43-16"><a href="#cb43-16" tabindex="-1"></a><span class="co">// Apply filters </span></span>
+<span id="cb43-17"><a href="#cb43-17" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb43-18"><a href="#cb43-18" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb43-19"><a href="#cb43-19" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb43-20"><a href="#cb43-20" tabindex="-1"></a></span>
+<span id="cb43-21"><a href="#cb43-21" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb43-22"><a href="#cb43-22" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb43-23"><a href="#cb43-23" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb43-24"><a href="#cb43-24" tabindex="-1"></a></span>
+<span id="cb43-25"><a href="#cb43-25" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb43-26"><a href="#cb43-26" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb43-27"><a href="#cb43-27" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb43-28"><a href="#cb43-28" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb43-29"><a href="#cb43-29" tabindex="-1"></a></span>
+<span id="cb43-30"><a href="#cb43-30" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb43-31"><a href="#cb43-31" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb43-32"><a href="#cb43-32" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb43-33"><a href="#cb43-33" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb43-34"><a href="#cb43-34" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb43-35"><a href="#cb43-35" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb43-36"><a href="#cb43-36" tabindex="-1"></a>}</span>
+<span id="cb43-37"><a href="#cb43-37" tabindex="-1"></a></span>
 <span id="cb43-38"><a href="#cb43-38" tabindex="-1"></a></span>
-<span id="cb43-39"><a href="#cb43-39" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filtered</span>
-<span id="cb43-40"><a href="#cb43-40" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb43-41"><a href="#cb43-41" tabindex="-1"></a>    fireEnd<span class="op">,</span> fireEnd<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
-<span id="cb43-42"><a href="#cb43-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb43-43"><a href="#cb43-43" tabindex="-1"></a></span>
-<span id="cb43-44"><a href="#cb43-44" tabindex="-1"></a></span>
-<span id="cb43-45"><a href="#cb43-45" tabindex="-1"></a><span class="co">// Write a function to calculate  Normalized Burn Ratio (NBR)</span></span>
-<span id="cb43-46"><a href="#cb43-46" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;SWIR-2&#39; (B12)</span></span>
-<span id="cb43-47"><a href="#cb43-47" tabindex="-1"></a><span class="kw">var</span> addNBR <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb43-48"><a href="#cb43-48" tabindex="-1"></a>  <span class="kw">var</span> nbr <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B12&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;nbr&#39;</span>])<span class="op">;</span></span>
-<span id="cb43-49"><a href="#cb43-49" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(nbr)</span>
-<span id="cb43-50"><a href="#cb43-50" tabindex="-1"></a>}</span>
-<span id="cb43-51"><a href="#cb43-51" tabindex="-1"></a></span>
-<span id="cb43-52"><a href="#cb43-52" tabindex="-1"></a><span class="kw">var</span> beforeNbr <span class="op">=</span> <span class="fu">addNBR</span>(before)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
-<span id="cb43-53"><a href="#cb43-53" tabindex="-1"></a><span class="kw">var</span> afterNbr <span class="op">=</span> <span class="fu">addNBR</span>(after)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
-<span id="cb43-54"><a href="#cb43-54" tabindex="-1"></a></span>
-<span id="cb43-55"><a href="#cb43-55" tabindex="-1"></a><span class="co">// Calculate Change in NBR (dNBR)</span></span>
-<span id="cb43-56"><a href="#cb43-56" tabindex="-1"></a><span class="kw">var</span> change <span class="op">=</span> beforeNbr<span class="op">.</span><span class="fu">subtract</span>(afterNbr)</span>
-<span id="cb43-57"><a href="#cb43-57" tabindex="-1"></a></span>
-<span id="cb43-58"><a href="#cb43-58" tabindex="-1"></a><span class="kw">var</span> dnbrPalette <span class="op">=</span> [<span class="st">&#39;#ffffb2&#39;</span><span class="op">,</span><span class="st">&#39;#fecc5c&#39;</span><span class="op">,</span><span class="st">&#39;#fd8d3c&#39;</span><span class="op">,</span><span class="st">&#39;#f03b20&#39;</span><span class="op">,</span><span class="st">&#39;#bd0026&#39;</span>]<span class="op">;</span></span>
-<span id="cb43-59"><a href="#cb43-59" tabindex="-1"></a><span class="co">// Display the change image</span></span>
-<span id="cb43-60"><a href="#cb43-60" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(change<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="fl">0.1</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.7</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> dnbrPalette}<span class="op">,</span></span>
-<span id="cb43-61"><a href="#cb43-61" tabindex="-1"></a>  <span class="st">&#39;Change in NBR&#39;</span>)</span>
-<span id="cb43-62"><a href="#cb43-62" tabindex="-1"></a></span>
-<span id="cb43-63"><a href="#cb43-63" tabindex="-1"></a><span class="co">// We can also classify the change image according to</span></span>
-<span id="cb43-64"><a href="#cb43-64" tabindex="-1"></a><span class="co">// burn severity</span></span>
-<span id="cb43-65"><a href="#cb43-65" tabindex="-1"></a></span>
-<span id="cb43-66"><a href="#cb43-66" tabindex="-1"></a><span class="co">// United States Geological Survey (USGS) proposed</span></span>
-<span id="cb43-67"><a href="#cb43-67" tabindex="-1"></a><span class="co">// a classification table to interpret the burn severity</span></span>
-<span id="cb43-68"><a href="#cb43-68" tabindex="-1"></a><span class="co">// We will assign a discrete class value and visualize it</span></span>
-<span id="cb43-69"><a href="#cb43-69" tabindex="-1"></a><span class="co">// | Severity     | dNBR Range         | Class |</span></span>
-<span id="cb43-70"><a href="#cb43-70" tabindex="-1"></a><span class="co">// |--------------|--------------------|-------|</span></span>
-<span id="cb43-71"><a href="#cb43-71" tabindex="-1"></a><span class="co">// | Unburned     | &lt; 0.1              | 0     |</span></span>
-<span id="cb43-72"><a href="#cb43-72" tabindex="-1"></a><span class="co">// | Low Severity | &gt;= 0.10 and &lt;0.27  | 1     |</span></span>
-<span id="cb43-73"><a href="#cb43-73" tabindex="-1"></a><span class="co">// | Moderate-Low | &gt;= 0.27 and &lt;0.44  | 2     |</span></span>
-<span id="cb43-74"><a href="#cb43-74" tabindex="-1"></a><span class="co">// | Moderate-High| &gt;= 0.44 and&lt; 0.66  | 3     |</span></span>
-<span id="cb43-75"><a href="#cb43-75" tabindex="-1"></a><span class="co">// | High         | &gt;= 0.66            | 4     |</span></span>
-<span id="cb43-76"><a href="#cb43-76" tabindex="-1"></a></span>
-<span id="cb43-77"><a href="#cb43-77" tabindex="-1"></a><span class="co">// Classification of continuous values can be done</span></span>
-<span id="cb43-78"><a href="#cb43-78" tabindex="-1"></a><span class="co">// using the .where() function</span></span>
-<span id="cb43-79"><a href="#cb43-79" tabindex="-1"></a><span class="kw">var</span> severity <span class="op">=</span> change</span>
-<span id="cb43-80"><a href="#cb43-80" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.10</span>)<span class="op">,</span> <span class="dv">0</span>)</span>
-<span id="cb43-81"><a href="#cb43-81" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.10</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.27</span>))<span class="op">,</span> <span class="dv">1</span>)</span>
-<span id="cb43-82"><a href="#cb43-82" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.27</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.44</span>))<span class="op">,</span> <span class="dv">2</span>)</span>
-<span id="cb43-83"><a href="#cb43-83" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.44</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.66</span>))<span class="op">,</span> <span class="dv">3</span>)</span>
-<span id="cb43-84"><a href="#cb43-84" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gt</span>(<span class="fl">0.66</span>)<span class="op">,</span> <span class="dv">4</span>)</span>
+<span id="cb43-39"><a href="#cb43-39" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb43-40"><a href="#cb43-40" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb43-41"><a href="#cb43-41" tabindex="-1"></a></span>
+<span id="cb43-42"><a href="#cb43-42" tabindex="-1"></a><span class="co">// Create Before and After composites</span></span>
+<span id="cb43-43"><a href="#cb43-43" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filteredMasked</span>
+<span id="cb43-44"><a href="#cb43-44" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb43-45"><a href="#cb43-45" tabindex="-1"></a>    fireStart<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)<span class="op">,</span> fireStart))</span>
+<span id="cb43-46"><a href="#cb43-46" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb43-47"><a href="#cb43-47" tabindex="-1"></a></span>
+<span id="cb43-48"><a href="#cb43-48" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filteredMasked</span>
+<span id="cb43-49"><a href="#cb43-49" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb43-50"><a href="#cb43-50" tabindex="-1"></a>    fireEnd<span class="op">,</span> fireEnd<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
+<span id="cb43-51"><a href="#cb43-51" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb43-52"><a href="#cb43-52" tabindex="-1"></a></span>
+<span id="cb43-53"><a href="#cb43-53" tabindex="-1"></a></span>
+<span id="cb43-54"><a href="#cb43-54" tabindex="-1"></a><span class="co">// Write a function to calculate  Normalized Burn Ratio (NBR)</span></span>
+<span id="cb43-55"><a href="#cb43-55" tabindex="-1"></a><span class="co">// &#39;NIR&#39; (B8) and &#39;SWIR-2&#39; (B12)</span></span>
+<span id="cb43-56"><a href="#cb43-56" tabindex="-1"></a><span class="kw">var</span> addNBR <span class="op">=</span> <span class="kw">function</span>(image) {</span>
+<span id="cb43-57"><a href="#cb43-57" tabindex="-1"></a>  <span class="kw">var</span> nbr <span class="op">=</span> image<span class="op">.</span><span class="fu">normalizedDifference</span>([<span class="st">&#39;B8&#39;</span><span class="op">,</span> <span class="st">&#39;B12&#39;</span>])<span class="op">.</span><span class="fu">rename</span>([<span class="st">&#39;nbr&#39;</span>])<span class="op">;</span></span>
+<span id="cb43-58"><a href="#cb43-58" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">addBands</span>(nbr)</span>
+<span id="cb43-59"><a href="#cb43-59" tabindex="-1"></a>}</span>
+<span id="cb43-60"><a href="#cb43-60" tabindex="-1"></a></span>
+<span id="cb43-61"><a href="#cb43-61" tabindex="-1"></a><span class="kw">var</span> beforeNbr <span class="op">=</span> <span class="fu">addNBR</span>(before)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
+<span id="cb43-62"><a href="#cb43-62" tabindex="-1"></a><span class="kw">var</span> afterNbr <span class="op">=</span> <span class="fu">addNBR</span>(after)<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;nbr&#39;</span>)<span class="op">;</span></span>
+<span id="cb43-63"><a href="#cb43-63" tabindex="-1"></a></span>
+<span id="cb43-64"><a href="#cb43-64" tabindex="-1"></a><span class="co">// Calculate Change in NBR (dNBR)</span></span>
+<span id="cb43-65"><a href="#cb43-65" tabindex="-1"></a><span class="kw">var</span> change <span class="op">=</span> beforeNbr<span class="op">.</span><span class="fu">subtract</span>(afterNbr)</span>
+<span id="cb43-66"><a href="#cb43-66" tabindex="-1"></a></span>
+<span id="cb43-67"><a href="#cb43-67" tabindex="-1"></a><span class="kw">var</span> dnbrPalette <span class="op">=</span> [<span class="st">&#39;#ffffb2&#39;</span><span class="op">,</span><span class="st">&#39;#fecc5c&#39;</span><span class="op">,</span><span class="st">&#39;#fd8d3c&#39;</span><span class="op">,</span><span class="st">&#39;#f03b20&#39;</span><span class="op">,</span><span class="st">&#39;#bd0026&#39;</span>]<span class="op">;</span></span>
+<span id="cb43-68"><a href="#cb43-68" tabindex="-1"></a><span class="co">// Display the change image</span></span>
+<span id="cb43-69"><a href="#cb43-69" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(change<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span><span class="fl">0.1</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.7</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> dnbrPalette}<span class="op">,</span></span>
+<span id="cb43-70"><a href="#cb43-70" tabindex="-1"></a>  <span class="st">&#39;Change in NBR&#39;</span>)</span>
+<span id="cb43-71"><a href="#cb43-71" tabindex="-1"></a></span>
+<span id="cb43-72"><a href="#cb43-72" tabindex="-1"></a><span class="co">// We can also classify the change image according to</span></span>
+<span id="cb43-73"><a href="#cb43-73" tabindex="-1"></a><span class="co">// burn severity</span></span>
+<span id="cb43-74"><a href="#cb43-74" tabindex="-1"></a></span>
+<span id="cb43-75"><a href="#cb43-75" tabindex="-1"></a><span class="co">// United States Geological Survey (USGS) proposed</span></span>
+<span id="cb43-76"><a href="#cb43-76" tabindex="-1"></a><span class="co">// a classification table to interpret the burn severity</span></span>
+<span id="cb43-77"><a href="#cb43-77" tabindex="-1"></a><span class="co">// We will assign a discrete class value and visualize it</span></span>
+<span id="cb43-78"><a href="#cb43-78" tabindex="-1"></a><span class="co">// | Severity     | dNBR Range         | Class |</span></span>
+<span id="cb43-79"><a href="#cb43-79" tabindex="-1"></a><span class="co">// |--------------|--------------------|-------|</span></span>
+<span id="cb43-80"><a href="#cb43-80" tabindex="-1"></a><span class="co">// | Unburned     | &lt; 0.1              | 0     |</span></span>
+<span id="cb43-81"><a href="#cb43-81" tabindex="-1"></a><span class="co">// | Low Severity | &gt;= 0.10 and &lt;0.27  | 1     |</span></span>
+<span id="cb43-82"><a href="#cb43-82" tabindex="-1"></a><span class="co">// | Moderate-Low | &gt;= 0.27 and &lt;0.44  | 2     |</span></span>
+<span id="cb43-83"><a href="#cb43-83" tabindex="-1"></a><span class="co">// | Moderate-High| &gt;= 0.44 and&lt; 0.66  | 3     |</span></span>
+<span id="cb43-84"><a href="#cb43-84" tabindex="-1"></a><span class="co">// | High         | &gt;= 0.66            | 4     |</span></span>
 <span id="cb43-85"><a href="#cb43-85" tabindex="-1"></a></span>
-<span id="cb43-86"><a href="#cb43-86" tabindex="-1"></a></span>
-<span id="cb43-87"><a href="#cb43-87" tabindex="-1"></a><span class="co">// Exercise</span></span>
-<span id="cb43-88"><a href="#cb43-88" tabindex="-1"></a></span>
-<span id="cb43-89"><a href="#cb43-89" tabindex="-1"></a><span class="co">// The resulting image &#39;severity&#39; is a discrete image with </span></span>
-<span id="cb43-90"><a href="#cb43-90" tabindex="-1"></a><span class="co">// pixel values from 0-4 representing the severity class</span></span>
-<span id="cb43-91"><a href="#cb43-91" tabindex="-1"></a></span>
-<span id="cb43-92"><a href="#cb43-92" tabindex="-1"></a><span class="co">// Display the image according to the following color table</span></span>
-<span id="cb43-93"><a href="#cb43-93" tabindex="-1"></a></span>
-<span id="cb43-94"><a href="#cb43-94" tabindex="-1"></a><span class="co">// | Severity     | Class | Color   |</span></span>
-<span id="cb43-95"><a href="#cb43-95" tabindex="-1"></a><span class="co">// |--------------|-------|---------|</span></span>
-<span id="cb43-96"><a href="#cb43-96" tabindex="-1"></a><span class="co">// | Unburned     | 0     | green   |</span></span>
-<span id="cb43-97"><a href="#cb43-97" tabindex="-1"></a><span class="co">// | Low Severity | 1     | yellow  |</span></span>
-<span id="cb43-98"><a href="#cb43-98" tabindex="-1"></a><span class="co">// | Moderate-Low | 2     | organge |</span></span>
-<span id="cb43-99"><a href="#cb43-99" tabindex="-1"></a><span class="co">// | Moderate-High| 3     | red     |</span></span>
-<span id="cb43-100"><a href="#cb43-100" tabindex="-1"></a><span class="co">// | High         | 4     | magenta |</span></span></code></pre></div>
+<span id="cb43-86"><a href="#cb43-86" tabindex="-1"></a><span class="co">// Classification of continuous values can be done</span></span>
+<span id="cb43-87"><a href="#cb43-87" tabindex="-1"></a><span class="co">// using the .where() function</span></span>
+<span id="cb43-88"><a href="#cb43-88" tabindex="-1"></a><span class="kw">var</span> severity <span class="op">=</span> change</span>
+<span id="cb43-89"><a href="#cb43-89" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.10</span>)<span class="op">,</span> <span class="dv">0</span>)</span>
+<span id="cb43-90"><a href="#cb43-90" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.10</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.27</span>))<span class="op">,</span> <span class="dv">1</span>)</span>
+<span id="cb43-91"><a href="#cb43-91" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.27</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.44</span>))<span class="op">,</span> <span class="dv">2</span>)</span>
+<span id="cb43-92"><a href="#cb43-92" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gte</span>(<span class="fl">0.44</span>)<span class="op">.</span><span class="fu">and</span>(change<span class="op">.</span><span class="fu">lt</span>(<span class="fl">0.66</span>))<span class="op">,</span> <span class="dv">3</span>)</span>
+<span id="cb43-93"><a href="#cb43-93" tabindex="-1"></a>  <span class="op">.</span><span class="fu">where</span>(change<span class="op">.</span><span class="fu">gt</span>(<span class="fl">0.66</span>)<span class="op">,</span> <span class="dv">4</span>)</span>
+<span id="cb43-94"><a href="#cb43-94" tabindex="-1"></a></span>
+<span id="cb43-95"><a href="#cb43-95" tabindex="-1"></a></span>
+<span id="cb43-96"><a href="#cb43-96" tabindex="-1"></a><span class="co">// Exercise</span></span>
+<span id="cb43-97"><a href="#cb43-97" tabindex="-1"></a></span>
+<span id="cb43-98"><a href="#cb43-98" tabindex="-1"></a><span class="co">// The resulting image &#39;severity&#39; is a discrete image with </span></span>
+<span id="cb43-99"><a href="#cb43-99" tabindex="-1"></a><span class="co">// pixel values from 0-4 representing the severity class</span></span>
+<span id="cb43-100"><a href="#cb43-100" tabindex="-1"></a></span>
+<span id="cb43-101"><a href="#cb43-101" tabindex="-1"></a><span class="co">// Display the image according to the following color table</span></span>
+<span id="cb43-102"><a href="#cb43-102" tabindex="-1"></a></span>
+<span id="cb43-103"><a href="#cb43-103" tabindex="-1"></a><span class="co">// | Severity     | Class | Color   |</span></span>
+<span id="cb43-104"><a href="#cb43-104" tabindex="-1"></a><span class="co">// |--------------|-------|---------|</span></span>
+<span id="cb43-105"><a href="#cb43-105" tabindex="-1"></a><span class="co">// | Unburned     | 0     | green   |</span></span>
+<span id="cb43-106"><a href="#cb43-106" tabindex="-1"></a><span class="co">// | Low Severity | 1     | yellow  |</span></span>
+<span id="cb43-107"><a href="#cb43-107" tabindex="-1"></a><span class="co">// | Moderate-Low | 2     | organge |</span></span>
+<span id="cb43-108"><a href="#cb43-108" tabindex="-1"></a><span class="co">// | Moderate-High| 3     | red     |</span></span>
+<span id="cb43-109"><a href="#cb43-109" tabindex="-1"></a><span class="co">// | High         | 4     | magenta |</span></span></code></pre></div>
 </div>
 </div>
 <div id="spectral-distance-change" class="section level2">
@@ -3533,52 +3556,60 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb44-1"><a h
 <span id="cb44-12"><a href="#cb44-12" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
 <span id="cb44-13"><a href="#cb44-13" tabindex="-1"></a>}<span class="op">;</span></span>
 <span id="cb44-14"><a href="#cb44-14" tabindex="-1"></a></span>
-<span id="cb44-15"><a href="#cb44-15" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb44-16"><a href="#cb44-16" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb44-17"><a href="#cb44-17" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb44-18"><a href="#cb44-18" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb44-19"><a href="#cb44-19" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb44-20"><a href="#cb44-20" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb44-21"><a href="#cb44-21" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb44-22"><a href="#cb44-22" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb44-23"><a href="#cb44-23" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb44-24"><a href="#cb44-24" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb44-25"><a href="#cb44-25" tabindex="-1"></a>} </span>
-<span id="cb44-26"><a href="#cb44-26" tabindex="-1"></a></span>
-<span id="cb44-27"><a href="#cb44-27" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb44-28"><a href="#cb44-28" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb44-29"><a href="#cb44-29" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb44-30"><a href="#cb44-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb44-31"><a href="#cb44-31" tabindex="-1"></a>  </span>
-<span id="cb44-32"><a href="#cb44-32" tabindex="-1"></a><span class="kw">var</span> dateOfIncident <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="st">&#39;2018-12-15&#39;</span>)</span>
-<span id="cb44-33"><a href="#cb44-33" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filtered</span>
-<span id="cb44-34"><a href="#cb44-34" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb44-35"><a href="#cb44-35" tabindex="-1"></a>    dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">,</span> dateOfIncident))</span>
-<span id="cb44-36"><a href="#cb44-36" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
-<span id="cb44-37"><a href="#cb44-37" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb44-38"><a href="#cb44-38" tabindex="-1"></a>  </span>
-<span id="cb44-39"><a href="#cb44-39" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filtered</span>
-<span id="cb44-40"><a href="#cb44-40" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb44-41"><a href="#cb44-41" tabindex="-1"></a>    dateOfIncident<span class="op">,</span> dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
-<span id="cb44-42"><a href="#cb44-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb44-43"><a href="#cb44-43" tabindex="-1"></a></span>
-<span id="cb44-44"><a href="#cb44-44" tabindex="-1"></a></span>
-<span id="cb44-45"><a href="#cb44-45" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
-<span id="cb44-46"><a href="#cb44-46" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
-<span id="cb44-47"><a href="#cb44-47" tabindex="-1"></a></span>
-<span id="cb44-48"><a href="#cb44-48" tabindex="-1"></a><span class="co">// Use the spectralDistnace() function to get spectral distance measures</span></span>
-<span id="cb44-49"><a href="#cb44-49" tabindex="-1"></a></span>
-<span id="cb44-50"><a href="#cb44-50" tabindex="-1"></a><span class="co">// Use the metric &#39;Spectral Angle Mapper (SAM)</span></span>
-<span id="cb44-51"><a href="#cb44-51" tabindex="-1"></a><span class="co">// The result is the spectral angle in radians</span></span>
-<span id="cb44-52"><a href="#cb44-52" tabindex="-1"></a><span class="kw">var</span> angle <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sam&#39;</span>)<span class="op">;</span></span>
-<span id="cb44-53"><a href="#cb44-53" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(angle<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;purple&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Spectral Angle&#39;</span>)<span class="op">;</span></span>
-<span id="cb44-54"><a href="#cb44-54" tabindex="-1"></a></span>
-<span id="cb44-55"><a href="#cb44-55" tabindex="-1"></a><span class="co">// Use the metric &#39;Squared Euclidian Distance (SED)&#39;</span></span>
-<span id="cb44-56"><a href="#cb44-56" tabindex="-1"></a><span class="kw">var</span> sed <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sed&#39;</span>)<span class="op">;</span></span>
-<span id="cb44-57"><a href="#cb44-57" tabindex="-1"></a><span class="co">// Take square root to get euclidian distance</span></span>
-<span id="cb44-58"><a href="#cb44-58" tabindex="-1"></a><span class="kw">var</span> distance <span class="op">=</span> sed<span class="op">.</span><span class="fu">sqrt</span>()<span class="op">;</span></span>
-<span id="cb44-59"><a href="#cb44-59" tabindex="-1"></a></span>
-<span id="cb44-60"><a href="#cb44-60" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(distance<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1500</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;spectral distance&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<span id="cb44-15"><a href="#cb44-15" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb44-16"><a href="#cb44-16" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb44-17"><a href="#cb44-17" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb44-18"><a href="#cb44-18" tabindex="-1"></a></span>
+<span id="cb44-19"><a href="#cb44-19" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb44-20"><a href="#cb44-20" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb44-21"><a href="#cb44-21" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb44-22"><a href="#cb44-22" tabindex="-1"></a></span>
+<span id="cb44-23"><a href="#cb44-23" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb44-24"><a href="#cb44-24" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb44-25"><a href="#cb44-25" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb44-26"><a href="#cb44-26" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb44-27"><a href="#cb44-27" tabindex="-1"></a></span>
+<span id="cb44-28"><a href="#cb44-28" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb44-29"><a href="#cb44-29" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb44-30"><a href="#cb44-30" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb44-31"><a href="#cb44-31" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb44-32"><a href="#cb44-32" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb44-33"><a href="#cb44-33" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb44-34"><a href="#cb44-34" tabindex="-1"></a>}</span>
+<span id="cb44-35"><a href="#cb44-35" tabindex="-1"></a></span>
+<span id="cb44-36"><a href="#cb44-36" tabindex="-1"></a></span>
+<span id="cb44-37"><a href="#cb44-37" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb44-38"><a href="#cb44-38" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb44-39"><a href="#cb44-39" tabindex="-1"></a></span>
+<span id="cb44-40"><a href="#cb44-40" tabindex="-1"></a><span class="kw">var</span> dateOfIncident <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="st">&#39;2018-12-15&#39;</span>)</span>
+<span id="cb44-41"><a href="#cb44-41" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filteredMasked</span>
+<span id="cb44-42"><a href="#cb44-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb44-43"><a href="#cb44-43" tabindex="-1"></a>    dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">,</span> dateOfIncident))</span>
+<span id="cb44-44"><a href="#cb44-44" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
+<span id="cb44-45"><a href="#cb44-45" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb44-46"><a href="#cb44-46" tabindex="-1"></a>  </span>
+<span id="cb44-47"><a href="#cb44-47" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filteredMasked</span>
+<span id="cb44-48"><a href="#cb44-48" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb44-49"><a href="#cb44-49" tabindex="-1"></a>    dateOfIncident<span class="op">,</span> dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))</span>
+<span id="cb44-50"><a href="#cb44-50" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb44-51"><a href="#cb44-51" tabindex="-1"></a></span>
+<span id="cb44-52"><a href="#cb44-52" tabindex="-1"></a></span>
+<span id="cb44-53"><a href="#cb44-53" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
+<span id="cb44-54"><a href="#cb44-54" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
+<span id="cb44-55"><a href="#cb44-55" tabindex="-1"></a></span>
+<span id="cb44-56"><a href="#cb44-56" tabindex="-1"></a><span class="co">// Use the spectralDistnace() function to get spectral distance measures</span></span>
+<span id="cb44-57"><a href="#cb44-57" tabindex="-1"></a></span>
+<span id="cb44-58"><a href="#cb44-58" tabindex="-1"></a><span class="co">// Use the metric &#39;Spectral Angle Mapper (SAM)</span></span>
+<span id="cb44-59"><a href="#cb44-59" tabindex="-1"></a><span class="co">// The result is the spectral angle in radians</span></span>
+<span id="cb44-60"><a href="#cb44-60" tabindex="-1"></a><span class="kw">var</span> angle <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sam&#39;</span>)<span class="op">;</span></span>
+<span id="cb44-61"><a href="#cb44-61" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(angle<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;purple&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Spectral Angle&#39;</span>)<span class="op">;</span></span>
+<span id="cb44-62"><a href="#cb44-62" tabindex="-1"></a></span>
+<span id="cb44-63"><a href="#cb44-63" tabindex="-1"></a><span class="co">// Use the metric &#39;Squared Euclidian Distance (SED)&#39;</span></span>
+<span id="cb44-64"><a href="#cb44-64" tabindex="-1"></a><span class="kw">var</span> sed <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sed&#39;</span>)<span class="op">;</span></span>
+<span id="cb44-65"><a href="#cb44-65" tabindex="-1"></a><span class="co">// Take square root to get euclidian distance</span></span>
+<span id="cb44-66"><a href="#cb44-66" tabindex="-1"></a><span class="kw">var</span> distance <span class="op">=</span> sed<span class="op">.</span><span class="fu">sqrt</span>()<span class="op">;</span></span>
+<span id="cb44-67"><a href="#cb44-67" tabindex="-1"></a></span>
+<span id="cb44-68"><a href="#cb44-68" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(distance<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1500</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;spectral distance&#39;</span>)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-20" class="section level3">
 <h3>Exercise</h3>
 <p><a
@@ -3599,48 +3630,57 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb45-1"><a h
 <span id="cb45-12"><a href="#cb45-12" tabindex="-1"></a>  <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]<span class="op">,</span></span>
 <span id="cb45-13"><a href="#cb45-13" tabindex="-1"></a>}<span class="op">;</span></span>
 <span id="cb45-14"><a href="#cb45-14" tabindex="-1"></a></span>
-<span id="cb45-15"><a href="#cb45-15" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb45-16"><a href="#cb45-16" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskS2clouds</span>(image) {</span>
-<span id="cb45-17"><a href="#cb45-17" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb45-18"><a href="#cb45-18" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb45-19"><a href="#cb45-19" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb45-20"><a href="#cb45-20" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb45-21"><a href="#cb45-21" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb45-22"><a href="#cb45-22" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb45-23"><a href="#cb45-23" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb45-24"><a href="#cb45-24" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb45-25"><a href="#cb45-25" tabindex="-1"></a>} </span>
-<span id="cb45-26"><a href="#cb45-26" tabindex="-1"></a></span>
-<span id="cb45-27"><a href="#cb45-27" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb45-28"><a href="#cb45-28" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb45-29"><a href="#cb45-29" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb45-30"><a href="#cb45-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
-<span id="cb45-31"><a href="#cb45-31" tabindex="-1"></a>  </span>
-<span id="cb45-32"><a href="#cb45-32" tabindex="-1"></a><span class="kw">var</span> dateOfIncident <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="st">&#39;2018-12-15&#39;</span>)</span>
-<span id="cb45-33"><a href="#cb45-33" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filtered</span>
-<span id="cb45-34"><a href="#cb45-34" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb45-35"><a href="#cb45-35" tabindex="-1"></a>    dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">,</span> dateOfIncident))</span>
-<span id="cb45-36"><a href="#cb45-36" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
-<span id="cb45-37"><a href="#cb45-37" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb45-38"><a href="#cb45-38" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filtered<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
-<span id="cb45-39"><a href="#cb45-39" tabindex="-1"></a>  dateOfIncident<span class="op">,</span> dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))<span class="op">.</span><span class="fu">median</span>()</span>
-<span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a></span>
-<span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a></span>
-<span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
-<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
-<span id="cb45-44"><a href="#cb45-44" tabindex="-1"></a></span>
-<span id="cb45-45"><a href="#cb45-45" tabindex="-1"></a><span class="kw">var</span> sed <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sed&#39;</span>)<span class="op">;</span></span>
-<span id="cb45-46"><a href="#cb45-46" tabindex="-1"></a><span class="kw">var</span> distance <span class="op">=</span> sed<span class="op">.</span><span class="fu">sqrt</span>()<span class="op">;</span></span>
-<span id="cb45-47"><a href="#cb45-47" tabindex="-1"></a></span>
-<span id="cb45-48"><a href="#cb45-48" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(distance<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1500</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;spectral distance&#39;</span>)<span class="op">;</span></span>
+<span id="cb45-15"><a href="#cb45-15" tabindex="-1"></a></span>
+<span id="cb45-16"><a href="#cb45-16" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb45-17"><a href="#cb45-17" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb45-18"><a href="#cb45-18" tabindex="-1"></a>  <span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;B.*&#39;</span>)</span>
+<span id="cb45-19"><a href="#cb45-19" tabindex="-1"></a>  </span>
+<span id="cb45-20"><a href="#cb45-20" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb45-21"><a href="#cb45-21" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb45-22"><a href="#cb45-22" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb45-23"><a href="#cb45-23" tabindex="-1"></a></span>
+<span id="cb45-24"><a href="#cb45-24" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb45-25"><a href="#cb45-25" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb45-26"><a href="#cb45-26" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb45-27"><a href="#cb45-27" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb45-28"><a href="#cb45-28" tabindex="-1"></a></span>
+<span id="cb45-29"><a href="#cb45-29" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb45-30"><a href="#cb45-30" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb45-31"><a href="#cb45-31" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb45-32"><a href="#cb45-32" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb45-33"><a href="#cb45-33" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb45-34"><a href="#cb45-34" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb45-35"><a href="#cb45-35" tabindex="-1"></a>}</span>
+<span id="cb45-36"><a href="#cb45-36" tabindex="-1"></a></span>
+<span id="cb45-37"><a href="#cb45-37" tabindex="-1"></a></span>
+<span id="cb45-38"><a href="#cb45-38" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb45-39"><a href="#cb45-39" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a>  </span>
+<span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a><span class="kw">var</span> dateOfIncident <span class="op">=</span> ee<span class="op">.</span><span class="fu">Date</span>(<span class="st">&#39;2018-12-15&#39;</span>)</span>
+<span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a><span class="kw">var</span> before <span class="op">=</span> filteredMasked</span>
+<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb45-44"><a href="#cb45-44" tabindex="-1"></a>    dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">,</span> dateOfIncident))</span>
+<span id="cb45-45"><a href="#cb45-45" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">calendarRange</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">12</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>))</span>
+<span id="cb45-46"><a href="#cb45-46" tabindex="-1"></a>  <span class="op">.</span><span class="fu">median</span>()</span>
+<span id="cb45-47"><a href="#cb45-47" tabindex="-1"></a><span class="kw">var</span> after <span class="op">=</span> filteredMasked<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(</span>
+<span id="cb45-48"><a href="#cb45-48" tabindex="-1"></a>  dateOfIncident<span class="op">,</span> dateOfIncident<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;month&#39;</span>)))<span class="op">.</span><span class="fu">median</span>()</span>
 <span id="cb45-49"><a href="#cb45-49" tabindex="-1"></a></span>
-<span id="cb45-50"><a href="#cb45-50" tabindex="-1"></a><span class="co">// Exercise</span></span>
-<span id="cb45-51"><a href="#cb45-51" tabindex="-1"></a><span class="co">// Inspect the distance image and find a suitable threshold</span></span>
-<span id="cb45-52"><a href="#cb45-52" tabindex="-1"></a><span class="co">// that signifies damage after the landslides</span></span>
-<span id="cb45-53"><a href="#cb45-53" tabindex="-1"></a><span class="co">// Apply the threshold and create a new image showing landslides</span></span>
-<span id="cb45-54"><a href="#cb45-54" tabindex="-1"></a><span class="co">// Display the results</span></span>
-<span id="cb45-55"><a href="#cb45-55" tabindex="-1"></a></span>
-<span id="cb45-56"><a href="#cb45-56" tabindex="-1"></a><span class="co">// Hint: Use the .gt() method to apply the threshold</span></span></code></pre></div>
+<span id="cb45-50"><a href="#cb45-50" tabindex="-1"></a></span>
+<span id="cb45-51"><a href="#cb45-51" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(before<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;Before&#39;</span>)</span>
+<span id="cb45-52"><a href="#cb45-52" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(after<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;After&#39;</span>)</span>
+<span id="cb45-53"><a href="#cb45-53" tabindex="-1"></a></span>
+<span id="cb45-54"><a href="#cb45-54" tabindex="-1"></a><span class="kw">var</span> sed <span class="op">=</span> after<span class="op">.</span><span class="fu">spectralDistance</span>(before<span class="op">,</span> <span class="st">&#39;sed&#39;</span>)<span class="op">;</span></span>
+<span id="cb45-55"><a href="#cb45-55" tabindex="-1"></a><span class="kw">var</span> distance <span class="op">=</span> sed<span class="op">.</span><span class="fu">sqrt</span>()<span class="op">;</span></span>
+<span id="cb45-56"><a href="#cb45-56" tabindex="-1"></a></span>
+<span id="cb45-57"><a href="#cb45-57" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(distance<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">min</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="dv">1500</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;white&#39;</span><span class="op">,</span> <span class="st">&#39;red&#39;</span>]}<span class="op">,</span> <span class="st">&#39;spectral distance&#39;</span>)<span class="op">;</span></span>
+<span id="cb45-58"><a href="#cb45-58" tabindex="-1"></a></span>
+<span id="cb45-59"><a href="#cb45-59" tabindex="-1"></a><span class="co">// Exercise</span></span>
+<span id="cb45-60"><a href="#cb45-60" tabindex="-1"></a><span class="co">// Inspect the distance image and find a suitable threshold</span></span>
+<span id="cb45-61"><a href="#cb45-61" tabindex="-1"></a><span class="co">// that signifies damage after the landslides</span></span>
+<span id="cb45-62"><a href="#cb45-62" tabindex="-1"></a><span class="co">// Apply the threshold and create a new image showing landslides</span></span>
+<span id="cb45-63"><a href="#cb45-63" tabindex="-1"></a><span class="co">// Display the results</span></span>
+<span id="cb45-64"><a href="#cb45-64" tabindex="-1"></a></span>
+<span id="cb45-65"><a href="#cb45-65" tabindex="-1"></a><span class="co">// Hint: Use the .gt() method to apply the threshold</span></span></code></pre></div>
 </div>
 </div>
 <div id="direct-classification-of-change" class="section level2">
@@ -4343,74 +4383,84 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb57-1"><a h
 <span id="cb57-7"><a href="#cb57-7" tabindex="-1"></a></span>
 <span id="cb57-8"><a href="#cb57-8" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_HARMONIZED&quot;</span>)<span class="op">;</span></span>
 <span id="cb57-9"><a href="#cb57-9" tabindex="-1"></a></span>
-<span id="cb57-10"><a href="#cb57-10" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb57-11"><a href="#cb57-11" tabindex="-1"></a><span class="kw">var</span> maskS2clouds <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb57-12"><a href="#cb57-12" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb57-13"><a href="#cb57-13" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb57-14"><a href="#cb57-14" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb57-15"><a href="#cb57-15" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb57-16"><a href="#cb57-16" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb57-17"><a href="#cb57-17" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb57-18"><a href="#cb57-18" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb57-19"><a href="#cb57-19" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb57-20"><a href="#cb57-20" tabindex="-1"></a>}</span>
-<span id="cb57-21"><a href="#cb57-21" tabindex="-1"></a></span>
-<span id="cb57-22"><a href="#cb57-22" tabindex="-1"></a><span class="co">// Write a function to scale the bands</span></span>
-<span id="cb57-23"><a href="#cb57-23" tabindex="-1"></a><span class="kw">var</span> scaleImage <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb57-24"><a href="#cb57-24" tabindex="-1"></a>  <span class="cf">return</span> image</span>
-<span id="cb57-25"><a href="#cb57-25" tabindex="-1"></a>    <span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
-<span id="cb57-26"><a href="#cb57-26" tabindex="-1"></a>    <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb57-27"><a href="#cb57-27" tabindex="-1"></a>}</span>
-<span id="cb57-28"><a href="#cb57-28" tabindex="-1"></a></span>
-<span id="cb57-29"><a href="#cb57-29" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb57-30"><a href="#cb57-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb57-31"><a href="#cb57-31" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb57-32"><a href="#cb57-32" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))</span>
-<span id="cb57-33"><a href="#cb57-33" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb57-34"><a href="#cb57-34" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(scaleImage)<span class="op">;</span></span>
-<span id="cb57-35"><a href="#cb57-35" tabindex="-1"></a>  </span>
-<span id="cb57-36"><a href="#cb57-36" tabindex="-1"></a><span class="co">// Create a median composite for 2020</span></span>
-<span id="cb57-37"><a href="#cb57-37" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span>  filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span></span>
-<span id="cb57-38"><a href="#cb57-38" tabindex="-1"></a></span>
-<span id="cb57-39"><a href="#cb57-39" tabindex="-1"></a><span class="co">// Load ESA WorldCover 2020 Classification</span></span>
-<span id="cb57-40"><a href="#cb57-40" tabindex="-1"></a><span class="kw">var</span> worldcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;ESA/WorldCover/v100&quot;</span>)</span>
-<span id="cb57-41"><a href="#cb57-41" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> worldcover</span>
-<span id="cb57-42"><a href="#cb57-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
-<span id="cb57-43"><a href="#cb57-43" tabindex="-1"></a><span class="kw">var</span> classification <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(filtered<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
-<span id="cb57-44"><a href="#cb57-44" tabindex="-1"></a></span>
-<span id="cb57-45"><a href="#cb57-45" tabindex="-1"></a><span class="co">// Create a Split Panel App</span></span>
-<span id="cb57-46"><a href="#cb57-46" tabindex="-1"></a></span>
-<span id="cb57-47"><a href="#cb57-47" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
-<span id="cb57-48"><a href="#cb57-48" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.58</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">12.97</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
-<span id="cb57-49"><a href="#cb57-49" tabindex="-1"></a></span>
-<span id="cb57-50"><a href="#cb57-50" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
-<span id="cb57-51"><a href="#cb57-51" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb57-52"><a href="#cb57-52" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb57-53"><a href="#cb57-53" tabindex="-1"></a></span>
-<span id="cb57-54"><a href="#cb57-54" tabindex="-1"></a><span class="co">// Link them together.</span></span>
-<span id="cb57-55"><a href="#cb57-55" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
+<span id="cb57-10"><a href="#cb57-10" tabindex="-1"></a></span>
+<span id="cb57-11"><a href="#cb57-11" tabindex="-1"></a><span class="co">// Write a function to scale the bands</span></span>
+<span id="cb57-12"><a href="#cb57-12" tabindex="-1"></a><span class="kw">var</span> scaleImage <span class="op">=</span> <span class="kw">function</span>(image) {</span>
+<span id="cb57-13"><a href="#cb57-13" tabindex="-1"></a>  <span class="cf">return</span> image</span>
+<span id="cb57-14"><a href="#cb57-14" tabindex="-1"></a>    <span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
+<span id="cb57-15"><a href="#cb57-15" tabindex="-1"></a>    <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
+<span id="cb57-16"><a href="#cb57-16" tabindex="-1"></a>}</span>
+<span id="cb57-17"><a href="#cb57-17" tabindex="-1"></a></span>
+<span id="cb57-18"><a href="#cb57-18" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb57-19"><a href="#cb57-19" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb57-20"><a href="#cb57-20" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb57-21"><a href="#cb57-21" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
+<span id="cb57-22"><a href="#cb57-22" tabindex="-1"></a>  </span>
+<span id="cb57-23"><a href="#cb57-23" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb57-24"><a href="#cb57-24" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb57-25"><a href="#cb57-25" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb57-26"><a href="#cb57-26" tabindex="-1"></a></span>
+<span id="cb57-27"><a href="#cb57-27" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb57-28"><a href="#cb57-28" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb57-29"><a href="#cb57-29" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb57-30"><a href="#cb57-30" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb57-31"><a href="#cb57-31" tabindex="-1"></a></span>
+<span id="cb57-32"><a href="#cb57-32" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb57-33"><a href="#cb57-33" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb57-34"><a href="#cb57-34" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb57-35"><a href="#cb57-35" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb57-36"><a href="#cb57-36" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb57-37"><a href="#cb57-37" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb57-38"><a href="#cb57-38" tabindex="-1"></a>}</span>
+<span id="cb57-39"><a href="#cb57-39" tabindex="-1"></a></span>
+<span id="cb57-40"><a href="#cb57-40" tabindex="-1"></a></span>
+<span id="cb57-41"><a href="#cb57-41" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb57-42"><a href="#cb57-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
+<span id="cb57-43"><a href="#cb57-43" tabindex="-1"></a>  </span>
+<span id="cb57-44"><a href="#cb57-44" tabindex="-1"></a><span class="kw">var</span> filteredMaskedScaled <span class="op">=</span> filteredMasked<span class="op">.</span><span class="fu">map</span>(scaleImage)<span class="op">;</span></span>
+<span id="cb57-45"><a href="#cb57-45" tabindex="-1"></a></span>
+<span id="cb57-46"><a href="#cb57-46" tabindex="-1"></a><span class="co">// Create a median composite for 2020</span></span>
+<span id="cb57-47"><a href="#cb57-47" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span>  filteredMaskedScaled<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span></span>
+<span id="cb57-48"><a href="#cb57-48" tabindex="-1"></a></span>
+<span id="cb57-49"><a href="#cb57-49" tabindex="-1"></a><span class="co">// Load ESA WorldCover 2020 Classification</span></span>
+<span id="cb57-50"><a href="#cb57-50" tabindex="-1"></a><span class="kw">var</span> worldcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;ESA/WorldCover/v100&quot;</span>)</span>
+<span id="cb57-51"><a href="#cb57-51" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> worldcover</span>
+<span id="cb57-52"><a href="#cb57-52" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
+<span id="cb57-53"><a href="#cb57-53" tabindex="-1"></a><span class="kw">var</span> classification <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(filtered<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb57-54"><a href="#cb57-54" tabindex="-1"></a></span>
+<span id="cb57-55"><a href="#cb57-55" tabindex="-1"></a><span class="co">// Create a Split Panel App</span></span>
 <span id="cb57-56"><a href="#cb57-56" tabindex="-1"></a></span>
-<span id="cb57-57"><a href="#cb57-57" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
-<span id="cb57-58"><a href="#cb57-58" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
-<span id="cb57-59"><a href="#cb57-59" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
-<span id="cb57-60"><a href="#cb57-60" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
-<span id="cb57-61"><a href="#cb57-61" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
-<span id="cb57-62"><a href="#cb57-62" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
-<span id="cb57-63"><a href="#cb57-63" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb57-64"><a href="#cb57-64" tabindex="-1"></a></span>
-<span id="cb57-65"><a href="#cb57-65" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
-<span id="cb57-66"><a href="#cb57-66" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
-<span id="cb57-67"><a href="#cb57-67" tabindex="-1"></a></span>
-<span id="cb57-68"><a href="#cb57-68" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
-<span id="cb57-69"><a href="#cb57-69" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
-<span id="cb57-70"><a href="#cb57-70" tabindex="-1"></a></span>
-<span id="cb57-71"><a href="#cb57-71" tabindex="-1"></a><span class="co">// Add the layers to the maps</span></span>
-<span id="cb57-72"><a href="#cb57-72" tabindex="-1"></a><span class="co">// Composite goes to the leftMap</span></span>
-<span id="cb57-73"><a href="#cb57-73" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
-<span id="cb57-74"><a href="#cb57-74" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;2020 Composite&#39;</span>)<span class="op">;</span></span>
-<span id="cb57-75"><a href="#cb57-75" tabindex="-1"></a></span>
-<span id="cb57-76"><a href="#cb57-76" tabindex="-1"></a><span class="co">// Classification foes to the rightMap</span></span>
-<span id="cb57-77"><a href="#cb57-77" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(classification<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;WorldCover Classification&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<span id="cb57-57"><a href="#cb57-57" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
+<span id="cb57-58"><a href="#cb57-58" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.58</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">12.97</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
+<span id="cb57-59"><a href="#cb57-59" tabindex="-1"></a></span>
+<span id="cb57-60"><a href="#cb57-60" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
+<span id="cb57-61"><a href="#cb57-61" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb57-62"><a href="#cb57-62" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb57-63"><a href="#cb57-63" tabindex="-1"></a></span>
+<span id="cb57-64"><a href="#cb57-64" tabindex="-1"></a><span class="co">// Link them together.</span></span>
+<span id="cb57-65"><a href="#cb57-65" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
+<span id="cb57-66"><a href="#cb57-66" tabindex="-1"></a></span>
+<span id="cb57-67"><a href="#cb57-67" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
+<span id="cb57-68"><a href="#cb57-68" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
+<span id="cb57-69"><a href="#cb57-69" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
+<span id="cb57-70"><a href="#cb57-70" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
+<span id="cb57-71"><a href="#cb57-71" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
+<span id="cb57-72"><a href="#cb57-72" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb57-73"><a href="#cb57-73" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb57-74"><a href="#cb57-74" tabindex="-1"></a></span>
+<span id="cb57-75"><a href="#cb57-75" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
+<span id="cb57-76"><a href="#cb57-76" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
+<span id="cb57-77"><a href="#cb57-77" tabindex="-1"></a></span>
+<span id="cb57-78"><a href="#cb57-78" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
+<span id="cb57-79"><a href="#cb57-79" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
+<span id="cb57-80"><a href="#cb57-80" tabindex="-1"></a></span>
+<span id="cb57-81"><a href="#cb57-81" tabindex="-1"></a><span class="co">// Add the layers to the maps</span></span>
+<span id="cb57-82"><a href="#cb57-82" tabindex="-1"></a><span class="co">// Composite goes to the leftMap</span></span>
+<span id="cb57-83"><a href="#cb57-83" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb57-84"><a href="#cb57-84" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;2020 Composite&#39;</span>)<span class="op">;</span></span>
+<span id="cb57-85"><a href="#cb57-85" tabindex="-1"></a></span>
+<span id="cb57-86"><a href="#cb57-86" tabindex="-1"></a><span class="co">// Classification foes to the rightMap</span></span>
+<span id="cb57-87"><a href="#cb57-87" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(classification<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;WorldCover Classification&#39;</span>)<span class="op">;</span></span></code></pre></div>
 <div id="exercise-27" class="section level3">
 <h3>Exercise</h3>
 <p><a
@@ -4426,148 +4476,160 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb58-1"><a h
 <span id="cb58-7"><a href="#cb58-7" tabindex="-1"></a></span>
 <span id="cb58-8"><a href="#cb58-8" tabindex="-1"></a><span class="kw">var</span> s2 <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;COPERNICUS/S2_HARMONIZED&quot;</span>)<span class="op">;</span></span>
 <span id="cb58-9"><a href="#cb58-9" tabindex="-1"></a></span>
-<span id="cb58-10"><a href="#cb58-10" tabindex="-1"></a><span class="co">// Write a function for Cloud masking</span></span>
-<span id="cb58-11"><a href="#cb58-11" tabindex="-1"></a><span class="kw">var</span> maskS2clouds <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb58-12"><a href="#cb58-12" tabindex="-1"></a>  <span class="kw">var</span> qa <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(<span class="st">&#39;QA60&#39;</span>)</span>
-<span id="cb58-13"><a href="#cb58-13" tabindex="-1"></a>  <span class="kw">var</span> cloudBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb58-14"><a href="#cb58-14" tabindex="-1"></a>  <span class="kw">var</span> cirrusBitMask <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">11</span><span class="op">;</span></span>
-<span id="cb58-15"><a href="#cb58-15" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cloudBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">and</span>(</span>
-<span id="cb58-16"><a href="#cb58-16" tabindex="-1"></a>             qa<span class="op">.</span><span class="fu">bitwiseAnd</span>(cirrusBitMask)<span class="op">.</span><span class="fu">eq</span>(<span class="dv">0</span>))</span>
-<span id="cb58-17"><a href="#cb58-17" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="co">//.divide(10000)</span></span>
-<span id="cb58-18"><a href="#cb58-18" tabindex="-1"></a>      <span class="op">.</span><span class="fu">select</span>(<span class="st">&quot;B.*&quot;</span>)</span>
-<span id="cb58-19"><a href="#cb58-19" tabindex="-1"></a>      <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb58-20"><a href="#cb58-20" tabindex="-1"></a>}</span>
-<span id="cb58-21"><a href="#cb58-21" tabindex="-1"></a></span>
-<span id="cb58-22"><a href="#cb58-22" tabindex="-1"></a><span class="co">// Write a function to scale the bands</span></span>
-<span id="cb58-23"><a href="#cb58-23" tabindex="-1"></a><span class="kw">var</span> scaleImage <span class="op">=</span> <span class="kw">function</span>(image) {</span>
-<span id="cb58-24"><a href="#cb58-24" tabindex="-1"></a>  <span class="cf">return</span> image</span>
-<span id="cb58-25"><a href="#cb58-25" tabindex="-1"></a>    <span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
-<span id="cb58-26"><a href="#cb58-26" tabindex="-1"></a>    <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
-<span id="cb58-27"><a href="#cb58-27" tabindex="-1"></a>}</span>
-<span id="cb58-28"><a href="#cb58-28" tabindex="-1"></a></span>
-<span id="cb58-29"><a href="#cb58-29" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
-<span id="cb58-30"><a href="#cb58-30" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
-<span id="cb58-31"><a href="#cb58-31" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
-<span id="cb58-32"><a href="#cb58-32" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))</span>
-<span id="cb58-33"><a href="#cb58-33" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskS2clouds)</span>
-<span id="cb58-34"><a href="#cb58-34" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(scaleImage)<span class="op">;</span></span>
-<span id="cb58-35"><a href="#cb58-35" tabindex="-1"></a>  </span>
-<span id="cb58-36"><a href="#cb58-36" tabindex="-1"></a><span class="co">// Create a median composite for 2020</span></span>
-<span id="cb58-37"><a href="#cb58-37" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span>  filtered<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span></span>
-<span id="cb58-38"><a href="#cb58-38" tabindex="-1"></a></span>
-<span id="cb58-39"><a href="#cb58-39" tabindex="-1"></a><span class="co">// Load ESA WorldCover 2020 Classification</span></span>
-<span id="cb58-40"><a href="#cb58-40" tabindex="-1"></a><span class="kw">var</span> worldcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;ESA/WorldCover/v100&quot;</span>)</span>
-<span id="cb58-41"><a href="#cb58-41" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> worldcover</span>
-<span id="cb58-42"><a href="#cb58-42" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
-<span id="cb58-43"><a href="#cb58-43" tabindex="-1"></a><span class="kw">var</span> classification <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(filtered<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb58-10"><a href="#cb58-10" tabindex="-1"></a></span>
+<span id="cb58-11"><a href="#cb58-11" tabindex="-1"></a><span class="co">// Write a function to scale the bands</span></span>
+<span id="cb58-12"><a href="#cb58-12" tabindex="-1"></a><span class="kw">var</span> scaleImage <span class="op">=</span> <span class="kw">function</span>(image) {</span>
+<span id="cb58-13"><a href="#cb58-13" tabindex="-1"></a>  <span class="cf">return</span> image</span>
+<span id="cb58-14"><a href="#cb58-14" tabindex="-1"></a>    <span class="op">.</span><span class="fu">multiply</span>(<span class="fl">0.0001</span>)</span>
+<span id="cb58-15"><a href="#cb58-15" tabindex="-1"></a>    <span class="op">.</span><span class="fu">copyProperties</span>(image<span class="op">,</span> [<span class="st">&quot;system:time_start&quot;</span>])</span>
+<span id="cb58-16"><a href="#cb58-16" tabindex="-1"></a>}</span>
+<span id="cb58-17"><a href="#cb58-17" tabindex="-1"></a></span>
+<span id="cb58-18"><a href="#cb58-18" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> s2</span>
+<span id="cb58-19"><a href="#cb58-19" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">lt</span>(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span><span class="op">,</span> <span class="dv">30</span>))</span>
+<span id="cb58-20"><a href="#cb58-20" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))</span>
+<span id="cb58-21"><a href="#cb58-21" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
+<span id="cb58-22"><a href="#cb58-22" tabindex="-1"></a>  </span>
+<span id="cb58-23"><a href="#cb58-23" tabindex="-1"></a>  </span>
+<span id="cb58-24"><a href="#cb58-24" tabindex="-1"></a><span class="co">// Load the Cloud Score+ collection</span></span>
+<span id="cb58-25"><a href="#cb58-25" tabindex="-1"></a><span class="kw">var</span> csPlus <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)<span class="op">;</span></span>
+<span id="cb58-26"><a href="#cb58-26" tabindex="-1"></a><span class="kw">var</span> csPlusBands <span class="op">=</span> csPlus<span class="op">.</span><span class="fu">first</span>()<span class="op">.</span><span class="fu">bandNames</span>()<span class="op">;</span></span>
+<span id="cb58-27"><a href="#cb58-27" tabindex="-1"></a></span>
+<span id="cb58-28"><a href="#cb58-28" tabindex="-1"></a><span class="co">// We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb58-29"><a href="#cb58-29" tabindex="-1"></a><span class="co">// image in the collection</span></span>
+<span id="cb58-30"><a href="#cb58-30" tabindex="-1"></a><span class="co">// This is done using the linkCollection() function</span></span>
+<span id="cb58-31"><a href="#cb58-31" tabindex="-1"></a><span class="kw">var</span> filteredS2WithCs <span class="op">=</span> filtered<span class="op">.</span><span class="fu">linkCollection</span>(csPlus<span class="op">,</span> csPlusBands)<span class="op">;</span></span>
+<span id="cb58-32"><a href="#cb58-32" tabindex="-1"></a></span>
+<span id="cb58-33"><a href="#cb58-33" tabindex="-1"></a><span class="co">// Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb58-34"><a href="#cb58-34" tabindex="-1"></a><span class="kw">function</span> <span class="fu">maskLowQA</span>(image) {</span>
+<span id="cb58-35"><a href="#cb58-35" tabindex="-1"></a>  <span class="kw">var</span> qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span><span class="op">;</span></span>
+<span id="cb58-36"><a href="#cb58-36" tabindex="-1"></a>  <span class="kw">var</span> clearThreshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb58-37"><a href="#cb58-37" tabindex="-1"></a>  <span class="kw">var</span> mask <span class="op">=</span> image<span class="op">.</span><span class="fu">select</span>(qaBand)<span class="op">.</span><span class="fu">gte</span>(clearThreshold)<span class="op">;</span></span>
+<span id="cb58-38"><a href="#cb58-38" tabindex="-1"></a>  <span class="cf">return</span> image<span class="op">.</span><span class="fu">updateMask</span>(mask)<span class="op">;</span></span>
+<span id="cb58-39"><a href="#cb58-39" tabindex="-1"></a>}</span>
+<span id="cb58-40"><a href="#cb58-40" tabindex="-1"></a></span>
+<span id="cb58-41"><a href="#cb58-41" tabindex="-1"></a></span>
+<span id="cb58-42"><a href="#cb58-42" tabindex="-1"></a><span class="kw">var</span> filteredMasked <span class="op">=</span> filteredS2WithCs</span>
+<span id="cb58-43"><a href="#cb58-43" tabindex="-1"></a>  <span class="op">.</span><span class="fu">map</span>(maskLowQA)<span class="op">;</span></span>
 <span id="cb58-44"><a href="#cb58-44" tabindex="-1"></a></span>
-<span id="cb58-45"><a href="#cb58-45" tabindex="-1"></a><span class="co">// Create a Split Panel App</span></span>
-<span id="cb58-46"><a href="#cb58-46" tabindex="-1"></a></span>
-<span id="cb58-47"><a href="#cb58-47" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
-<span id="cb58-48"><a href="#cb58-48" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.58</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">12.97</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
+<span id="cb58-45"><a href="#cb58-45" tabindex="-1"></a><span class="kw">var</span> filteredMaskedScaled <span class="op">=</span> filteredMasked<span class="op">.</span><span class="fu">map</span>(scaleImage)<span class="op">;</span></span>
+<span id="cb58-46"><a href="#cb58-46" tabindex="-1"></a>  </span>
+<span id="cb58-47"><a href="#cb58-47" tabindex="-1"></a><span class="co">// Create a median composite for 2020</span></span>
+<span id="cb58-48"><a href="#cb58-48" tabindex="-1"></a><span class="kw">var</span> composite <span class="op">=</span>  filteredMaskedScaled<span class="op">.</span><span class="fu">median</span>()<span class="op">;</span></span>
 <span id="cb58-49"><a href="#cb58-49" tabindex="-1"></a></span>
-<span id="cb58-50"><a href="#cb58-50" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
-<span id="cb58-51"><a href="#cb58-51" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb58-52"><a href="#cb58-52" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
-<span id="cb58-53"><a href="#cb58-53" tabindex="-1"></a></span>
-<span id="cb58-54"><a href="#cb58-54" tabindex="-1"></a><span class="co">// Link them together.</span></span>
-<span id="cb58-55"><a href="#cb58-55" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
+<span id="cb58-50"><a href="#cb58-50" tabindex="-1"></a></span>
+<span id="cb58-51"><a href="#cb58-51" tabindex="-1"></a><span class="co">// Load ESA WorldCover 2020 Classification</span></span>
+<span id="cb58-52"><a href="#cb58-52" tabindex="-1"></a><span class="kw">var</span> worldcover <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&quot;ESA/WorldCover/v100&quot;</span>)</span>
+<span id="cb58-53"><a href="#cb58-53" tabindex="-1"></a><span class="kw">var</span> filtered <span class="op">=</span> worldcover</span>
+<span id="cb58-54"><a href="#cb58-54" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(<span class="st">&#39;2020-01-01&#39;</span><span class="op">,</span> <span class="st">&#39;2021-01-01&#39;</span>))<span class="op">;</span></span>
+<span id="cb58-55"><a href="#cb58-55" tabindex="-1"></a><span class="kw">var</span> classification <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>(filtered<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
 <span id="cb58-56"><a href="#cb58-56" tabindex="-1"></a></span>
-<span id="cb58-57"><a href="#cb58-57" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
-<span id="cb58-58"><a href="#cb58-58" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
-<span id="cb58-59"><a href="#cb58-59" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
-<span id="cb58-60"><a href="#cb58-60" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
-<span id="cb58-61"><a href="#cb58-61" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
-<span id="cb58-62"><a href="#cb58-62" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
-<span id="cb58-63"><a href="#cb58-63" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb58-64"><a href="#cb58-64" tabindex="-1"></a></span>
-<span id="cb58-65"><a href="#cb58-65" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
-<span id="cb58-66"><a href="#cb58-66" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
-<span id="cb58-67"><a href="#cb58-67" tabindex="-1"></a></span>
-<span id="cb58-68"><a href="#cb58-68" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
-<span id="cb58-69"><a href="#cb58-69" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
-<span id="cb58-70"><a href="#cb58-70" tabindex="-1"></a></span>
-<span id="cb58-71"><a href="#cb58-71" tabindex="-1"></a><span class="co">// Add the layers to the maps</span></span>
-<span id="cb58-72"><a href="#cb58-72" tabindex="-1"></a><span class="co">// Composite goes to the leftMap</span></span>
-<span id="cb58-73"><a href="#cb58-73" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
-<span id="cb58-74"><a href="#cb58-74" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;2020 Composite&#39;</span>)<span class="op">;</span></span>
-<span id="cb58-75"><a href="#cb58-75" tabindex="-1"></a></span>
-<span id="cb58-76"><a href="#cb58-76" tabindex="-1"></a><span class="co">// Classification foes to the rightMap</span></span>
-<span id="cb58-77"><a href="#cb58-77" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(classification<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;WorldCover Classification&#39;</span>)<span class="op">;</span></span>
-<span id="cb58-78"><a href="#cb58-78" tabindex="-1"></a></span>
-<span id="cb58-79"><a href="#cb58-79" tabindex="-1"></a><span class="co">// Adding a Legend</span></span>
-<span id="cb58-80"><a href="#cb58-80" tabindex="-1"></a><span class="co">// The following code creates a legend with class names and colors</span></span>
-<span id="cb58-81"><a href="#cb58-81" tabindex="-1"></a></span>
-<span id="cb58-82"><a href="#cb58-82" tabindex="-1"></a><span class="co">// Create the panel for the legend items.</span></span>
-<span id="cb58-83"><a href="#cb58-83" tabindex="-1"></a><span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb58-84"><a href="#cb58-84" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {</span>
-<span id="cb58-85"><a href="#cb58-85" tabindex="-1"></a>    <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span><span class="op">,</span></span>
-<span id="cb58-86"><a href="#cb58-86" tabindex="-1"></a>    <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span></span>
-<span id="cb58-87"><a href="#cb58-87" tabindex="-1"></a>  }</span>
-<span id="cb58-88"><a href="#cb58-88" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb58-89"><a href="#cb58-89" tabindex="-1"></a></span>
-<span id="cb58-90"><a href="#cb58-90" tabindex="-1"></a><span class="co">// Create and add the legend title.</span></span>
-<span id="cb58-91"><a href="#cb58-91" tabindex="-1"></a><span class="kw">var</span> legendTitle <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb58-92"><a href="#cb58-92" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="st">&#39;ESA WorldCover Classes&#39;</span><span class="op">,</span></span>
-<span id="cb58-93"><a href="#cb58-93" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {</span>
-<span id="cb58-94"><a href="#cb58-94" tabindex="-1"></a>    <span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span></span>
-<span id="cb58-95"><a href="#cb58-95" tabindex="-1"></a>    <span class="dt">fontSize</span><span class="op">:</span> <span class="st">&#39;18px&#39;</span><span class="op">,</span></span>
-<span id="cb58-96"><a href="#cb58-96" tabindex="-1"></a>    <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span><span class="op">,</span></span>
-<span id="cb58-97"><a href="#cb58-97" tabindex="-1"></a>    <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;0&#39;</span></span>
-<span id="cb58-98"><a href="#cb58-98" tabindex="-1"></a>  }</span>
-<span id="cb58-99"><a href="#cb58-99" tabindex="-1"></a>})<span class="op">;</span></span>
-<span id="cb58-100"><a href="#cb58-100" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(legendTitle)<span class="op">;</span></span>
+<span id="cb58-57"><a href="#cb58-57" tabindex="-1"></a><span class="co">// Create a Split Panel App</span></span>
+<span id="cb58-58"><a href="#cb58-58" tabindex="-1"></a></span>
+<span id="cb58-59"><a href="#cb58-59" tabindex="-1"></a><span class="co">// Set a center and zoom level.</span></span>
+<span id="cb58-60"><a href="#cb58-60" tabindex="-1"></a><span class="kw">var</span> center <span class="op">=</span> {<span class="dt">lon</span><span class="op">:</span> <span class="fl">77.58</span><span class="op">,</span> <span class="dt">lat</span><span class="op">:</span> <span class="fl">12.97</span><span class="op">,</span> <span class="dt">zoom</span><span class="op">:</span> <span class="dv">12</span>}<span class="op">;</span></span>
+<span id="cb58-61"><a href="#cb58-61" tabindex="-1"></a></span>
+<span id="cb58-62"><a href="#cb58-62" tabindex="-1"></a><span class="co">// Create two maps.</span></span>
+<span id="cb58-63"><a href="#cb58-63" tabindex="-1"></a><span class="kw">var</span> leftMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb58-64"><a href="#cb58-64" tabindex="-1"></a><span class="kw">var</span> rightMap <span class="op">=</span> ui<span class="op">.</span><span class="fu">Map</span>(center)<span class="op">;</span></span>
+<span id="cb58-65"><a href="#cb58-65" tabindex="-1"></a></span>
+<span id="cb58-66"><a href="#cb58-66" tabindex="-1"></a><span class="co">// Link them together.</span></span>
+<span id="cb58-67"><a href="#cb58-67" tabindex="-1"></a><span class="kw">var</span> linker <span class="op">=</span> <span class="kw">new</span> ui<span class="op">.</span><span class="at">Map</span><span class="op">.</span><span class="fu">Linker</span>([leftMap<span class="op">,</span> rightMap])<span class="op">;</span></span>
+<span id="cb58-68"><a href="#cb58-68" tabindex="-1"></a></span>
+<span id="cb58-69"><a href="#cb58-69" tabindex="-1"></a><span class="co">// Create a split panel with the two maps.</span></span>
+<span id="cb58-70"><a href="#cb58-70" tabindex="-1"></a><span class="kw">var</span> splitPanel <span class="op">=</span> ui<span class="op">.</span><span class="fu">SplitPanel</span>({</span>
+<span id="cb58-71"><a href="#cb58-71" tabindex="-1"></a>  <span class="dt">firstPanel</span><span class="op">:</span> leftMap<span class="op">,</span></span>
+<span id="cb58-72"><a href="#cb58-72" tabindex="-1"></a>  <span class="dt">secondPanel</span><span class="op">:</span> rightMap<span class="op">,</span></span>
+<span id="cb58-73"><a href="#cb58-73" tabindex="-1"></a>  <span class="dt">orientation</span><span class="op">:</span> <span class="st">&#39;horizontal&#39;</span><span class="op">,</span></span>
+<span id="cb58-74"><a href="#cb58-74" tabindex="-1"></a>  <span class="dt">wipe</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb58-75"><a href="#cb58-75" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb58-76"><a href="#cb58-76" tabindex="-1"></a></span>
+<span id="cb58-77"><a href="#cb58-77" tabindex="-1"></a><span class="co">// Remove the default map from the root panel.</span></span>
+<span id="cb58-78"><a href="#cb58-78" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
+<span id="cb58-79"><a href="#cb58-79" tabindex="-1"></a></span>
+<span id="cb58-80"><a href="#cb58-80" tabindex="-1"></a><span class="co">// Add our split panel to the root panel.</span></span>
+<span id="cb58-81"><a href="#cb58-81" tabindex="-1"></a>ui<span class="op">.</span><span class="at">root</span><span class="op">.</span><span class="fu">add</span>(splitPanel)<span class="op">;</span></span>
+<span id="cb58-82"><a href="#cb58-82" tabindex="-1"></a></span>
+<span id="cb58-83"><a href="#cb58-83" tabindex="-1"></a><span class="co">// Add the layers to the maps</span></span>
+<span id="cb58-84"><a href="#cb58-84" tabindex="-1"></a><span class="co">// Composite goes to the leftMap</span></span>
+<span id="cb58-85"><a href="#cb58-85" tabindex="-1"></a><span class="kw">var</span> rgbVis <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">bands</span><span class="op">:</span> [<span class="st">&#39;B4&#39;</span><span class="op">,</span> <span class="st">&#39;B3&#39;</span><span class="op">,</span> <span class="st">&#39;B2&#39;</span>]}<span class="op">;</span></span>
+<span id="cb58-86"><a href="#cb58-86" tabindex="-1"></a>leftMap<span class="op">.</span><span class="fu">addLayer</span>(composite<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> rgbVis<span class="op">,</span> <span class="st">&#39;2020 Composite&#39;</span>)<span class="op">;</span></span>
+<span id="cb58-87"><a href="#cb58-87" tabindex="-1"></a></span>
+<span id="cb58-88"><a href="#cb58-88" tabindex="-1"></a><span class="co">// Classification foes to the rightMap</span></span>
+<span id="cb58-89"><a href="#cb58-89" tabindex="-1"></a>rightMap<span class="op">.</span><span class="fu">addLayer</span>(classification<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {}<span class="op">,</span> <span class="st">&#39;WorldCover Classification&#39;</span>)<span class="op">;</span></span>
+<span id="cb58-90"><a href="#cb58-90" tabindex="-1"></a></span>
+<span id="cb58-91"><a href="#cb58-91" tabindex="-1"></a><span class="co">// Adding a Legend</span></span>
+<span id="cb58-92"><a href="#cb58-92" tabindex="-1"></a><span class="co">// The following code creates a legend with class names and colors</span></span>
+<span id="cb58-93"><a href="#cb58-93" tabindex="-1"></a></span>
+<span id="cb58-94"><a href="#cb58-94" tabindex="-1"></a><span class="co">// Create the panel for the legend items.</span></span>
+<span id="cb58-95"><a href="#cb58-95" tabindex="-1"></a><span class="kw">var</span> legend <span class="op">=</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb58-96"><a href="#cb58-96" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {</span>
+<span id="cb58-97"><a href="#cb58-97" tabindex="-1"></a>    <span class="dt">position</span><span class="op">:</span> <span class="st">&#39;middle-right&#39;</span><span class="op">,</span></span>
+<span id="cb58-98"><a href="#cb58-98" tabindex="-1"></a>    <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px 15px&#39;</span></span>
+<span id="cb58-99"><a href="#cb58-99" tabindex="-1"></a>  }</span>
+<span id="cb58-100"><a href="#cb58-100" tabindex="-1"></a>})<span class="op">;</span></span>
 <span id="cb58-101"><a href="#cb58-101" tabindex="-1"></a></span>
-<span id="cb58-102"><a href="#cb58-102" tabindex="-1"></a><span class="kw">var</span> loading <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>(<span class="st">&#39;Loading legend...&#39;</span><span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;2px 0 4px 0&#39;</span>})<span class="op">;</span></span>
-<span id="cb58-103"><a href="#cb58-103" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(loading)<span class="op">;</span></span>
-<span id="cb58-104"><a href="#cb58-104" tabindex="-1"></a></span>
-<span id="cb58-105"><a href="#cb58-105" tabindex="-1"></a><span class="co">// Creates and styles 1 row of the legend.</span></span>
-<span id="cb58-106"><a href="#cb58-106" tabindex="-1"></a><span class="kw">var</span> makeRow <span class="op">=</span> <span class="kw">function</span>(color<span class="op">,</span> name) {</span>
-<span id="cb58-107"><a href="#cb58-107" tabindex="-1"></a>  <span class="co">// Create the label that is actually the colored box.</span></span>
-<span id="cb58-108"><a href="#cb58-108" tabindex="-1"></a>  <span class="kw">var</span> colorBox <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb58-109"><a href="#cb58-109" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {</span>
-<span id="cb58-110"><a href="#cb58-110" tabindex="-1"></a>      <span class="dt">backgroundColor</span><span class="op">:</span> <span class="st">&#39;#&#39;</span> <span class="op">+</span> color<span class="op">,</span></span>
-<span id="cb58-111"><a href="#cb58-111" tabindex="-1"></a>      <span class="co">// Use padding to give the box height and width.</span></span>
-<span id="cb58-112"><a href="#cb58-112" tabindex="-1"></a>      <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px&#39;</span><span class="op">,</span></span>
-<span id="cb58-113"><a href="#cb58-113" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span></span>
-<span id="cb58-114"><a href="#cb58-114" tabindex="-1"></a>    }</span>
-<span id="cb58-115"><a href="#cb58-115" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb58-102"><a href="#cb58-102" tabindex="-1"></a><span class="co">// Create and add the legend title.</span></span>
+<span id="cb58-103"><a href="#cb58-103" tabindex="-1"></a><span class="kw">var</span> legendTitle <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb58-104"><a href="#cb58-104" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="st">&#39;ESA WorldCover Classes&#39;</span><span class="op">,</span></span>
+<span id="cb58-105"><a href="#cb58-105" tabindex="-1"></a>  <span class="dt">style</span><span class="op">:</span> {</span>
+<span id="cb58-106"><a href="#cb58-106" tabindex="-1"></a>    <span class="dt">fontWeight</span><span class="op">:</span> <span class="st">&#39;bold&#39;</span><span class="op">,</span></span>
+<span id="cb58-107"><a href="#cb58-107" tabindex="-1"></a>    <span class="dt">fontSize</span><span class="op">:</span> <span class="st">&#39;18px&#39;</span><span class="op">,</span></span>
+<span id="cb58-108"><a href="#cb58-108" tabindex="-1"></a>    <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span><span class="op">,</span></span>
+<span id="cb58-109"><a href="#cb58-109" tabindex="-1"></a>    <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;0&#39;</span></span>
+<span id="cb58-110"><a href="#cb58-110" tabindex="-1"></a>  }</span>
+<span id="cb58-111"><a href="#cb58-111" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb58-112"><a href="#cb58-112" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(legendTitle)<span class="op">;</span></span>
+<span id="cb58-113"><a href="#cb58-113" tabindex="-1"></a></span>
+<span id="cb58-114"><a href="#cb58-114" tabindex="-1"></a><span class="kw">var</span> loading <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>(<span class="st">&#39;Loading legend...&#39;</span><span class="op">,</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;2px 0 4px 0&#39;</span>})<span class="op">;</span></span>
+<span id="cb58-115"><a href="#cb58-115" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(loading)<span class="op">;</span></span>
 <span id="cb58-116"><a href="#cb58-116" tabindex="-1"></a></span>
-<span id="cb58-117"><a href="#cb58-117" tabindex="-1"></a>  <span class="co">// Create the label filled with the description text.</span></span>
-<span id="cb58-118"><a href="#cb58-118" tabindex="-1"></a>  <span class="kw">var</span> description <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
-<span id="cb58-119"><a href="#cb58-119" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> name<span class="op">,</span></span>
-<span id="cb58-120"><a href="#cb58-120" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 6px&#39;</span>}</span>
-<span id="cb58-121"><a href="#cb58-121" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb58-122"><a href="#cb58-122" tabindex="-1"></a></span>
-<span id="cb58-123"><a href="#cb58-123" tabindex="-1"></a>  <span class="cf">return</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
-<span id="cb58-124"><a href="#cb58-124" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [colorBox<span class="op">,</span> description]<span class="op">,</span></span>
-<span id="cb58-125"><a href="#cb58-125" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">Flow</span>(<span class="st">&#39;horizontal&#39;</span>)</span>
-<span id="cb58-126"><a href="#cb58-126" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb58-127"><a href="#cb58-127" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb58-117"><a href="#cb58-117" tabindex="-1"></a><span class="co">// Creates and styles 1 row of the legend.</span></span>
+<span id="cb58-118"><a href="#cb58-118" tabindex="-1"></a><span class="kw">var</span> makeRow <span class="op">=</span> <span class="kw">function</span>(color<span class="op">,</span> name) {</span>
+<span id="cb58-119"><a href="#cb58-119" tabindex="-1"></a>  <span class="co">// Create the label that is actually the colored box.</span></span>
+<span id="cb58-120"><a href="#cb58-120" tabindex="-1"></a>  <span class="kw">var</span> colorBox <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb58-121"><a href="#cb58-121" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {</span>
+<span id="cb58-122"><a href="#cb58-122" tabindex="-1"></a>      <span class="dt">backgroundColor</span><span class="op">:</span> <span class="st">&#39;#&#39;</span> <span class="op">+</span> color<span class="op">,</span></span>
+<span id="cb58-123"><a href="#cb58-123" tabindex="-1"></a>      <span class="co">// Use padding to give the box height and width.</span></span>
+<span id="cb58-124"><a href="#cb58-124" tabindex="-1"></a>      <span class="dt">padding</span><span class="op">:</span> <span class="st">&#39;8px&#39;</span><span class="op">,</span></span>
+<span id="cb58-125"><a href="#cb58-125" tabindex="-1"></a>      <span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 0&#39;</span></span>
+<span id="cb58-126"><a href="#cb58-126" tabindex="-1"></a>    }</span>
+<span id="cb58-127"><a href="#cb58-127" tabindex="-1"></a>  })<span class="op">;</span></span>
 <span id="cb58-128"><a href="#cb58-128" tabindex="-1"></a></span>
-<span id="cb58-129"><a href="#cb58-129" tabindex="-1"></a><span class="kw">var</span> BAND_NAME <span class="op">=</span> <span class="st">&#39;Map&#39;</span><span class="op">;</span></span>
-<span id="cb58-130"><a href="#cb58-130" tabindex="-1"></a><span class="co">// Get the list of palette colors and class names from the image.</span></span>
-<span id="cb58-131"><a href="#cb58-131" tabindex="-1"></a>classification<span class="op">.</span><span class="fu">toDictionary</span>()<span class="op">.</span><span class="fu">select</span>([BAND_NAME <span class="op">+</span> <span class="st">&quot;.*&quot;</span>])<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(result) {</span>
-<span id="cb58-132"><a href="#cb58-132" tabindex="-1"></a>  <span class="kw">var</span> palette <span class="op">=</span> result[BAND_NAME <span class="op">+</span> <span class="st">&quot;_class_palette&quot;</span>]<span class="op">;</span></span>
-<span id="cb58-133"><a href="#cb58-133" tabindex="-1"></a>  <span class="kw">var</span> names <span class="op">=</span> result[BAND_NAME <span class="op">+</span> <span class="st">&quot;_class_names&quot;</span>]<span class="op">;</span></span>
-<span id="cb58-134"><a href="#cb58-134" tabindex="-1"></a>  loading<span class="op">.</span><span class="fu">style</span>()<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;shown&#39;</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
-<span id="cb58-135"><a href="#cb58-135" tabindex="-1"></a></span>
-<span id="cb58-136"><a href="#cb58-136" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> names<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
-<span id="cb58-137"><a href="#cb58-137" tabindex="-1"></a>    legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(palette[i]<span class="op">,</span> names[i]))<span class="op">;</span></span>
-<span id="cb58-138"><a href="#cb58-138" tabindex="-1"></a>  }</span>
-<span id="cb58-139"><a href="#cb58-139" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb58-129"><a href="#cb58-129" tabindex="-1"></a>  <span class="co">// Create the label filled with the description text.</span></span>
+<span id="cb58-130"><a href="#cb58-130" tabindex="-1"></a>  <span class="kw">var</span> description <span class="op">=</span> ui<span class="op">.</span><span class="fu">Label</span>({</span>
+<span id="cb58-131"><a href="#cb58-131" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> name<span class="op">,</span></span>
+<span id="cb58-132"><a href="#cb58-132" tabindex="-1"></a>    <span class="dt">style</span><span class="op">:</span> {<span class="dt">margin</span><span class="op">:</span> <span class="st">&#39;0 0 4px 6px&#39;</span>}</span>
+<span id="cb58-133"><a href="#cb58-133" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb58-134"><a href="#cb58-134" tabindex="-1"></a></span>
+<span id="cb58-135"><a href="#cb58-135" tabindex="-1"></a>  <span class="cf">return</span> ui<span class="op">.</span><span class="fu">Panel</span>({</span>
+<span id="cb58-136"><a href="#cb58-136" tabindex="-1"></a>    <span class="dt">widgets</span><span class="op">:</span> [colorBox<span class="op">,</span> description]<span class="op">,</span></span>
+<span id="cb58-137"><a href="#cb58-137" tabindex="-1"></a>    <span class="dt">layout</span><span class="op">:</span> ui<span class="op">.</span><span class="at">Panel</span><span class="op">.</span><span class="at">Layout</span><span class="op">.</span><span class="fu">Flow</span>(<span class="st">&#39;horizontal&#39;</span>)</span>
+<span id="cb58-138"><a href="#cb58-138" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb58-139"><a href="#cb58-139" tabindex="-1"></a>}<span class="op">;</span></span>
 <span id="cb58-140"><a href="#cb58-140" tabindex="-1"></a></span>
-<span id="cb58-141"><a href="#cb58-141" tabindex="-1"></a><span class="co">// Print the panel containing the legend</span></span>
-<span id="cb58-142"><a href="#cb58-142" tabindex="-1"></a><span class="fu">print</span>(legend)<span class="op">;</span></span>
-<span id="cb58-143"><a href="#cb58-143" tabindex="-1"></a></span>
-<span id="cb58-144"><a href="#cb58-144" tabindex="-1"></a><span class="co">// Exercise</span></span>
-<span id="cb58-145"><a href="#cb58-145" tabindex="-1"></a></span>
-<span id="cb58-146"><a href="#cb58-146" tabindex="-1"></a><span class="co">// The &#39;legend&#39; panel contains the legend for the classification</span></span>
-<span id="cb58-147"><a href="#cb58-147" tabindex="-1"></a><span class="co">// Add the legend to the map below</span></span>
-<span id="cb58-148"><a href="#cb58-148" tabindex="-1"></a></span>
-<span id="cb58-149"><a href="#cb58-149" tabindex="-1"></a><span class="co">// Hint: UI Widgets can only be shown once in the app. Remove the</span></span>
-<span id="cb58-150"><a href="#cb58-150" tabindex="-1"></a><span class="co">//       print statement before adding the legend to the map.</span></span>
-<span id="cb58-151"><a href="#cb58-151" tabindex="-1"></a><span class="co">// Hint: Load the legend in the right-hand side map.</span></span></code></pre></div>
+<span id="cb58-141"><a href="#cb58-141" tabindex="-1"></a><span class="kw">var</span> BAND_NAME <span class="op">=</span> <span class="st">&#39;Map&#39;</span><span class="op">;</span></span>
+<span id="cb58-142"><a href="#cb58-142" tabindex="-1"></a><span class="co">// Get the list of palette colors and class names from the image.</span></span>
+<span id="cb58-143"><a href="#cb58-143" tabindex="-1"></a>classification<span class="op">.</span><span class="fu">toDictionary</span>()<span class="op">.</span><span class="fu">select</span>([BAND_NAME <span class="op">+</span> <span class="st">&quot;.*&quot;</span>])<span class="op">.</span><span class="fu">evaluate</span>(<span class="kw">function</span>(result) {</span>
+<span id="cb58-144"><a href="#cb58-144" tabindex="-1"></a>  <span class="kw">var</span> palette <span class="op">=</span> result[BAND_NAME <span class="op">+</span> <span class="st">&quot;_class_palette&quot;</span>]<span class="op">;</span></span>
+<span id="cb58-145"><a href="#cb58-145" tabindex="-1"></a>  <span class="kw">var</span> names <span class="op">=</span> result[BAND_NAME <span class="op">+</span> <span class="st">&quot;_class_names&quot;</span>]<span class="op">;</span></span>
+<span id="cb58-146"><a href="#cb58-146" tabindex="-1"></a>  loading<span class="op">.</span><span class="fu">style</span>()<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;shown&#39;</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb58-147"><a href="#cb58-147" tabindex="-1"></a></span>
+<span id="cb58-148"><a href="#cb58-148" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> names<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb58-149"><a href="#cb58-149" tabindex="-1"></a>    legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(palette[i]<span class="op">,</span> names[i]))<span class="op">;</span></span>
+<span id="cb58-150"><a href="#cb58-150" tabindex="-1"></a>  }</span>
+<span id="cb58-151"><a href="#cb58-151" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb58-152"><a href="#cb58-152" tabindex="-1"></a></span>
+<span id="cb58-153"><a href="#cb58-153" tabindex="-1"></a><span class="co">// Print the panel containing the legend</span></span>
+<span id="cb58-154"><a href="#cb58-154" tabindex="-1"></a><span class="fu">print</span>(legend)<span class="op">;</span></span>
+<span id="cb58-155"><a href="#cb58-155" tabindex="-1"></a></span>
+<span id="cb58-156"><a href="#cb58-156" tabindex="-1"></a><span class="co">// Exercise</span></span>
+<span id="cb58-157"><a href="#cb58-157" tabindex="-1"></a></span>
+<span id="cb58-158"><a href="#cb58-158" tabindex="-1"></a><span class="co">// The &#39;legend&#39; panel contains the legend for the classification</span></span>
+<span id="cb58-159"><a href="#cb58-159" tabindex="-1"></a><span class="co">// Add the legend to the map below</span></span>
+<span id="cb58-160"><a href="#cb58-160" tabindex="-1"></a></span>
+<span id="cb58-161"><a href="#cb58-161" tabindex="-1"></a><span class="co">// Hint: UI Widgets can only be shown once in the app. Remove the</span></span>
+<span id="cb58-162"><a href="#cb58-162" tabindex="-1"></a><span class="co">//       print statement before adding the legend to the map.</span></span>
+<span id="cb58-163"><a href="#cb58-163" tabindex="-1"></a><span class="co">// Hint: Load the legend in the right-hand side map.</span></span></code></pre></div>
 </div>
 </div>
 </div>

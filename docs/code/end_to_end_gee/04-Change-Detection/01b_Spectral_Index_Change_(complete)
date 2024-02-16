@@ -19,31 +19,40 @@ Map.centerObject(geometry, 10)
 
 var s2 = ee.ImageCollection("COPERNICUS/S2")
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)//.divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
-} 
 
-// Apply filters and cloud mask
+// Apply filters 
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
   .select('B.*')
 
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
+
 // Create Before and After composites
-var before = filtered
+var before = filteredMasked
   .filter(ee.Filter.date(
     fireStart.advance(-2, 'month'), fireStart))
   .median()
 
-var after = filtered
+var after = filteredMasked
   .filter(ee.Filter.date(
     fireEnd, fireEnd.advance(1, 'month')))
   .median()
@@ -55,8 +64,8 @@ var swirVis = {
   max: 3000,
   bands: ['B12', 'B8', 'B4'],
 };
-Map.addLayer(before, swirVis, 'Before')
-Map.addLayer(after, swirVis, 'After')
+Map.addLayer(before.clip(geometry), swirVis, 'Before')
+Map.addLayer(after.clip(geometry), swirVis, 'After')
 
 // Write a function to calculate  Normalized Burn Ratio (NBR)
 // 'NIR' (B8) and 'SWIR-2' (B12)
@@ -70,8 +79,8 @@ var afterNbr = addNBR(after).select('nbr');
 
 var nbrVis = {min: -0.5, max: 0.5, palette: ['white', 'black']}
 
-Map.addLayer(beforeNbr, nbrVis, 'Prefire NBR');
-Map.addLayer(afterNbr, nbrVis, 'Postfire NBR');
+Map.addLayer(beforeNbr.clip(geometry), nbrVis, 'Prefire NBR');
+Map.addLayer(afterNbr.clip(geometry), nbrVis, 'Postfire NBR');
 
 // Calculate Change in NBR (dNBR)
 var change = beforeNbr.subtract(afterNbr)
@@ -81,4 +90,4 @@ var threshold = 0.3
 
 // Display Burned Areas
 var burned = change.gt(threshold)
-Map.addLayer(burned, {min:0, max:1, palette: ['white', 'red']}, 'Burned', false) 
+Map.addLayer(burned.clip(geometry), {min:0, max:1, palette: ['white', 'red']}, 'Burned', false) 

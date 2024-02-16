@@ -9,58 +9,89 @@ var geometry = ee.Geometry.Polygon([[
   [75.7528434923199, 12.470171844429931],
   [75.7528434923199, 12.49723970868507]
 ]]);
-var dateOfIncident = ee.Date('2018-12-15');
+var dateOfIncident = ee.Date.fromYMD(2018, 12, 15);
 
 Map.centerObject(geometry)
 
-var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+var beforeDateFilter = ee.Filter.and(
+  ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident),
+  ee.Filter.calendarRange(12, 12, 'month'));
+
+// The period after the landslides was comparitively
+// cloud-free, so we obtain images from upto 1 month after.
+var afterDateFilter = ee.Filter.date(
+  dateOfIncident, dateOfIncident.advance(1, 'month'));
+  
+// Apply the filters and get composites
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1');
+
+var beforeDW = dw
+  .filter(beforeDateFilter)
+  .filter(ee.Filter.bounds(geometry))
+  .mean();
+  
+var afterDW = dw
+  .filter(afterDateFilter)
+  .filter(ee.Filter.bounds(geometry))
+  .mean();
+  
+// Load the Sentinel-2 collection 
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 
 // Write a function for Cloud masking
 function maskS2clouds(image) {
-  var qa = image.select('QA60')
+  var qa = image.select('QA60');
   var cloudBitMask = 1 << 10;
   var cirrusBitMask = 1 << 11;
   var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
   return image.updateMask(mask)//.divide(10000)
       .select("B.*")
-      .copyProperties(image, ["system:time_start"])
+      .copyProperties(image, ["system:time_start"]);
 } 
 
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
   .map(maskS2clouds)
-  .select('B.*')
+  .select('B.*');
 
 var beforeS2 = filtered
-  .filter(ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident))
-  .filter(ee.Filter.calendarRange(12, 12, 'month'))
-  .median()
+  .filter(beforeDateFilter)
+  .median();
 
 var afterS2 = filtered
-  .filter(ee.Filter.date(dateOfIncident, dateOfIncident.advance(1, 'month'))).median()
+  .filter(afterDateFilter)
+  .median();
 
 var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2'],};
-Map.addLayer(beforeS2, rgbVis, 'Before')
-Map.addLayer(afterS2, rgbVis, 'After')
 
-// Load the Dynamic World collection
-var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+//Map.centerObject(geometry, 13);
+Map.addLayer(beforeS2.clip(geometry), rgbVis, 'Before');
+Map.addLayer(afterS2.clip(geometry), rgbVis, 'After');
 
-var beforeDW = dw
-  .filter(ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident))
-  .filter(ee.Filter.calendarRange(12, 12, 'month'))
-  .mean()
-  .select('bare');
+var probabilityVis = {
+  min:0, 
+  max:0.5,
+  palette: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'],
+  bands: ['bare']
+}
+Map.addLayer(beforeDW.clip(geometry), probabilityVis, 'Before Probabilities', false);
+Map.addLayer(afterDW.clip(geometry), probabilityVis, 'After Probabilities', false);
 
-var afterDW = dw
-  .filter(ee.Filter.date(dateOfIncident, dateOfIncident.advance(1, 'month')))
-  .mean()
-  .select('bare');
-
-Map.addLayer(beforeDW, {}, 'Before Probabilities', false)
-Map.addLayer(afterDW, {}, 'After Probabilities', false)
-
-// Change in 'bare' class > 0.1
-var change = afterDW.subtract(beforeDW).gt(0.1)
-Map.addLayer(change.selfMask(), {min:0, max:1, palette: ['red']}, 'Change')
+// We define the landslide pixels where the 'bare' probability
+// has increased or 'trees' probability has decreased
+var bareThreshold = 0.1;
+var treesThreshold = 0.2;
+var bareChange = afterDW.select('bare')
+  .subtract(beforeDW.select('bare'))
+  .gt(bareThreshold);
+var treesChange = beforeDW.select('trees')
+  .subtract(afterDW.select('trees'))
+  .gt(treesThreshold);
+var change = bareChange.or(treesChange);
+  
+var changeVis = {min:0, max:1, palette: ['red']};
+Map.addLayer(change.selfMask().clip(geometry), changeVis,
+  'Detected Landslides');
