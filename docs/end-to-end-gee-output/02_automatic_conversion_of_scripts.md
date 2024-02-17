@@ -82,27 +82,6 @@ If your code loads any layers, they will be loaded on the map widget. To display
 m
 ```
 
-The auto-conversion is almost perfect and works flawlessly on most GEE code.
-
-One place it misses is during the conversion of function arguments specified as a dicitonary. You will need to prefix the resulting code with `**` to specify them as `**kwargs`. For example, the `geemap` converter produces code such as below.
-  ```
-  stats = image.reduceRegion({
-    'reducer': ee.Reducer.mean(),
-    'geometry': geometry,
-    'scale': 10,
-    'maxPixels': 1e10
-    })
-  ```
-To make this valid GEE Python API code - prefix the argument dictionary with `**`.
-  ```
-  stats = image.reduceRegion(**{
-    'reducer': ee.Reducer.mean(),
-    'geometry': geometry,
-    'scale': 10,
-    'maxPixels': 1e10
-    })
-  ```
-
 #### Automatic Conversion using Code
 
 `geemap` offers a function `js_snippet_to_py()` that can be used to perform the conversion using code. This is useful for batch conversions. To use this, we first create a string with the javascript code.
@@ -119,23 +98,30 @@ var rgbVis = {
   bands: ['B4', 'B3', 'B2'],
 };
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
+var filtered = s2
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
 }
 
-var filtered = s2
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-  .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
 
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
 
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
@@ -143,15 +129,15 @@ function addNDVI(image) {
   return image.addBands(ndvi);
 }
 
-var withNdvi = filtered.map(addNDVI);
+var withNdvi = filteredMasked.map(addNDVI);
 
 var composite = withNdvi.median()
 palette = [
-  'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
+  'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
   '74A901', '66A000', '529400', '3E8601', '207401', '056201',
   '004C00', '023B01', '012E01', '011D01', '011301'];
 
-ndviVis = {min:0, max:0.5, palette: palette }
+ndviVis = {min:0, max:0.7, palette: palette }
 Map.addLayer(withNdvi.select('ndvi'), ndviVis, 'NDVI Composite')
 
 """
@@ -172,6 +158,7 @@ The automatic conversion works great. Review it and paste it to the cell below.
 ```python
 import ee
 import geemap
+
 m = geemap.Map()
 
 geometry = ee.Geometry.Point([107.61303468448624, 12.130969369851766])
@@ -183,37 +170,45 @@ rgbVis = {
   'bands': ['B4', 'B3', 'B2'],
 }
 
-# Write a function for Cloud masking
-def maskS2clouds(image):
-  qa = image.select('QA60')
-  cloudBitMask = 1 << 10
-  cirrusBitMask = 1 << 11
-  mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask) \
-      .select("B.*") \
-      .copyProperties(image, ["system:time_start"])
-
 filtered = s2 \
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31')) \
-  .filter(ee.Filter.bounds(geometry)) \
-  .map(maskS2clouds)
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
+  .filter(ee.Filter.bounds(geometry))
+
+# Load the Cloud Score+ collection
+csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED')
+csPlusBands = csPlus.first().bandNames()
+
+# We need to add Cloud Score + bands to each Sentinel-2
+# image in the collection
+# This is done using the linkCollection() function
+filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands)
+
+# Function to mask pixels with low CS+ QA scores.
+def maskLowQA(image):
+  qaBand = 'cs'
+  clearThreshold = 0.5
+  mask = image.select(qaBand).gte(clearThreshold)
+  return image.updateMask(mask)
+
+filteredMasked = filteredS2WithCs \
+  .map(maskLowQA)
 
 # Write a function that computes NDVI for an image and adds it as a band
 def addNDVI(image):
   ndvi = image.normalizedDifference(['B5', 'B4']).rename('ndvi')
   return image.addBands(ndvi)
 
-withNdvi = filtered.map(addNDVI)
+withNdvi = filteredMasked.map(addNDVI)
 
 composite = withNdvi.median()
 palette = [
-  'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
+  'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
   '74A901', '66A000', '529400', '3E8601', '207401', '056201',
   '004C00', '023B01', '012E01', '011D01', '011301']
 
-ndviVis = {'min':0, 'max':0.5, 'palette': palette }
+ndviVis = {'min':0, 'max':0.7, 'palette': palette }
 m.addLayer(withNdvi.select('ndvi'), ndviVis, 'NDVI Composite')
+
 m
 ```
 

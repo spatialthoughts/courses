@@ -34,29 +34,36 @@ rgbVis = {
   'bands': ['B4', 'B3', 'B2'],
 }
 
-# Write a function for Cloud masking
-def maskS2clouds(image):
-  qa = image.select('QA60')
-  cloudBitMask = 1 << 10
-  cirrusBitMask = 1 << 11
-  mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask) \
-      .select("B.*") \
-      .copyProperties(image, ["system:time_start"])
-
 filtered = s2 \
   .filter(ee.Filter.date('2019-01-01', '2020-01-01')) \
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
   .filter(ee.Filter.bounds(geometry)) \
-  .map(maskS2clouds)
+
+# Load the Cloud Score+ collection
+csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED')
+csPlusBands = csPlus.first().bandNames()
+
+# We need to add Cloud Score + bands to each Sentinel-2
+# image in the collection
+# This is done using the linkCollection() function
+filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands)
+
+# Function to mask pixels with low CS+ QA scores.
+def maskLowQA(image):
+  qaBand = 'cs'
+  clearThreshold = 0.5
+  mask = image.select(qaBand).gte(clearThreshold)
+  return image.updateMask(mask)
+
+filteredMasked = filteredS2WithCs \
+  .map(maskLowQA)
 
 # Write a function that computes NDVI for an image and adds it as a band
 def addNDVI(image):
   ndvi = image.normalizedDifference(['B5', 'B4']).rename('ndvi')
   return image.addBands(ndvi)
 
-withNdvi = filtered.map(addNDVI)
+withNdvi = filteredMasked.map(addNDVI)
 ```
 
 #### Export All Images
