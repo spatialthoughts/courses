@@ -1,6 +1,6 @@
 ## Overview
 
-[Leafmap](https://leafmap.org/) is a Python package for interactive mapping that supports a wide-variety of plotting backends. 
+[Leafmap](https://leafmap.org/) is a Python package for interactive mapping that supports a wide-variety of plotting backends.
 
 We will explore the capabilities of Leafmap and create a map that includes vector and raster layers. For a more comprehensive overview, check out [leafmap key Features](https://leafmap.org/notebooks/00_key_features/).
 
@@ -63,7 +63,7 @@ m
 
 You can change the basemap to a Google basemap and set the center of the map. `leafmap.Map()` supports many arguments to customize the map and available controls.
 
-References: 
+References:
 
 * [`leafmap.leafmap.Map`](https://leafmap.org/leafmap/#leafmap.leafmap.Map)
 * [`ipyleaflet.leaflet.Map`](https://ipyleaflet.readthedocs.io/en/latest/api_reference/index.html#ipyleaflet.leaflet.Map)
@@ -188,6 +188,6 @@ You will need to specify additional `kwargs` parameters to create a correct visu
 
 
 ```python
-gcs_bucket = 'https://storage.googleapis.com/spatialthoughts-public-data/'
+gcs_bucket = 'https://storage.googleapis.com/spatialthoughts-public-data/ntl/viirs/'
 cog_url = os.path.join(gcs_bucket, 'viirs_ntl_2021_india.tif')
 ```
