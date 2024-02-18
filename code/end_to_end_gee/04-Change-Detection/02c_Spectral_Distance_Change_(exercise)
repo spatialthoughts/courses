@@ -4,19 +4,18 @@ var geometry = ee.Geometry.Polygon([[
   [75.7528434923199, 12.470171844429931],
   [75.7528434923199, 12.49723970868507]
 ]]);
-Map.centerObject(geometry)
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+Map.centerObject(geometry);
+var s2 = ee.ImageCollection('COPERNICUS/S2');
 var rgbVis = {
   min: 0.0,
   max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
 
-
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .select('B.*')
-  
+  .select('B.*');
+
 // Load the Cloud Score+ collection
 var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
 var csPlusBands = csPlus.first().bandNames();
@@ -29,35 +28,39 @@ var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
 // Function to mask pixels with low CS+ QA scores.
 function maskLowQA(image) {
   var qaBand = 'cs';
-  var clearThreshold = 0.5;
+  var clearThreshold = 0.65;
   var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
-
 var filteredMasked = filteredS2WithCs
   .map(maskLowQA);
-  
-var dateOfIncident = ee.Date('2018-12-15')
+
+var dateOfIncident = ee.Date('2018-08-15');
+
 var before = filteredMasked
+  .filter(ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident))
+  .filter(ee.Filter.calendarRange(6, 10, 'month'))
+  .median();
+  
+var after = filteredMasked
   .filter(ee.Filter.date(
-    dateOfIncident.advance(-2, 'year'), dateOfIncident))
-  .filter(ee.Filter.calendarRange(12, 12, 'month'))
-  .median()
-var after = filteredMasked.filter(ee.Filter.date(
-  dateOfIncident, dateOfIncident.advance(1, 'month'))).median()
+    dateOfIncident, dateOfIncident.advance(1, 'month')))
+  .median();
 
 
-Map.addLayer(before.clip(geometry), rgbVis, 'Before')
-Map.addLayer(after.clip(geometry), rgbVis, 'After')
+Map.addLayer(before.clip(geometry), rgbVis, 'Before');
+Map.addLayer(after.clip(geometry), rgbVis, 'After');
 
-var sed = after.spectralDistance(before, 'sed');
-var distance = sed.sqrt();
+// Use the spectralDistance() function to get spectral distance measures
 
-Map.addLayer(distance.clip(geometry), {min: 0, max: 1500, palette: ['white', 'red']}, 'spectral distance');
+// Use the metric 'Spectral Angle Mapper (SAM)
+// The result is the spectral angle in radians
+var angle = after.spectralDistance(before, 'sam');
+Map.addLayer(angle.clip(geometry), {min: 0, max: 1, palette: ['white', 'purple']}, 'Spectral Angle');
 
 // Exercise
-// Inspect the distance image and find a suitable threshold
+// Inspect the angle image and find a suitable threshold
 // that signifies damage after the landslides
 // Apply the threshold and create a new image showing landslides
 // Display the results

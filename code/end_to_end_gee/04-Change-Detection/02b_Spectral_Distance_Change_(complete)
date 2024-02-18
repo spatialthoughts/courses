@@ -4,8 +4,8 @@ var geometry = ee.Geometry.Polygon([[
   [75.7528434923199, 12.470171844429931],
   [75.7528434923199, 12.49723970868507]
 ]]);
-Map.centerObject(geometry)
-var s2 = ee.ImageCollection("COPERNICUS/S2")
+Map.centerObject(geometry);
+var s2 = ee.ImageCollection('COPERNICUS/S2');
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -14,7 +14,7 @@ var rgbVis = {
 
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .select('B.*')
+  .select('B.*');
 
 // Load the Cloud Score+ collection
 var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
@@ -28,32 +28,31 @@ var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
 // Function to mask pixels with low CS+ QA scores.
 function maskLowQA(image) {
   var qaBand = 'cs';
-  var clearThreshold = 0.5;
+  var clearThreshold = 0.65;
   var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
-
 var filteredMasked = filteredS2WithCs
   .map(maskLowQA);
 
-var dateOfIncident = ee.Date('2018-12-15')
+var dateOfIncident = ee.Date('2018-08-15');
+
 var before = filteredMasked
-  .filter(ee.Filter.date(
-    dateOfIncident.advance(-2, 'year'), dateOfIncident))
-  .filter(ee.Filter.calendarRange(12, 12, 'month'))
-  .median()
+  .filter(ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident))
+  .filter(ee.Filter.calendarRange(6, 10, 'month'))
+  .median();
   
 var after = filteredMasked
   .filter(ee.Filter.date(
     dateOfIncident, dateOfIncident.advance(1, 'month')))
-  .median()
+  .median();
 
 
-Map.addLayer(before.clip(geometry), rgbVis, 'Before')
-Map.addLayer(after.clip(geometry), rgbVis, 'After')
+Map.addLayer(before.clip(geometry), rgbVis, 'Before');
+Map.addLayer(after.clip(geometry), rgbVis, 'After');
 
-// Use the spectralDistnace() function to get spectral distance measures
+// Use the spectralDistance() function to get spectral distance measures
 
 // Use the metric 'Spectral Angle Mapper (SAM)
 // The result is the spectral angle in radians

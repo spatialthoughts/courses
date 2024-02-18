@@ -9,17 +9,26 @@ var geometry = karnataka.geometry();
 // Use the Sentinel-2 collection 
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 
-// Write a function for Cloud masking
-var maskS2clouds = function(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask)
-      .select('B.*')
-      .copyProperties(image, ['system:time_start'])
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = s2.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
 }
+
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
 
 // Write a function to apply the scaling factor to
 // each of the bands to get reflectance values
@@ -52,11 +61,10 @@ var addDateBand = function(image) {
 };
 
 // Filter and pre-process the collection
-var filtered = s2
+var filtered = filteredMasked
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
   .map(scaleImage)
   .map(addNDVI)
   .map(addDateBand);

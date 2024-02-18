@@ -2,6 +2,23 @@
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 var geometry = ee.Geometry.Point([74.80368345518073, 30.391793042969]);
 
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var s2WithCs = s2.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
 var startDate = ee.Date.fromYMD(2019, 1, 1);
 var endDate = ee.Date.fromYMD(2021, 1, 1);
 
@@ -11,23 +28,11 @@ function addNDVI(image) {
   return image.addBands(ndvi);
 } 
 
-// Function to mask clouds
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask).divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"])
-}
-
-var originalCollection = s2
+var originalCollection = s2WithCs
   .filter(ee.Filter.date(startDate, endDate))
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
+  .map(maskLowQA)
   .map(addNDVI);
 
 

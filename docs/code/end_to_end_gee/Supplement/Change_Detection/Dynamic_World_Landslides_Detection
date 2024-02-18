@@ -1,6 +1,6 @@
 // Landslides Detection using Dynamic World Probability Bands
 
-// We want to detect landslides occurred in December 2018
+// We want to detect landslides occurred in August 2018
 // in India's Kodagu district.
 
 var geometry = ee.Geometry.Polygon([[
@@ -9,13 +9,13 @@ var geometry = ee.Geometry.Polygon([[
   [75.7528434923199, 12.470171844429931],
   [75.7528434923199, 12.49723970868507]
 ]]);
-var dateOfIncident = ee.Date.fromYMD(2018, 12, 15);
+var dateOfIncident = ee.Date.fromYMD(2018, 8, 15);
 
 Map.centerObject(geometry)
 
 var beforeDateFilter = ee.Filter.and(
   ee.Filter.date(dateOfIncident.advance(-2, 'year'), dateOfIncident),
-  ee.Filter.calendarRange(12, 12, 'month'));
+  ee.Filter.calendarRange(6, 10, 'month'))
 
 // The period after the landslides was comparitively
 // cloud-free, so we obtain images from upto 1 month after.
@@ -40,28 +40,36 @@ var afterDW = dw
 // Load the Sentinel-2 collection 
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
 
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60');
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0));
-  return image.updateMask(mask)//.divide(10000)
-      .select("B.*")
-      .copyProperties(image, ["system:time_start"]);
-} 
 
 var filtered = s2
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
   .select('B.*');
 
-var beforeS2 = filtered
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.65;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA);
+  
+var beforeS2 = filteredMasked
   .filter(beforeDateFilter)
   .median();
 
-var afterS2 = filtered
+var afterS2 = filteredMasked
   .filter(afterDateFilter)
   .median();
 
