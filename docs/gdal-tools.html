@@ -525,6 +525,9 @@ id="toc-multithreading">Multithreading</a></li>
 </ul></li>
 <li><a href="#supplement" id="toc-supplement">Supplement</a>
 <ul>
+<li><a href="#check-supported-formats-and-capabilities"
+id="toc-check-supported-formats-and-capabilities">Check Supported
+Formats and Capabilities</a></li>
 <li><a href="#extracting-image-metadata-and-statistics"
 id="toc-extracting-image-metadata-and-statistics">Extracting Image
 Metadata and Statistics</a></li>
@@ -2156,6 +2159,71 @@ processing of the data.</p>
 </div>
 <div id="supplement" class="section level1">
 <h1>Supplement</h1>
+<div id="check-supported-formats-and-capabilities"
+class="section level2">
+<h2>Check Supported Formats and Capabilities</h2>
+<p>The GDAL binaries are built to include support for many common data
+formats. To check what formats are supported in your GDAL distribution,
+you can run the following command</p>
+<pre><code>gdalinfo --formats</code></pre>
+<p>Alternatively the <code>--format</code> flag can be used with any
+other utilities like <code>gdal_translate</code> or <code>ogrinfo</code>
+to obtain this list.</p>
+<p>The output lists the shortnames of all the drivers, whether supports
+vector or raster data along with abbreviations indicating the
+capabilities.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Abbreviation</th>
+<th>Capabilities</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>r</td>
+<td>read</td>
+</tr>
+<tr class="even">
+<td>ro</td>
+<td>read only</td>
+</tr>
+<tr class="odd">
+<td>w</td>
+<td>write (create dataset)</td>
+</tr>
+<tr class="even">
+<td>w+</td>
+<td>write with (support to update)</td>
+</tr>
+<tr class="odd">
+<td>s</td>
+<td>supports subdatasets</td>
+</tr>
+<tr class="even">
+<td>v</td>
+<td>supports virtual access - eg. /vsimem/</td>
+</tr>
+</tbody>
+</table>
+<p>That means an abbreviation of <code>rov</code> indicates that it is a
+read-only format that supports virtual access.</p>
+<p>QGIS distributes versions of GDAL that also has support for non-open
+formats, such as MrSID. You can use the commands from the included GDAL
+distribution. The location will depend on the platform and the
+distribution. Below is an example of how to set the correct path and
+environment variables for using that.</p>
+<p>Open a Command Prompt/Terminal and run the following to set the
+correct path.</p>
+<p><strong>Windows</strong></p>
+<pre><code>set OSGEO4W_ROOT=C:\OSGeo4W
+call &quot;%OSGEO4W_ROOT%\bin\o4w_env.bat&quot; 
+set PATH=%OSGEO4W_ROOT%\bin;%OSGEO4W_ROOT%\apps\qgis-ltr\bin</code></pre>
+<p><strong>Mac</strong></p>
+<pre><code>export PATH=/Applications/$QGIS_VERSION.app/Contents/MacOS/bin:$PATH</code></pre>
+<p>Running <code>gdalinfo --formats</code> will not list MrSID and other
+proprietary formats.</p>
+</div>
 <div id="extracting-image-metadata-and-statistics"
 class="section level2">
 <h2>Extracting Image Metadata and Statistics</h2>
@@ -2180,26 +2248,26 @@ the <code>jq</code> query like below.</p>
 <code>json</code> module to parse and extract the results. The code
 below shows how to extract the min and max values for each of the SRTM
 tiles used in the example earlier.</p>
-<div class="sourceCode" id="cb100"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb100-2"><a href="#cb100-2" tabindex="-1"></a><span class="im">import</span> json</span>
-<span id="cb100-3"><a href="#cb100-3" tabindex="-1"></a><span class="im">import</span> subprocess</span>
-<span id="cb100-4"><a href="#cb100-4" tabindex="-1"></a></span>
-<span id="cb100-5"><a href="#cb100-5" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
-<span id="cb100-6"><a href="#cb100-6" tabindex="-1"></a></span>
-<span id="cb100-7"><a href="#cb100-7" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
-<span id="cb100-8"><a href="#cb100-8" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
-<span id="cb100-9"><a href="#cb100-9" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
-<span id="cb100-10"><a href="#cb100-10" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
-<span id="cb100-11"><a href="#cb100-11" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
-<span id="cb100-12"><a href="#cb100-12" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb100-13"><a href="#cb100-13" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
-<span id="cb100-14"><a href="#cb100-14" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
-<span id="cb100-15"><a href="#cb100-15" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
-<span id="cb100-16"><a href="#cb100-16" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
-<span id="cb100-17"><a href="#cb100-17" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
-<span id="cb100-18"><a href="#cb100-18" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
-<span id="cb100-19"><a href="#cb100-19" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb103"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb103-3"><a href="#cb103-3" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb103-4"><a href="#cb103-4" tabindex="-1"></a></span>
+<span id="cb103-5"><a href="#cb103-5" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;srtm&#39;</span></span>
+<span id="cb103-6"><a href="#cb103-6" tabindex="-1"></a></span>
+<span id="cb103-7"><a href="#cb103-7" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdalinfo -stats -json </span><span class="sc">{input}</span><span class="st">&#39;</span></span>
+<span id="cb103-8"><a href="#cb103-8" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
+<span id="cb103-9"><a href="#cb103-9" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.hgt&#39;</span>):</span>
+<span id="cb103-10"><a href="#cb103-10" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
+<span id="cb103-11"><a href="#cb103-11" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
+<span id="cb103-12"><a href="#cb103-12" tabindex="-1"></a>    output <span class="op">=</span> subprocess.check_output(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>), shell<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb103-13"><a href="#cb103-13" tabindex="-1"></a>    info_dict <span class="op">=</span> json.loads(output)</span>
+<span id="cb103-14"><a href="#cb103-14" tabindex="-1"></a>    bands <span class="op">=</span> info_dict[<span class="st">&#39;bands&#39;</span>]</span>
+<span id="cb103-15"><a href="#cb103-15" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb103-16"><a href="#cb103-16" tabindex="-1"></a>      band_id <span class="op">=</span> band[<span class="st">&#39;band&#39;</span>]</span>
+<span id="cb103-17"><a href="#cb103-17" tabindex="-1"></a>      <span class="bu">min</span> <span class="op">=</span> band[<span class="st">&#39;minimum&#39;</span>]</span>
+<span id="cb103-18"><a href="#cb103-18" tabindex="-1"></a>      <span class="bu">max</span> <span class="op">=</span> band[<span class="st">&#39;maximum&#39;</span>]</span>
+<span id="cb103-19"><a href="#cb103-19" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">,</span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(filename, band_id, <span class="bu">min</span>, <span class="bu">max</span>))</span></code></pre></div>
 </div>
 <div id="creating-contours" class="section level2">
 <h2>Creating Contours</h2>
