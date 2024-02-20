@@ -1406,11 +1406,13 @@ If you want to check whether a given GeoTIFF file is a valid Cloud-Optimized Geo
 
 1. Using the `rio` command-line utility
 
-Rasterio provides a command-line utility called [`rio`](https://rasterio.readthedocs.io/en/stable/cli.html) to performa various raster operations on the command-line. The [`rio-cogeo`](https://cogeotiff.github.io/rio-cogeo/) plugin to Rasterio adds support for creation and validation of COGs.
+Rasterio provides a command-line utility called [rio](https://rasterio.readthedocs.io/en/stable/cli.html){target="_blank"} to perform various raster operations on the command-line. The [rio-cogeo](https://cogeotiff.github.io/rio-cogeo/){target="_blank"} plugin to Rasterio adds support for creation and validation of COGs.
 
-You can install the required libraries in your conda environment as follows
+You can install the required libraries in your conda environment as follows.
 
 ```
+conda create --name cogeo
+conda activate cogeo
 conda install -c conda-forge rasterio rio-cogeo
 ```
 
@@ -1473,6 +1475,39 @@ gdal_contour merged.tif contour_polygons.shp -i 500 -p -amin MINELEV -amax MAXEL
 
 ```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Contour Polygons with Elevation Attributes'}
 knitr::include_graphics('images/gdal/contour3.png')
+```
+
+## Creating Colorized Imagery
+
+We can use `gdaldem color-relief` command to apply a color palette to any  one-band image to create a rendered image. 
+
+We create a file `ntl_colormap.txt` containing the pixel intensity values mapped to RGB colors. The key `nv` is used to assign a color to NoData values.
+
+```
+0 0 0 4
+20 145 43 129
+40 251 133 96
+50 254 216 154
+60 252 253 191
+nv 255 255 255
+```
+
+Apply the colormap to the single-band nighttime lights image.
+
+```
+gdaldem color-relief \
+  /vsicurl/https://storage.googleapis.com/spatialthoughts-public-data/ntl/viirs/viirs_ntl_2021_india.tif \
+  ntl_colormap.txt ntl_colorized.tif
+```
+
+Convert the colorized GeoTIFF to a PNG. Specify the value 255 to set the transparency for the NoData values.
+
+```
+gdal_translate -of PNG -a_nodata 255 ntl_colorized.tif ntl_colorized.png
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/ntl_colorized.png')
 ```
 
 ## Creating Colorized Hillshade
