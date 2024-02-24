@@ -61,6 +61,6 @@ We prefer the following style while writing the tutorials.
 | Window titles, Tabs, Dialogs and buttons    | ```*label*``` |
 | Menu items                                  | ``` ** menu &arr; submenu1 &rarr; submenu2 ** ``` |
 | Processing algorithms                       | ``` ** Processing Toolbox &arr; Vector Overlay &rarr; Clip** ``` |
-| Layer and file names                        | ``` **layer_name** ``` |
-| Text input by the user / keyboard shortcuts | ``` **value** ```| 
+| Layer and file names                        | ``` ``layer_name`` ``` |
+| Text input by the user / keyboard shortcuts | ``` *value* ```| 
 | Hyper Link's                                | ``` [Spatial Thoughts](https:spatialthoughts.com) ```|
