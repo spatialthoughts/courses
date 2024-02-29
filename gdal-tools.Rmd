@@ -1207,9 +1207,9 @@ Now that we have a polygon layer with the buffer region around the metro station
 
 **Windows**
 ```
-python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip \
-  -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected \
-  -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved \
+python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip ^
+  -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected ^
+  -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved ^
   -output_ds spatial_query.gpkg -output_lyr selected -nlt POINT
 ```
 
@@ -1698,6 +1698,24 @@ cat coordinates.txt | gdallocationinfo /vsigs/spatialthoughts-public-data/ntl/vi
 
 ```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='Querying single or multiple values'}
 knitr::include_graphics('images/gdal/ntl_query2.png')
+```
+
+## Masking Values using a Binary Raster
+
+Often we have binary images representing a data mask. We can use `numpy.where()` function with `gdal_calc.py` to mask pixels based on another binary images.
+
+Let's say we have a `binary.tif` containing pixel values 0 and 1. We now want to set all pixels from `merged.tif` to No Data where the `binary.tif` is 0. Assuming, we want to use **-32768** as the *No Data* value, we can use a command like below.
+
+```
+gdal_calc.py -A merged.tif -B binary.tif \
+  --calc="numpy.where(B==1, A, -32768)" \
+  --NoDataValue -32768 --outfile masked.tif
+```
+
+This command says *Wherever the value of B raster is 1, the output should be the pixel values from A else it should be -32768*. Since we are also setting the `-NoDataValue` to -32768, the command effectively sets all pixels where the condition doesn't match (B != 1) to NoData.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/gdal/binary_mask.png')
 ```
 
 

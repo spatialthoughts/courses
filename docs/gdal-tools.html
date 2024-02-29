@@ -558,6 +558,9 @@ Pixel-Wise Statistics over Multiple Rasters</a></li>
 <li><a href="#extracting-values-from-a-raster"
 id="toc-extracting-values-from-a-raster">Extracting Values from a
 Raster</a></li>
+<li><a href="#masking-values-using-a-binary-raster"
+id="toc-masking-values-using-a-binary-raster">Masking Values using a
+Binary Raster</a></li>
 <li><a href="#raster-to-vector-conversion"
 id="toc-raster-to-vector-conversion">Raster to Vector
 Conversion</a></li>
@@ -2006,9 +2009,9 @@ Intersection, Difference (Erase), Union etc. We will use the
 <em>Clip</em> mode to select features from the input layer clipped to
 the features from the secondary layer.</p>
 <p><strong>Windows</strong></p>
-<pre><code>python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip \
-  -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected \
-  -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved \
+<pre><code>python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip ^
+  -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected ^
+  -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved ^
   -output_ds spatial_query.gpkg -output_lyr selected -nlt POINT</code></pre>
 <p><strong>Mac/Linux</strong></p>
 <pre><code>ogr_layer_algebra.py Clip \
@@ -2618,6 +2621,26 @@ post processing.</p>
 Querying single or multiple values
 </p>
 </div>
+</div>
+<div id="masking-values-using-a-binary-raster" class="section level2">
+<h2>Masking Values using a Binary Raster</h2>
+<p>Often we have binary images representing a data mask. We can use
+<code>numpy.where()</code> function with <code>gdal_calc.py</code> to
+mask pixels based on another binary images.</p>
+<p>Let’s say we have a <code>binary.tif</code> containing pixel values 0
+and 1. We now want to set all pixels from <code>merged.tif</code> to No
+Data where the <code>binary.tif</code> is 0. Assuming, we want to use
+<strong>-32768</strong> as the <em>No Data</em> value, we can use a
+command like below.</p>
+<pre><code>gdal_calc.py -A merged.tif -B binary.tif \
+  --calc=&quot;numpy.where(B==1, A, -32768)&quot; \
+  --NoDataValue -32768 --outfile masked.tif</code></pre>
+<p>This command says <em>Wherever the value of B raster is 1, the output
+should be the pixel values from A else it should be -32768</em>. Since
+we are also setting the <code>-NoDataValue</code> to -32768, the command
+effectively sets all pixels where the condition doesn’t match (B != 1)
+to NoData.</p>
+<p><img src="images/gdal/binary_mask.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="raster-to-vector-conversion" class="section level2">
 <h2>Raster to Vector Conversion</h2>
