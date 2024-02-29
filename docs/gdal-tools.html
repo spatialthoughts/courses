@@ -2012,12 +2012,12 @@ the features from the secondary layer.</p>
 <pre><code>python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip ^
   -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected ^
   -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved ^
-  -output_ds spatial_query.gpkg -output_lyr selected -nlt POINT</code></pre>
+  -output_ds output.gpkg -output_lyr selected -nlt POINT</code></pre>
 <p><strong>Mac/Linux</strong></p>
 <pre><code>ogr_layer_algebra.py Clip \
   -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected \
   -method_ds spatial_query.gpkg -method_lyr metro_stations_buffer_dissolved \
-  -output_ds spatial_query.gpkg -output_lyr selected -nlt POINT</code></pre>
+  -output_ds output.gpkg -output_lyr selected -nlt POINT</code></pre>
 <p><img src="images/gdal/geoprocessing4.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="data-cleaning" class="section level3">
@@ -2031,13 +2031,13 @@ data by selecting the feature from the latest year for each
 establishment. Note that some column names have spaces in the names, so
 we enclose them in double-quotes.</p>
 <p><strong>Windows</strong></p>
-<pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update ^
+<pre><code>ogr2ogr -t_srs EPSG:4326 output.gpkg output.gpkg -update ^
   -nln cleaned -sql &quot;SELECT t1.* FROM selected t1 ^
   JOIN (SELECT \&quot;Property ID\&quot;, MAX(\&quot;Census year\&quot;) as year FROM selected ^
   GROUP BY \&quot;Property ID\&quot;) t2 ON t1.\&quot;Property ID\&quot; = t2.\&quot;Property ID\&quot; ^
   AND t1.\&quot;Census year\&quot; = t2.year&quot;</code></pre>
 <p><strong>Mac/Linux</strong></p>
-<pre><code>ogr2ogr -t_srs EPSG:4326 spatial_query.gpkg spatial_query.gpkg -update \
+<pre><code>ogr2ogr -t_srs EPSG:4326 output.gpkg output.gpkg -update \
   -nln cleaned -sql &quot;SELECT t1.* FROM selected t1 \
   JOIN (SELECT \&quot;Property ID\&quot;, MAX(\&quot;Census year\&quot;) as year FROM selected \
   GROUP BY \&quot;Property ID\&quot;) t2 ON t1.\&quot;Property ID\&quot; = t2.\&quot;Property ID\&quot; \
@@ -2049,9 +2049,12 @@ we enclose them in double-quotes.</p>
 </div>
 <div id="running-commands-in-batch" class="section level1">
 <h1>3. Running commands in batch</h1>
-<p>You can run the GDAL/OGR commands in a loop using Python. Say you
-want to convert the format of the images from JPEG200 to GeoTiff. You
-would run a command such as below.</p>
+<p>You can run the GDAL/OGR commands in a loop using Python. For
+example, if we wanted to convert the format of the images from JPEG200
+to GeoTiff for all files in a directory, we would want to run a command
+like below for every image. Here we want the <code>{input}</code> and
+<code>{output}</code> values to be determined from the files in a
+directory.</p>
 <pre><code>gdal_translate -of GTiff -co COMPRESS=JPEG {input} {output}</code></pre>
 <p>But it would be a lot of manual effort if you want to run the
 commands on hundreds of input files. Here’s where a simple python script
@@ -2063,13 +2066,15 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a h
 <span id="cb91-2"><a href="#cb91-2" tabindex="-1"></a></span>
 <span id="cb91-3"><a href="#cb91-3" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
 <span id="cb91-4"><a href="#cb91-4" tabindex="-1"></a></span>
-<span id="cb91-5"><a href="#cb91-5" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb91-5"><a href="#cb91-5" tabindex="-1"></a>command_string <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
 <span id="cb91-6"><a href="#cb91-6" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir):</span>
 <span id="cb91-7"><a href="#cb91-7" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>):</span>
 <span id="cb91-8"><a href="#cb91-8" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
 <span id="cb91-9"><a href="#cb91-9" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
 <span id="cb91-10"><a href="#cb91-10" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb91-11"><a href="#cb91-11" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span></code></pre></div>
+<span id="cb91-11"><a href="#cb91-11" tabindex="-1"></a>    command <span class="op">=</span> command_string.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output)</span>
+<span id="cb91-12"><a href="#cb91-12" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Running -&gt;&#39;</span>, command)</span>
+<span id="cb91-13"><a href="#cb91-13" tabindex="-1"></a>    os.system(command)</span></code></pre></div>
 <p>In Anaconda Prompt, run the following command from
 <code>gdal-tools</code> directory to start batch processing on all tiles
 contained in the <code>naip/</code> directory.</p>
@@ -2082,32 +2087,25 @@ series.</p>
 <div class="sourceCode" id="cb93"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb93-2"><a href="#cb93-2" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
-<span id="cb93-3"><a href="#cb93-3" tabindex="-1"></a><span class="im">from</span> timeit <span class="im">import</span> default_timer <span class="im">as</span> timer</span>
-<span id="cb93-4"><a href="#cb93-4" tabindex="-1"></a></span>
-<span id="cb93-5"><a href="#cb93-5" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb93-3"><a href="#cb93-3" tabindex="-1"></a></span>
+<span id="cb93-4"><a href="#cb93-4" tabindex="-1"></a>input_dir <span class="op">=</span> <span class="st">&#39;naip&#39;</span></span>
+<span id="cb93-5"><a href="#cb93-5" tabindex="-1"></a>command_string <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
 <span id="cb93-6"><a href="#cb93-6" tabindex="-1"></a></span>
-<span id="cb93-7"><a href="#cb93-7" tabindex="-1"></a>command <span class="op">=</span> <span class="st">&#39;gdal_translate -of GTiff -co COMPRESS=JPEG </span><span class="sc">{input}</span><span class="st"> </span><span class="sc">{output}</span><span class="st">&#39;</span></span>
+<span id="cb93-7"><a href="#cb93-7" tabindex="-1"></a>num_cores <span class="op">=</span> <span class="dv">4</span></span>
 <span id="cb93-8"><a href="#cb93-8" tabindex="-1"></a></span>
 <span id="cb93-9"><a href="#cb93-9" tabindex="-1"></a><span class="kw">def</span> process(<span class="bu">file</span>):</span>
 <span id="cb93-10"><a href="#cb93-10" tabindex="-1"></a>    <span class="bu">input</span> <span class="op">=</span> os.path.join(input_dir, <span class="bu">file</span>)</span>
 <span id="cb93-11"><a href="#cb93-11" tabindex="-1"></a>    filename <span class="op">=</span> os.path.splitext(os.path.basename(<span class="bu">file</span>))[<span class="dv">0</span>]</span>
 <span id="cb93-12"><a href="#cb93-12" tabindex="-1"></a>    output <span class="op">=</span>  os.path.join(input_dir, filename <span class="op">+</span> <span class="st">&#39;.tif&#39;</span>)</span>
-<span id="cb93-13"><a href="#cb93-13" tabindex="-1"></a>    os.system(command.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output))</span>
-<span id="cb93-14"><a href="#cb93-14" tabindex="-1"></a>    </span>
-<span id="cb93-15"><a href="#cb93-15" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
-<span id="cb93-16"><a href="#cb93-16" tabindex="-1"></a></span>
-<span id="cb93-17"><a href="#cb93-17" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
-<span id="cb93-18"><a href="#cb93-18" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb93-19"><a href="#cb93-19" tabindex="-1"></a>  p <span class="op">=</span> Pool(<span class="dv">4</span>)</span>
-<span id="cb93-20"><a href="#cb93-20" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span>
-<span id="cb93-21"><a href="#cb93-21" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb93-22"><a href="#cb93-22" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span>
-<span id="cb93-23"><a href="#cb93-23" tabindex="-1"></a>  </span>
-<span id="cb93-24"><a href="#cb93-24" tabindex="-1"></a>  start <span class="op">=</span> timer()</span>
-<span id="cb93-25"><a href="#cb93-25" tabindex="-1"></a>  <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
-<span id="cb93-26"><a href="#cb93-26" tabindex="-1"></a>    process(<span class="bu">file</span>)</span>
-<span id="cb93-27"><a href="#cb93-27" tabindex="-1"></a>  end <span class="op">=</span> timer()</span>
-<span id="cb93-28"><a href="#cb93-28" tabindex="-1"></a>  <span class="bu">print</span>(end <span class="op">-</span> start)</span></code></pre></div>
+<span id="cb93-13"><a href="#cb93-13" tabindex="-1"></a>    command <span class="op">=</span> command_string.<span class="bu">format</span>(<span class="bu">input</span><span class="op">=</span><span class="bu">input</span>, output<span class="op">=</span>output)</span>
+<span id="cb93-14"><a href="#cb93-14" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Running -&gt;&#39;</span>, command)</span>
+<span id="cb93-15"><a href="#cb93-15" tabindex="-1"></a>    os.system(command)</span>
+<span id="cb93-16"><a href="#cb93-16" tabindex="-1"></a>    </span>
+<span id="cb93-17"><a href="#cb93-17" tabindex="-1"></a>files <span class="op">=</span> [<span class="bu">file</span> <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_dir) <span class="cf">if</span> <span class="bu">file</span>.endswith(<span class="st">&#39;.jp2&#39;</span>)]</span>
+<span id="cb93-18"><a href="#cb93-18" tabindex="-1"></a></span>
+<span id="cb93-19"><a href="#cb93-19" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb93-20"><a href="#cb93-20" tabindex="-1"></a>  p <span class="op">=</span> Pool(num_cores)</span>
+<span id="cb93-21"><a href="#cb93-21" tabindex="-1"></a>  p.<span class="bu">map</span>(process, files)</span></code></pre></div>
 <p>The script runs the commands both in parallel and serial mode and
 prints the time taken by each of them.</p>
 <pre><code>python batch_parallel.py</code></pre>
