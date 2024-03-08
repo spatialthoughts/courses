@@ -596,7 +596,13 @@ Exports</a>
 <ul>
 <li><a href="#exercise-30" id="toc-exercise-30">Exercise</a></li>
 </ul></li>
-<li><a href="#automating-downloads" id="toc-automating-downloads">04.
+<li><a href="#using-earth-engine-with-xarray"
+id="toc-using-earth-engine-with-xarray">04. Using Earth Engine with
+XArray</a>
+<ul>
+<li><a href="#exercise-31" id="toc-exercise-31">Exercise</a></li>
+</ul></li>
+<li><a href="#automating-downloads" id="toc-automating-downloads">05.
 Automating Downloads</a></li>
 </ul></li>
 <li><a href="#supplement" id="toc-supplement">Supplement</a>
@@ -5293,8 +5299,196 @@ Launching multiple tasks using the Python API
 </div>
 </div>
 </div>
+<div id="using-earth-engine-with-xarray" class="section level2">
+<h2>04. Using Earth Engine with XArray</h2>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/end_to_end_gee/04_time_series_processing_xee.ipynb"
+target="_blank">Open in Google Colab ↗</a></p>
+<p><a href="https://github.com/google/Xee">XEE</a> is an python package
+for working with Google Earth Engine data with <a
+href="https://docs.xarray.dev/en/stable/">XArray</a>. XEE makes it
+possible to leverage the strengths of both GEE and the Python ecosystem
+around XArray.</p>
+<p>We will learn how to use XEE to extract and process a NDVI
+time-series for a location.</p>
+<div id="installation" class="section level4">
+<h4>Installation</h4>
+<p>Let’s install the required packages in the Colab environment.</p>
+<div class="sourceCode" id="cb95"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a>    <span class="op">!</span>pip install <span class="op">--</span>upgrade xee</span></code></pre></div>
+<div class="sourceCode" id="cb96"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb96-2"><a href="#cb96-2" tabindex="-1"></a><span class="im">import</span> xarray</span>
+<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
+</div>
+<div id="initialization-3" class="section level4">
+<h4>Initialization</h4>
+<p>First of all, you need to run the following cells to initialize the
+API and authorize your account. You must have a Google Cloud Project
+associated with your GEE account. Replace the <code>cloud_project</code>
+with your own project from <a
+href="https://console.cloud.google.com/">Google Cloud Console</a>.</p>
+<p>We are using the <a
+href="https://developers.google.com/earth-engine/cloud/highvolume">High-volume
+Endpoint</a> which supports large number of concurrent requests and is
+recommended when working with XEE.</p>
+<div class="sourceCode" id="cb97"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
+<span id="cb97-2"><a href="#cb97-2" tabindex="-1"></a></span>
+<span id="cb97-3"><a href="#cb97-3" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb97-4"><a href="#cb97-4" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb97-5"><a href="#cb97-5" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb97-6"><a href="#cb97-6" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
+<span id="cb97-7"><a href="#cb97-7" tabindex="-1"></a>    )</span>
+<span id="cb97-8"><a href="#cb97-8" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb97-9"><a href="#cb97-9" tabindex="-1"></a>    ee.Authenticate()</span>
+<span id="cb97-10"><a href="#cb97-10" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb97-11"><a href="#cb97-11" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb97-12"><a href="#cb97-12" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
+<span id="cb97-13"><a href="#cb97-13" tabindex="-1"></a>    )</span></code></pre></div>
+</div>
+<div id="select-a-location." class="section level4">
+<h4>Select a location.</h4>
+<div class="sourceCode" id="cb98"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">82.60759592318209</span>, <span class="fl">27.163481733946846</span>])</span></code></pre></div>
+</div>
+<div id="preprocess-the-data-in-gee" class="section level4">
+<h4>Preprocess the data in GEE</h4>
+<p>We start with the Sentinel-2 L1C collection. We pre-process the data
+by applying cloud masking and pixel scaling.</p>
+<div class="sourceCode" id="cb99"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb99-2"><a href="#cb99-2" tabindex="-1"></a></span>
+<span id="cb99-3"><a href="#cb99-3" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb99-4"><a href="#cb99-4" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2017-01-01&#39;</span>, <span class="st">&#39;2018-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb99-5"><a href="#cb99-5" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb99-6"><a href="#cb99-6" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb99-7"><a href="#cb99-7" tabindex="-1"></a></span>
+<span id="cb99-8"><a href="#cb99-8" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
+<span id="cb99-9"><a href="#cb99-9" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb99-10"><a href="#cb99-10" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
+<span id="cb99-11"><a href="#cb99-11" tabindex="-1"></a></span>
+<span id="cb99-12"><a href="#cb99-12" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb99-13"><a href="#cb99-13" tabindex="-1"></a><span class="co"># image in the collection</span></span>
+<span id="cb99-14"><a href="#cb99-14" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
+<span id="cb99-15"><a href="#cb99-15" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
+<span id="cb99-16"><a href="#cb99-16" tabindex="-1"></a></span>
+<span id="cb99-17"><a href="#cb99-17" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb99-18"><a href="#cb99-18" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
+<span id="cb99-19"><a href="#cb99-19" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
+<span id="cb99-20"><a href="#cb99-20" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb99-21"><a href="#cb99-21" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
+<span id="cb99-22"><a href="#cb99-22" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
+<span id="cb99-23"><a href="#cb99-23" tabindex="-1"></a></span>
+<span id="cb99-24"><a href="#cb99-24" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
+<span id="cb99-25"><a href="#cb99-25" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
+<span id="cb99-26"><a href="#cb99-26" tabindex="-1"></a></span>
+<span id="cb99-27"><a href="#cb99-27" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb99-28"><a href="#cb99-28" tabindex="-1"></a><span class="co"># Create a new image to overcome https://github.com/google/Xee/issues/88</span></span>
+<span id="cb99-29"><a href="#cb99-29" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb99-30"><a href="#cb99-30" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B8&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb99-31"><a href="#cb99-31" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.0001</span>).addBands(ndvi)<span class="op">\</span></span>
+<span id="cb99-32"><a href="#cb99-32" tabindex="-1"></a>    .copyProperties(image, [<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb99-33"><a href="#cb99-33" tabindex="-1"></a></span>
+<span id="cb99-34"><a href="#cb99-34" tabindex="-1"></a><span class="co"># Map the function over the collection</span></span>
+<span id="cb99-35"><a href="#cb99-35" tabindex="-1"></a>withNdvi <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
+</div>
+<div id="load-imagecollection-as-xarray-dataset" class="section level4">
+<h4>Load ImageCollection as XArray Dataset</h4>
+<p>Now we have an ImageCollection that we want to get it as a XArray
+Dataset. We define the region of interest and extract the
+ImageCollection using the <code>ee</code> engine.</p>
+<div class="sourceCode" id="cb100"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a>ds <span class="op">=</span> xarray.open_dataset(</span>
+<span id="cb100-2"><a href="#cb100-2" tabindex="-1"></a>    withNdvi,</span>
+<span id="cb100-3"><a href="#cb100-3" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;ee&#39;</span>,</span>
+<span id="cb100-4"><a href="#cb100-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:3857&#39;</span>,</span>
+<span id="cb100-5"><a href="#cb100-5" tabindex="-1"></a>    scale<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb100-6"><a href="#cb100-6" tabindex="-1"></a>    geometry<span class="op">=</span>geometry,</span>
+<span id="cb100-7"><a href="#cb100-7" tabindex="-1"></a>    ee_mask_value<span class="op">=-</span><span class="dv">9999</span>,</span>
+<span id="cb100-8"><a href="#cb100-8" tabindex="-1"></a>)</span>
+<span id="cb100-9"><a href="#cb100-9" tabindex="-1"></a></span>
+<span id="cb100-10"><a href="#cb100-10" tabindex="-1"></a>ds</span></code></pre></div>
+<p>Select the <code>ndvi</code> band.</p>
+<div class="sourceCode" id="cb101"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" tabindex="-1"></a>ndvi_time_series <span class="op">=</span> ds.ndvi</span></code></pre></div>
+<p>Run <code>compute()</code> to fetch the pixels from Earth Engine.
+This may take some time depending on the size of the request. This is a
+time-series at a single pixel, so we also <code>squeeze()</code> to
+remove the X and Y dimensions and get an array of NDVI values.</p>
+<div class="sourceCode" id="cb102"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" tabindex="-1"></a>original_time_series <span class="op">=</span> ndvi_time_series.compute()</span>
+<span id="cb102-2"><a href="#cb102-2" tabindex="-1"></a>original_time_series <span class="op">=</span> original_time_series.squeeze()</span>
+<span id="cb102-3"><a href="#cb102-3" tabindex="-1"></a>original_time_series</span></code></pre></div>
+<p>Plot the time-series.</p>
+<div class="sourceCode" id="cb103"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
+<span id="cb103-3"><a href="#cb103-3" tabindex="-1"></a>original_time_series.plot.line(</span>
+<span id="cb103-4"><a href="#cb103-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb103-5"><a href="#cb103-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb103-6"><a href="#cb103-6" tabindex="-1"></a>plt.show()</span></code></pre></div>
+</div>
+<div id="process-time-series-using-xarray" class="section level4">
+<h4>Process Time-Series using XArray</h4>
+<p>We use XArray’s excellent time-series processing functionality to
+process the time-series. First, we create a regularly spaced
+time-series.</p>
+<div class="sourceCode" id="cb104"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> original_time_series<span class="op">\</span></span>
+<span id="cb104-2"><a href="#cb104-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>)</span>
+<span id="cb104-3"><a href="#cb104-3" tabindex="-1"></a>time_series_resampled</span></code></pre></div>
+<p>Next we fill the cloud-masked pixels with linearly interpolated
+values from temporal neighbors.</p>
+<div class="sourceCode" id="cb105"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled<span class="op">\</span></span>
+<span id="cb105-2"><a href="#cb105-2" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb105-3"><a href="#cb105-3" tabindex="-1"></a>time_series_interpolated</span></code></pre></div>
+<p>We also apply a moving-window smoothing to remove noise.</p>
+<div class="sourceCode" id="cb106"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" tabindex="-1"></a>time_series_smooth <span class="op">=</span> time_series_interpolated<span class="op">\</span></span>
+<span id="cb106-2"><a href="#cb106-2" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span>
+<span id="cb106-3"><a href="#cb106-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
+<p>A moving-window smoothing removed the first and last values of the
+time-series. We anchor the smoothed time-series with the values from the
+original time-series.</p>
+<div class="sourceCode" id="cb107"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" tabindex="-1"></a>time_series_smooth[<span class="dv">0</span>] <span class="op">=</span> original_time_series[<span class="dv">0</span>]</span>
+<span id="cb107-2"><a href="#cb107-2" tabindex="-1"></a>time_series_smooth[<span class="op">-</span><span class="dv">1</span>] <span class="op">=</span> original_time_series[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb107-3"><a href="#cb107-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
+<p>Plot the original and smoothed time-series.</p>
+<div class="sourceCode" id="cb108"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb108-2"><a href="#cb108-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
+<span id="cb108-3"><a href="#cb108-3" tabindex="-1"></a>original_time_series.plot.line(</span>
+<span id="cb108-4"><a href="#cb108-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb108-5"><a href="#cb108-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb108-6"><a href="#cb108-6" tabindex="-1"></a>time_series_smooth.plot.line(</span>
+<span id="cb108-7"><a href="#cb108-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb108-8"><a href="#cb108-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb108-9"><a href="#cb108-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
+</div>
+<div id="download-the-time-series" class="section level4">
+<h4>Download the Time-Series</h4>
+<p>Convert the DataArray to a Pandas DataFrame and save it as a CSV
+file.</p>
+<div class="sourceCode" id="cb109"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smooth.to_dataframe(<span class="st">&#39;ndvi&#39;</span>).reset_index()</span>
+<span id="cb109-2"><a href="#cb109-2" tabindex="-1"></a>df</span></code></pre></div>
+<div class="sourceCode" id="cb110"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb110-1"><a href="#cb110-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;smoothed_time_series.csv&#39;</span></span>
+<span id="cb110-2"><a href="#cb110-2" tabindex="-1"></a>df[[<span class="st">&#39;time&#39;</span>, <span class="st">&#39;ndvi&#39;</span>]].to_csv(output_filename, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+</div>
+<div id="exercise-31" class="section level3">
+<h3>Exercise</h3>
+<p>Replace the <code>geometry</code> with the location of your choice.
+Extract and download the smoothed time-series as a CSV file.</p>
+</div>
+</div>
 <div id="automating-downloads" class="section level2">
-<h2>04. Automating Downloads</h2>
+<h2>05. Automating Downloads</h2>
 <p>Another common use of the GEE Python API is to automate data
 processing and export. You can create a Python script that can be called
 from a server or launched on a schedule using tools such as <a
@@ -5317,74 +5511,71 @@ GEE.</p>
 <li>Create a new file named <code>download_data.py</code> with the
 content shown below.</li>
 </ol>
-<div class="sourceCode" id="cb95"><pre
-class="sourceCode py"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="im">import</span> datetime</span>
-<span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a><span class="im">import</span> csv</span>
-<span id="cb95-4"><a href="#cb95-4" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb95-5"><a href="#cb95-5" tabindex="-1"></a></span>
-<span id="cb95-6"><a href="#cb95-6" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
-<span id="cb95-7"><a href="#cb95-7" tabindex="-1"></a></span>
-<span id="cb95-8"><a href="#cb95-8" tabindex="-1"></a><span class="cf">try</span>:</span>
-<span id="cb95-9"><a href="#cb95-9" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
-<span id="cb95-10"><a href="#cb95-10" tabindex="-1"></a><span class="cf">except</span>:</span>
-<span id="cb95-11"><a href="#cb95-11" tabindex="-1"></a>    ee.Authenticate()</span>
-<span id="cb95-12"><a href="#cb95-12" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
-<span id="cb95-13"><a href="#cb95-13" tabindex="-1"></a></span>
-<span id="cb95-14"><a href="#cb95-14" tabindex="-1"></a><span class="co"># Get current date and convert to milliseconds </span></span>
-<span id="cb95-15"><a href="#cb95-15" tabindex="-1"></a>start_date <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2022</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb95-16"><a href="#cb95-16" tabindex="-1"></a>end_date <span class="op">=</span> start_date.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
-<span id="cb95-17"><a href="#cb95-17" tabindex="-1"></a></span>
-<span id="cb95-18"><a href="#cb95-18" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM&#39;</span>)</span>
-<span id="cb95-19"><a href="#cb95-19" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
-<span id="cb95-20"><a href="#cb95-20" tabindex="-1"></a></span>
-<span id="cb95-21"><a href="#cb95-21" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
-<span id="cb95-22"><a href="#cb95-22" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
-<span id="cb95-23"><a href="#cb95-23" tabindex="-1"></a></span>
-<span id="cb95-24"><a href="#cb95-24" tabindex="-1"></a><span class="co"># Datasets</span></span>
-<span id="cb95-25"><a href="#cb95-25" tabindex="-1"></a><span class="co"># SMAP is in safe mode and not generating new data since August 2022</span></span>
-<span id="cb95-26"><a href="#cb95-26" tabindex="-1"></a><span class="co"># https://nsidc.org/data/user-resources/data-announcements/user-notice-smap-safe-mode</span></span>
-<span id="cb95-27"><a href="#cb95-27" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&quot;NASA_USDA/HSL/SMAP10KM_soil_moisture&quot;</span>)</span>
-<span id="cb95-28"><a href="#cb95-28" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&quot;FAO/GAUL_SIMPLIFIED_500m/2015/level2&quot;</span>)</span>
-<span id="cb95-29"><a href="#cb95-29" tabindex="-1"></a></span>
-<span id="cb95-30"><a href="#cb95-30" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
-<span id="cb95-31"><a href="#cb95-31" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
-<span id="cb95-32"><a href="#cb95-32" tabindex="-1"></a></span>
-<span id="cb95-33"><a href="#cb95-33" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
-<span id="cb95-34"><a href="#cb95-34" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;ssm&#39;</span>)</span>
-<span id="cb95-35"><a href="#cb95-35" tabindex="-1"></a></span>
-<span id="cb95-36"><a href="#cb95-36" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
-<span id="cb95-37"><a href="#cb95-37" tabindex="-1"></a></span>
-<span id="cb95-38"><a href="#cb95-38" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
-<span id="cb95-39"><a href="#cb95-39" tabindex="-1"></a></span>
-<span id="cb95-40"><a href="#cb95-40" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
-<span id="cb95-41"><a href="#cb95-41" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
-<span id="cb95-42"><a href="#cb95-42" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
-<span id="cb95-43"><a href="#cb95-43" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">10000</span>,</span>
-<span id="cb95-44"><a href="#cb95-44" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
-<span id="cb95-45"><a href="#cb95-45" tabindex="-1"></a>  })</span>
-<span id="cb95-46"><a href="#cb95-46" tabindex="-1"></a></span>
-<span id="cb95-47"><a href="#cb95-47" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
-<span id="cb95-48"><a href="#cb95-48" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
-<span id="cb95-49"><a href="#cb95-49" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb95-50"><a href="#cb95-50" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
-<span id="cb95-51"><a href="#cb95-51" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
-<span id="cb95-52"><a href="#cb95-52" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
-<span id="cb95-53"><a href="#cb95-53" tabindex="-1"></a></span>
-<span id="cb95-54"><a href="#cb95-54" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
-<span id="cb95-55"><a href="#cb95-55" tabindex="-1"></a></span>
-<span id="cb95-56"><a href="#cb95-56" tabindex="-1"></a>data <span class="op">=</span> []</span>
-<span id="cb95-57"><a href="#cb95-57" tabindex="-1"></a></span>
-<span id="cb95-58"><a href="#cb95-58" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
-<span id="cb95-59"><a href="#cb95-59" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
-<span id="cb95-60"><a href="#cb95-60" tabindex="-1"></a></span>
-<span id="cb95-61"><a href="#cb95-61" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb95-62"><a href="#cb95-62" tabindex="-1"></a></span>
-<span id="cb95-63"><a href="#cb95-63" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
-<span id="cb95-64"><a href="#cb95-64" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
-<span id="cb95-65"><a href="#cb95-65" tabindex="-1"></a>    writer.writeheader()</span>
-<span id="cb95-66"><a href="#cb95-66" tabindex="-1"></a>    writer.writerows(data)</span>
-<span id="cb95-67"><a href="#cb95-67" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
+<div class="sourceCode" id="cb111"><pre
+class="sourceCode py"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" tabindex="-1"></a><span class="im">import</span> datetime</span>
+<span id="cb111-2"><a href="#cb111-2" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb111-3"><a href="#cb111-3" tabindex="-1"></a><span class="im">import</span> csv</span>
+<span id="cb111-4"><a href="#cb111-4" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb111-5"><a href="#cb111-5" tabindex="-1"></a></span>
+<span id="cb111-6"><a href="#cb111-6" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
+<span id="cb111-7"><a href="#cb111-7" tabindex="-1"></a></span>
+<span id="cb111-8"><a href="#cb111-8" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb111-9"><a href="#cb111-9" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
+<span id="cb111-10"><a href="#cb111-10" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb111-11"><a href="#cb111-11" tabindex="-1"></a>    ee.Authenticate()</span>
+<span id="cb111-12"><a href="#cb111-12" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
+<span id="cb111-13"><a href="#cb111-13" tabindex="-1"></a></span>
+<span id="cb111-14"><a href="#cb111-14" tabindex="-1"></a><span class="co"># Get current date and convert to milliseconds </span></span>
+<span id="cb111-15"><a href="#cb111-15" tabindex="-1"></a>start_date <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2024</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb111-16"><a href="#cb111-16" tabindex="-1"></a>end_date <span class="op">=</span> start_date.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
+<span id="cb111-17"><a href="#cb111-17" tabindex="-1"></a></span>
+<span id="cb111-18"><a href="#cb111-18" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM&#39;</span>)</span>
+<span id="cb111-19"><a href="#cb111-19" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
+<span id="cb111-20"><a href="#cb111-20" tabindex="-1"></a></span>
+<span id="cb111-21"><a href="#cb111-21" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
+<span id="cb111-22"><a href="#cb111-22" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
+<span id="cb111-23"><a href="#cb111-23" tabindex="-1"></a></span>
+<span id="cb111-24"><a href="#cb111-24" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/SMAP/SPL4SMGP/007&#39;</span>)</span>
+<span id="cb111-25"><a href="#cb111-25" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;FAO/GAUL_SIMPLIFIED_500m/2015/level2&#39;</span>)</span>
+<span id="cb111-26"><a href="#cb111-26" tabindex="-1"></a></span>
+<span id="cb111-27"><a href="#cb111-27" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
+<span id="cb111-28"><a href="#cb111-28" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb111-29"><a href="#cb111-29" tabindex="-1"></a></span>
+<span id="cb111-30"><a href="#cb111-30" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
+<span id="cb111-31"><a href="#cb111-31" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;sm_surface&#39;</span>)</span>
+<span id="cb111-32"><a href="#cb111-32" tabindex="-1"></a></span>
+<span id="cb111-33"><a href="#cb111-33" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
+<span id="cb111-34"><a href="#cb111-34" tabindex="-1"></a></span>
+<span id="cb111-35"><a href="#cb111-35" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
+<span id="cb111-36"><a href="#cb111-36" tabindex="-1"></a></span>
+<span id="cb111-37"><a href="#cb111-37" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
+<span id="cb111-38"><a href="#cb111-38" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
+<span id="cb111-39"><a href="#cb111-39" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
+<span id="cb111-40"><a href="#cb111-40" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">11000</span>,</span>
+<span id="cb111-41"><a href="#cb111-41" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
+<span id="cb111-42"><a href="#cb111-42" tabindex="-1"></a>  })</span>
+<span id="cb111-43"><a href="#cb111-43" tabindex="-1"></a></span>
+<span id="cb111-44"><a href="#cb111-44" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
+<span id="cb111-45"><a href="#cb111-45" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
+<span id="cb111-46"><a href="#cb111-46" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb111-47"><a href="#cb111-47" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
+<span id="cb111-48"><a href="#cb111-48" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
+<span id="cb111-49"><a href="#cb111-49" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
+<span id="cb111-50"><a href="#cb111-50" tabindex="-1"></a></span>
+<span id="cb111-51"><a href="#cb111-51" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
+<span id="cb111-52"><a href="#cb111-52" tabindex="-1"></a></span>
+<span id="cb111-53"><a href="#cb111-53" tabindex="-1"></a>data <span class="op">=</span> []</span>
+<span id="cb111-54"><a href="#cb111-54" tabindex="-1"></a></span>
+<span id="cb111-55"><a href="#cb111-55" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
+<span id="cb111-56"><a href="#cb111-56" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
+<span id="cb111-57"><a href="#cb111-57" tabindex="-1"></a></span>
+<span id="cb111-58"><a href="#cb111-58" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb111-59"><a href="#cb111-59" tabindex="-1"></a></span>
+<span id="cb111-60"><a href="#cb111-60" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
+<span id="cb111-61"><a href="#cb111-61" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
+<span id="cb111-62"><a href="#cb111-62" tabindex="-1"></a>    writer.writeheader()</span>
+<span id="cb111-63"><a href="#cb111-63" tabindex="-1"></a>    writer.writerows(data)</span>
+<span id="cb111-64"><a href="#cb111-64" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>From the terminal, navigate to the directory where you have created
 the file and type the command below to run the script.</li>

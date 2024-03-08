@@ -12,7 +12,7 @@ except:
     ee.Initialize(project=cloud_project)
 
 # Get current date and convert to milliseconds 
-start_date = ee.Date.fromYMD(2022, 1, 1)
+start_date = ee.Date.fromYMD(2024, 1, 1)
 end_date = start_date.advance(1, 'month')
 
 date_string = end_date.format('YYYY_MM')
@@ -21,17 +21,14 @@ filename = 'ssm_{}.csv'.format(date_string.getInfo())
 # Saving to current directory. You can change the path to appropriate location
 output_path = os.path.join(filename)
 
-# Datasets
-# SMAP is in safe mode and not generating new data since August 2022
-# https://nsidc.org/data/user-resources/data-announcements/user-notice-smap-safe-mode
-soilmoisture = ee.ImageCollection("NASA_USDA/HSL/SMAP10KM_soil_moisture")
-admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2")
+soilmoisture = ee.ImageCollection('NASA/SMAP/SPL4SMGP/007')
+admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2')
 
 # Filter to a state
 karnataka = admin2.filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
 
 # Select the ssm band
-ssm  = soilmoisture.select('ssm')
+ssm  = soilmoisture.select('sm_surface')
 
 filtered = ssm .filter(ee.Filter.date(start_date, end_date))
 
@@ -40,7 +37,7 @@ mean = filtered.mean()
 stats = mean.reduceRegions(**{
   'collection': karnataka,
   'reducer': ee.Reducer.mean().setOutputs(['meanssm']),
-  'scale': 10000,
+  'scale': 11000,
   'crs': 'EPSG:32643'
   })
 
