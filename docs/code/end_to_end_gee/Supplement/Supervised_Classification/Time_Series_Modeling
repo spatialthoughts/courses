@@ -30,32 +30,31 @@ var geometry = farms.geometry();
 //Map.addLayer(geometry, {color: 'grey'}, 'Boundary');
 //Map.centerObject(geometry);
 
-var rgbVis = {
-  min: 0.0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
-// Function to remove cloud and snow pixels from Sentinel-2 SR image
+var filtered = s2
+  .filter(ee.Filter.date('2017-01-01', '2023-01-01'))
+  .filter(ee.Filter.bounds(geometry));
 
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(10);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 10% or cloud shadow classification
-  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
-
-var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2017-01-01', '2023-01-01'))
-  .filter(ee.Filter.bounds(geometry))
-  .map(maskCloudAndShadowsSR)
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
   .select('B.*');
+  
 
 // Function to add NDVI, time, and constant variables
 var addVariables = function(image) {
@@ -71,7 +70,7 @@ var addVariables = function(image) {
   return image.addBands([ndvi, t, constant]);
 };
 
-var filteredWithVariables = filtered.map(addVariables);
+var filteredWithVariables = filteredMasked.map(addVariables);
 print(filteredWithVariables.first());
 
 // Plot a time series of NDVI at a single location.

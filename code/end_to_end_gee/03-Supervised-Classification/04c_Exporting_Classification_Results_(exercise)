@@ -1,40 +1,46 @@
 var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
 var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
 var gcp = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_gcps');
-var alos = ee.Image('JAXA/ALOS/AW3D30/V2_2');
+var alos = ee.ImageCollection('JAXA/ALOS/AW3D30/V3_2');
 
 
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var geometry = arkavathy.geometry()
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
 
 var rgbVis = {
   min: 0.0,
   max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
-// Function to remove cloud and snow pixels from Sentinel-2 SR image
 
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(10);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 10% or cloud shadow classification
-  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
-
-var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry))
-  .map(maskCloudAndShadowsSR)
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
   .select('B.*');
 
-var composite = filtered.median();
+var composite = filteredMasked.median();
 
 var addIndices = function(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
@@ -52,13 +58,25 @@ var addIndices = function(image) {
 
 var composite = addIndices(composite);
 
-
 // Calculate Slope and Elevation
-var elev = alos.select('AVE_DSM').rename('elev');
-var slope = ee.Terrain.slope(alos.select('AVE_DSM')).rename('slope');
 
-var composite = composite.addBands(elev).addBands(slope);
+// Use ALOS World 3D v3
 
+// This comes as a collection of images
+// We mosaic it to create a single image
+
+// Need to set the projection correctly on the mosaic
+// for the slope computation
+var proj = alos.first().projection();
+
+var elevation = alos.select('DSM').mosaic()
+  .setDefaultProjection(proj)
+  .rename('elev');
+
+var slope = ee.Terrain.slope(elevation)
+  .rename('slope');
+
+var composite = composite.addBands(elevation).addBands(slope);
 var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
 Map.addLayer(composite.clip(geometry), visParams, 'RGB');
 
@@ -77,7 +95,7 @@ function normalize(image){
   var minDict = image.reduceRegion({
     reducer: ee.Reducer.min(),
     geometry: geometry,
-    scale: 20,
+    scale: 10,
     maxPixels: 1e9,
     bestEffort: true,
     tileScale: 16
@@ -85,7 +103,7 @@ function normalize(image){
   var maxDict = image.reduceRegion({
     reducer: ee.Reducer.max(),
     geometry: geometry,
-    scale: 20,
+    scale: 10,
     maxPixels: 1e9,
     bestEffort: true,
     tileScale: 16
@@ -106,7 +124,6 @@ var gcp = gcp.randomColumn();
 // 70% training, 30% validation
 var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
 var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
-Map.addLayer(validationGcp);
 
 // Overlay the point on the image to get training data.
 var training = composite.sampleRegions({
@@ -115,7 +132,6 @@ var training = composite.sampleRegions({
   scale: 10,
   tileScale: 16
 });
-print(training);
 
 // Train a classifier.
 var classifier = ee.Classifier.smileRandomForest(50)
