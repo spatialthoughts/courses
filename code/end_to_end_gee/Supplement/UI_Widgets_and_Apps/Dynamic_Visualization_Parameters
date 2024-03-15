@@ -1,0 +1,106 @@
+// Script showing how to dynamically compute min/max
+// values from an image and use it for visualization
+
+// Load Terra Land Surface Temperature and Emissivity
+// 8-Day Global 1km collection
+
+// Filter to April 2022 when Indian sub-continent
+// was experiencing unprecedented heat-wave
+var dataset = ee.ImageCollection('MODIS/061/MOD11A2')
+  .filter(ee.Filter.date('2022-04-20', '2022-04-30'));
+// Select LST_Day_1km band
+var landSurfaceTemperature = dataset.select('LST_Day_1km');
+
+// Scale to Kelvin and convert to Celsius
+var modis_LST = landSurfaceTemperature.map(function(img) {
+  return img
+    .multiply(0.02)
+    .subtract(273.15)
+   .copyProperties(img, ['system:time_start']);
+});
+print('Modis Image Colection processed:', modis_LST);
+
+// Extract an image
+var LST_Mosaic = ee.Image(modis_LST.first());
+print('Complete individual image', LST_Mosaic)
+
+// Define a color palette
+var palette = [
+  '040274', '040281', '0502a3', '0502b8', '0502ce', '0502e6',
+  '0602ff', '235cb1', '307ef3', '269db1', '30c8e2', '32d3ef',
+  '3be285', '3ff38f', '86e26f', '3ae237', 'b5e22e', 'd6e21f',
+  'fff705', 'ffd611', 'ffb613', 'ff8b13', 'ff6e08', 'ff500d',
+  'ff0000', 'de0101', 'c21301', 'a71001', '911003'
+]
+
+// Construct a global polygon that we can use to compute stats
+var geometry = ee.Algorithms.GeometryConstructors.BBox(-180, -90, 180, 90)
+
+// Let's compute the image statistics to find the optimal
+// visual parameters
+
+// Option 1: Percentile Contrast Stretch
+
+// For this, we compute the values at certain percentile
+// range from the image pixel values and use that as min/max
+// values.
+
+// Most commonly used values are 98-percentile. This is the default for QGIS and many other software
+// Works well for elevation and other raster datasets
+
+// You may also try a 90-percentile stretch by replacing
+// the function with ee.Reducer.percentile([10,90])
+
+// We can use a lower scale to compute approximate stats
+// Since this is happening dynamically, speed is more 
+// important than accuracy
+var stats = LST_Mosaic.reduceRegion({
+  reducer: ee.Reducer.percentile([2, 98]),
+  geometry: geometry,
+  scale: 10000,
+  maxPixels: 1e10
+});
+var min = stats.getNumber('LST_Day_1km_p2')
+var max = stats.getNumber('LST_Day_1km_p98')
+print('2-percentile', min)
+print('98-percentile', max)
+
+// Option 2: Standard Deviation Contrast Stretch
+
+// For this, we compute the values at certain standard
+// deviations away from the mean.
+var stats = LST_Mosaic.reduceRegion({
+  reducer: ee.Reducer.mean().combine({
+    reducer2: ee.Reducer.stdDev(),
+    sharedInputs: true}),
+  geometry: geometry,
+  scale: 10000,
+  maxPixels: 1e10
+});
+var mean = stats.getNumber('LST_Day_1km_mean')
+var stdDev = stats.getNumber('LST_Day_1km_stdDev')
+var min = mean.subtract(stdDev);
+var max = mean.add(stdDev)
+print('mean - 1-standard deviation', min)
+print('mean + 1-standard deviation', max)
+
+// Create a dicitonary with the min/max values
+
+var statsDict = ee.Dictionary({min: min, max: max});
+
+// Since Map.addLayer() is a client-side function
+// We need to use evaluate() to fetch the value
+// from server before using it.
+
+statsDict.evaluate(function(statsDictClient) {
+  var landSurfaceTemperatureVis = {
+    min: statsDictClient.min, 
+    max: statsDictClient.max, 
+    palette: palette
+  };
+
+  Map.setCenter(75.74, 24.89, 4);
+  Map.addLayer(
+    LST_Mosaic, landSurfaceTemperatureVis, 'Land Surface Temperature');
+});
+ 
