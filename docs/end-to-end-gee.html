@@ -604,6 +604,8 @@ XArray</a>
 </ul></li>
 <li><a href="#automating-downloads" id="toc-automating-downloads">05.
 Automating Downloads</a></li>
+<li><a href="#using-service-accounts"
+id="toc-using-service-accounts">06. Using Service Accounts</a></li>
 </ul></li>
 <li><a href="#supplement" id="toc-supplement">Supplement</a>
 <ul>
@@ -5627,6 +5629,71 @@ the file and type the command below to run the script.</li>
 current directory.</li>
 </ol>
 <p><img src="images/end_to_end_gee/download3.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="using-service-accounts" class="section level2">
+<h2>06. Using Service Accounts</h2>
+<p>If you want to automate Earth Engine jobs on a server, it is
+preferable to use a <a
+href="https://developers.google.com/earth-engine/guides/service_account">Service
+Account</a> for authentication. A service account is a virtual account
+linked to a Google Cloud project. Once you create a service account and
+give necessary permissions, it can be used to authenticate your Earth
+Engine account instead of your own account. Each service account is
+identified by an email address in the form of
+<code>&lt;account_name&gt;@&lt;project&gt;.iam.gserviceaccount.com</code>.
+Along with them, the credentials are stored in a separate
+<code>.json</code> file. You need to keep this <code>.json</code> file
+safe on the system with appropriate permissions so external users do not
+have access to it.</p>
+<p>The below code example shows how to authenticate a Earth Engine
+Export job using a service account. The code snippet assumes that the
+private key file is in the same directory as the scirpt and saved as a
+file named <code>.private_key.json</code>.</p>
+<div class="sourceCode" id="cb113"><pre
+class="sourceCode py"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb113-2"><a href="#cb113-2" tabindex="-1"></a><span class="co"># Replace the service account with your service account email</span></span>
+<span id="cb113-3"><a href="#cb113-3" tabindex="-1"></a>service_account <span class="op">=</span> <span class="st">&#39;export-data-gee@spatialthoughts.iam.gserviceaccount.com&#39;</span></span>
+<span id="cb113-4"><a href="#cb113-4" tabindex="-1"></a><span class="co"># Replace the value with the path to your private key json file</span></span>
+<span id="cb113-5"><a href="#cb113-5" tabindex="-1"></a>private_key_path <span class="op">=</span> <span class="st">&#39;.private_key.json&#39;</span></span>
+<span id="cb113-6"><a href="#cb113-6" tabindex="-1"></a>credentials <span class="op">=</span> ee.ServiceAccountCredentials(service_account, private_key_path)</span>
+<span id="cb113-7"><a href="#cb113-7" tabindex="-1"></a>ee.Initialize(credentials)</span>
+<span id="cb113-8"><a href="#cb113-8" tabindex="-1"></a></span>
+<span id="cb113-9"><a href="#cb113-9" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
+<span id="cb113-10"><a href="#cb113-10" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
+<span id="cb113-11"><a href="#cb113-11" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
+<span id="cb113-12"><a href="#cb113-12" tabindex="-1"></a></span>
+<span id="cb113-13"><a href="#cb113-13" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
+<span id="cb113-14"><a href="#cb113-14" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span>
+<span id="cb113-15"><a href="#cb113-15" tabindex="-1"></a></span>
+<span id="cb113-16"><a href="#cb113-16" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
+<span id="cb113-17"><a href="#cb113-17" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
+<span id="cb113-18"><a href="#cb113-18" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb113-19"><a href="#cb113-19" tabindex="-1"></a></span>
+<span id="cb113-20"><a href="#cb113-20" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
+<span id="cb113-21"><a href="#cb113-21" tabindex="-1"></a></span>
+<span id="cb113-22"><a href="#cb113-22" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
+<span id="cb113-23"><a href="#cb113-23" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2020-01-01&#39;</span>, <span class="st">&#39;2021-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb113-24"><a href="#cb113-24" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb113-25"><a href="#cb113-25" tabindex="-1"></a></span>
+<span id="cb113-26"><a href="#cb113-26" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb113-27"><a href="#cb113-27" tabindex="-1"></a></span>
+<span id="cb113-28"><a href="#cb113-28" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb113-29"><a href="#cb113-29" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(</span>
+<span id="cb113-30"><a href="#cb113-30" tabindex="-1"></a>        ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb113-31"><a href="#cb113-31" tabindex="-1"></a></span>
+<span id="cb113-32"><a href="#cb113-32" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
+<span id="cb113-33"><a href="#cb113-33" tabindex="-1"></a>    </span>
+<span id="cb113-34"><a href="#cb113-34" tabindex="-1"></a>    task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
+<span id="cb113-35"><a href="#cb113-35" tabindex="-1"></a>        <span class="st">&#39;image&#39;</span>: clippedImage,</span>
+<span id="cb113-36"><a href="#cb113-36" tabindex="-1"></a>        <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Terraclimate Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
+<span id="cb113-37"><a href="#cb113-37" tabindex="-1"></a>        <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
+<span id="cb113-38"><a href="#cb113-38" tabindex="-1"></a>        <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
+<span id="cb113-39"><a href="#cb113-39" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>: <span class="fl">4638.3</span>,</span>
+<span id="cb113-40"><a href="#cb113-40" tabindex="-1"></a>        <span class="st">&#39;region&#39;</span>: geometry,</span>
+<span id="cb113-41"><a href="#cb113-41" tabindex="-1"></a>        <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
+<span id="cb113-42"><a href="#cb113-42" tabindex="-1"></a>    })</span>
+<span id="cb113-43"><a href="#cb113-43" tabindex="-1"></a>    task.start()</span>
+<span id="cb113-44"><a href="#cb113-44" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
