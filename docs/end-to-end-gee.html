@@ -5543,7 +5543,7 @@ href="https://donny-son.github.io/posts/cronjob-with-conda/">crontab</a>.</p>
 <p>This script below provides a complete example of automating a
 download using Google Earth Engine API. It uses the Google Earth Engine
 API to compute the average soil moisture for the given time period over
-all districts in a state. The result is then downloaded as a JSON file
+all districts in a state. The result is then downloaded as a CSV file
 and saved locally.</p>
 <blockquote>
 <p>Before running the script, please install the Earth Engine Python
@@ -5571,57 +5571,60 @@ class="sourceCode py"><code class="sourceCode python"><span id="cb111-1"><a href
 <span id="cb111-11"><a href="#cb111-11" tabindex="-1"></a>    ee.Authenticate()</span>
 <span id="cb111-12"><a href="#cb111-12" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
 <span id="cb111-13"><a href="#cb111-13" tabindex="-1"></a></span>
-<span id="cb111-14"><a href="#cb111-14" tabindex="-1"></a><span class="co"># Get current date and convert to milliseconds </span></span>
-<span id="cb111-15"><a href="#cb111-15" tabindex="-1"></a>start_date <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2024</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb111-16"><a href="#cb111-16" tabindex="-1"></a>end_date <span class="op">=</span> start_date.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
-<span id="cb111-17"><a href="#cb111-17" tabindex="-1"></a></span>
-<span id="cb111-18"><a href="#cb111-18" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM&#39;</span>)</span>
-<span id="cb111-19"><a href="#cb111-19" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
+<span id="cb111-14"><a href="#cb111-14" tabindex="-1"></a><span class="co"># Get current date</span></span>
+<span id="cb111-15"><a href="#cb111-15" tabindex="-1"></a>now <span class="op">=</span> datetime.datetime.now()</span>
+<span id="cb111-16"><a href="#cb111-16" tabindex="-1"></a></span>
+<span id="cb111-17"><a href="#cb111-17" tabindex="-1"></a><span class="co"># Define the period of past 1-week</span></span>
+<span id="cb111-18"><a href="#cb111-18" tabindex="-1"></a>end_date <span class="op">=</span> ee.Date(now)</span>
+<span id="cb111-19"><a href="#cb111-19" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">1</span>, <span class="st">&#39;week&#39;</span>)</span>
 <span id="cb111-20"><a href="#cb111-20" tabindex="-1"></a></span>
-<span id="cb111-21"><a href="#cb111-21" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
-<span id="cb111-22"><a href="#cb111-22" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
+<span id="cb111-21"><a href="#cb111-21" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM_dd&#39;</span>)</span>
+<span id="cb111-22"><a href="#cb111-22" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
 <span id="cb111-23"><a href="#cb111-23" tabindex="-1"></a></span>
-<span id="cb111-24"><a href="#cb111-24" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/SMAP/SPL4SMGP/007&#39;</span>)</span>
-<span id="cb111-25"><a href="#cb111-25" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;FAO/GAUL_SIMPLIFIED_500m/2015/level2&#39;</span>)</span>
+<span id="cb111-24"><a href="#cb111-24" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
+<span id="cb111-25"><a href="#cb111-25" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
 <span id="cb111-26"><a href="#cb111-26" tabindex="-1"></a></span>
-<span id="cb111-27"><a href="#cb111-27" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
-<span id="cb111-28"><a href="#cb111-28" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb111-27"><a href="#cb111-27" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/SMAP/SPL4SMGP/007&#39;</span>)</span>
+<span id="cb111-28"><a href="#cb111-28" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;FAO/GAUL_SIMPLIFIED_500m/2015/level2&#39;</span>)</span>
 <span id="cb111-29"><a href="#cb111-29" tabindex="-1"></a></span>
-<span id="cb111-30"><a href="#cb111-30" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
-<span id="cb111-31"><a href="#cb111-31" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;sm_surface&#39;</span>)</span>
+<span id="cb111-30"><a href="#cb111-30" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
+<span id="cb111-31"><a href="#cb111-31" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
 <span id="cb111-32"><a href="#cb111-32" tabindex="-1"></a></span>
-<span id="cb111-33"><a href="#cb111-33" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
-<span id="cb111-34"><a href="#cb111-34" tabindex="-1"></a></span>
-<span id="cb111-35"><a href="#cb111-35" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
-<span id="cb111-36"><a href="#cb111-36" tabindex="-1"></a></span>
-<span id="cb111-37"><a href="#cb111-37" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
-<span id="cb111-38"><a href="#cb111-38" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
-<span id="cb111-39"><a href="#cb111-39" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
-<span id="cb111-40"><a href="#cb111-40" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">11000</span>,</span>
-<span id="cb111-41"><a href="#cb111-41" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
-<span id="cb111-42"><a href="#cb111-42" tabindex="-1"></a>  })</span>
-<span id="cb111-43"><a href="#cb111-43" tabindex="-1"></a></span>
-<span id="cb111-44"><a href="#cb111-44" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
-<span id="cb111-45"><a href="#cb111-45" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
-<span id="cb111-46"><a href="#cb111-46" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb111-47"><a href="#cb111-47" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
-<span id="cb111-48"><a href="#cb111-48" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
-<span id="cb111-49"><a href="#cb111-49" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
-<span id="cb111-50"><a href="#cb111-50" tabindex="-1"></a></span>
-<span id="cb111-51"><a href="#cb111-51" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
-<span id="cb111-52"><a href="#cb111-52" tabindex="-1"></a></span>
-<span id="cb111-53"><a href="#cb111-53" tabindex="-1"></a>data <span class="op">=</span> []</span>
-<span id="cb111-54"><a href="#cb111-54" tabindex="-1"></a></span>
-<span id="cb111-55"><a href="#cb111-55" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
-<span id="cb111-56"><a href="#cb111-56" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
+<span id="cb111-33"><a href="#cb111-33" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
+<span id="cb111-34"><a href="#cb111-34" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;sm_surface&#39;</span>)</span>
+<span id="cb111-35"><a href="#cb111-35" tabindex="-1"></a></span>
+<span id="cb111-36"><a href="#cb111-36" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
+<span id="cb111-37"><a href="#cb111-37" tabindex="-1"></a></span>
+<span id="cb111-38"><a href="#cb111-38" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
+<span id="cb111-39"><a href="#cb111-39" tabindex="-1"></a></span>
+<span id="cb111-40"><a href="#cb111-40" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
+<span id="cb111-41"><a href="#cb111-41" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
+<span id="cb111-42"><a href="#cb111-42" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
+<span id="cb111-43"><a href="#cb111-43" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">11000</span>,</span>
+<span id="cb111-44"><a href="#cb111-44" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
+<span id="cb111-45"><a href="#cb111-45" tabindex="-1"></a>  })</span>
+<span id="cb111-46"><a href="#cb111-46" tabindex="-1"></a></span>
+<span id="cb111-47"><a href="#cb111-47" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
+<span id="cb111-48"><a href="#cb111-48" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
+<span id="cb111-49"><a href="#cb111-49" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb111-50"><a href="#cb111-50" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
+<span id="cb111-51"><a href="#cb111-51" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
+<span id="cb111-52"><a href="#cb111-52" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
+<span id="cb111-53"><a href="#cb111-53" tabindex="-1"></a></span>
+<span id="cb111-54"><a href="#cb111-54" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
+<span id="cb111-55"><a href="#cb111-55" tabindex="-1"></a></span>
+<span id="cb111-56"><a href="#cb111-56" tabindex="-1"></a>data <span class="op">=</span> []</span>
 <span id="cb111-57"><a href="#cb111-57" tabindex="-1"></a></span>
-<span id="cb111-58"><a href="#cb111-58" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb111-59"><a href="#cb111-59" tabindex="-1"></a></span>
-<span id="cb111-60"><a href="#cb111-60" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
-<span id="cb111-61"><a href="#cb111-61" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
-<span id="cb111-62"><a href="#cb111-62" tabindex="-1"></a>    writer.writeheader()</span>
-<span id="cb111-63"><a href="#cb111-63" tabindex="-1"></a>    writer.writerows(data)</span>
-<span id="cb111-64"><a href="#cb111-64" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
+<span id="cb111-58"><a href="#cb111-58" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
+<span id="cb111-59"><a href="#cb111-59" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
+<span id="cb111-60"><a href="#cb111-60" tabindex="-1"></a></span>
+<span id="cb111-61"><a href="#cb111-61" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb111-62"><a href="#cb111-62" tabindex="-1"></a></span>
+<span id="cb111-63"><a href="#cb111-63" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
+<span id="cb111-64"><a href="#cb111-64" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
+<span id="cb111-65"><a href="#cb111-65" tabindex="-1"></a>    writer.writeheader()</span>
+<span id="cb111-66"><a href="#cb111-66" tabindex="-1"></a>    writer.writerows(data)</span>
+<span id="cb111-67"><a href="#cb111-67" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>From the terminal, navigate to the directory where you have created
 the file and type the command below to run the script.</li>

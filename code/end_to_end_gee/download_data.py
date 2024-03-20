@@ -11,11 +11,14 @@ except:
     ee.Authenticate()
     ee.Initialize(project=cloud_project)
 
-# Get current date and convert to milliseconds 
-start_date = ee.Date.fromYMD(2024, 1, 1)
-end_date = start_date.advance(1, 'month')
+# Get current date
+now = datetime.datetime.now()
 
-date_string = end_date.format('YYYY_MM')
+# Define the period of past 1-week
+end_date = ee.Date(now)
+start_date = end_date.advance(-1, 'week')
+
+date_string = end_date.format('YYYY_MM_dd')
 filename = 'ssm_{}.csv'.format(date_string.getInfo())
 
 # Saving to current directory. You can change the path to appropriate location
