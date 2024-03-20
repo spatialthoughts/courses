@@ -134,7 +134,7 @@ Write a program that prints the numbers from 1 to 100 and for multiples of 3 pri
 
 So the output should be something like below
 
-`1, 2, Fizz, 4, Buzz, Fizz, 7, 8, Fizz, Buzz, 11, Fizz, 13, 14, FizzBuzz, ...`
+`1, 2, Fizz, 4, Buzz, Fizz ... 13, 14, FizzBuzz, ...`
 
 Breaking down the problem further, we need to create for-loop with following conditions
 

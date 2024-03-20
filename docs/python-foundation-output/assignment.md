@@ -39,11 +39,18 @@ Many countries of the world do not have structured addresses and use informal or
 
 For example, an address like following will fail to geocode using Nominatim
 
-- `Spatial Thoughts LLP, FF 105, Aaradhya Complex, Gala Gymkhana Road, Bopal, Ahmedabad, India`
+```
+Spatial Thoughts LLP,
+FF 105, Aaradhya Complex,
+Gala Gymkhana Road, Bopal,
+Ahmedabad, India
+```
 
 Instead, you may try to geocode the following
 
-- `Gala Gymkhana Road, Bopal, Ahmedabad, India`
+```
+Gala Gymkhana Road, Bopal, Ahmedabad, India
+```
 
 
 ## Part 3
