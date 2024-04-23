@@ -1,5 +1,5 @@
 from qgis.core import QgsDistanceArea
-from qgis.core import QgsUnitTypes
+from qgis.core import Qgis
 
 san_francisco = (37.7749, -122.4194)
 new_york = (40.661, -73.944)
@@ -17,9 +17,9 @@ point2 = QgsPointXY(lon2, lat2)
 distance = d.measureLine([point1, point2])
 print('Distance in meters', distance)
 
-distance_km = d.convertLengthMeasurement(distance, QgsUnitTypes.DistanceKilometers)
+distance_km = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.DistanceKilometers)
 print('Distance in kilometers', distance_km)
 
-distance_mi = d.convertLengthMeasurement(distance, QgsUnitTypes.DistanceMiles)
+distance_mi = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.DistanceMiles)
 print('Distance in miles', distance_mi)
 
