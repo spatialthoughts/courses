@@ -1,0 +1,117 @@
+// Create a histogram for multiple bands of a Sentinel-2 image
+
+// Select the region
+var geometry = ee.Geometry.Polygon([[
+  [77.5765, 12.95640],
+  [77.5765, 12.94018],
+  [77.5966, 12.94018],
+  [77.5966, 12.95640]
+]]);
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+// Filter the Sentinel-2 collection
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+// Sort the collection and pick the least cloudy image
+var filteredS2Sorted = filteredS2.sort('CLOUDY_PIXEL_PERCENTAGE');
+var image = filteredS2Sorted.first();
+
+Map.centerObject(geometry, 10);
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(image, rgbVis, 'Image');
+
+// Select bands
+// Pad the band names by 0 so they are sorted correctly
+var bands = image.select(
+  ['B11', 'B8', 'B4', 'B3', 'B2'],
+  ['B11', 'B08', 'B04', 'B03', 'B02']);
+  
+// Let's extract the data using reduceRegion
+// and ee.Recuer.histogram() reducer
+var stats = bands.reduceRegion({
+  reducer: ee.Reducer.fixedHistogram({
+    min: 0,
+    max: 5000,
+    steps: 100}),
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10,
+  tileScale: 16
+});
+
+// We have a histogram for each band
+// Get a list of bands and extract values
+
+var bands = ee.List(stats.keys());
+
+// Create a FeatureCollection
+var histogramFc = ee.FeatureCollection(bands.map(function(band){
+  var histogram = stats.get(band);
+  var values = ee.Array(histogram).toList();
+  var features = values.map(function(item) {
+    var itemList = ee.List(item);
+    var bucket = itemList.get(0); 
+    var value = itemList.get(1);
+    // Exports require features to have a non-null
+    // geometry. Create a geometry for the centroid
+    var nullGeom = geometry.centroid({maxError: 1});
+    return ee.Feature(nullGeom, {
+      bucket: bucket,
+      value: value,
+      band: band
+    });
+  });
+  return features;
+}).flatten());
+
+// For large computations, we can export the results
+
+// Replace this with your asset id
+var exportAssetId = 'users/ujavalgandhi/ee_dataviz/histogram_by_band_fc';
+
+Export.table.toAsset({
+  collection: histogramFc,
+  description: 'Histogram_by_Band_FeatureCollection',
+  assetId: exportAssetId
+});
+
+// Import the asset once export finishes
+var histogramFcExported = ee.FeatureCollection(exportAssetId);
+
+var chart = ui.Chart.feature.groups({
+  features: histogramFcExported,
+  xProperty: 'bucket',
+  yProperty: 'value',
+  seriesProperty: 'band'
+})
+.setChartType('AreaChart')
+.setOptions({
+    title: 'Histogram',
+    vAxis: {
+      title: 'Count', 
+      gridlines: {color: 'transparent'},
+    },
+    hAxis: {
+      title: 'Pixel Values',
+      gridlines: {color: 'transparent'}
+    },
+    lineWidth: 1,
+    areaOpacity: 0.2,
+    legend: { position: 'top' },
+    // series values are sorted alphabetically
+    series: {
+      0: {labelInLegend: 'Blue', color: 'blue'},
+      1: {labelInLegend: 'Green', color: 'green'},
+      2: {labelInLegend: 'Red', color: 'red'},
+      3: {labelInLegend: 'NIR', color: 'orange'},
+      4: {labelInLegend: 'SWIR', color: 'purple'},
+    },
+    chartArea: {
+        width: '70%',
+        height: '70%'
+    }
+});
+  
+print(chart);
+
