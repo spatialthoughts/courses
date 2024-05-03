@@ -40,9 +40,8 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
             'OUTPUT',
             context)
 
-        # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / layer.featureCount() if layer.featureCount() else 0
+        total = layer.featureCount()
         features = layer.getFeatures()
         
         # Define the options for saving the layer
@@ -69,7 +68,11 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
             writer.addFeature(f)
 
             # Update the progress bar
-            feedback.setProgress(int(current * total))
+            if total != 0:
+              progress = int(100*(current/total))
+            else:
+              progress = 0
+            feedback.setProgress(progress)
 
         return {'OUTPUT': output}
 

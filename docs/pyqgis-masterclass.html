@@ -1979,6 +1979,48 @@ python script that can be part of the Processing Framework in QGIS.</p>
 href="https://docs.qgis.org/3.34/en/docs/user_manual/processing/scripts.html">Writing
 new Processing algorithms as Python scripts</a> section of the QGIS User
 Guide.</p>
+<p>The Processing algorithms follow the structure as described
+below:</p>
+<ul>
+<li>Processing scripts inherit from the base <a
+href="https://qgis.org/pyqgis/3.34/core/QgsProcessingAlgorithm.html"><code>QgsProcessingAlgorithm</code></a>
+class.</li>
+<li>The <code>initAlgorithm()</code> method is called to set-up the
+inputs and the outputs. The inputs and outputs to the processing
+algorithms must be defined with appropriate class for the type of
+parameter. You can see all the available classes for defining parameters
+that inherit the <a
+href="https://api.qgis.org/api/classQgsProcessingParameterDefinition.html"><code>QgsProcessingParameterDefinition</code></a>
+class.</li>
+<li>The <code>processAlgorithm()</code> method contains the main logic
+of the script that gets executed when the user clicks the <em>Run</em>
+button. You can get the references to the user selected inputs and
+outputs using the methods from the <a
+href="https://qgis.org/pyqgis/3.34/core/QgsProcessingAlgorithm.html"><code>QgsProcessingAlgorithm</code></a>
+class.</li>
+</ul>
+<p>There is additional terminology and classes that you must understand
+for writing Processing Scripts:</p>
+<ul>
+<li><strong>context</strong>: This is an object of the <a
+href="https://qgis.org/pyqgis/3.34/core/QgsProcessingContext.html"><code>QgsProcessingContext</code></a>
+class that contains information about the current project and settings.
+Learn more at <a
+href="https://gis.stackexchange.com/questions/419632/what-does-context-mean-in-pyqgis">what
+does context mean in PyQGIS?</a>.</li>
+<li><strong>feedback</strong>: This is an object of the <a
+href="https://qgis.org/pyqgis/3.34/core/QgsProcessingFeedback.html"><code>QgsProcessingFeedback</code></a>
+class that is used to communicate with the user during the execution of
+the algorithm. This is used for updaitng the progress bar, displaying
+error messages etc.</li>
+<li><strong>source</strong> and <strong>sink</strong>: Processing
+algorithms use specialized classes that make is simple to read and write
+vector layers. The <a
+href="https://qgis.org/pyqgis/3.34/core/QgsFeatureSource.html"><code>QgsFeatureSource</code></a>
+class has methods to easily read features and <a
+href="https://qgis.org/pyqgis/3.34/core/QgsFeatureSink.html"><code>QgsFeatureSink</code></a>
+has methods to write features.</li>
+</ul>
 <p>We will now see how the Python Console script can be converted to a
 Processing script.</p>
 <p>To create a new processing script, go to <strong>Processing →
@@ -2031,66 +2073,60 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb45-1"><a h
 <span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a>            <span class="st">&#39;OUTPUT&#39;</span>,</span>
 <span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a>            context)</span>
 <span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a></span>
-<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a>        <span class="co"># Compute the number of steps to display within the progress bar and</span></span>
-<span id="cb45-44"><a href="#cb45-44" tabindex="-1"></a>        <span class="co"># get features from source</span></span>
-<span id="cb45-45"><a href="#cb45-45" tabindex="-1"></a>        total <span class="op">=</span> <span class="fl">100.0</span> <span class="op">/</span> layer.featureCount() <span class="cf">if</span> layer.featureCount() <span class="cf">else</span> <span class="dv">0</span></span>
-<span id="cb45-46"><a href="#cb45-46" tabindex="-1"></a>        features <span class="op">=</span> layer.getFeatures()</span>
-<span id="cb45-47"><a href="#cb45-47" tabindex="-1"></a>        </span>
-<span id="cb45-48"><a href="#cb45-48" tabindex="-1"></a>        <span class="co"># Define the options for saving the layer</span></span>
-<span id="cb45-49"><a href="#cb45-49" tabindex="-1"></a>        save_options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
-<span id="cb45-50"><a href="#cb45-50" tabindex="-1"></a>        save_options.driverName <span class="op">=</span> <span class="st">&#39;CSV&#39;</span></span>
-<span id="cb45-51"><a href="#cb45-51" tabindex="-1"></a>        save_options.fileEncoding <span class="op">=</span> <span class="st">&#39;UTF-8&#39;</span></span>
-<span id="cb45-52"><a href="#cb45-52" tabindex="-1"></a></span>
-<span id="cb45-53"><a href="#cb45-53" tabindex="-1"></a>        <span class="co"># Create the writer</span></span>
-<span id="cb45-54"><a href="#cb45-54" tabindex="-1"></a>        writer <span class="op">=</span> QgsVectorFileWriter.create(</span>
-<span id="cb45-55"><a href="#cb45-55" tabindex="-1"></a>            fileName<span class="op">=</span>output,</span>
-<span id="cb45-56"><a href="#cb45-56" tabindex="-1"></a>            fields<span class="op">=</span>layer.fields(),</span>
-<span id="cb45-57"><a href="#cb45-57" tabindex="-1"></a>            geometryType<span class="op">=</span>QgsWkbTypes.NoGeometry,</span>
-<span id="cb45-58"><a href="#cb45-58" tabindex="-1"></a>            srs<span class="op">=</span>layer.crs(),</span>
-<span id="cb45-59"><a href="#cb45-59" tabindex="-1"></a>            transformContext<span class="op">=</span>QgsProject.instance().transformContext(),</span>
-<span id="cb45-60"><a href="#cb45-60" tabindex="-1"></a>            options<span class="op">=</span>save_options)</span>
-<span id="cb45-61"><a href="#cb45-61" tabindex="-1"></a></span>
-<span id="cb45-62"><a href="#cb45-62" tabindex="-1"></a>    </span>
-<span id="cb45-63"><a href="#cb45-63" tabindex="-1"></a>        <span class="cf">for</span> current, f <span class="kw">in</span> <span class="bu">enumerate</span>(features):</span>
-<span id="cb45-64"><a href="#cb45-64" tabindex="-1"></a>            <span class="co"># Stop the algorithm if cancel button has been clicked</span></span>
-<span id="cb45-65"><a href="#cb45-65" tabindex="-1"></a>            <span class="cf">if</span> feedback.isCanceled():</span>
-<span id="cb45-66"><a href="#cb45-66" tabindex="-1"></a>                <span class="cf">break</span></span>
-<span id="cb45-67"><a href="#cb45-67" tabindex="-1"></a></span>
-<span id="cb45-68"><a href="#cb45-68" tabindex="-1"></a>            <span class="co"># Add the feature</span></span>
-<span id="cb45-69"><a href="#cb45-69" tabindex="-1"></a>            writer.addFeature(f)</span>
-<span id="cb45-70"><a href="#cb45-70" tabindex="-1"></a></span>
-<span id="cb45-71"><a href="#cb45-71" tabindex="-1"></a>            <span class="co"># Update the progress bar</span></span>
-<span id="cb45-72"><a href="#cb45-72" tabindex="-1"></a>            feedback.setProgress(<span class="bu">int</span>(current <span class="op">*</span> total))</span>
-<span id="cb45-73"><a href="#cb45-73" tabindex="-1"></a></span>
-<span id="cb45-74"><a href="#cb45-74" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: output}</span>
-<span id="cb45-75"><a href="#cb45-75" tabindex="-1"></a></span>
-<span id="cb45-76"><a href="#cb45-76" tabindex="-1"></a>    <span class="kw">def</span> name(<span class="va">self</span>):</span>
-<span id="cb45-77"><a href="#cb45-77" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;save_attributes&#39;</span></span>
+<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a>        <span class="co"># get features from source</span></span>
+<span id="cb45-44"><a href="#cb45-44" tabindex="-1"></a>        total <span class="op">=</span> layer.featureCount()</span>
+<span id="cb45-45"><a href="#cb45-45" tabindex="-1"></a>        features <span class="op">=</span> layer.getFeatures()</span>
+<span id="cb45-46"><a href="#cb45-46" tabindex="-1"></a>        </span>
+<span id="cb45-47"><a href="#cb45-47" tabindex="-1"></a>        <span class="co"># Define the options for saving the layer</span></span>
+<span id="cb45-48"><a href="#cb45-48" tabindex="-1"></a>        save_options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
+<span id="cb45-49"><a href="#cb45-49" tabindex="-1"></a>        save_options.driverName <span class="op">=</span> <span class="st">&#39;CSV&#39;</span></span>
+<span id="cb45-50"><a href="#cb45-50" tabindex="-1"></a>        save_options.fileEncoding <span class="op">=</span> <span class="st">&#39;UTF-8&#39;</span></span>
+<span id="cb45-51"><a href="#cb45-51" tabindex="-1"></a></span>
+<span id="cb45-52"><a href="#cb45-52" tabindex="-1"></a>        <span class="co"># Create the writer</span></span>
+<span id="cb45-53"><a href="#cb45-53" tabindex="-1"></a>        writer <span class="op">=</span> QgsVectorFileWriter.create(</span>
+<span id="cb45-54"><a href="#cb45-54" tabindex="-1"></a>            fileName<span class="op">=</span>output,</span>
+<span id="cb45-55"><a href="#cb45-55" tabindex="-1"></a>            fields<span class="op">=</span>layer.fields(),</span>
+<span id="cb45-56"><a href="#cb45-56" tabindex="-1"></a>            geometryType<span class="op">=</span>QgsWkbTypes.NoGeometry,</span>
+<span id="cb45-57"><a href="#cb45-57" tabindex="-1"></a>            srs<span class="op">=</span>layer.crs(),</span>
+<span id="cb45-58"><a href="#cb45-58" tabindex="-1"></a>            transformContext<span class="op">=</span>QgsProject.instance().transformContext(),</span>
+<span id="cb45-59"><a href="#cb45-59" tabindex="-1"></a>            options<span class="op">=</span>save_options)</span>
+<span id="cb45-60"><a href="#cb45-60" tabindex="-1"></a></span>
+<span id="cb45-61"><a href="#cb45-61" tabindex="-1"></a>    </span>
+<span id="cb45-62"><a href="#cb45-62" tabindex="-1"></a>        <span class="cf">for</span> current, f <span class="kw">in</span> <span class="bu">enumerate</span>(features):</span>
+<span id="cb45-63"><a href="#cb45-63" tabindex="-1"></a>            <span class="co"># Stop the algorithm if cancel button has been clicked</span></span>
+<span id="cb45-64"><a href="#cb45-64" tabindex="-1"></a>            <span class="cf">if</span> feedback.isCanceled():</span>
+<span id="cb45-65"><a href="#cb45-65" tabindex="-1"></a>                <span class="cf">break</span></span>
+<span id="cb45-66"><a href="#cb45-66" tabindex="-1"></a></span>
+<span id="cb45-67"><a href="#cb45-67" tabindex="-1"></a>            <span class="co"># Add the feature</span></span>
+<span id="cb45-68"><a href="#cb45-68" tabindex="-1"></a>            writer.addFeature(f)</span>
+<span id="cb45-69"><a href="#cb45-69" tabindex="-1"></a></span>
+<span id="cb45-70"><a href="#cb45-70" tabindex="-1"></a>            <span class="co"># Update the progress bar</span></span>
+<span id="cb45-71"><a href="#cb45-71" tabindex="-1"></a>            <span class="cf">if</span> total <span class="op">!=</span> <span class="dv">0</span>:</span>
+<span id="cb45-72"><a href="#cb45-72" tabindex="-1"></a>              progress <span class="op">=</span> <span class="bu">int</span>(<span class="dv">100</span><span class="op">*</span>(current<span class="op">/</span>total))</span>
+<span id="cb45-73"><a href="#cb45-73" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb45-74"><a href="#cb45-74" tabindex="-1"></a>              progress <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb45-75"><a href="#cb45-75" tabindex="-1"></a>            feedback.setProgress(progress)</span>
+<span id="cb45-76"><a href="#cb45-76" tabindex="-1"></a></span>
+<span id="cb45-77"><a href="#cb45-77" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: output}</span>
 <span id="cb45-78"><a href="#cb45-78" tabindex="-1"></a></span>
-<span id="cb45-79"><a href="#cb45-79" tabindex="-1"></a>    <span class="kw">def</span> displayName(<span class="va">self</span>):</span>
-<span id="cb45-80"><a href="#cb45-80" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="st">&#39;Save Attributes As CSV&#39;</span>)</span>
-<span id="cb45-81"><a href="#cb45-81" tabindex="-1"></a> </span>
-<span id="cb45-82"><a href="#cb45-82" tabindex="-1"></a>    <span class="kw">def</span> group(<span class="va">self</span>):</span>
-<span id="cb45-83"><a href="#cb45-83" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="va">self</span>.groupId())</span>
-<span id="cb45-84"><a href="#cb45-84" tabindex="-1"></a></span>
-<span id="cb45-85"><a href="#cb45-85" tabindex="-1"></a>    <span class="kw">def</span> groupId(<span class="va">self</span>):</span>
-<span id="cb45-86"><a href="#cb45-86" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;&#39;</span></span>
+<span id="cb45-79"><a href="#cb45-79" tabindex="-1"></a>    <span class="kw">def</span> name(<span class="va">self</span>):</span>
+<span id="cb45-80"><a href="#cb45-80" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;save_attributes&#39;</span></span>
+<span id="cb45-81"><a href="#cb45-81" tabindex="-1"></a></span>
+<span id="cb45-82"><a href="#cb45-82" tabindex="-1"></a>    <span class="kw">def</span> displayName(<span class="va">self</span>):</span>
+<span id="cb45-83"><a href="#cb45-83" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="st">&#39;Save Attributes As CSV&#39;</span>)</span>
+<span id="cb45-84"><a href="#cb45-84" tabindex="-1"></a> </span>
+<span id="cb45-85"><a href="#cb45-85" tabindex="-1"></a>    <span class="kw">def</span> group(<span class="va">self</span>):</span>
+<span id="cb45-86"><a href="#cb45-86" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="va">self</span>.groupId())</span>
 <span id="cb45-87"><a href="#cb45-87" tabindex="-1"></a></span>
-<span id="cb45-88"><a href="#cb45-88" tabindex="-1"></a>    <span class="kw">def</span> tr(<span class="va">self</span>, string):</span>
-<span id="cb45-89"><a href="#cb45-89" tabindex="-1"></a>        <span class="cf">return</span> QCoreApplication.translate(<span class="st">&#39;Processing&#39;</span>, string)</span>
+<span id="cb45-88"><a href="#cb45-88" tabindex="-1"></a>    <span class="kw">def</span> groupId(<span class="va">self</span>):</span>
+<span id="cb45-89"><a href="#cb45-89" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;&#39;</span></span>
 <span id="cb45-90"><a href="#cb45-90" tabindex="-1"></a></span>
-<span id="cb45-91"><a href="#cb45-91" tabindex="-1"></a>    <span class="kw">def</span> createInstance(<span class="va">self</span>):</span>
-<span id="cb45-92"><a href="#cb45-92" tabindex="-1"></a>        <span class="cf">return</span> SaveAttributesAlgorithm()</span></code></pre></div>
+<span id="cb45-91"><a href="#cb45-91" tabindex="-1"></a>    <span class="kw">def</span> tr(<span class="va">self</span>, string):</span>
+<span id="cb45-92"><a href="#cb45-92" tabindex="-1"></a>        <span class="cf">return</span> QCoreApplication.translate(<span class="st">&#39;Processing&#39;</span>, string)</span>
+<span id="cb45-93"><a href="#cb45-93" tabindex="-1"></a></span>
+<span id="cb45-94"><a href="#cb45-94" tabindex="-1"></a>    <span class="kw">def</span> createInstance(<span class="va">self</span>):</span>
+<span id="cb45-95"><a href="#cb45-95" tabindex="-1"></a>        <span class="cf">return</span> SaveAttributesAlgorithm()</span></code></pre></div>
 <p><img src="images/pyqgis/processingscriptwrite.png" width="75%" style="display: block; margin: auto;" /></p>
-<p>By now, you must be familiar with the code in the
-<code>processAlgorithm()</code> method. This method contains the main
-logic of the script that gets executed when the user clicks the
-<em>Run</em> button. Here we are creating a new class called
-<code>SaveAttributesAlgorithm</code>. As this is a processing script, we
-must inherit from the <code>QgsProcessingAlgorithm</code> class. The
-<code>initAlgorithm()</code> method is called to set-up the inputs and
-the outputs. There are other methods that set the algorithm name and
-group.</p>
 <p>Click the <em>Save Script</em> button and save the script as
 <code>save_attributes_algorithm.py</code>. This script must be saved
 inside the <code>{profile folder}/processing/scripts/</code> directory
@@ -2181,55 +2217,59 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb48-1"><a h
 <span id="cb48-40"><a href="#cb48-40" tabindex="-1"></a>            <span class="st">&#39;OUTPUT&#39;</span>,</span>
 <span id="cb48-41"><a href="#cb48-41" tabindex="-1"></a>            context)</span>
 <span id="cb48-42"><a href="#cb48-42" tabindex="-1"></a></span>
-<span id="cb48-43"><a href="#cb48-43" tabindex="-1"></a>        <span class="co"># Compute the number of steps to display within the progress bar and</span></span>
-<span id="cb48-44"><a href="#cb48-44" tabindex="-1"></a>        <span class="co"># get features from source</span></span>
-<span id="cb48-45"><a href="#cb48-45" tabindex="-1"></a>        total <span class="op">=</span> <span class="fl">100.0</span> <span class="op">/</span> layer.featureCount() <span class="cf">if</span> layer.featureCount() <span class="cf">else</span> <span class="dv">0</span></span>
-<span id="cb48-46"><a href="#cb48-46" tabindex="-1"></a>        features <span class="op">=</span> layer.getFeatures()</span>
-<span id="cb48-47"><a href="#cb48-47" tabindex="-1"></a>        </span>
-<span id="cb48-48"><a href="#cb48-48" tabindex="-1"></a>        <span class="co"># Define the options for saving the layer</span></span>
-<span id="cb48-49"><a href="#cb48-49" tabindex="-1"></a>        save_options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
-<span id="cb48-50"><a href="#cb48-50" tabindex="-1"></a>        save_options.driverName <span class="op">=</span> <span class="st">&#39;CSV&#39;</span></span>
-<span id="cb48-51"><a href="#cb48-51" tabindex="-1"></a>        save_options.fileEncoding <span class="op">=</span> <span class="st">&#39;UTF-8&#39;</span></span>
-<span id="cb48-52"><a href="#cb48-52" tabindex="-1"></a></span>
-<span id="cb48-53"><a href="#cb48-53" tabindex="-1"></a>        <span class="co"># Create the writer</span></span>
-<span id="cb48-54"><a href="#cb48-54" tabindex="-1"></a>        writer <span class="op">=</span> QgsVectorFileWriter.create(</span>
-<span id="cb48-55"><a href="#cb48-55" tabindex="-1"></a>            fileName<span class="op">=</span>output,</span>
-<span id="cb48-56"><a href="#cb48-56" tabindex="-1"></a>            fields<span class="op">=</span>layer.fields(),</span>
-<span id="cb48-57"><a href="#cb48-57" tabindex="-1"></a>            geometryType<span class="op">=</span>QgsWkbTypes.NoGeometry,</span>
-<span id="cb48-58"><a href="#cb48-58" tabindex="-1"></a>            srs<span class="op">=</span>layer.crs(),</span>
-<span id="cb48-59"><a href="#cb48-59" tabindex="-1"></a>            transformContext<span class="op">=</span>QgsProject.instance().transformContext(),</span>
-<span id="cb48-60"><a href="#cb48-60" tabindex="-1"></a>            options<span class="op">=</span>save_options)</span>
-<span id="cb48-61"><a href="#cb48-61" tabindex="-1"></a></span>
-<span id="cb48-62"><a href="#cb48-62" tabindex="-1"></a>    </span>
-<span id="cb48-63"><a href="#cb48-63" tabindex="-1"></a>        <span class="cf">for</span> current, f <span class="kw">in</span> <span class="bu">enumerate</span>(features):</span>
-<span id="cb48-64"><a href="#cb48-64" tabindex="-1"></a>            <span class="co"># Stop the algorithm if cancel button has been clicked</span></span>
-<span id="cb48-65"><a href="#cb48-65" tabindex="-1"></a>            <span class="cf">if</span> feedback.isCanceled():</span>
-<span id="cb48-66"><a href="#cb48-66" tabindex="-1"></a>                <span class="cf">break</span></span>
-<span id="cb48-67"><a href="#cb48-67" tabindex="-1"></a></span>
-<span id="cb48-68"><a href="#cb48-68" tabindex="-1"></a>            <span class="co"># Add a feature in the sink</span></span>
-<span id="cb48-69"><a href="#cb48-69" tabindex="-1"></a>            writer.addFeature(f)</span>
-<span id="cb48-70"><a href="#cb48-70" tabindex="-1"></a></span>
-<span id="cb48-71"><a href="#cb48-71" tabindex="-1"></a>            <span class="co"># Update the progress bar</span></span>
-<span id="cb48-72"><a href="#cb48-72" tabindex="-1"></a>            feedback.setProgress(<span class="bu">int</span>(current <span class="op">*</span> total))</span>
-<span id="cb48-73"><a href="#cb48-73" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: output}</span>
-<span id="cb48-74"><a href="#cb48-74" tabindex="-1"></a></span>
-<span id="cb48-75"><a href="#cb48-75" tabindex="-1"></a>    <span class="kw">def</span> name(<span class="va">self</span>):</span>
-<span id="cb48-76"><a href="#cb48-76" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;save_attributes&#39;</span></span>
-<span id="cb48-77"><a href="#cb48-77" tabindex="-1"></a></span>
-<span id="cb48-78"><a href="#cb48-78" tabindex="-1"></a>    <span class="kw">def</span> displayName(<span class="va">self</span>):</span>
-<span id="cb48-79"><a href="#cb48-79" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="st">&#39;Save Attributes As CSV&#39;</span>)</span>
-<span id="cb48-80"><a href="#cb48-80" tabindex="-1"></a> </span>
-<span id="cb48-81"><a href="#cb48-81" tabindex="-1"></a>    <span class="kw">def</span> group(<span class="va">self</span>):</span>
-<span id="cb48-82"><a href="#cb48-82" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="va">self</span>.groupId())</span>
-<span id="cb48-83"><a href="#cb48-83" tabindex="-1"></a></span>
-<span id="cb48-84"><a href="#cb48-84" tabindex="-1"></a>    <span class="kw">def</span> groupId(<span class="va">self</span>):</span>
-<span id="cb48-85"><a href="#cb48-85" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;&#39;</span></span>
-<span id="cb48-86"><a href="#cb48-86" tabindex="-1"></a></span>
-<span id="cb48-87"><a href="#cb48-87" tabindex="-1"></a>    <span class="kw">def</span> tr(<span class="va">self</span>, string):</span>
-<span id="cb48-88"><a href="#cb48-88" tabindex="-1"></a>        <span class="cf">return</span> QCoreApplication.translate(<span class="st">&#39;Processing&#39;</span>, string)</span>
-<span id="cb48-89"><a href="#cb48-89" tabindex="-1"></a></span>
-<span id="cb48-90"><a href="#cb48-90" tabindex="-1"></a>    <span class="kw">def</span> createInstance(<span class="va">self</span>):</span>
-<span id="cb48-91"><a href="#cb48-91" tabindex="-1"></a>        <span class="cf">return</span> SaveAttributesAlgorithm()</span></code></pre></div>
+<span id="cb48-43"><a href="#cb48-43" tabindex="-1"></a>        <span class="co"># get features from source</span></span>
+<span id="cb48-44"><a href="#cb48-44" tabindex="-1"></a>        total <span class="op">=</span> layer.featureCount()</span>
+<span id="cb48-45"><a href="#cb48-45" tabindex="-1"></a>        features <span class="op">=</span> layer.getFeatures()</span>
+<span id="cb48-46"><a href="#cb48-46" tabindex="-1"></a>        </span>
+<span id="cb48-47"><a href="#cb48-47" tabindex="-1"></a>        <span class="co"># Define the options for saving the layer</span></span>
+<span id="cb48-48"><a href="#cb48-48" tabindex="-1"></a>        save_options <span class="op">=</span> QgsVectorFileWriter.SaveVectorOptions()</span>
+<span id="cb48-49"><a href="#cb48-49" tabindex="-1"></a>        save_options.driverName <span class="op">=</span> <span class="st">&#39;CSV&#39;</span></span>
+<span id="cb48-50"><a href="#cb48-50" tabindex="-1"></a>        save_options.fileEncoding <span class="op">=</span> <span class="st">&#39;UTF-8&#39;</span></span>
+<span id="cb48-51"><a href="#cb48-51" tabindex="-1"></a></span>
+<span id="cb48-52"><a href="#cb48-52" tabindex="-1"></a>        <span class="co"># Create the writer</span></span>
+<span id="cb48-53"><a href="#cb48-53" tabindex="-1"></a>        writer <span class="op">=</span> QgsVectorFileWriter.create(</span>
+<span id="cb48-54"><a href="#cb48-54" tabindex="-1"></a>            fileName<span class="op">=</span>output,</span>
+<span id="cb48-55"><a href="#cb48-55" tabindex="-1"></a>            fields<span class="op">=</span>layer.fields(),</span>
+<span id="cb48-56"><a href="#cb48-56" tabindex="-1"></a>            geometryType<span class="op">=</span>QgsWkbTypes.NoGeometry,</span>
+<span id="cb48-57"><a href="#cb48-57" tabindex="-1"></a>            srs<span class="op">=</span>layer.crs(),</span>
+<span id="cb48-58"><a href="#cb48-58" tabindex="-1"></a>            transformContext<span class="op">=</span>QgsProject.instance().transformContext(),</span>
+<span id="cb48-59"><a href="#cb48-59" tabindex="-1"></a>            options<span class="op">=</span>save_options)</span>
+<span id="cb48-60"><a href="#cb48-60" tabindex="-1"></a></span>
+<span id="cb48-61"><a href="#cb48-61" tabindex="-1"></a>    </span>
+<span id="cb48-62"><a href="#cb48-62" tabindex="-1"></a>        <span class="cf">for</span> current, f <span class="kw">in</span> <span class="bu">enumerate</span>(features):</span>
+<span id="cb48-63"><a href="#cb48-63" tabindex="-1"></a>            <span class="co"># Stop the algorithm if cancel button has been clicked</span></span>
+<span id="cb48-64"><a href="#cb48-64" tabindex="-1"></a>            <span class="cf">if</span> feedback.isCanceled():</span>
+<span id="cb48-65"><a href="#cb48-65" tabindex="-1"></a>                <span class="cf">break</span></span>
+<span id="cb48-66"><a href="#cb48-66" tabindex="-1"></a></span>
+<span id="cb48-67"><a href="#cb48-67" tabindex="-1"></a>            <span class="co"># Add the feature</span></span>
+<span id="cb48-68"><a href="#cb48-68" tabindex="-1"></a>            writer.addFeature(f)</span>
+<span id="cb48-69"><a href="#cb48-69" tabindex="-1"></a></span>
+<span id="cb48-70"><a href="#cb48-70" tabindex="-1"></a>            <span class="co"># Update the progress bar</span></span>
+<span id="cb48-71"><a href="#cb48-71" tabindex="-1"></a>            <span class="cf">if</span> total <span class="op">!=</span> <span class="dv">0</span>:</span>
+<span id="cb48-72"><a href="#cb48-72" tabindex="-1"></a>              progress <span class="op">=</span> <span class="bu">int</span>(<span class="dv">100</span><span class="op">*</span>(current<span class="op">/</span>total))</span>
+<span id="cb48-73"><a href="#cb48-73" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb48-74"><a href="#cb48-74" tabindex="-1"></a>              progress <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb48-75"><a href="#cb48-75" tabindex="-1"></a>            feedback.setProgress(progress)</span>
+<span id="cb48-76"><a href="#cb48-76" tabindex="-1"></a></span>
+<span id="cb48-77"><a href="#cb48-77" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&#39;OUTPUT&#39;</span>: output}</span>
+<span id="cb48-78"><a href="#cb48-78" tabindex="-1"></a></span>
+<span id="cb48-79"><a href="#cb48-79" tabindex="-1"></a>    <span class="kw">def</span> name(<span class="va">self</span>):</span>
+<span id="cb48-80"><a href="#cb48-80" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;save_attributes&#39;</span></span>
+<span id="cb48-81"><a href="#cb48-81" tabindex="-1"></a></span>
+<span id="cb48-82"><a href="#cb48-82" tabindex="-1"></a>    <span class="kw">def</span> displayName(<span class="va">self</span>):</span>
+<span id="cb48-83"><a href="#cb48-83" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="st">&#39;Save Attributes As CSV&#39;</span>)</span>
+<span id="cb48-84"><a href="#cb48-84" tabindex="-1"></a> </span>
+<span id="cb48-85"><a href="#cb48-85" tabindex="-1"></a>    <span class="kw">def</span> group(<span class="va">self</span>):</span>
+<span id="cb48-86"><a href="#cb48-86" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.tr(<span class="va">self</span>.groupId())</span>
+<span id="cb48-87"><a href="#cb48-87" tabindex="-1"></a></span>
+<span id="cb48-88"><a href="#cb48-88" tabindex="-1"></a>    <span class="kw">def</span> groupId(<span class="va">self</span>):</span>
+<span id="cb48-89"><a href="#cb48-89" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;&#39;</span></span>
+<span id="cb48-90"><a href="#cb48-90" tabindex="-1"></a></span>
+<span id="cb48-91"><a href="#cb48-91" tabindex="-1"></a>    <span class="kw">def</span> tr(<span class="va">self</span>, string):</span>
+<span id="cb48-92"><a href="#cb48-92" tabindex="-1"></a>        <span class="cf">return</span> QCoreApplication.translate(<span class="st">&#39;Processing&#39;</span>, string)</span>
+<span id="cb48-93"><a href="#cb48-93" tabindex="-1"></a></span>
+<span id="cb48-94"><a href="#cb48-94" tabindex="-1"></a>    <span class="kw">def</span> createInstance(<span class="va">self</span>):</span>
+<span id="cb48-95"><a href="#cb48-95" tabindex="-1"></a>        <span class="cf">return</span> SaveAttributesAlgorithm()</span></code></pre></div>
 <p><code>save_attributes_provider.py</code></p>
 <div class="sourceCode" id="cb49"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" tabindex="-1"></a><span class="im">import</span> os</span>
