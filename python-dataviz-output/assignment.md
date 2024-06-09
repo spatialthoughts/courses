@@ -74,8 +74,11 @@ for f in [rivers_filepath, countries_filepath]:
   with zipfile.ZipFile(f) as zf:
     zf.extractall(data_folder)
 
-river_shapefilepath = os.path.join(data_folder, 'HydroRIVERS_v10_as_shp', f'HydroRIVERS_v10_{continent}.shp')
-countries_filepath = os.path.join(data_folder, os.path.splitext(countries_file)[0] + '.shp')
+river_shapefilepath = os.path.join(
+    data_folder, 'HydroRIVERS_v10_as_shp',
+    f'HydroRIVERS_v10_{continent}.shp')
+countries_filepath = os.path.join(
+    data_folder, os.path.splitext(countries_file)[0] + '.shp')
 ```
 
 ## Data Pre-Processing
