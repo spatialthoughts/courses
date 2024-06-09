@@ -35,7 +35,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-Select a continent code. Visit [HydroRIVERS](https://www.hydrosheds.org/products/hydrorivers) and replace the value with the continent that your country is in. For example, here we want to create a map of rivers of India, so the continent code used is `as` (Asia).
+Select a continent code. Visit [HydroRIVERS](https://www.hydrosheds.org/products/hydrorivers) and replace the value with the continent that your country is in. For example, here we want to create a map of rivers of India, so the continent code used is `as` (Asia). You can right-click the download link for any continent and see the continent code in the URL.
 
 
 ```python
@@ -75,7 +75,7 @@ for f in [rivers_filepath, countries_filepath]:
     zf.extractall(data_folder)
 
 river_shapefilepath = os.path.join(
-    data_folder, 'HydroRIVERS_v10_as_shp',
+    data_folder, f'HydroRIVERS_v10_{continent}_shp',
     f'HydroRIVERS_v10_{continent}.shp')
 countries_filepath = os.path.join(
     data_folder, os.path.splitext(countries_file)[0] + '.shp')
@@ -85,7 +85,9 @@ countries_filepath = os.path.join(
 
 We select a country and extract the country geometry from the Natural Earth countries shapefile. Replace the `country` variable with the name of your chosen country.
 
-*Hint: You can print a list of values from the `SOVEREIGNT` column of `country_gdf` GeoDataFrame using `country_gdf.SOVEREIGNT.values` to know the value for your country.*
+*Hint1: You can print a list of values from the `SOVEREIGNT` column of `country_gdf` GeoDataFrame using `country_gdf.SOVEREIGNT.values` to know the value for your country.*
+
+*Hint2: For some countries, you may have to use additional condition using `ADM0_A3_IN` value to select the feature for the country.*
 
 
 ```python
@@ -144,9 +146,10 @@ plt.show()
     
 
 
-Your task is to render the river network by applying the following changes. Refer to the [`geopandas.GeoDataFrame.plot()`](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) documentation for parameter values and options.
+Your task is to render the river network for your chosen country by applying the following changes. Refer to the [`geopandas.GeoDataFrame.plot()`](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) documentation for parameter values and options.
 
-*   Assign a color to each river segment based on the value of `MAIN_RIV` column. *Hint: set `categorical=True`*.
+* Change the country to any country of your choice. Remember to change the `continent` code as well.
+* Assign a color to each river segment based on the value of `MAIN_RIV` column. *Hint: set `categorical=True`*.
 *  Assign width to each item based on the value in the `width` column.
 * Set the map background to black.
 * Set the title to white and change the font to be larger.
