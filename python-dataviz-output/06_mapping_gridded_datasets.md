@@ -10,15 +10,13 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt-get -qq remove python-shapely python3-shapely
-  !pip install --no-binary shapely shapely --force
-  !pip install --no-binary cartopy cartopy==0.19.0.post1
+  !pip install cartopy
 ```
 
 
 ```python
 import cartopy
-import cartopy.crs as ccrs 
+import cartopy.crs as ccrs
 import os
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -136,7 +134,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-We can further customize the map by adjusting the colorbar. 
+We can further customize the map by adjusting the colorbar.
 
 Reference: [matplotlib.pyplot.colorbar](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html)
 
@@ -175,4 +173,4 @@ plt.show()
 
 ## Exercise
 
-Display the map in the Robinson projection.
+Display the map in the Equal Earth projection.
