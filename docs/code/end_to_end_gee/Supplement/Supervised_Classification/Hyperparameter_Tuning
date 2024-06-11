@@ -7,75 +7,9 @@ var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
 var geometry = arkavathy.geometry();
 Map.centerObject(geometry);
 
-var rgbVis = {
-  min: 0.0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
-
-var filtered = s2
-  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry));
-
-// Load the Cloud Score+ collection
-var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
-var csPlusBands = csPlus.first().bandNames();
-
-// We need to add Cloud Score + bands to each Sentinel-2
-// image in the collection
-// This is done using the linkCollection() function
-var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
-
-// Function to mask pixels with low CS+ QA scores.
-function maskLowQA(image) {
-  var qaBand = 'cs';
-  var clearThreshold = 0.5;
-  var mask = image.select(qaBand).gte(clearThreshold);
-  return image.updateMask(mask);
-}
-
-var filteredMasked = filteredS2WithCs
-  .map(maskLowQA)
-  .select('B.*');
-
-var composite = filteredMasked.median();
-
-var addIndices = function(image) {
-  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
-  var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
-  var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
-  var bsi = image.expression(
-      '(( X + Y ) - (A + B)) /(( X + Y ) + (A + B)) ', {
-        'X': image.select('B11'), //swir1
-        'Y': image.select('B4'),  //red
-        'A': image.select('B8'), // nir
-        'B': image.select('B2'), // blue
-  }).rename('bsi');
-  return image.addBands(ndvi).addBands(ndbi).addBands(mndwi).addBands(bsi);
-};
-
-var composite = addIndices(composite);
-
-// Calculate Slope and Elevation
-
-// Use ALOS World 3D v3
-
-// This comes as a collection of images
-// We mosaic it to create a single image
-
-// Need to set the projection correctly on the mosaic
-// for the slope computation
-var proj = alos.first().projection();
-
-var elevation = alos.select('DSM').mosaic()
-  .setDefaultProjection(proj)
-  .rename('elev');
-
-var slope = ee.Terrain.slope(elevation)
-  .rename('slope');
-
-var composite = composite.addBands(elevation).addBands(slope);
+// Load the Composite
+// This was Exported as an Asset previously
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_multiband_composite');
 var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
 Map.addLayer(composite.clip(geometry), visParams, 'RGB');
 

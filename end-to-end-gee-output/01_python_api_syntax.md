@@ -216,10 +216,3 @@ var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
 print(filtered.size());
 ```
 ---
-
-
-```python
-import ee
-ee.Authenticate()
-ee.Initialize()
-```
