@@ -1,0 +1,67 @@
+// Example script for stratified sampling of
+// training samples for supervised classification
+// The script demonstrates the difference between
+// a simple random split of training features vs.
+// a random split of training features by by class
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+
+// Simple Random Split
+var gcp = gcp.randomColumn();
+var trainingGcpSimple = gcp.filter(ee.Filter.lt('random', 0.6));
+var validationGcpSimple = gcp.filter(ee.Filter.gte('random', 0.6));
+
+// Split with Stratified Random Sampling
+// Split features into training / validation sets, per class
+var classes = ee.List(gcp.aggregate_array('landcover').distinct());
+print('Classes', classes);
+
+var getSplitSamples = function(classNumber) {
+  var classSamples = gcp
+    .filter(ee.Filter.eq('landcover', classNumber))
+    .randomColumn('random');
+
+  // Split the samples, 60% for training, 40% for validation
+  var classTrainingGcp = classSamples
+    .filter(ee.Filter.lt('random', 0.6))
+    // Set a property to identify the fraction
+    .map(function(f) {return f.set('fraction', 'training')});
+    
+  var classValidationGcp = classSamples
+    .filter(ee.Filter.gte('random', 0.6))
+    .map(function(f) {return f.set('fraction', 'validation')});
+  return classTrainingGcp.merge(classValidationGcp);
+};
+
+// map() the function on the list of classes
+var splitSamples = ee.FeatureCollection(classes.map(getSplitSamples))
+  .flatten();
+
+// Filter using the 'fraction' property
+var trainingGcpStratified = splitSamples.filter(
+  ee.Filter.eq('fraction', 'training'));
+var validationGcpStratified = splitSamples.filter(
+  ee.Filter.eq('fraction', 'validation'));
+
+// Validate the results
+
+// Function to calculate distribution of samples
+var getDistribution = function(fc) {
+  return fc.reduceColumns({
+    reducer: ee.Reducer.frequencyHistogram(),
+    selectors: ['landcover']}).get('histogram');
+};
+
+print('Distribution of All Samples by Class', getDistribution(gcp));
+
+print('Training (Simple Split)',
+  getDistribution(trainingGcpSimple));
+
+print('Training (Stratified Split)',
+  getDistribution(trainingGcpStratified));
+    
+print('Validation (Simple Split)',
+  getDistribution(validationGcpSimple));
+
+print('Validation (Stratified Split)',
+  getDistribution(validationGcpStratified));
+  
