@@ -10,9 +10,10 @@ The following blocks of code will install the required packages and download the
 
 
 ```python
-import pandas as pd
-import os
 import matplotlib.pyplot as plt
+import os
+import pandas as pd
+import requests
 ```
 
 
@@ -31,9 +32,11 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
 ```
 
 We have 12 different CSV files containing crime data for each month of 2020. We download each of them to the data folder.
@@ -55,15 +58,15 @@ files = [
   '2020-12-metropolitan-street.csv'
 ]
 
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/crime/'
+
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/police.uk/'
 
 for f in files:
   url = os.path.join(data_url + f)
   download(url)
 
 ```
-
-## Data Pre-Processing
 
 It will be helpful to merge all 12 CSV files into a single dataframe. We can use `pd.concat()` to merge a list of dataframes.
 
@@ -96,7 +99,7 @@ type_counts = merged_df.groupby('Crime type').size()
 type_counts
 ```
 
-We now uses the `plot()` method to create the chart. This method is a wrapper around `matplotlib` and can accept supported arguments from it. 
+We now uses the `plot()` method to create the chart. This method is a wrapper around `matplotlib` and can accept supported arguments from it.
 
 Reference: [`pandas.DataFrame.plot`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.plot.html)
 
@@ -124,7 +127,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-Matplotlib plots offer unlimited possibilities to customize your charts. Let's see some of the options available to customize the pie-chart. 
+Matplotlib plots offer unlimited possibilities to customize your charts. Let's see some of the options available to customize the pie-chart.
 
 * `wedgeprops`: Customize the look of each 'wedge' of the pie.
 * `textprops`: Set the text properties of labels.
@@ -133,13 +136,13 @@ Reference: [`matplotlib.pyplot.pie`](https://matplotlib.org/stable/api/_as_gen/m
 
 
 ```python
-wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
+wedgeprops={'linewidth': 3, 'edgecolor': 'white'}
 textprops= {'fontsize': 10, 'fontstyle': 'italic'}
 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,10)
 
-type_counts.plot(kind='pie', ax=ax, 
+type_counts.plot(kind='pie', ax=ax,
                  wedgeprops=wedgeprops,
                  textprops=textprops
                  )
@@ -154,7 +157,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_20_0.png)
+![](python-dataviz-output/02_creating_charts_files/02_creating_charts_19_0.png)
     
 
 
@@ -194,7 +197,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/02_creating_charts_files/02_creating_charts_25_0.png)
+![](python-dataviz-output/02_creating_charts_files/02_creating_charts_24_0.png)
     
 
 

@@ -14,6 +14,7 @@ Colab comes pre-installed with many Python packages. You can use a package by si
 
 ```python
 import pandas as pd
+import geopandas as gpd
 ```
 
 Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If you want to install any packages, you can run a command by prefixing the command with a `!`. For example, you can install third-party packages via `pip` using the command `!pip`.
@@ -30,30 +31,9 @@ Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If y
 import rioxarray
 ```
 
-Some packages may also require additional binaries or local configuration. This can be achieved using package management commands for Ubuntu Linux. For example, we can run `apt` command to install specific package required for `geopandas` to work correctly.
-
-
-```python
-!apt install -qq libspatialindex-dev
-!pip install --quiet fiona shapely pyproj rtree
-!pip install --quiet geopandas
-```
-
-    libspatialindex-dev is already the newest version (1.8.5-5).
-    The following package was automatically installed and is no longer required:
-      libnvidia-common-460
-    Use 'apt autoremove' to remove it.
-    0 upgraded, 0 newly installed, 0 to remove and 20 not upgraded.
-
-
-
-```python
-import geopandas as gpd
-```
-
 ### Data Management
 
-Colab provides 100GB of disk space along with your notebook. This can be used to store your data, intermediate outputs and results. 
+Colab provides 100GB of disk space along with your notebook. This can be used to store your data, intermediate outputs and results.
 
 The code below will create 2 folders named 'data' and 'output' in your local filesystem.
 
@@ -74,24 +54,25 @@ We can download some data from the internet and store it in the Colab environmen
 
 
 ```python
+import requests
+
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
 ```
 
 Let's download the [Populated Places](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/) dataset from Natural Earth.
 
 
 ```python
-download('https://naciscdn.org/naturalearth/10m/cultural/' + 
+download('https://naciscdn.org/naturalearth/10m/cultural/' +
          'ne_10m_populated_places_simple.zip')
 ```
-
-    Downloaded data/ne_10m_populated_places_simple.zip
-
 
 The file is now in our local filesystem. We can construct the path to the data folder and read it using `geopandas`
 

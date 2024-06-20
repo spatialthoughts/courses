@@ -2,7 +2,7 @@
 
 Similar to Pandas, GeoPandas has a `plot()` method that can plot geospatial data using Matplotlib.
 
-We will work with census data to create a choropleth map of population density. We will start with a shapefile of census tracts, and join it with tabular data to get a GeoDataframe with census tract geometry and correponding populations. 
+We will work with census data to create a choropleth map of population density. We will start with a shapefile of census tracts, and join it with tabular data to get a GeoDataframe with census tract geometry and correponding populations.
 
 ## Setup and Data Download
 
@@ -12,9 +12,7 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree mapclassify
-  !pip install geopandas
+  !pip install mapclassify
 ```
 
 
@@ -23,7 +21,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-
+import requests
 ```
 
 
@@ -42,18 +40,21 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
 ```
 
-We will download the the census tracts shapefile and a CSV file containing a variety of population statistics for each tract. 
+We will download the the census tracts shapefile and a CSV file containing a variety of population statistics for each tract.
 
 
 ```python
 shapefile_name = 'tl_2019_06_tract'
 shapefile_exts = ['.shp', '.shx', '.dbf', '.prj']
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/census/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/census/'
 
 for ext in shapefile_exts:
   url = data_url + shapefile_name + ext
@@ -139,7 +140,7 @@ We have the population density for each tract in the `density` column. We can as
 
 > Tip: You can add `_r` to any color ramp name to get a **r**eversed version of that ramp.
 
-References: 
+References:
 - [Matplotlib Colormaps](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
 - [Mapclassify Classification Schemes](https://pysal.org/mapclassify/generated/mapclassify.classify.html#mapclassify.classify)
 
@@ -157,27 +158,81 @@ Instead of the class breaks being determined by the classification scheme, we ca
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10,10)
-gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined', 
-         classification_kwds=dict(bins=[1,10,25,50,100, 250, 500, 1000, 5000]),
-         legend=True)
+
+classification_kwds={
+  'bins': [1,10,25,50,100, 250, 500, 1000, 5000]
+}
+gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined',
+         classification_kwds=classification_kwds, legend=True)
 
 plt.show()
 ```
 
-We give final touches to our map and save the result as a PNG file. Remember to call `plt.savefig()` before showing the plot as the plot gets emptied after being shown.
+We can supply legend customization options via the `legend_kwds` parameter and adjust the legend position, formatting of the text, and add a legend title. We can also manually adjust the legend entries, to give a more legible labels.
+
+
 
 
 ```python
-output_path = os.path.join(output_folder, 'california_pop.png')
+legend_kwds= {
+  'loc': 'upper right',
+  'bbox_to_anchor': (0.8, 0.9),
+  'fmt': '{:<5.0f}',
+  'frameon': False,
+  'fontsize': 8,
+  'title': 'persons/sq.km.'
+}
+classification_kwds={
+  'bins':[1,10,25,50,100, 250, 500, 1000, 5000]
+}
 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10,10)
-gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined', 
-         classification_kwds=dict(bins=[1,10,25,50,100, 250, 500, 1000, 5000]),
-         legend=True)
+gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined',
+         classification_kwds=classification_kwds,
+         legend=True, legend_kwds=legend_kwds)
+
 ax.set_axis_off()
+
+# Change the last entry in the legend to '>5000'
+legend = ax.get_legend()
+legend.texts[-1].set_text('> 5000')
+
+plt.show()
+```
+
+Once we are happy with the look, we add a title and save the result as a PNG file. Remember to call `plt.savefig()` before showing the plot as the plot gets emptied after being shown.
+
+
+```python
+legend_kwds= {
+  'loc': 'upper right',
+  'bbox_to_anchor': (0.8, 0.9),
+  'fmt': '{:<5.0f}',
+  'frameon': False,
+  'fontsize': 8,
+  'title': 'persons/sq.km.'
+}
+classification_kwds={
+  'bins':[1,10,25,50,100, 250, 500, 1000, 5000]
+}
+
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(10,10)
+gdf.plot(ax=ax, column='density', cmap='RdYlGn_r', scheme='User_Defined',
+         classification_kwds=classification_kwds,
+         legend=True, legend_kwds=legend_kwds)
+
+ax.set_axis_off()
+
+# Change the last entry in the legend to '>5000'
+legend = ax.get_legend()
+legend.texts[-1].set_text('> 5000')
+
+# Add a title
 ax.set_title('California Population Density (2019)', size = 18)
 
+output_path = os.path.join(output_folder, 'california_pop.png')
 plt.savefig(output_path, dpi=300)
 
 plt.show()
@@ -185,7 +240,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/03_creating_maps_files/03_creating_maps_29_0.png)
+![](python-dataviz-output/03_creating_maps_files/03_creating_maps_31_0.png)
     
 
 
