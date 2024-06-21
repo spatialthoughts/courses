@@ -84,7 +84,10 @@ Apply filters to select the country feature. We use an additional filter `TYPE !
 
 
 ```python
-selected_country = country_gdf[(country_gdf['SOVEREIGNT'] == country) & (country_gdf['TYPE'] != 'Dependency')]
+selected_country = country_gdf[
+    (country_gdf['SOVEREIGNT'] == country) &
+    (country_gdf['TYPE'] != 'Dependency')
+]
 selected_country
 ```
 
