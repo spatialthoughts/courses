@@ -1,10 +1,8 @@
 ## Overview
 
-Many climate and meteorological datasets come as gridded rasters in data formats such as NetCDF and GRIB. We will use [XArray](http://xarray.pydata.org/) to read, process and visualize the gridded raster dataset.
+Xarray is an evolution of rasterio and is inspired by libraries like pandas to work with raster datasets. It is particularly suited for working with multi-dimensional time-series raster datasets. It also integrates tightly with dask that allows one to scale raster data processing using parallel computing. XArray provides [Plotting Functions](https://xarray.pydata.org/en/stable/user-guide/plotting.html) based on Matplotlib.
 
-Xarray is an evolution of rasterio and is inspired by libraries like pandas to work with raster datasets. It is particularly suited for working with multi-dimensional time-series raster datasets. It also integrates tightly with dask that allows one to scale raster data processing using parallel computing. XArray provides [Plotting Functions](https://xarray.pydata.org/en/stable/user-guide/plotting.html) based on Matplotlib. 
-
-In this section, we will take the [Gridded Monthly Temperature Anomaly Data](https://data.giss.nasa.gov/gistemp/) from 1880-present from GISTEMP and visualize the temperature anomaly for the year 2021.
+In this section, we will learn about XArray basics and learn how to work with a time-series of Sentinel-2 satellite imagery to create and visualize a median composite image.
 
 ## Setup and Data Download
 
@@ -12,9 +10,19 @@ The following blocks of code will install the required packages and download the
 
 
 ```python
+%%capture
+if 'google.colab' in str(get_ipython()):
+    !pip install pystac-client odc-stac rioxarray
+```
+
+
+```python
 import os
 import matplotlib.pyplot as plt
+import pystac_client
+from odc.stac import stac_load
 import xarray as xr
+import rioxarray as rxr
 ```
 
 
@@ -28,56 +36,76 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
+## Get Satellite Imagery using STAC API
+
+We define a location and time of interest to get some satellite imagery.
+
 
 ```python
-def download(url):
-    filename = os.path.join(data_folder, os.path.basename(url))
-    if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+latitude = 27.163
+longitude = 82.608
+year = 2023
+```
 
-filename = 'gistemp1200_GHCNv4_ERSSTv5.nc'
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gistemp/'
+Let's use Element84 search endpoint to look for items from the sentinel-2-l2a collection on AWS.
 
-download(data_url + filename)
+
+```python
+catalog = pystac_client.Client.open(
+    'https://earth-search.aws.element84.com/v1')
+
+# Define a small bounding box around the chosen point
+km2deg = 1.0 / 111
+x, y = (longitude, latitude)
+r = 1 * km2deg  # radius in degrees
+bbox = (x - r, y - r, x + r, y + r)
+
+search = catalog.search(
+    collections=['sentinel-2-c1-l2a'],
+    bbox=bbox,
+    datetime=f'{year}',
+    query={'eo:cloud_cover': {'lt': 30}},
+)
+items = search.item_collection()
+```
+
+Load the matching images as a XArray Dataset.
+
+
+```python
+ds = stac_load(
+    items,
+    bands=['red', 'green', 'blue', 'nir'],
+    resolution=10,
+    bbox=bbox,
+    chunks={},  # <-- use Dask
+    groupby='solar_day',
+)
+ds
+```
+
+
+```python
+%%time
+ds = ds.compute()
 ```
 
 ## XArray Terminology
 
-By convention, XArray is imported as `xr`. We use Xarray's `open_dataset()` method to read the gridded raster. The result is a `xarray.Dataset` object.
-
-
-
-```python
-file_path = os.path.join(data_folder, filename)
-ds = xr.open_dataset(file_path)
-ds
-```
-
-The NetCDF file contains a grid of values for each month from 1880-2021 at a spatial resolution of 2 degrees. Let's understand what is contained in a Dataset.
+We now have a `xarray.Dataset` object. Let's understand what is contained in a Dataset.
 
 * *Variables*: This is similar to a band in a raster dataset. Each variable contains an array of values.
 * *Dimensions*: This is similar to number of array axes.
-* *Coordinates*: These are the labels for values in each dimension. 
+* *Coordinates*: These are the labels for values in each dimension.
 * *Attributes*: This is the metadata associated with the dataset.
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/xarray_terminology.png' width=800/>
 
 A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset.variable_name` syntax.
 
-Let's see the `time_bnds` variable. This contains a 2d array which has both a starting and ending time for each one averaging period.
-
 
 ```python
-ds.time_bnds
-```
-
-The main variable of interest is = `tempanomaly` - containing the grid of temperature anomaly values at different times. Let's select that variable and store it as `da`.
-
-
-```python
-da = ds.tempanomaly
+da = ds.red
 da
 ```
 
@@ -92,94 +120,109 @@ Let's select the temperature anomany values for the last time step. Since we kno
 da.isel(time=-1)
 ```
 
+You can call `.values` on a DataArray to get an array of the values.
+
+
+```python
+da.isel(time=-1).values
+```
+
+You can query for a values at using multiple dimensions.
+
+
+```python
+da.isel(time=-1, x=-1, y=-1).values
+```
+
 We can also specify a value to query using the `sel()` method.
 
-
-```python
-da.sel(time='2021-12-15')
-```
-
-We can specify multiple dimensions to query for a subset. Let's extract the temperature anomaly at `lat=49`, `lon=-123` and `time='2021-06-15'`. This region experienced abnormally high temperatures in June 2021.
+Let's see what are the values of `time` variable.
 
 
 ```python
-da.sel(lat=49, lon=-123, time='2021-06-15')
+dates = da.time.values
+dates
 ```
 
-The `sel()` method also support nearest neighbor lookups. This is useful when you do not know the exact label of the dimension, but want to find the closest one. 
+We can query using the value of a coordinate using the `sel()` method.
+
+
+```python
+da.sel(time='2023-12-16')
+```
+
+The `sel()` method also support nearest neighbor lookups. This is useful when you do not know the exact label of the dimension, but want to find the closest one.
 
 > Tip: You can use `interp()` instead of `sel()` to interpolate the value instead of closest lookup.
 
 
 ```python
-da.sel(lat=28.6, lon=77.2, time='2021-05-01', method='nearest')
+da.sel(time='2023-01-01', method='nearest')
 ```
 
-You can call `.values` on a DataArray to get an array of the values.
+The `sel()` method also allows specifying range of values using Python's built-in `slice()` function. The code below will select all observations during January 2023.
 
 
 ```python
-selected = da.sel(lat=28.6, lon=77.2, time='2021-05-01', method='nearest')
-print(selected.values)
-```
-
-The `sel()` method also allows specifying range of values using Python's built-in `slice()` function. The code below will select all observationss in the year 2021.
-
-
-```python
-da.sel(time=slice('2021-01-01', '2021-12-31'))
-```
-
-## Masking and Subsetting Data
-
-XArray has a [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function that allows you to extract a subset of the array. The code block below extracts the anomaly at a specific Lat/Lon. We then use the `.where()` function to select items that have a positive anomaly.
-
-
-
-```python
-selected = da.sel(lat=28.6, lon=77.2, method='nearest')
-selected
-```
-
-We can use `drop=True` to remove all items where the condition did not match and create a subset of the data.
-
-
-```python
-positive = selected.where(selected > 0, drop=True)
-positive
+da.sel(time=slice('2023-01-01', '2023-01-31'))
 ```
 
 ## Aggregating Data
 
-A very-powerful feature of XArray is the ability to easily aggregate data across dimensions - making it ideal for many remote sensing analysis. Let's calculate the average temperature anomany for the year 2021.
+A very-powerful feature of XArray is the ability to easily aggregate data across dimensions - making it ideal for many remote sensing analysis. Let's create a median composite from all the individual images.
 
-We first select the subset for year 2021 and apply the `.mean()` aggregation across the `time` dimension.
-
-
-```python
-subset2021 = da.sel(time=slice('2021-01-01', '2021-12-31'))
-subset2021.mean(dim='time')
-```
-
-XArray has many features easily work with time-series data such as this. We can use temporal components to aggregate the data across time. Here we take our monthly time-series of anomalies and aggregate it to a yearly time-series using the `groupby()` method.
-
-Reference: [Resampling and grouped operations](https://docs.xarray.dev/en/stable/user-guide/time-series.html#resampling-and-grouped-operations)
+We apply the `.median()` aggregation across the `time` dimension.
 
 
 ```python
-yearly = da.groupby('time.year').mean(dim='time')
-yearly
+median = ds.median(dim='time')
+median
 ```
+
+## Visualizing Data
+
+XArray provides a `plot.imshow()` method based on Matplotlib to plot DataArrays.
+
+Reference : [xarray.plot.imshow ](https://docs.xarray.dev/en/stable/generated/xarray.plot.imshow.html)
+
+To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as `band`.
+
+
+```python
+median_da = median.to_array('band')
+median_da
+```
+
+The easy way to visualize the data without the outliers is to pass the parameter `robust=True`. This will use the 2nd and 98th percentiles of the data to compute the color limits.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+median_da.sel(band=['red', 'green', 'blue']).plot.imshow(
+    ax=ax,
+    robust=True)
+ax.set_title('RGB Visualization')
+ax.set_axis_off()
+plt.show()
+```
+
+
+    
+![](python-dataviz-output/05_xarray_basics_files/05_xarray_basics_41_0.png)
+    
+
 
 ## Exercise
 
-Can you find out when did the highest temperature anomaly occured at a specific location?
+Display the median composite for the month of May.
 
-Replace the `lat` and `lon` in the following code with your chosen location. You will see the resulting `max_anomaly` DataArray with the anomaly value along with lat, lon and time coordinates.  Extract the `time` coordinate of the resulting array and print the time when the maximum anomaly occured.
+The snippet below takes our time-series and aggregate it to a monthly median composites `groupby()` method.
+
+After aggregation, you will have a new dimension named `month`. Extract the DataArray for the chosen month using `sel()` method.
 
 
 ```python
-selected = da.sel(lat=28.6, lon=77.2, method='nearest')
-max_anomaly = selected.where(selected==selected.max(), drop=True)
-max_anomaly
+monthly = ds.groupby('time.month').median(dim='time')
+monthly
 ```
