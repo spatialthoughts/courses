@@ -43,21 +43,26 @@ def download(url):
         print('Downloaded ' + local)
 
 filename = 'gistemp1200_GHCNv4_ERSSTv5.nc'
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gistemp/'
+
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/gistemp/'
 
 download(data_url + filename)
 ```
 
 ## Data Pre-Processing
 
-We read the data using `XArray`, select the `tempanomaly` variable and aggregate it to yearly anoamalies.
+We read the data using `XArray` and select the `tempanomaly` variable.
 
 
 ```python
 file_path = os.path.join(data_folder, filename)
 ds = xr.open_dataset(file_path)
 da = ds.tempanomaly
+da
 ```
+
+We have monthly anomalies from 1880-present. Let's aggregate it to mean yealy anomalies.
 
 
 ```python
@@ -67,34 +72,27 @@ yearly
 
 ## Plotting using Matplotlib
 
-XArray provides a `plot()` method based on Matplotlib. When you call `plot()` on a 2D DataArray, it uses the `xarray.plot.pcolormesh()` function that creates a Pseudocolor plot.
 
-Reference: [xarray.plot](https://docs.xarray.dev/en/stable/user-guide/plotting.html#two-dimensions)
-
+Let's extract the data for one of the years.
 
 
 ```python
-anomaly2021 = yearly.sel(year=2021)
-anomaly2021
+year = 2023
+```
+
+We can use the `.sel()` method to query using the value of the `year` dimension.
+
+
+```python
+anomaly = yearly.sel(year=year)
+anomaly
 ```
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15, 7)
-anomaly2021.plot(ax=ax)
-plt.show()
-```
-
-While the `plot()` method works, it is slower than the `plot.imshow()` method when rendering large 2D-arrays. So we would prefer using it instead of the `plot() method.
-
-Reference : [xarray.plot.imshow ](https://docs.xarray.dev/en/stable/generated/xarray.plot.imshow.html)
-
-
-```python
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(15, 7)
-anomaly2021.plot.imshow(ax=ax)
+anomaly.plot.imshow(ax=ax)
 plt.show()
 ```
 
@@ -108,7 +106,7 @@ fig.set_size_inches(15, 7)
 anomaly2021.plot.imshow(ax=ax,
     vmin=-3, vmax=3, add_labels=False, cmap='coolwarm')
 
-ax.set_title('Temperature Anomaly in 2021 (°C)', fontsize = 14)
+ax.set_title(f'Temperature Anomaly in {year} (°C)', fontsize = 14)
 
 plt.show()
 ```
@@ -123,10 +121,12 @@ Reference: [CartoPy List of Projections](https://scitools.org.uk/cartopy/docs/la
 
 
 ```python
-fig, ax = plt.subplots(1, 1, subplot_kw={'projection': ccrs.Orthographic(0, 30)})
+projection = ccrs.Orthographic(0, 30)
+
+fig, ax = plt.subplots(1, 1, subplot_kw={'projection': projection})
 fig.set_size_inches(5,5)
 
-anomaly2021.plot.imshow(ax=ax,
+anomaly.plot.imshow(ax=ax,
     vmin=-3, vmax=3, cmap='coolwarm',
     transform=ccrs.PlateCarree())
 
@@ -140,6 +140,8 @@ Reference: [matplotlib.pyplot.colorbar](https://matplotlib.org/stable/api/_as_ge
 
 
 ```python
+projection = ccrs.Orthographic(0, 30)
+
 cbar_kwargs = {
     'orientation':'horizontal',
     'fraction': 0.025,
@@ -147,9 +149,9 @@ cbar_kwargs = {
     'extend':'neither'
 }
 
-fig, ax = plt.subplots(1, 1, subplot_kw={'projection': ccrs.Orthographic(0, 30)})
-fig.set_size_inches(10, 10)
-anomaly2021.plot.imshow(
+fig, ax = plt.subplots(1, 1, subplot_kw={'projection': projection})
+fig.set_size_inches(8, 8)
+anomaly.plot.imshow(
     ax=ax,
     vmin=-3, vmax=3, cmap='coolwarm',
     transform=ccrs.PlateCarree(),
@@ -157,7 +159,7 @@ anomaly2021.plot.imshow(
     cbar_kwargs=cbar_kwargs)
 
 ax.coastlines()
-plt.title('Temperature Anomaly in 2021 (°C)', fontsize = 14)
+plt.title(f'Temperature Anomaly in {year} (°C)', fontsize = 14)
 
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'anomaly.jpg')
@@ -167,10 +169,12 @@ plt.show()
 
 
     
-![](python-dataviz-output/06_mapping_gridded_datasets_files/06_mapping_gridded_datasets_20_0.png)
+![](python-dataviz-output/06_mapping_gridded_datasets_files/06_mapping_gridded_datasets_22_0.png)
     
 
 
 ## Exercise
 
 Display the map in the Equal Earth projection.
+
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/anomaly.png' width=800/>
