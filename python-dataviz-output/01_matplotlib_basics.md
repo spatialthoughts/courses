@@ -130,7 +130,7 @@ Create a plot that displays the 2 given points with their x,y coordinates with d
 * `point1`: Plot it with green color and a triangle marker.
 * `point2`: Plot it with red color and a circle marker.
 
-<img src='https://courses.spatialthoughts.com/images/python_dataviz/points.png' width=800/>
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/points.png' width=300/>
 
 Use the code block as your starting point and refer to [matplotlib.pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html) documentation for help.
 

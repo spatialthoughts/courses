@@ -177,4 +177,4 @@ plt.show()
 
 Display the map in the Equal Earth projection.
 
-<img src='https://courses.spatialthoughts.com/images/python_dataviz/anomaly.png' width=800/>
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/anomaly.png' width=400/>
