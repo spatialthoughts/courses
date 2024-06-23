@@ -40,7 +40,7 @@ fig.set_size_inches(5,5)
 plt.show()
 ```
 
-First, let's learn how to plot a single point using matplotlib. Let's say we want to display a point at the coordinate (0.5, 0.5). 
+First, let's learn how to plot a single point using matplotlib. Let's say we want to display a point at the coordinate (0.5, 0.5).
 
 
 
@@ -130,9 +130,12 @@ Create a plot that displays the 2 given points with their x,y coordinates with d
 * `point1`: Plot it with green color and a triangle marker.
 * `point2`: Plot it with red color and a circle marker.
 
-Reference: [matplotlib.pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html)
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/points.png' width=800/>
+
+Use the code block as your starting point and refer to [matplotlib.pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html) documentation for help.
 
 > Hint: You can call `plot()` multiple times to add new data to the same Axes.
+
 
 
 ```python

@@ -203,7 +203,11 @@ plt.show()
 
 ## Exercise
 
-Plot the trend of Bicycle thefts as a line chart. The cell below filters the `merged_df` dataframe to select incidents of 'Bicycle theft'. Group the results by months and plot the results.
+Plot the trend of Bicycle thefts as a line chart.
+
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/bicycle_thefts.png' width=800/>
+
+ The cell below filters the `merged_df` dataframe to select incidents of 'Bicycle theft'. Group the results by months and plot the results.
 
 
 ```python

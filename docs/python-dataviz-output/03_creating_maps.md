@@ -247,11 +247,21 @@ plt.show()
 ## Exercise
 
 1. Plot the census tracts geodataframe `tracts` with just outlines and no fill color.
-2. Display the plot zoomed-in around the San Francisco area between Latitudes from `37.71` to `37.82` and Longitudes from `-122.53` to `-122.36`.
+2. Display the map zoomed-in around the San Francisco area between Latitudes from `37.71` to `37.82` and Longitudes from `-122.53` to `-122.36`.
 
-Hints
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/sf.png' width=600/>
+
+You the code block below as your starting point.
+
+Hints:
 
 * Set the `facecolor` option to `'none'` for no fills. Check the [*style_kwds* parameter](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) of the `plot()` method for more details.
 * Use the `set_xlim()` and `set_ylim()` methods to set the view area of the Axes.
 
-<img src='https://courses.spatialthoughts.com/images/python_dataviz/sf.png' width=800/>
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(7,7)
+tracts.plot(ax=ax)
+plt.show()
+```

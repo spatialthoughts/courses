@@ -251,7 +251,10 @@ plt.show()
 
 1. Our eclipse dataset also contains polygons for penumbra contours. Add them to the visualization. This layer has a column `Obscur` that contains the obscuration value (the fraction of the Sun's area covered by the Moon). Style the contours by the obscuration value and add it to the map.
 2. Instead of the OpenTopoMap, create a visualization using another basemap. Some options to try are  `Esri.WorldTerrain`, `CartoDB.Positron` and `TopPlusOpen.Grey`.
-3. Save the resulting visualization as a PNG file `eclipse_path.png`.
+
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_path.png' width=800/>
+
+The code below below reads and re-projects the penumbra shapefile. Start your exercise by rendering the polygons by the `Obsur` column and then add it to the main chart.
 
 
 ```python
@@ -261,5 +264,3 @@ penumbra_gdf = gpd.read_file(penumbra_shapefile_path)
 penumbra_reprojected = penumbra_gdf.to_crs(crs)
 penumbra_reprojected
 ```
-
-<img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_path.png' width=800/>
