@@ -1,8 +1,8 @@
 ## Overview
 
-In the previous notebook, we learnt how to use [Xarray](http://xarray.pydata.org/) to work with gridded datasets. XArray is also well suited to work with georeferenced rasters - such as satellite imagery, population grids, or elevation data.[rioxarray](https://corteva.github.io/rioxarray/stable/index.html) is an extension of xarray that makes it easy to work with geospatial rasters. You can install the `rioxarray` package from the `conda-forge` channel. 
+In the previous notebook, we learnt how to use [Xarray](http://xarray.pydata.org/) to work with gridded datasets. XArray is also well suited to work with georeferenced rasters - such as satellite imagery, population grids, or elevation data.[rioxarray](https://corteva.github.io/rioxarray/stable/index.html) is an extension of xarray that makes it easy to work with geospatial rasters.
 
-In this section, we will take 4 individual SRTM tiles around the Mt. Everest region and merge them to a single GeoTiff using RasterIO. We will also use `matplotlib` to visualize the result with some annonations.
+In this section, we will take 4 individual SRTM tiles around the Mt. Everest region and merge them to a single GeoTiff using RasterIO. We will also use `matplotlib` to add labels to the final map using annonations.
 
 ## Setup and Data Download
 
@@ -12,7 +12,7 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install --quiet rioxarray
+    !pip install rioxarray
 ```
 
 By convention, `rioxarray` is imported as `rxr`.
@@ -54,7 +54,8 @@ srtm_tiles = [
   'N28E087.hgt'
 ]
 
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/srtm/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/srtm/'
 
 for tile in srtm_tiles:
   url = '{}/{}'.format(data_url, tile)
@@ -93,7 +94,7 @@ A `xarray.DataArray` object also contains 1 or more `coordinates`. Each coordina
 rds.coords
 ```
 
-The raster metadata is stored in the [`rio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors) accessor. This is enabled by the `rioxarray` library which provides geospatial functions on top of `xarray`. 
+The raster metadata is stored in the [`rio`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors) accessor. This is enabled by the `rioxarray` library which provides geospatial functions on top of `xarray`.
 
 
 ```python
@@ -124,7 +125,7 @@ for tile in srtm_tiles:
     datasets.append(band)
 ```
 
-You can visualize any `DataArray` object by calling `plot()` method. Here we create a subplot with 1 row and 4 columns. The `subplots()` method will return a list of Axes that we can use to render each of the source SRTM rasters. For plots with multiple columns, the Axes will be a nested list. To easily iterate over it, we can use `.flat` which returns a 1D iterator on the axes. 
+You can visualize any `DataArray` object by calling `plot()` method. Here we create a subplot with 1 row and 4 columns. The `subplots()` method will return a list of Axes that we can use to render each of the source SRTM rasters. For plots with multiple columns, the Axes will be a nested list. To easily iterate over it, we can use `.flat` which returns a 1D iterator on the axes.
 
 While plotting the data, we can use the `cmap` option to specify a color ramp. Here we are using the built-in *Greys* ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values.
 
@@ -142,15 +143,9 @@ plt.tight_layout()
 plt.show()
 ```
 
-
-    
-![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_23_0.png)
-    
-
-
 ## Merging Rasters
 
-Now that you understand the basic data structure of *xarray* and the &rio* extension, let's use it to process some data. We will take 4 individual SRTM tiles and merge them to a single GeoTiff. You will note that `rioxarray` handles the CRS and transform much better - taking care of internal details and providing a simple API.
+Now that you understand the basic data structure of *xarray* and the *rio* extension, let's use it to process some data. We will take 4 individual SRTM tiles and merge them to a single GeoTiff. You will note that `rioxarray` handles the CRS and transform much better - taking care of internal details and providing a simple API.
 
 We will use the `merge_arrays()` method from the `rioxarray.merge` module to merge the rasters. We can also specify an optional `method` that controls how overlapping tiles are merged. Here we have chosen `first` which takes the value of the first raster in the overlapping region.
 
@@ -171,6 +166,15 @@ fig.set_size_inches(12, 10)
 merged.plot.imshow(ax=ax, cmap='Greys_r')
 ax.set_title('merged')
 plt.show()
+```
+
+We can save the resulting raster in any format supported by GDAL using the `to_raster()` method. Let's save this as a [Cloud-Optimized GeoTIFF (COG)](https://gdal.org/drivers/raster/cog.html).
+
+
+```python
+output_file = 'merged.tif'
+output_path = os.path.join(output_folder, output_file)
+merged.rio.to_raster(output_path, driver='COG')
 ```
 
 ## Annotating Plots
@@ -200,7 +204,7 @@ max_elev = int(max_da.values)
 print(max_x, max_y, max_elev)
 ```
 
-Now we plot the `merged` raster and annotate it using the `annotate()` function. 
+Now we plot the `merged` raster and annotate it using the `annotate()` function.
 
 Reference: [matplotlib.pyplot.annotate
 ](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.annotate.html)
@@ -214,7 +218,7 @@ ax.plot(max_x, max_y, '^r', markersize=11)
 ax.annotate('Mt. Everest (elevation:{}m)'.format(max_elev),
             xy=(max_x, max_y), xycoords='data',
             xytext=(20, 20), textcoords='offset points',
-            arrowprops=dict(arrowstyle='->', color='black')
+            arrowprops={'arrowstyle':'->', 'color':'black'}
             )
 plt.tight_layout()
 plt.show()
@@ -222,30 +226,31 @@ plt.show()
 
 
     
-![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_36_0.png)
+![](python-dataviz-output/07_visualizing_rasters_files/07_visualizing_rasters_38_0.png)
     
 
 
-Finally, save the merged array to disk as a GeoTiff file.
-
-
-```python
-output_filename = 'merged.tif'
-output_path = os.path.join(output_folder, output_filename)
-merged.rio.to_raster(output_path)
-```
-
 ## Exercise
 
-Add contours to the elevation plot below. You can use the [`xarray.plot.contour`](https://docs.xarray.dev/en/stable/generated/xarray.plot.contour.html) function to create the contour plot.
+Add contours to the elevation plot below.
 
-Hint: Use the options `colors=black` and `levels=10`.
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/contours.png' width=600/>
+
+Start with the code snippet below and use the [`xarray.plot.contour`](https://docs.xarray.dev/en/stable/generated/xarray.plot.contour.html) function to render the contours
+
+Hint: Use the options `colors=white` and `levels=10`.
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(12, 10)
-merged.plot.imshow(ax=ax, cmap='viridis', add_labels=False)
+fig.set_size_inches(10, 10)
+merged.plot.imshow(
+    ax=ax,
+    cmap='viridis',
+    add_labels=False,
+    add_colorbar=False)
+
+ax.set_axis_off()
 plt.tight_layout()
 plt.show()
 ```
