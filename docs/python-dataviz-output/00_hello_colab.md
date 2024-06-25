@@ -23,7 +23,7 @@ Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If y
 
 
 ```python
-!pip install --quiet rioxarray
+!pip install rioxarray
 ```
 
 
