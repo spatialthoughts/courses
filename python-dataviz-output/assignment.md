@@ -131,9 +131,9 @@ river_gdf_final = river_gdf.sort_values(['UPLAND_SKM', 'width'])[
 river_gdf_final
 ```
 
-Your task is to render the river network by applying the following changes. Refer to the [`geopandas.GeoDataFrame.plot()`](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) documentation for parameter values and options.
+Your task is to take the `river_gdf_final` GeoDataFrame and render the river network by applying the following styling guidelines. Refer to the [`geopandas.GeoDataFrame.plot()`](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) documentation for parameter values and options.
 
-*   Assign a color to each river segment based on the value of `MAIN_RIV` column. *Hint: set `categorical=True`*.
-*  Assign width to each item based on the value in the `width` column.
+* Assign a color to each river segment based on the value of `MAIN_RIV` column. *Hint: set `categorical=True`*.
+* Assign width to each item based on the value in the `width` column.
 * Set the map background to black.
 * Set the title to white and change the font to be larger.

@@ -251,12 +251,12 @@ plt.show()
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/sf.png' width=600/>
 
-You the code block below as your starting point.
+Use the code block below as your starting point.
 
 Hints:
 
-* Set the `facecolor` option to `'none'` for no fills. Check the [*style_kwds* parameter](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) of the `plot()` method for more details.
-* Use the `set_xlim()` and `set_ylim()` methods to set the view area of the Axes.
+* Set the `facecolor` option to `'none'` for no fills. Refer to the [*style_kwds* parameter](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html) of the `plot()` method for more details.
+* Use the [`set_xlim()`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xlim.html) and [`set_ylim()`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_ylim.html) methods to set the view area of the Axes. *Remember that Latitudes are Y-coordinates and Longitudes are X-Coordinates.*
 
 
 ```python

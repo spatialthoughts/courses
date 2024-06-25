@@ -254,7 +254,7 @@ plt.show()
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_path.png' width=800/>
 
-The code below below reads and re-projects the penumbra shapefile. Start your exercise by rendering the polygons by the `Obsur` column and then add it to the main chart.
+The code below reads and re-projects the penumbra shapefile. Start your exercise by rendering the polygons by the `Obsur` column and then add it to the main chart.
 
 
 ```python

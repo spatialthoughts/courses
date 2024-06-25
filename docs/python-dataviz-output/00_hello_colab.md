@@ -50,7 +50,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-We can download some data from the internet and store it in the Colab environment. Below is a helper function that uses `urllib` to fetch any file from a URL.
+We can download some data from the internet and store it in the Colab environment. Below is a helper function to download a file from a URL.
 
 
 ```python

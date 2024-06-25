@@ -1,6 +1,6 @@
 ## Overview
 
-In this section, we will take the [Gridded Monthly Temperature Anomaly Data](https://data.giss.nasa.gov/gistemp/) from 1880-present from GISTEMP and visualize the temperature anomaly for the year 2021.
+In this section, we will take the [Gridded Monthly Temperature Anomaly Data](https://data.giss.nasa.gov/gistemp/) from 1880-present from GISTEMP and visualize the temperature anomaly for any year.
 
 ## Setup and Data Download
 
@@ -103,7 +103,7 @@ We can customize the plot using Matplotlib's options.
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15, 7)
 
-anomaly2021.plot.imshow(ax=ax,
+anomaly.plot.imshow(ax=ax,
     vmin=-3, vmax=3, add_labels=False, cmap='coolwarm')
 
 ax.set_title(f'Temperature Anomaly in {year} (°C)', fontsize = 14)
