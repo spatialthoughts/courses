@@ -1,10 +1,10 @@
 ### Creating an Artistic Rendering of a City
 
-Contextily provides an easy way to render tiles for a location using the OpenStreetMap's Nominatim API. Any location name from OpenStreetMap can be geocoded and displayed using the [Contextily Place API](https://contextily.readthedocs.io/en/latest/places_guide.html). 
+Contextily provides an easy way to render tiles for a location using the OpenStreetMap's Nominatim API. Any location name from OpenStreetMap can be geocoded and displayed using the [Contextily Place API](https://contextily.readthedocs.io/en/latest/places_guide.html).
 
 We can use it to quickly create a high-resolution rendering of any city using any supported basemap with exact dimensions.
 
-#### Setup 
+#### Setup
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -39,7 +39,7 @@ Replace the `place_name` below with the name of your chosen city, region or neig
 
 
 ```python
-place_name = 'Bangalore'
+place_name = 'Ahmedabad, India'
 place = Place(place_name, zoom=13)
 ```
 
@@ -60,11 +60,13 @@ providers = cx.providers
 providers
 ```
 
-Let's try the `Stamen.Toner` style. Some basemaps are available only upto a certain zoom level. If you get an error adjust the zoom level as well.
+Let's try the award-winning [*Watercolor*](https://www.cooperhewitt.org/2023/08/27/nda-stamen-design-watercolor-maps/) style by Stamen. Stamen basemaps are hosted by Stadia and require an API key to use. You can [sign-up and obtain a free API key](https://stadiamaps.com/stamen/). Once done, replace `YOUR-API-KEY` with your actual API key below.
 
 
 ```python
-source = cx.providers.Stamen.Toner
+source = cx.providers.Stadia.StamenWatercolor(api_key='YOUR-API-KEY')
+source['url'] = source['url'] + '?api_key={api_key}'
+
 zoom = 13
 ```
 
@@ -92,11 +94,11 @@ If we wanted to create a rendering for exact dimensions, we have to adjust the d
 
 
 ```python
-# Here we are using A4 paper size in Landscape orientation
-# Swap width and height for Portrait orientation
+# Here we are using A4 paper size in Portrait orientation
+# Swap width and height for Landscape orientation
 # or choose any other dimensions
-paper_width = 11.69
-paper_height = 8.27
+paper_height = 11.69
+paper_width = 8.27
 
 ratio = paper_width/paper_height
 
@@ -138,7 +140,7 @@ plt.tight_layout(pad=0)
 
 output_file = 'basemap.png'
 output_path = os.path.join(output_folder, output_file)
-plt.savefig(output_path, dpi=300, bbox_inches='tight', pad=0)
+plt.savefig(output_path, dpi=300, bbox_inches='tight')
 plt.show()
 ```
 
