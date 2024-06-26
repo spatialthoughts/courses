@@ -219,10 +219,10 @@ Display the median composite for the month of May.
 
 The snippet below takes our time-series and aggregate it to a monthly median composites `groupby()` method.
 
-After aggregation, you will have a new dimension named `month`. Extract the DataArray for the chosen month using `sel()` method.
-
 
 ```python
 monthly = ds.groupby('time.month').median(dim='time')
 monthly
 ```
+
+You now have a new dimension named `month`. Start your exercise by first converting the Dataset to a DataArray. Then extract the data for the chosen month using `sel()` method and plot it.
