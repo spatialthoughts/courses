@@ -1,19 +1,10 @@
 ### Elevation Profile Plot from a GPS Track
 
-We will take a GPS track recorded from Strava app and create an elevation profile plot.
+We will take a GPS track for a mountain trek recorded from Strava app and create an elevation profile plot. We also explore some advanced charting functions to add labels on X-axis at precise time intervals.
 
 #### Setup and Data Download
 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
-
-
-```python
-%%capture
-if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree mapclassify
-  !pip install geopandas
-```
 
 
 ```python
@@ -22,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
 import pandas as pd
-
+import requests
 ```
 
 
@@ -41,15 +32,19 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
 ```
 
 
 ```python
 filename = 'summit.gpx'
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/gps/'
+
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/gps/'
 
 download(data_url + filename)
 ```
@@ -98,30 +93,29 @@ plt.style.use('ggplot')
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
+
+# We show a subset of track for the summit in a blue line
 gdf_subset['ele'].plot(kind='line', ax=ax, color='#2b8cbe')
+# The full track is shown with a grey fill
+ax.fill_between(gdf.index, gdf['ele'].values, color='grey', alpha=0.3)
 plt.tight_layout()
 plt.title('Elevation Profile', fontsize = 18)
 plt.ylabel('Elevation (meters)', size = 15)
 plt.xlabel(None)
+
 # Show a tick every 30 minute
 xlocator = mdates.MinuteLocator(interval=30)
-
-xformat = mdates.DateFormatter('%H:%M %Z', tz=gdf.index.tz)  # adds some extra formatting, but not required
+xformat = mdates.DateFormatter('%H:%M %Z', tz=gdf.index.tz)
 
 ax.xaxis.set_major_locator(xlocator)
 ax.xaxis.set_major_formatter(xformat)
+
 ax.set_ylim([3200, 3700])
-ax.fill_between(gdf.index, gdf['ele'].values, color='grey', alpha=0.3)
 plt.show()
 ```
 
 
     
-![](python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_16_0.png)
+![](python-dataviz-output/supplement_elevation_profile_plot_files/supplement_elevation_profile_plot_15_0.png)
     
 
-
-
-```python
-plt.style.use('default')
-```

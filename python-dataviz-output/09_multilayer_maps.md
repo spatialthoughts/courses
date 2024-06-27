@@ -1,6 +1,6 @@
 ## Overview
 
-[Folium](https://python-visualization.github.io/folium/) supports creating maps with multiple layers. Recent versions of GeoPandas have built-in support to create interactive folium maps from a GeoDataFrame. 
+[Folium](https://python-visualization.github.io/folium/) supports creating maps with multiple layers. Recent versions of GeoPandas have built-in support to create interactive folium maps from a GeoDataFrame using the `explore()` function.
 
 In this section, we will create a multi-layer interactive map using 2 vector datasets.
 
@@ -10,9 +10,7 @@ In this section, we will create a multi-layer interactive map using 2 vector dat
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree mapclassify
-  !pip install geopandas
+  !pip install mapclassify
 ```
 
 
@@ -21,6 +19,7 @@ import os
 import folium
 from folium import Figure
 import geopandas as gpd
+import requests
 ```
 
 
@@ -39,27 +38,35 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
+```
 
+
+```python
 filename = 'karnataka.gpkg'
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/osm/'
 download(data_url + filename)
 
 ```
 
 ## Using GeoPandas explore()
 
+Read the individual layers from the GeoPackage using GeoPandas.
+
 
 ```python
 data_pkg_path = 'data'
 filename = 'karnataka.gpkg'
 path = os.path.join(data_pkg_path, filename)
+
 roads_gdf = gpd.read_file(path, layer='karnataka_highways')
 districts_gdf = gpd.read_file(path, layer='karnataka_districts')
 state_gdf = gpd.read_file(path, layer='karnataka')
-
 ```
 
 We can use the [explore()](https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.explore.html) method to create an interactive folium map from the GeoDataFrame. When you call `explore()` a folium object is created. You can save that object and use it to display or add more layers to the map.
@@ -92,18 +99,20 @@ districts_gdf.explore(m=m)
 fig.add_child(m)
 ```
 
-Folium supports a variety of basemaps. Let's change the basemap to use *Stamen Terrain* tiles. Additionally, we can change the styling using the `color` and `style_kwds` parameters.
+Folium supports a variety of basemaps. Let's change the basemap to use *Cartodb Positron* tiles. Additionally, we can change the styling using the `color` and `style_kwds` parameters.
+
+*Reference: [Folium Tiles](https://python-visualization.github.io/folium/latest/user_guide/raster_layers/tiles.html)*
 
 
 ```python
 fig = Figure(width=800, height=400)
 
-m = folium.Map(tiles='Stamen Terrain')
+m = folium.Map(tiles='Cartodb Positron')
 m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
 
 districts_gdf.explore(
     m=m,
-    color='black', 
+    color='black',
     style_kwds={'fillOpacity': 0.3, 'weight': 0.5},
   )
 
@@ -129,24 +138,27 @@ def get_category(row):
         return 'SH'
     else:
         return 'NA'
-    
+
 roads_gdf['category'] = roads_gdf.apply(get_category, axis=1)
 roads_gdf
 ```
+
+Now we can use the `category` column to style the layer with different colors. Additionally, we customize the `tooltip` to show only the selected columns when hovering over a feature.
 
 
 ```python
 fig = Figure(width=800, height=400)
 
-m = folium.Map()
+m = folium.Map(tiles='Cartodb Positron')
 m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
 
 roads_gdf.explore(
     m=m,
-    column='category', 
-    categories=['NH', 'SH'], 
+    column='category',
+    categories=['NH', 'SH'],
     cmap=['#1f78b4', '#e31a1c'],
-    categorical=True
+    categorical=True,
+    tooltip=['ref']
 )
 
 fig.add_child(m)
@@ -160,22 +172,23 @@ When you call `explore()` a folium object is created. You can save that object a
 ```python
 fig = Figure(width=800, height=400)
 
-m = folium.Map(tiles='Stamen Terrain')
+m = folium.Map(tiles='Cartodb Positron')
 m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
 
 districts_gdf.explore(
     m=m,
-    color='black', 
+    color='black',
     style_kwds={'fillOpacity': 0.3, 'weight':0.5},
     name='districts',
     tooltip=False)
 
 roads_gdf.explore(
     m=m,
-    column='category', 
-    categories=['NH', 'SH'], 
+    column='category',
+    categories=['NH', 'SH'],
     cmap=['#1f78b4', '#e31a1c'],
     categorical=True,
+    tooltip=['ref'],
     name='highways'
 )
 
@@ -200,27 +213,28 @@ Hint: Use the `style_kwds` with *'fill'* and *'weight'* options.
 ```python
 fig = Figure(width=800, height=400)
 
-m = folium.Map(tiles='Stamen Terrain')
+m = folium.Map(tiles='Cartodb Positron')
 m.fit_bounds([[bounds[1],bounds[0]], [bounds[3],bounds[2]]])
 
 districts_gdf.explore(
     m=m,
-    color='black', 
+    color='black',
     style_kwds={'fillOpacity': 0.3, 'weight':0.5},
     name='districts',
     tooltip=False)
 
 roads_gdf.explore(
     m=m,
-    column='category', 
-    categories=['NH', 'SH'], 
+    column='category',
+    categories=['NH', 'SH'],
     cmap=['#1f78b4', '#e31a1c'],
     categorical=True,
-    name='highways'
+    tooltip=['ref'],
+    name='highways',
 )
 
 fig.add_child(m)
 folium.LayerControl().add_to(m)
-m
 
+m
 ```
