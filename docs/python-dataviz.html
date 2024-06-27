@@ -2048,7 +2048,9 @@ the axes.</p>
 <p>While plotting the data, we can use the <code>cmap</code> option to
 specify a color ramp. Here we are using the built-in <em>Greys</em>
 ramp. Appending **_r** gives us the inverted ramp with blacks
-representing lower elevation values.</p>
+representing lower elevation values. When plotting on multiple Axes, it
+is useful to specify <code>set_aspect('equal')</code> so the aspect raio
+of the plot is maintained even if there is not enough space.</p>
 <div class="sourceCode" id="cb112"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb112-1"><a href="#cb112-1" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">4</span>)</span>
 <span id="cb112-2"><a href="#cb112-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>,<span class="dv">3</span>)</span>
@@ -2057,9 +2059,10 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb112-1"><a 
 <span id="cb112-5"><a href="#cb112-5" tabindex="-1"></a>    im <span class="op">=</span> da.plot.imshow(ax<span class="op">=</span>ax, cmap<span class="op">=</span><span class="st">&#39;Greys_r&#39;</span>)</span>
 <span id="cb112-6"><a href="#cb112-6" tabindex="-1"></a>    filename <span class="op">=</span> srtm_tiles[index]</span>
 <span id="cb112-7"><a href="#cb112-7" tabindex="-1"></a>    ax.set_title(filename)</span>
-<span id="cb112-8"><a href="#cb112-8" tabindex="-1"></a></span>
-<span id="cb112-9"><a href="#cb112-9" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb112-10"><a href="#cb112-10" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<span id="cb112-8"><a href="#cb112-8" tabindex="-1"></a>    ax.set_aspect(<span class="st">&#39;equal&#39;</span>) <span class="co"># maintain aspect ratio</span></span>
+<span id="cb112-9"><a href="#cb112-9" tabindex="-1"></a></span>
+<span id="cb112-10"><a href="#cb112-10" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb112-11"><a href="#cb112-11" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="merging-rasters" class="section level2">
 <h2>Merging Rasters</h2>
@@ -4393,15 +4396,17 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb243-1"><a 
 <span id="cb243-9"><a href="#cb243-9" tabindex="-1"></a>umbra_gdf <span class="op">=</span> gpd.read_file(umbra_shapefile_path)</span>
 <span id="cb243-10"><a href="#cb243-10" tabindex="-1"></a>penumbra_gdf <span class="op">=</span> gpd.read_file(penumbra_shapefile_path)</span></code></pre></div>
 <p>Choose a Orthographic Projection centered on the continental USA.
-convrt the CartoPy projection to a GeoPandas projection and reproject
+Convert the CartoPy projection to a GeoPandas projection and reproject
 the data layers.</p>
 <div class="sourceCode" id="cb244"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb244-1"><a href="#cb244-1" tabindex="-1"></a>cartopy_crs <span class="op">=</span> ccrs.Orthographic(<span class="op">-</span><span class="dv">100</span>, <span class="dv">45</span>)</span>
 <span id="cb244-2"><a href="#cb244-2" tabindex="-1"></a>crs<span class="op">=</span> cartopy_crs.proj4_init</span>
 <span id="cb244-3"><a href="#cb244-3" tabindex="-1"></a></span>
-<span id="cb244-4"><a href="#cb244-4" tabindex="-1"></a>penumbra_gdf_reprojected <span class="op">=</span> penumbra_gdf.to_crs(crs)</span>
-<span id="cb244-5"><a href="#cb244-5" tabindex="-1"></a>umbra_gdf_reproejcted <span class="op">=</span> umbra_gdf.to_crs(crs)</span>
-<span id="cb244-6"><a href="#cb244-6" tabindex="-1"></a>path_gdf_reprojected <span class="op">=</span> path_gdf.to_crs(crs)</span></code></pre></div>
+<span id="cb244-4"><a href="#cb244-4" tabindex="-1"></a><span class="co"># Reproject using GeoPandas</span></span>
+<span id="cb244-5"><a href="#cb244-5" tabindex="-1"></a><span class="co"># CartoPy reprojection on-the-fly while plotting results in artifacts</span></span>
+<span id="cb244-6"><a href="#cb244-6" tabindex="-1"></a>penumbra_gdf_reprojected <span class="op">=</span> penumbra_gdf.to_crs(crs)</span>
+<span id="cb244-7"><a href="#cb244-7" tabindex="-1"></a>umbra_gdf_reprojected <span class="op">=</span> umbra_gdf.to_crs(crs)</span>
+<span id="cb244-8"><a href="#cb244-8" tabindex="-1"></a>path_gdf_reprojected <span class="op">=</span> path_gdf.to_crs(crs)</span></code></pre></div>
 <p>Read the Blue Marble basemap image</p>
 <div class="sourceCode" id="cb245"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb245-1"><a href="#cb245-1" tabindex="-1"></a>basemapth_path <span class="op">=</span> os.path.join(data_folder, basemap_file)</span>
@@ -4420,40 +4425,42 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb246-1"><a 
 <span id="cb246-8"><a href="#cb246-8" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb246-9"><a href="#cb246-9" tabindex="-1"></a></span>
 <span id="cb246-10"><a href="#cb246-10" tabindex="-1"></a><span class="co"># Plot the DataFrames</span></span>
-<span id="cb246-11"><a href="#cb246-11" tabindex="-1"></a>penumbra_gdf.to_crs(crs).plot(</span>
-<span id="cb246-12"><a href="#cb246-12" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb246-13"><a href="#cb246-13" tabindex="-1"></a>    column<span class="op">=</span><span class="st">&#39;Obscur&#39;</span>,</span>
-<span id="cb246-14"><a href="#cb246-14" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;Greys&#39;</span>,</span>
-<span id="cb246-15"><a href="#cb246-15" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb246-16"><a href="#cb246-16" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb246-17"><a href="#cb246-17" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.2</span></span>
-<span id="cb246-18"><a href="#cb246-18" tabindex="-1"></a>)</span>
-<span id="cb246-19"><a href="#cb246-19" tabindex="-1"></a></span>
-<span id="cb246-20"><a href="#cb246-20" tabindex="-1"></a>penumbra_gdf.to_crs(crs).plot(</span>
-<span id="cb246-21"><a href="#cb246-21" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb246-22"><a href="#cb246-22" tabindex="-1"></a>    column<span class="op">=</span><span class="st">&#39;Obscur&#39;</span>,</span>
-<span id="cb246-23"><a href="#cb246-23" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;Greys&#39;</span>,</span>
-<span id="cb246-24"><a href="#cb246-24" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb246-25"><a href="#cb246-25" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb246-26"><a href="#cb246-26" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span></span>
-<span id="cb246-27"><a href="#cb246-27" tabindex="-1"></a>)</span>
-<span id="cb246-28"><a href="#cb246-28" tabindex="-1"></a></span>
-<span id="cb246-29"><a href="#cb246-29" tabindex="-1"></a>path_gdf.to_crs(crs).plot(</span>
-<span id="cb246-30"><a href="#cb246-30" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb246-31"><a href="#cb246-31" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>,</span>
-<span id="cb246-32"><a href="#cb246-32" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb246-33"><a href="#cb246-33" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb246-34"><a href="#cb246-34" tabindex="-1"></a>)</span>
-<span id="cb246-35"><a href="#cb246-35" tabindex="-1"></a></span>
-<span id="cb246-36"><a href="#cb246-36" tabindex="-1"></a>umbra_gdf.to_crs(crs).plot(</span>
-<span id="cb246-37"><a href="#cb246-37" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb246-38"><a href="#cb246-38" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>,</span>
-<span id="cb246-39"><a href="#cb246-39" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>)</span>
-<span id="cb246-40"><a href="#cb246-40" tabindex="-1"></a></span>
-<span id="cb246-41"><a href="#cb246-41" tabindex="-1"></a></span>
-<span id="cb246-42"><a href="#cb246-42" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, fontsize<span class="op">=</span><span class="dv">14</span>)</span>
+<span id="cb246-11"><a href="#cb246-11" tabindex="-1"></a></span>
+<span id="cb246-12"><a href="#cb246-12" tabindex="-1"></a><span class="co"># Plot penumbra shadows with just fills</span></span>
+<span id="cb246-13"><a href="#cb246-13" tabindex="-1"></a>penumbra_gdf_reprojected.plot(</span>
+<span id="cb246-14"><a href="#cb246-14" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb246-15"><a href="#cb246-15" tabindex="-1"></a>    column<span class="op">=</span><span class="st">&#39;Obscur&#39;</span>,</span>
+<span id="cb246-16"><a href="#cb246-16" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;Greys&#39;</span>,</span>
+<span id="cb246-17"><a href="#cb246-17" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb246-18"><a href="#cb246-18" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.2</span></span>
+<span id="cb246-19"><a href="#cb246-19" tabindex="-1"></a>)</span>
+<span id="cb246-20"><a href="#cb246-20" tabindex="-1"></a></span>
+<span id="cb246-21"><a href="#cb246-21" tabindex="-1"></a><span class="co"># Plot penumbra shadows with outlines</span></span>
+<span id="cb246-22"><a href="#cb246-22" tabindex="-1"></a>penumbra_gdf_reprojected.plot(</span>
+<span id="cb246-23"><a href="#cb246-23" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb246-24"><a href="#cb246-24" tabindex="-1"></a>    column<span class="op">=</span><span class="st">&#39;Obscur&#39;</span>,</span>
+<span id="cb246-25"><a href="#cb246-25" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;Greys&#39;</span>,</span>
+<span id="cb246-26"><a href="#cb246-26" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb246-27"><a href="#cb246-27" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb246-28"><a href="#cb246-28" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span></span>
+<span id="cb246-29"><a href="#cb246-29" tabindex="-1"></a>)</span>
+<span id="cb246-30"><a href="#cb246-30" tabindex="-1"></a></span>
+<span id="cb246-31"><a href="#cb246-31" tabindex="-1"></a>path_gdf_reprojected.to_crs(crs).plot(</span>
+<span id="cb246-32"><a href="#cb246-32" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb246-33"><a href="#cb246-33" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;#636363&#39;</span>,</span>
+<span id="cb246-34"><a href="#cb246-34" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb246-35"><a href="#cb246-35" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb246-36"><a href="#cb246-36" tabindex="-1"></a>)</span>
+<span id="cb246-37"><a href="#cb246-37" tabindex="-1"></a></span>
+<span id="cb246-38"><a href="#cb246-38" tabindex="-1"></a>umbra_gdf_reprojected.to_crs(crs).plot(</span>
+<span id="cb246-39"><a href="#cb246-39" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb246-40"><a href="#cb246-40" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;#252525&#39;</span>,</span>
+<span id="cb246-41"><a href="#cb246-41" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>)</span>
+<span id="cb246-42"><a href="#cb246-42" tabindex="-1"></a></span>
 <span id="cb246-43"><a href="#cb246-43" tabindex="-1"></a></span>
-<span id="cb246-44"><a href="#cb246-44" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<span id="cb246-44"><a href="#cb246-44" tabindex="-1"></a>plt.title(<span class="st">&#39;2017 Total Solar Eclipse Path&#39;</span>, fontsize<span class="op">=</span><span class="dv">14</span>)</span>
+<span id="cb246-45"><a href="#cb246-45" tabindex="-1"></a></span>
+<span id="cb246-46"><a href="#cb246-46" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
 src="python-dataviz-output/supplement_eclipse_globe_files/supplement_eclipse_globe_15_0.png" /></p>
 <p><a

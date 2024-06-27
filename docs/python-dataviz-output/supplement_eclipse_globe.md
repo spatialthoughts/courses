@@ -88,15 +88,17 @@ umbra_gdf = gpd.read_file(umbra_shapefile_path)
 penumbra_gdf = gpd.read_file(penumbra_shapefile_path)
 ```
 
-Choose a Orthographic Projection centered on the continental USA. convrt the CartoPy projection to a GeoPandas projection and reproject the data layers.
+Choose a Orthographic Projection centered on the continental USA. Convert the CartoPy projection to a GeoPandas projection and reproject the data layers.
 
 
 ```python
 cartopy_crs = ccrs.Orthographic(-100, 45)
 crs= cartopy_crs.proj4_init
 
+# Reproject using GeoPandas
+# CartoPy reprojection on-the-fly while plotting results in artifacts
 penumbra_gdf_reprojected = penumbra_gdf.to_crs(crs)
-umbra_gdf_reproejcted = umbra_gdf.to_crs(crs)
+umbra_gdf_reprojected = umbra_gdf.to_crs(crs)
 path_gdf_reprojected = path_gdf.to_crs(crs)
 ```
 
@@ -111,6 +113,7 @@ basemap_ds = rxr.open_rasterio(basemapth_path)
 #### Create a Globe Visualization
 
 
+
 ```python
 fig, ax = plt.subplots(1, 1, subplot_kw={'projection': cartopy_crs})
 fig.set_size_inches(8, 8)
@@ -122,16 +125,18 @@ basemap_ds.plot.imshow(
     robust=True)
 
 # Plot the DataFrames
-penumbra_gdf.to_crs(crs).plot(
+
+# Plot penumbra shadows with just fills
+penumbra_gdf_reprojected.plot(
     ax=ax,
     column='Obscur',
     cmap='Greys',
-    linewidth=1,
     edgecolor='none',
     alpha=0.2
 )
 
-penumbra_gdf.to_crs(crs).plot(
+# Plot penumbra shadows with outlines
+penumbra_gdf_reprojected.plot(
     ax=ax,
     column='Obscur',
     cmap='Greys',
@@ -140,14 +145,14 @@ penumbra_gdf.to_crs(crs).plot(
     alpha=0.5
 )
 
-path_gdf.to_crs(crs).plot(
+path_gdf_reprojected.to_crs(crs).plot(
     ax=ax,
     facecolor='#636363',
     edgecolor='none',
     alpha=0.5,
 )
 
-umbra_gdf.to_crs(crs).plot(
+umbra_gdf_reprojected.to_crs(crs).plot(
     ax=ax,
     facecolor='#252525',
     edgecolor='none')

@@ -127,7 +127,7 @@ for tile in srtm_tiles:
 
 You can visualize any `DataArray` object by calling `plot()` method. Here we create a subplot with 1 row and 4 columns. The `subplots()` method will return a list of Axes that we can use to render each of the source SRTM rasters. For plots with multiple columns, the Axes will be a nested list. To easily iterate over it, we can use `.flat` which returns a 1D iterator on the axes.
 
-While plotting the data, we can use the `cmap` option to specify a color ramp. Here we are using the built-in *Greys* ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values.
+While plotting the data, we can use the `cmap` option to specify a color ramp. Here we are using the built-in *Greys* ramp. Appending **_r** gives us the inverted ramp with blacks representing lower elevation values. When plotting on multiple Axes, it is useful to specify `set_aspect('equal')` so the aspect raio of the plot is maintained even if there is not enough space.
 
 
 ```python
@@ -138,6 +138,7 @@ for index, ax in enumerate(axes.flat):
     im = da.plot.imshow(ax=ax, cmap='Greys_r')
     filename = srtm_tiles[index]
     ax.set_title(filename)
+    ax.set_aspect('equal') # maintain aspect ratio
 
 plt.tight_layout()
 plt.show()
