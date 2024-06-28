@@ -1,0 +1,60 @@
+// This script shows how to extract and export
+// daily precipitation time-series at each pixel
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY');
+
+// Save the scale and projection values
+var projection = ee.Image(chirps.first()).projection();
+var scale = projection.nominalScale();
+
+// Define the start and end dates
+// Here we are extracting 10-years of data
+var startDate = ee.Date.fromYMD(2010, 1, 1);
+var endDate = startDate.advance(10, 'year');
+
+// Select a region
+// If you want your own region, upload a shapefile
+// and use the resulting asset instead
+var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
+var geometry = selected.geometry();
+
+var dateFilter = ee.Filter.date(startDate, endDate);
+var filtered = chirps.filter(dateFilter);
+  
+// Write a function to extract values from a single image
+var extractValues = function(image) {
+  // We want to extract a time-series at each pixel
+  // Add a band with latlon values
+  var imageWithLonLat = image.addBands(ee.Image.pixelLonLat());
+  var extracted = imageWithLonLat.sample({
+    region: geometry,
+    scale: scale,
+    projection: projection,
+    geometries: false 
+  });
+  var date = image.date().format('YYYY-MM-dd');
+  // Set the date for all features
+  var extractedWithDate = extracted.map(function(f) {
+    return f.set('date', date);  
+  });
+  return extractedWithDate;
+};
+
+// Test the function
+print(extractValues(filtered.first()));
+
+// map() the function the filtered collection
+var timeSeries = filtered.map(extractValues).flatten();
+
+// To reduce the exported data, we can also filter
+// records with 0 precipitation
+var timeSeriesFiltered = timeSeries.filter(ee.Filter.gt('precipitation', 0));
+
+// Export the results as CSV
+Export.table.toDrive({
+  collection: timeSeriesFiltered,
+  description: 'Precipitation_Time_Series_Export',
+  folder: 'earthengine',
+  fileNamePrefix: 'precipitation_time_series',
+  fileFormat: 'CSV'
+});
