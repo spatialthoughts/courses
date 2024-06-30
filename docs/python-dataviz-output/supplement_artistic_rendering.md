@@ -1,8 +1,10 @@
 ### Creating an Artistic Rendering of a City
 
+We can use basemap tiles from Stamen to create a high-resolution rendering of any city using the [contextily](https://contextily.readthedocs.io/en/latest/) library in Python.
+
 Contextily provides an easy way to render tiles for a location using the OpenStreetMap's Nominatim API. Any location name from OpenStreetMap can be geocoded and displayed using the [Contextily Place API](https://contextily.readthedocs.io/en/latest/places_guide.html).
 
-We can use it to quickly create a high-resolution rendering of any city using any supported basemap with exact dimensions.
+
 
 #### Setup
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
@@ -122,6 +124,8 @@ print('Adjusted BBOX', x_min, x_max, y_min, y_max)
 
 Now we have the bounding box cooridnates, we can use the `bounds2img` method to fetch the tiles and create a map. The final rendering is saved as a PNG file in the Colab localstorage. You can open the **Files** tab from the left-hand panel in Colab and browse to the output folder. Locate the `basemap.png` file and click the **⋮** button and select Download to download the file locally.
 
+> Make sure to attribute the map correctly. The recommended attribution for Stamen Watercolor tiles is *Map tiles by Stamen Design, under CC BY 4.0. Data by OpenStreetMap, under CC BY SA.*
+
 
 ```python
 fig, ax = plt.subplots(1, 1)
@@ -146,6 +150,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/supplement_contextily_files/supplement_contextily_19_0.png)
+![](python-dataviz-output/supplement_artistic_rendering_files/supplement_artistic_rendering_19_0.png)
     
 
