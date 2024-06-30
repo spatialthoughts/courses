@@ -28,9 +28,11 @@ if 'google.colab' in str(get_ipython()):
 import os
 import leafmap.deckgl as leafmap
 import geopandas as gpd
+import pandas as pd
 import requests
-from palettable.colorbrewer.diverging import Spectral_8
-from lonboard.colormap import apply_continuous_cmap
+import palettable
+import lonboard
+
 ```
 
 
@@ -96,14 +98,17 @@ Select a country name. Replace the value below with your chosen country.
 
 
 ```python
-country = 'India'
+country = 'United States of America'
 ```
 
 Apply filters to select the country feature. We use an additional filter `TYPE != 'Dependency'` to exclude overseas territories. You may have to adjust the filter to get the correct country polygon.
 
 
 ```python
-selected_country = country_gdf[(country_gdf['SOVEREIGNT'] == country) & (country_gdf['TYPE'] != 'Dependency')]
+selected_country = country_gdf[
+    (country_gdf['SOVEREIGNT'] == country) &
+    (country_gdf['TYPE'] != 'Dependency')
+]
 selected_country
 ```
 
@@ -141,8 +146,8 @@ We want to style the rivers so that the width of the line is proportional to the
 ```python
 original_min = 300
 original_max = 10000
-target_min = 0.5
-target_max = 2
+target_min = 0.1
+target_max = 1
 scaled = (river_gdf['UPLAND_SKM'] - original_min) / (original_max - original_min)
 river_gdf['width'] = scaled.clip(0, 1) * (target_max - target_min) + target_min
 river_gdf_final = river_gdf.sort_values(['UPLAND_SKM', 'width'])[
@@ -150,29 +155,42 @@ river_gdf_final = river_gdf.sort_values(['UPLAND_SKM', 'width'])[
 river_gdf_final
 ```
 
-We want to assign a color based on the `MAIN_RIV` attribute. We add a new column `color` to the GeoDataFrame by scaling the input values to the 0-1 range that will be used to linearly interpolate the supplied color ramp.
+We want to assign a color based on the `MAIN_RIV` attribute. We will split the rivers into 10 equal bins.
 
 
 ```python
-original_min = river_gdf_final['MAIN_RIV'].min()
-original_max = river_gdf_final['MAIN_RIV'].max()
-target_min = 0
-target_max = 1
-scaled = (river_gdf['MAIN_RIV'] - original_min) / (original_max - original_min)
-river_gdf_final['color'] = scaled.clip(0, 1) * (target_max - target_min) + target_min
+river_gdf_final['color'] = pd.qcut(
+    river_gdf_final.MAIN_RIV, q=10,
+    labels=False, duplicates='drop')
 river_gdf_final
 ```
 
-Now we can update the visualization by supplying dynamic width and color parameters.
+We create a discreate colormap by assigning a color to each bin.
 
 
 ```python
-m = leafmap.Map(height=600)
+cmap = palettable.colorbrewer.diverging.Spectral_10
+
+colormap = {}
+for i, color in enumerate(cmap.colors):
+    colormap[i] = color
+colormap
+```
+
+
+```python
+basemap = lonboard.basemap.CartoBasemap.DarkMatterNoLabels
+cmap = palettable.colorbrewer.diverging.Spectral_10
+widths = river_gdf_final['width']
+colors = lonboard.colormap.apply_categorical_cmap(
+    river_gdf_final['color'], colormap)
+
+m = leafmap.Map(height=700, basemap_style=basemap)
 m.add_gdf(river_gdf_final,
           zoom_to_layer=True,
           pickable=True,
-          get_width=river_gdf_final['width'],
-          get_color=apply_continuous_cmap(river_gdf_final['color'], Spectral_8),
+          get_width=widths,
+          get_color=colors,
           width_units='pixels'
 )
 m

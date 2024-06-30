@@ -146,6 +146,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/supplement_contextily_files/supplement_contextily_19_0.png)
+![](python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/python-dataviz-output/supplement_contextily_files/supplement_contextily_19_0.png)
     
 
