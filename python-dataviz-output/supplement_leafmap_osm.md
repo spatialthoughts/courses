@@ -11,11 +11,7 @@
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree mapclassify
-  !pip install geopandas
-  !pip install leafmap
-  !pip install osmnx
+  !pip install leafmap osmnx
 ```
 
 
@@ -49,7 +45,7 @@ Reference: [`leafmap.osm_gdf_from_place`](https://leafmap.org/osm/#leafmap.osm.o
 
 ```python
 parking_gdf = leafmap.osm_gdf_from_place(
-    'Bangalore', 
+    'Bangalore',
     tags={'amenity': ['parking', 'parking_space', 'parking_entrance']}
   )
 ```
@@ -88,7 +84,7 @@ parking_zones.to_file(driver='GPKG', filename=output_path, layer='zones')
 parking_locations.to_file(driver='GPKG', filename=output_path, layer='locations')
 ```
 
-### Visualizing OSM Data
+#### Visualizing OSM Data
 
 The `leafmap.osm` module has many functions that can add OSM data directy to the map. Here we use `add_osm_from_geocode()` function to add the boundary of a region from OSM. In addition, we can select a basemap from `leafmap.basemaps.keys()` for the map.
 

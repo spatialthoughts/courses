@@ -104,7 +104,7 @@ m
 
 ## Adding Data Layers
 
-Leafmap's `foliummap` module supports adding a variety of data types along with helper functions such as `set_center()`. Let's add a GeoJSON file to the map using `add_geojson()`.
+Leafmap's `foliumap` module supports adding a variety of data types along with helper functions such as `set_center()`. Let's add a GeoJSON file to the map using `add_geojson()`.
 
 Reference: [leafmap.foliumap.Map.add_geojson](https://leafmap.org/foliumap/#leafmap.foliumap.Map.add_geojson)
 
@@ -219,7 +219,7 @@ Hints:
   * The range of these values are between 0-60. Use `rescale='0,60'`.
   * A grayscale image can be displayed in color using a named colormap. For example `colormap_name='viridis'`.
   * The map automatically zooms to the extent of the COG. Turn that behaviror off by supplying `zoom_to_layer=False`.
-* To zoom to your chosen region, use [`leafmap.Map.zoom_to_bounds()`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.zoom_to_bounds) method with the bounding box in the `[minx, miny, maxx, maxy]` format.
+* To zoom to your chosen region, use [`leafmap.Map.zoom_to_bounds()`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.zoom_to_bounds) method with the bounding box in the `[minx, miny, maxx, maxy]` format. You can use this [handy tool](https://boundingbox.klokantech.com/) to find the coordinates for your region. (Search for your place and choose *CSV* format)
 
 
 ```python
