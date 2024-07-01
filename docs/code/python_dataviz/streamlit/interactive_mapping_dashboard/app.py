@@ -5,8 +5,8 @@ import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 
-if 'district_selectbox' not in st.session_state:
-    st.session_state['district_selectbox'] = 'Bidar'
+if 'selected_district' not in st.session_state:
+    st.session_state['selected_district'] = 'Bidar'
     
 st.set_page_config(page_title="Dashboard", layout="wide")
 
@@ -14,7 +14,9 @@ st.title('Interactive Highway Dashboard')
 
 st.sidebar.title("About")
 st.sidebar.info('Explore the Roads')
-st.sidebar.markdown('Click on any feature to see the stats.')
+st.sidebar.markdown('Click on any feature to see the stats. The text and chart below will update as you click on the map.')
+
+selected = st.sidebar.markdown(f'Current selection: :red[{st.session_state.selected_district}]')
 
 data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
         'download/osm/'
@@ -51,23 +53,23 @@ m.add_gdf(
     gdf=districts_gdf,
     layer_name='districts',
     zoom_to_layer=True,
-    info_mode='on_click',
+    info_mode='none',
     style={'color': 'black', 'fillOpacity': 0.3, 'weight': 0.5},
     )
 
  
 map_data = m.to_streamlit(800, 600, bidirectional=True)
 
-if map_data['last_object_clicked']:
-    clicked_district = map_data['last_active_drawing']['properties']['DISTRICT']
-    st.session_state.district_selectbox = clicked_district
 
 
-districts = districts_gdf.DISTRICT.values
-district = st.sidebar.selectbox('Select a District', districts, key='district_selectbox')
-district_lengths = lengths_df[lengths_df['DISTRICT'] == district]
+district_lengths = lengths_df[lengths_df['DISTRICT'] == st.session_state.selected_district]
 
 fig, ax = plt.subplots(1, 1)
 district_lengths.plot(kind='bar', ax=ax, color=['blue', 'red', 'gray'], ylabel='Kilometers', xlabel='Category')
 ax.get_xaxis().set_ticklabels([])
 stats = st.sidebar.pyplot(fig)
+
+if map_data['last_object_clicked']:
+    clicked_district = map_data['last_active_drawing']['properties']['DISTRICT']
+    st.session_state.selected_district = clicked_district
+    selected.write(f'Current selection: :red[{st.session_state.selected_district}]')
