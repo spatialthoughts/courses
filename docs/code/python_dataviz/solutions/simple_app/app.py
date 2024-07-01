@@ -32,7 +32,8 @@ if address:
     if results:
         st.write('Geocoded Coordinates: {}, {}'.format(results[0], results[1]))
         
-        basemap = st.selectbox('Select a basemap', ['OpenStreetMap', 'Stamen Terrain', 'Stamen Toner'])
+        basemap = st.selectbox('Select a basemap',
+          ['OpenStreetMap', 'CartoDB Positron', 'CartoDB DarkMatter'])
         m = folium.Map(location=results, zoom_start=8, tiles=basemap)
         folium.Marker(
                 results,
