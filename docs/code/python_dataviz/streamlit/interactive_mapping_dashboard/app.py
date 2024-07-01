@@ -10,12 +10,14 @@ if 'district_selectbox' not in st.session_state:
     
 st.set_page_config(page_title="Dashboard", layout="wide")
 
-st.title('National Highway Dashboard')
+st.title('Interactive Highway Dashboard')
 
 st.sidebar.title("About")
 st.sidebar.info('Explore the Roads')
+st.sidebar.markdown('Click on any feature to see the stats.')
 
-data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+        'download/osm/'
 gpkg_file = 'karnataka.gpkg'
 csv_file = 'highway_lengths_by_district.csv'
 
@@ -49,12 +51,12 @@ m.add_gdf(
     gdf=districts_gdf,
     layer_name='districts',
     zoom_to_layer=True,
-    info_mode=None,
+    info_mode='on_click',
     style={'color': 'black', 'fillOpacity': 0.3, 'weight': 0.5},
     )
 
  
-map_data = m.to_streamlit(500, 800, bidirectional=True)
+map_data = m.to_streamlit(800, 600, bidirectional=True)
 
 if map_data['last_object_clicked']:
     clicked_district = map_data['last_active_drawing']['properties']['DISTRICT']
