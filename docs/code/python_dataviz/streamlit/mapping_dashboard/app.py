@@ -12,7 +12,9 @@ st.sidebar.title('About')
 st.sidebar.info('Explore the Highway Statistics')
 
 
-data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/python-dataviz/osm/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+        'download/osm/'
+        
 gpkg_file = 'karnataka.gpkg'
 csv_file = 'highway_lengths_by_district.csv'
 
@@ -81,4 +83,4 @@ m.add_gdf(
  )
 
 
-m_streamlit = m.to_streamlit(600, 600)
+m_streamlit = m.to_streamlit(800, 600)
