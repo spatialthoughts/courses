@@ -23,7 +23,6 @@ import folium
 import geopandas as gpd
 import leafmap.foliumap as leafmap
 import os
-import osmnx as ox
 ```
 
 
