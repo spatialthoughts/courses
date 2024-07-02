@@ -143,7 +143,7 @@ roads_gdf['category'] = roads_gdf.apply(get_category, axis=1)
 roads_gdf
 ```
 
-Now we can use the `category` column to style the layer with different colors. Additionally, we customize the `tooltip` to show only the selected columns when hovering over a feature.
+Now we can use the `category` column to style the layer with different colors. Additionally, we customize the `tooltip` to show only the selected columns when hovering over a feature and `tooltip_kwds` to customize the name of the column being displayed.
 
 
 ```python
@@ -158,7 +158,8 @@ roads_gdf.explore(
     categories=['NH', 'SH'],
     cmap=['#1f78b4', '#e31a1c'],
     categorical=True,
-    tooltip=['ref']
+    tooltip=['ref'],
+    tooltip_kwds={'aliases': ['name']}
 )
 
 fig.add_child(m)
@@ -189,6 +190,7 @@ roads_gdf.explore(
     cmap=['#1f78b4', '#e31a1c'],
     categorical=True,
     tooltip=['ref'],
+    tooltip_kwds={'aliases': ['name']},
     name='highways'
 )
 
@@ -208,6 +210,11 @@ m
 Add the `state_gdf` layer to the folium map below with a thick blue border and no fill. Save the resulting map as a HTML file on your computer.
 
 Hint: Use the `style_kwds` with *'fill'* and *'weight'* options.
+
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/folium_multilayer.png' width=600/>
+
+
+Use the code below as your starting point for the exercise.
 
 
 ```python
@@ -231,6 +238,7 @@ roads_gdf.explore(
     categorical=True,
     tooltip=['ref'],
     name='highways',
+    tooltip_kwds={'aliases': ['name']}
 )
 
 fig.add_child(m)
