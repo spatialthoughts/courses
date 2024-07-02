@@ -80,7 +80,7 @@ folium.Marker(san_francisco, popup='San Francisco',
               icon=folium.Icon(
                   color='green', icon='crosshairs', prefix='fa')
              ).add_to(m)
-folium.Marker(new_york, popup='New York', 
+folium.Marker(new_york, popup='New York',
               icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
              ).add_to(m)
 fig.add_child(m)
@@ -171,7 +171,15 @@ m.save(output_path)
 
 ## Exercise
 
-Below is the complete code to create an interactive map with the driving directions between two cities. Replace the origin and destination with your chosen cities and create an interactive map.
+1. Create an interactive map of driving directions between two of your chosen cities.
+2. Cutomize the marker icons to a *car* icon. Reference [`folium.map.Icon`](https://python-visualization.github.io/folium/modules.html#folium.map.Icon).
+3. Change the route line to *red* color with a line width of 1 pixels. Reference [`folium.vector_layers.Polyline`](https://python-visualization.github.io/folium/modules.html#folium.vector_layers.PolyLine) and [`leaflet.Path`](https://leafletjs.com/reference.html#path)
+
+
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/folium_route.png' width=600/>
+
+
+Use the code block below as the starting point and replace the variables below with those of your chosen locations and insert your own API key.
 
 
 ```python
@@ -179,7 +187,7 @@ import folium
 import requests
 
 ###############################
-###  Replace Variables Below 
+###  Replace Variables Below
 ###############################
 origin = (37.7749, -122.4194)
 origin_name = 'San Francisco'
@@ -218,7 +226,7 @@ folium.Marker(origin, popup=origin_name,
               icon=folium.Icon(
                   color='green', icon='crosshairs', prefix='fa')
              ).add_to(m)
-folium.Marker(destination, popup=destination_name, 
+folium.Marker(destination, popup=destination_name,
               icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
              ).add_to(m)
 folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
