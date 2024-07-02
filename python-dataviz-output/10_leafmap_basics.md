@@ -18,6 +18,7 @@ if 'google.colab' in str(get_ipython()):
 import os
 import geopandas as gpd
 import leafmap.foliumap as leafmap
+import requests
 ```
 
 
@@ -58,7 +59,7 @@ gpkg_file = 'bangalore_roads.gpkg'
 data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
   'download/bangalore/'
 
-for f in json_file, gpkg_file, raster_file:
+for f in json_file, gpkg_file:
   download(data_url + f)
 ```
 
