@@ -5,22 +5,25 @@
 * [Leafmap OpenStreetMap Features](https://leafmap.org/notebooks/15_openstreetmap/)
 * [`leafmap.osm` module](https://leafmap.org/osm/)
 
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/leafmap_osm.png' width=600/>
+
+
 #### Setup and Data Download
 
 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !pip install leafmap osmnx
+  !pip install leafmap osmnx mapclassify
 ```
 
 
 ```python
-import os
-import geopandas as gpd
 import folium
+import geopandas as gpd
 import leafmap.foliumap as leafmap
-import osmnx
+import os
+import osmnx as ox
 ```
 
 
@@ -69,9 +72,9 @@ The results contains both points and polygon features. Let's separate them out.
 
 ```python
 parking_zones = parking_gdf_subset[
-    parking_gdf_subset['geometry'].apply(lambda x : x.type == 'Polygon' )]
+    parking_gdf_subset['geometry'].apply(lambda x : x.geom_type == 'Polygon' )]
 parking_locations = parking_gdf_subset[
-    parking_gdf_subset['geometry'].apply(lambda x : x.type == 'Point' )]
+    parking_gdf_subset['geometry'].apply(lambda x : x.geom_type == 'Point' )]
 ```
 
 We can save the resulting GeoDataFrame to a GeoPackage.
@@ -103,11 +106,13 @@ We can add the GeoDataFrame to the map as well using GeoPanda's `explore()` func
 m = leafmap.Map(width=800, height=500)
 m.add_basemap('CartoDB.DarkMatter')
 m.add_osm_from_geocode('Bangalore', layer_name='Bangalore', info_mode=None)
+
 parking_zones.explore(
     style_kwds={'fillOpacity': 0.3, 'weight': 0.5},
     color='orange',
     name='parking zones',
     m=m)
+
 parking_locations.explore(
     marker_type='circle',
     marker_kwds={'radius': 1},
