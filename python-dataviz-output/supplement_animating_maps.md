@@ -2,6 +2,8 @@
 
 We take the dataset for 2017 solar eclipse and animate the path of the solar eclipse.
 
+<img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_animation.gif' width=600/>
+
 #### Setup and Data Download
 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
@@ -21,6 +23,7 @@ import geopandas as gpd
 import os
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
+import shapely
 ```
 
 
@@ -105,19 +108,27 @@ Reference: [`matplotlib.animation.FuncAnimation`](https://matplotlib.org/stable/
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
 
-# Set the bounds
-ax.set_xlim(bounds[0], bounds[2])
-ax.set_ylim(bounds[1], bounds[3])
-
-plt.tight_layout()
-
 def animate(i):
     ax.clear()
+    # Set the bounds
+    ax.set_xlim(bounds[0], bounds[2])
+    ax.set_ylim(bounds[1], bounds[3])
     # Get the point from the points list at index i
     umbra_filtered = umbra_subset.iloc[i:i+1]
-    path_reprojected.plot(ax=ax, facecolor='#cccccc', edgecolor='#969696', alpha=0.5)
-    cx.add_basemap(ax, crs=path_reprojected.crs, source=cx.providers.OpenTopoMap)
-    umbra_filtered.plot(ax=ax, facecolor='#252525', edgecolor='#636363', alpha=0.5)
+
+    path_reprojected.plot(
+      ax=ax,
+      facecolor='#969696',
+      edgecolor='none',
+      alpha=0.5)
+    umbra_filtered.plot(
+      ax=ax,
+      facecolor='#252525',
+      edgecolor='none')
+    cx.add_basemap(ax,
+      crs=path_reprojected.crs,
+      source=cx.providers.OpenTopoMap,
+      zoom=5)
     ax.set_axis_off()
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     time = umbra_filtered.iloc[0].Time
@@ -133,16 +144,9 @@ plt.close()
 
 
 ```python
-import matplotlib as mpl
-mpl.rcParams['animation.embed_limit'] = 2**128
-from IPython.display import HTML
-HTML(ani.to_jshtml())
-```
-
-
-```python
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'solar_eclipse.gif')
 
 ani.save(output_path, writer=PillowWriter(fps=5))
+plt.close()
 ```
