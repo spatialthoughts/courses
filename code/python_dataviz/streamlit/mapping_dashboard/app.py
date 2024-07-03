@@ -44,6 +44,8 @@ fig, ax = plt.subplots(1, 1)
 district_lengths.plot(kind='bar', ax=ax, color=['blue', 'red'],
     ylabel='Kilometers', xlabel='Category')
 ax.get_xaxis().set_ticklabels([])
+ax.set_ylim(0, 2500)
+
 stats = st.sidebar.pyplot(fig)
 
 ## Create the map
