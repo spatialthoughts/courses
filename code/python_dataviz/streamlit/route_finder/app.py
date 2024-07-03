@@ -7,7 +7,8 @@ import requests
 st.set_page_config(page_title='Route Finder')
 st.title('Route Finder')
 
-st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) to geocode and get directions between the specified origin and destination. [[view source code](https://github.com/spatialthoughts/streamlit/tree/main/route_finder)]')
+st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) '
+  'to geocode and get directions between the specified origin and destination.')
 st.text('Enter any city name or address below.')
 origin = st.text_input('Origin (Example: San Francisco, CA)')
 destination = st.text_input('Destination (Example: San Jose, CA)')

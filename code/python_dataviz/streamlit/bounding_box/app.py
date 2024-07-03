@@ -11,7 +11,8 @@ if "zoom" not in st.session_state:
     st.session_state["zoom"] = 13
     
 st.title('Bounding Box Tool')
-st.markdown('This app allows you to get coordinates and bounding box for any place in the world - powered by OpenStreetMap. View the source code at [GitHub](https://github.com/spatialthoughts/python-dataviz-web/tree/main/streamlit/bounding_box).')
+st.markdown('This app allows you to get coordinates and bounding box for any '
+  'place in the world - powered by OpenStreetMap.')
 
 address = st.text_input('Enter an address.')
 
@@ -72,3 +73,5 @@ xmax = upperright['lng']
 
 coordinate_text.text(f'{lng:.4f}, {lat:.4f}')
 boundingbox_text.text(f'[{xmin:.4f}, {ymin:.4f}, {xmax:.4f}, {ymax:.4f}]')
+
+
