@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
+import requests
 ```
 
 
@@ -30,20 +31,21 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
+```
 
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/misc/'
+
+```python
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/misc/'
 csv_name = 'feature_sample_data.csv'
 
 download(data_url + csv_name)
-
-
 ```
-
-    Downloaded data/feature_sample_data.csv
-
 
 #### Data Pre-Processing
 
@@ -87,9 +89,3 @@ output_path = os.path.join(output_folder, 'correlation_matrix.png')
 plt.savefig(output_path, dpi=300)
 plt.show()
 ```
-
-
-    
-![](python-dataviz-output/supplement_feature_correlation_matrix_files/supplement_feature_correlation_matrix_10_0.png)
-    
-

@@ -9,9 +9,7 @@ This example shows how to add labels to vector layer features using Matplotlib. 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree mapclassify
-  !pip install geopandas
+  !pip install mapclassify
 ```
 
 
@@ -19,6 +17,7 @@ if 'google.colab' in str(get_ipython()):
 import os
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import requests
 ```
 
 
@@ -37,18 +36,21 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
+```
 
+
+```python
 filename = 'karnataka.gpkg'
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/osm/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/bangalore/'
 download(data_url + filename)
 
 ```
-
-    Downloaded data/karnataka.gpkg
-
 
 #### Data Pre-Processing
 
@@ -97,7 +99,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_labeling_features_files/supplement_labeling_features_13_0.png)
+![](python-dataviz-output/supplement_labeling_features_files/supplement_labeling_features_14_0.png)
     
 
 

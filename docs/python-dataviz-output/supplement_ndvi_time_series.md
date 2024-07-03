@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import requests
 ```
 
 
@@ -24,13 +25,18 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
-        
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+```
 
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/misc/'
+
+```python
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/misc/'
 filename = 'ndvi_data.xlsx'
+
 download(data_url + filename)
 ```
 
@@ -78,7 +84,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_9_0.png)
+![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_10_0.png)
     
 
 
@@ -99,11 +105,11 @@ df_smooth
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(20,10)
-df_smooth.plot(y='NDVI', kind='line', ax=ax, 
+df_smooth.plot(y='NDVI', kind='line', ax=ax,
                   marker='o', markersize=1, color='#66c2a4', linestyle='dotted',
                   label='Original')
 df_smooth.plot(y='NDVI_smooth', kind='line', ax=ax,
-                  marker='o', linewidth= 2, markersize=0, color='#238b45', 
+                  marker='o', linewidth= 2, markersize=0, color='#238b45',
                   label='{} Day Moving-Average'.format(window_size_days))
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
@@ -123,6 +129,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_12_0.png)
+![](python-dataviz-output/supplement_ndvi_time_series_files/supplement_ndvi_time_series_13_0.png)
     
 

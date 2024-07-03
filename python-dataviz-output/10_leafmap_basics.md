@@ -46,13 +46,6 @@ def download(url):
 
 
 ```python
-def download(url):
-    filename = os.path.join(data_folder, os.path.basename(url))
-    if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
-
 json_file = 'bangalore_wards.json'
 gpkg_file = 'bangalore_roads.gpkg'
 
@@ -61,25 +54,6 @@ data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
 
 for f in json_file, gpkg_file:
   download(data_url + f)
-```
-
-
-```python
-def download(url):
-    filename = os.path.join(data_folder, os.path.basename(url))
-    if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
-
-json_file = 'bangalore_wards.json'
-gpkg_file = 'bangalore_roads.gpkg'
-
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/bangalore/'
-
-for f in json_file, gpkg_file:
-  download(data_url + f)
-
 ```
 
 ## Creating a Map

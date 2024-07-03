@@ -10,14 +10,12 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !apt install libspatialindex-dev
-  !pip install fiona shapely pyproj rtree
-  !pip install geopandas
   !pip install contextily
 ```
 
 
 ```python
+import requests
 import contextily as cx
 import geopandas as gpd
 import os
@@ -41,14 +39,20 @@ if not os.path.exists(output_folder):
 def download(url):
     filename = os.path.join(data_folder, os.path.basename(url))
     if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
+      with requests.get(url, stream=True, allow_redirects=True) as r:
+          with open(filename, 'wb') as f:
+              for chunk in r.iter_content(chunk_size=8192):
+                  f.write(chunk)
+      print('Downloaded', filename)
+```
 
+
+```python
 path_shapefile = 'upath17'
 umbra_shapefile = 'umbra17'
 shapefile_exts = ['.shp', '.shx', '.dbf', '.prj']
-data_url = 'https://github.com/spatialthoughts/python-dataviz-web/raw/main/data/eclipse/'
+data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
+  'download/eclipse/'
 
 for shapefile in [path_shapefile, umbra_shapefile]:
   for ext in shapefile_exts:
@@ -72,8 +76,16 @@ umbra_gdf = gpd.read_file(umbra_shapefile_path)
 
 
 ```python
-path_reprojected = path_gdf.to_crs('epsg:3857')
-umbra_reprojected = umbra_gdf.to_crs('epsg:3857')
+crs = 'EPSG:9311'
+
+path_reprojected = path_gdf.to_crs(crs)
+umbra_reprojected = umbra_gdf.to_crs(crs)
+
+# Use the bounding box coordinates for continental us
+usa = shapely.geometry.box(-125, 24, -66, 49)
+usa_gdf = gpd.GeoDataFrame(geometry=[usa], crs='EPSG:4326')
+usa_gdf_reprojected = usa_gdf.to_crs(crs)
+bounds = usa_gdf_reprojected.total_bounds
 ```
 
 
@@ -92,6 +104,11 @@ Reference: [`matplotlib.animation.FuncAnimation`](https://matplotlib.org/stable/
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15,7)
+
+# Set the bounds
+ax.set_xlim(bounds[0], bounds[2])
+ax.set_ylim(bounds[1], bounds[3])
+
 plt.tight_layout()
 
 def animate(i):
