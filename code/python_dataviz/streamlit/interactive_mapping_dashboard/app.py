@@ -14,7 +14,8 @@ st.title('Interactive Highway Dashboard')
 
 st.sidebar.title("About")
 st.sidebar.info('Explore the Roads')
-st.sidebar.markdown('Click on any feature to see the stats. The text and chart below will update as you click on the map.')
+st.sidebar.markdown('Click on any feature to see the stats. '
+  'The text and chart below will update as you click on the map.')
 
 selected = st.sidebar.markdown(f'Current selection: :red[{st.session_state.selected_district}]')
 
