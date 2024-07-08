@@ -158,6 +158,12 @@ folium.PolyLine(route_xy, tooltip=tooltip, smooth_factor=1).add_to(m)
 m
 ```
 
+> Folium also provides a [`GeoJson`](https://python-visualization.github.io/folium/latest/user_guide/geojson/geojson.html) method to load any data in the GeoJSON format directly. Instead of extracting the coordinates, and creating a Polyline, we can also directly use the GeoJSON response returned by the OpenRouteService API like this. This is the preferred method as it gives you additional features for styling and layer manipulation.
+
+```
+folium.GeoJson(data, tooltip=tooltip, smooth_factor=1)
+```
+
 Folium maps can be saved to a HTML file by calling `save()` on the map object.
 
 
