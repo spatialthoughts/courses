@@ -376,8 +376,8 @@ Editor</a></li>
 id="toc-create-a-minimal-plugin">1. Create a Minimal Plugin</a></li>
 <li><a href="#add-core-functionality" id="toc-add-core-functionality">2.
 Add Core Functionality</a></li>
-<li><a href="#add-menu-item" id="toc-add-menu-item">3. Add Menu
-Item</a></li>
+<li><a href="#add-user-interface" id="toc-add-user-interface">3. Add
+User Interface</a></li>
 <li><a href="#package-and-share-your-plugin"
 id="toc-package-and-share-your-plugin">4. Package and Share Your
 Plugin</a></li>
@@ -465,7 +465,7 @@ when the plugin is loaded and <code>unload()</code> method which is
 called when the plugin is unloaded. For now, we are creating a minimal
 plugin that just add a button and a menu entry that displays message
 when clicked.</p>
-<p><code>load_basemap.py</code></p>
+<p><code>main.py</code></p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="im">import</span> inspect</span>
@@ -495,7 +495,7 @@ point of the plugin. It imports the plugin class created in the second
 file and creates an instance of it.</p>
 <p><code>__init__.py</code></p>
 <div class="sourceCode" id="cb3"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="im">from</span> .load_basemap <span class="im">import</span> BasemapLoaderPlugin</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="im">from</span> .main <span class="im">import</span> BasemapLoaderPlugin</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="kw">def</span> classFactory(iface):</span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    <span class="cf">return</span> BasemapLoaderPlugin(iface)</span></code></pre></div>
@@ -520,15 +520,15 @@ href="https://wiki.openstreetmap.org/wiki/Raster_tile_providers#Base_maps">OpenS
 Standard</a> XYZ layer. The PyQGIS code to load a XYZ tile layer is
 adapted from the <a
 href="https://docs.qgis.org/3.34/en/docs/pyqgis_developer_cookbook/cheat_sheet.html">PyQGIS
-Cookbook</a>. Modify the <code>load_basemap.py</code> file with the
-content from below.</p>
-<p><code>load_basemap.py</code></p>
+Cookbook</a>. Modify the <code>main.py</code> file with the content from
+below.</p>
+<p><code>main.py</code></p>
 <div class="sourceCode" id="cb4"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="im">import</span> inspect</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="im">from</span> PyQt5.QtWidgets <span class="im">import</span> QAction</span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="im">from</span> PyQt5.QtGui <span class="im">import</span> QIcon</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsRasterLayer, QgsProject</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsRasterLayer, QgsProject, QgsCoordinateReferenceSystem</span>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>cmd_folder <span class="op">=</span> os.path.split(inspect.getfile(inspect.currentframe()))[<span class="dv">0</span>]</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
@@ -573,8 +573,88 @@ Click <em>Reload</em> to reload the plugin.</p>
 toolbar and you will see the basemap layer loaded in QGIS.</p>
 <p><img src="images/qgis_plugin_workshop/pluginbasemapcomplete.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
-<div id="add-menu-item" class="section level1">
-<h1>3. Add Menu Item</h1>
+<div id="add-user-interface" class="section level1">
+<h1>3. Add User Interface</h1>
+<p>We will now add some user-interface widget to the plugin. Instead of
+a button that loads a single basemap, we can build a toolbar that has a
+drop-down menu of many options that the user can pick from and load the
+basemap.</p>
+<p>For a comprehensive list of basemap tile-services and their URLs, you
+can see the <a
+href="https://contextily.readthedocs.io/en/latest/providers_deepdive.html">Contextily
+Providers</a> page.</p>
+<p><code>main.py</code></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="im">import</span> inspect</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="im">from</span> PyQt5.QtWidgets <span class="im">import</span> QAction, QComboBox, QLabel, QPushButton</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="im">from</span> PyQt5.QtGui <span class="im">import</span> QIcon</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="im">from</span> qgis.core <span class="im">import</span> QgsRasterLayer, QgsProject, QgsCoordinateReferenceSystem</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>cmd_folder <span class="op">=</span> os.path.split(inspect.getfile(inspect.currentframe()))[<span class="dv">0</span>]</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co"># We create a dictionary of all the basemaps and their URLs to be used</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>osm <span class="op">=</span> <span class="st">&#39;https://tile.openstreetmap.org/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>cartodb_darkmatter <span class="op">=</span> <span class="st">&#39;https://a.basemaps.cartocdn.com/dark_all/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>cartodb_positron <span class="op">=</span> <span class="st">&#39;https://a.basemaps.cartocdn.com/light_all/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>esri_shaded_relief <span class="op">=</span> <span class="st">&#39;https://server.arcgisonline.com/ArcGIS/rest/services/&#39;</span> \</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>    <span class="st">&#39;World_Street_Map/MapServer/tile/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">&#39;</span> </span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>BASEMAPS <span class="op">=</span> {</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>    <span class="st">&#39;OpenStreetMap&#39;</span>: osm,</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>    <span class="st">&#39;CartoDB DarkMatter&#39;</span>: cartodb_darkmatter,</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    <span class="st">&#39;CartoDB Positron&#39;</span>: cartodb_positron,</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>    <span class="st">&#39;Esri World Shaded Relief&#39;</span>: esri_shaded_relief</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>}</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="kw">class</span> BasemapLoaderPlugin:</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, iface):</span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>        <span class="va">self</span>.iface <span class="op">=</span> iface</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>    <span class="kw">def</span> initGui(<span class="va">self</span>):</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>        <span class="co"># Create a Toolbar</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>        <span class="va">self</span>.basemapToolbar <span class="op">=</span> <span class="va">self</span>.iface.addToolBar(<span class="st">&#39;Basemap Selector&#39;</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>        </span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>        <span class="co"># Create an Action with Logo</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>        icon <span class="op">=</span> os.path.join(os.path.join(cmd_folder, <span class="st">&#39;logo.png&#39;</span>))</span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>        <span class="va">self</span>.action <span class="op">=</span> QAction(QIcon(icon), <span class="st">&#39;Load Basemap&#39;</span>, <span class="va">self</span>.basemapToolbar)</span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a>        </span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a>        <span class="co"># Create a label</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>        <span class="va">self</span>.label <span class="op">=</span> QLabel(<span class="st">&#39;Select a basemap&#39;</span>, parent<span class="op">=</span><span class="va">self</span>.basemapToolbar)</span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a>        <span class="co"># Create a dropdown menu</span></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>        <span class="va">self</span>.basemapSelector <span class="op">=</span> QComboBox(parent<span class="op">=</span><span class="va">self</span>.basemapToolbar)</span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>        <span class="va">self</span>.basemapSelector.setFixedWidth(<span class="dv">150</span>)</span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>        <span class="co"># Populate it with names of all the basemaps</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>        <span class="cf">for</span> basemap_name <span class="kw">in</span> BASEMAPS.keys():</span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a>            <span class="va">self</span>.basemapSelector.addItem(basemap_name)</span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a>            </span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a>        <span class="co"># Add all the widgets to the toolbar</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a>        <span class="va">self</span>.basemapToolbar.addWidget(<span class="va">self</span>.label)</span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a>        <span class="va">self</span>.basemapToolbar.addWidget(<span class="va">self</span>.basemapSelector)</span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a>        <span class="va">self</span>.basemapToolbar.addAction(<span class="va">self</span>.action)</span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a>      </span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a>        <span class="co"># Connect the run() method to the action</span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a>        <span class="va">self</span>.action.triggered.<span class="ex">connect</span>(<span class="va">self</span>.run)</span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a>      </span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a>    <span class="kw">def</span> unload(<span class="va">self</span>):</span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a>        <span class="kw">del</span> <span class="va">self</span>.basemapToolbar</span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a>    <span class="kw">def</span> run(<span class="va">self</span>):</span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a>        selected_basemap <span class="op">=</span> <span class="va">self</span>.basemapSelector.currentText()</span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a>        basemap_url <span class="op">=</span> BASEMAPS[selected_basemap]</span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a>        zmin <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a>        zmax <span class="op">=</span> <span class="dv">19</span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a>        crs <span class="op">=</span> <span class="st">&#39;EPSG:3857&#39;</span></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a>        </span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a>        uri <span class="op">=</span> <span class="ss">f&#39;type=xyz&amp;url=</span><span class="sc">{</span>basemap_url<span class="sc">}</span><span class="ss">&amp;zmax=</span><span class="sc">{</span>zmax<span class="sc">}</span><span class="ss">&amp;zmin=</span><span class="sc">{</span>zmin<span class="sc">}</span><span class="ss">$crs=</span><span class="sc">{</span>crs<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a>        rlayer <span class="op">=</span> QgsRasterLayer(uri, selected_basemap, <span class="st">&#39;wms&#39;</span>)</span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a>        <span class="cf">if</span> rlayer.isValid():</span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a>            QgsProject.instance().addMapLayer(rlayer)</span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a>            <span class="va">self</span>.iface.messageBar().pushSuccess(<span class="st">&#39;Success&#39;</span>, <span class="st">&#39;Basemap Layer Loaded&#39;</span>)</span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a>            <span class="va">self</span>.iface.messageBar().pushCritical(<span class="st">&#39;Error&#39;</span>, <span class="st">&#39;Invalid Basemap Layer&#39;</span>)</span></code></pre></div>
+<p>Reload the plugin to see the toolbar.</p>
 </div>
 <div id="package-and-share-your-plugin" class="section level1">
 <h1>4. Package and Share Your Plugin</h1>

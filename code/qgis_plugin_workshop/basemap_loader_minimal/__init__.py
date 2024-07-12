@@ -1,4 +1,4 @@
-from .load_basemap import BasemapLoaderPlugin
+from .main import BasemapLoaderPlugin
 
 def classFactory(iface):
     return BasemapLoaderPlugin(iface)
