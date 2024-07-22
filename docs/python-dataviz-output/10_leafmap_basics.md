@@ -193,7 +193,7 @@ Hints:
 * The GeoTIFF image is a single-band image with grayscale values of night time light intensities. Specify additional `kwargs` parameters from [`leafmap.Map.add_cog_layer()`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer).
   * The range of these values are between 0-60. Use `rescale='0,60'`.
   * A grayscale image can be displayed in color using a named colormap. For example `colormap_name='viridis'`.
-  * The map automatically zooms to the extent of the COG. Turn that behaviror off by supplying `zoom_to_layer=False`.
+  * The map automatically zooms to the extent of the COG. Turn that behavior off by supplying `zoom_to_layer=False`.
 * To zoom to your chosen region, use [`leafmap.Map.zoom_to_bounds()`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.zoom_to_bounds) method with the bounding box in the `[minx, miny, maxx, maxy]` format. You can use this [bounding box app](https://boundingbox.streamlit.app/) to find the coordinates for your region.
 
 

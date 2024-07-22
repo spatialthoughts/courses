@@ -147,7 +147,7 @@ We extract the route summary returned by the API which contains the total drivin
 ```python
 summary = data['features'][0]['properties']['summary']
 distance = round(summary['distance']/1000)
-tooltip = 'Driving Distance: {}km'.format(distance)
+tooltip = 'Driving Distance: {} km'.format(distance)
 ```
 
 We can use the [`folium.vector_layers.Polyline`](https://python-visualization.github.io/folium/modules.html#folium.vector_layers.PolyLine) class to add a line to the map. The class has a `smooth_factor` parameter which can be used to simplify the line displayed when zoomed-out. Setting a higher number results in better performance.
@@ -222,7 +222,7 @@ summary = data['features'][0]['properties']['summary']
 
 route_xy = [(y, x) for x, y in route]
 distance = round(summary['distance']/1000)
-tooltip = 'Driving Distance: {}km'.format(distance)
+tooltip = 'Driving Distance: {} km'.format(distance)
 
 from folium import Figure
 fig = Figure(width=800, height=400)

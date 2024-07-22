@@ -206,7 +206,7 @@ for x in range(10):
 
 ## Exercise 2
 
-Below cell contains a dictionary with 3 destination cities and their coordinates. Write a `for` loop to iterate over the `destination_cities` disctionary and call `get_driving_distance()` function to print real driving distance between San Fransico and each city. Rate limit your queries by adding `time.sleep(2)` between successive function calls. Make sure to replace the `ORS_API_KEY` value with your own key.
+Below cell contains a dictionary with 3 destination cities and their coordinates. Write a `for` loop to iterate over the `destination_cities` dictionary and call `get_driving_distance()` function to print real driving distance between San Fransico and each city. Rate limit your queries by adding `time.sleep(2)` between successive function calls. Make sure to replace the `ORS_API_KEY` value with your own key.
 
 
 ```python
