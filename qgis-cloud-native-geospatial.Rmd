@@ -42,17 +42,21 @@ knitr::include_graphics('images/spatial_thoughts_logo.png')
 
 # Introduction 
 
-This workshop is designed to help you take your first steps in building QGIS plugins. We will understand the QGIS plugin architecture and see how you can package your code and distribute it as a plugin. 
+This workshop will introduce participants to the modern approach to working with large datasets in QGIS. Modern data formats - such as Cloud-Optimized GeoTIFFs (COG), Cloud-Optimized Point Clouds (COPC), and FlatGeoBuf (FGB) allow datasets to be streamed from cloud storage without having to download entire files. Spatial Temporal Asset Catalog (STAC) provides a standardized way to query cloud-hosted datasets. Combined with QGIS, these technologies allow users to visualize and analyze large datasets which was not possible before.
 
-[![View Presentation](images/qgis_plugin_workshop/introduction.png){width="400px"}](https://docs.google.com/presentation/d/1NKTXASOgu8GFTWKkQpPbGDVRwDcyzRSdVwCg0772dTI/edit?usp=sharing){target="_blank"}
+[![View Presentation](images/qgis_cloud_native_geospatial/introduction.png){width="400px"}](https://docs.google.com/presentation/d/1cpu1PcEX1pCpFvGZ9yyNH_YKfndmSoxV6qi2Bf7p_jk/edit?usp=sharing){target="_blank"}
 
-[View the Presentation &#8599;](https://docs.google.com/presentation/d/1NKTXASOgu8GFTWKkQpPbGDVRwDcyzRSdVwCg0772dTI/edit?usp=sharing){target="_blank"}
+[View the Presentation &#8599;](https://docs.google.com/presentation/d/1cpu1PcEX1pCpFvGZ9yyNH_YKfndmSoxV6qi2Bf7p_jk/edit?usp=sharing){target="_blank"}
 
 # Installation and Setting up the Environment
 
 ## Install QGIS
 
 This workshop requires QGIS LTR version 3.34. Please review [QGIS-LTR Installation Guide](install-qgis-ltr.html) for step-by-step instructions.
+
+## Get the Data Package
+
+We have created a data package containing checkpoint projects that will allow you to load the results of each section. You can download the data package from `qgis-cloud-native-geospatial.zip`.
 
 # 1. Cloud Native Geospatial Formats
 
@@ -111,7 +115,7 @@ https://github.com/spatialthoughts/cloud-native-geospatial/releases/download/hyd
 knitr::include_graphics('images/qgis_cloud_native_geospatial/fgb2.png')
 ```
 
-3. A new layer `hydrorivers -- rivers` will be added to the *Layers* panel. This is a large line layer containing over 2.5 million features. QGIS will request and load only the features within the current canvas extent. FlatGeoBuf format does not contain simplified versions of features that can be loaded at lower zoom levels. So if you zoom out to a large region, all the features within that region will be requested. To prevent fetching unnecesarily large amounts of data - we can enable scale dependent visibility. Right-click the `hydrorivers -- rivers` layer and select *Properties*.
+3. A new layer `hydrorivers -- rivers` will be added to the *Layers* panel. This is a large line layer containing over 2.5 million features. QGIS will request and load only the features within the current canvas extent. FlatGeoBuf format does not contain simplified versions of features that can be loaded at lower zoom levels. So if you zoom out to a large region, all the features within that region will be requested. To prevent fetching unnecessarily large amounts of data - we can enable scale dependent visibility. Right-click the `hydrorivers -- rivers` layer and select *Properties*.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/qgis_cloud_native_geospatial/fgb3.png')
@@ -139,9 +143,106 @@ knitr::include_graphics('images/qgis_cloud_native_geospatial/fgb6.png')
 
 ## 2.1 Load a STAC Asset
 
-## 2.2 Application: Zonal Statistics
+1. Visit the [OpenLandMap STAC](https://stac.openlandmap.org/) catalog in a web browser. Locate the **JRC Global Human Settlement annual population (GHS)** collection and click to view more details.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac1.png')
+```
+
+2. This collection consists of GHSL Gridded Population rasters from year 2000-2021. Sort the collection in *Descending* order. The first item will be the latest population raster. Click on it to explore it further.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac2.png')
+```
+
+3. This STAC Item consists of a Cloud-Optimized GeoTIFF image of population for the year 2021. Click **Copy URL** button to get the direct link to access the file.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac3.png')
+```
+
+4. Open QGIS. From the *Browser* panel, scroll down and locate **XYZ Tiles &rarr; OpenStreetMap** tile layer. Drag and drop it to the main canvas. Once the `OpenStreetMap` layer is loaded, go to your region of interest. Click the *Open Data Source Manager* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac4.png')
+```
+
+5. Select the *Raster* tab. Select `Protocol: HTTP(S), cloud etc.` as the *Source Type*. Enter the URL copied in the previous step as the *URI*. Click *Add*.
+
+```
+https://s3.openlandmap.org/arco/pop.count_ghs.jrc_m_100m_s_20210101_20211231_go_epsg.4326_v20230620.tif
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac5.png')
+```
+
+6. A new layer `pop.count_ghs.jrc_m_100m_s_20210101_20211231_go_epsg.4326_v20230620` will be added to the *Layers* panel. This image represents the population count in each 100m x 100m grid cell. The original data comes with decimal values, but to optimize the storage space and transfer of data, the image is saved with the data type *UInt32* (Integers). To preserve the full fidelity of the data, the original pixel values are multiplied by 100. Hence if the the pixel value is `2068` - it represents a population count of `20.68`. Keep this in mind and we will appropriately scale our results with this factor. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stac6.png')
+```
+
+## 2.2 Zonal Statistics with Cloud-hosted Data
+
+1. Let's load some vector data. Click the *Open Data Source Manager* button. Select the *Vector* tab. Select `Protocol: HTTP(S), cloud etc.` as the *Source Type*. Enter the following URL as the *URI*. Click *Add*.
+
+```
+https://storage.googleapis.com/spatialthoughts-public-data/geoboundaries/admin2.fgb
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal1.png')
+```
+
+2. A new layer `admin2 -- adm2_polygons` will be added to the *Layers* panel. This is a very large vector polygon layer and the polygons for Admin2 regions within the current canvas extents will be fetched and loaded. We will pick a region of interest. To make the selection easier, let's add some labels to the polygons. Click the *Open Layer Styling Panel* button on the *Layers* panel.Select the *Labels* tab. Select `Single Labels` from the drop-down menu and select `adm2_name` as the *Value*. The name of the administrative region will be rendered on the map.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal2.png')
+```
+
+3. Click on the *Select Features by Area or Single Click* button on the *Selection Toolbar*. Once activated, click on your chosen administrative region to select it. Go to **Processing &rarr; Toolbox**. From the *Processing Toolbox*, search and locate the **Raster analysis &rarr; Zonal statistics** algorithm. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal3.png')
+```
+
+4. In the *Zonal Statistics* dialog, select `admin2 -- adm2_polygons` as the *Input layer*. Make sure to check the *Selected features only* box. Select the `pop.count_ghs.jrc_m_100m_s_20210101_20211231_go_epsg.4326_v20230620` layer as the *Raster layer*. Enter `population_` as the *Output column prefix*. For the *Statistics to calculate*, click the *...* button and select only `Sum`. Save the output as a file `zonal_stats.gpkg` and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal4.png')
+```
+
+5. The algorithm will fetch the pixels required to perform the calculation and once complete, a new layer `zonal_stats` will be added to the *Layers* panel. This layer contains the result of the Zonal Statistics that was computed directed from the cloud-hosted dataset by fetching only required pixels and features - saving us time, bandwidth and storage.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal5.png')
+```
+
+6. The resulting value needs to be scaled by a factor of 100 to get the actual population count. Search and locate the **Vector table &rarr; Field calculator** algorithm and double-click to open it. Select `zonal_stats` as the *Input layer* and enter `population` as the *Field name*. Enter the following expression to scale the population value. Enter the output file name as `zonal_stats_final.gpkg` and click *Run*.
+
+```
+"population_sum" / 100
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal6.png')
+```
+
+7. Once the computation finishes and the new layer `zonal_stats_final` is loaded, right-click the layer and select *Open Attribute Table*. The field **population** contains the total population within the selected administrative region.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/zonal7.png')
+```
 
 ## 2.3 Explore STAC Catalogs
+
+There are many publicly accessible STAC catalogs available - with more providers making their data available through STAC. To explore all the available catalogs, you can visit the [STAC Index](https://stacindex.org/). Click on *Catalogs* and explore the listings.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacindex.png')
+```
+
 
 # 3. STAC API Browser Plugin
 
@@ -163,8 +264,15 @@ gdal_translate -of COG viirs_ntl_2021_global.tif viirs_ntl_2021_global_cog.tif
 ogr2ogr -f FlatGeobuf hydrorivers.fgb hydrorivers.gpkg
 ```
 
+```
+ogr2ogr -f FlatGeobuf admin2.fgb admin2.gpkg -select "adm2_name,adm1_name,adm0_name,iso_2,iso_3"
+```
 
 ## 4.2 Hosting Cloud Native Geospatial Data
+
+# Data Credits
+
+* Global Edge-matched Subnational Boundaries: Humanitarian Edge Matched, FieldMaps, OCHA, geoBoundaries, U.S. Department of State, OpenStreetMap. Downloaded from https://fieldmaps.io/data
 
 
 # License
