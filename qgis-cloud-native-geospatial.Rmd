@@ -1,6 +1,6 @@
 ---
 title: "Cloud Native Geospatial Workflows with QGIS (Full workshop Material)"
-subtitle: "Using QGIS for visualizing and analyzing large cloud-hosted datasets."
+subtitle: "Using QGIS for visualizing and analyzing large cloud-hosted raster and vector datasets."
 author: "Ujaval Gandhi"
 fontsize: 12pt
 output:
@@ -246,11 +246,187 @@ knitr::include_graphics('images/qgis_cloud_native_geospatial/stacindex.png')
 
 # 3. STAC API Browser Plugin
 
-## 3.1 Query a STAC API
+## 3.1 Query a STAC API Catalog
+
+1. Let's install the *STAC API Browser* plugin. Go to **Plugins &rarr; Manage and Install Plugins**. Select the *All* tab and search for `STAC API Browser`. Once you find the plugin, click *Install*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin1.png')
+```
+
+2. Once installed, open the plugin from **Web &rarr; STAC API Browser Plugin &rarr; Open STAC API Browser**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin2.png')
+```
+
+3. In the *STAC API Browser* window, select `Microsoft Planetary Computer STAC API` as the *Connections*. Click *Fetch collections* to get all the collections available through the API. Scroll down and select the `ESA WorldCover` collection.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin3.png')
+```
+
+4. In the same window, scroll down and check the *Extent* box. Click the *Map Canvas Extent* to load the current extent. Click *Search*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin4.png')
+```
+
+5. This collection contains global landcover data for the years 2020 and 2021. The global dataset is split into several small tiles. You will see the matching tiles as items in the result. Click *View assets* for the item for the year 2021.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin5.png')
+```
+
+6. We will load the `Land Cover Classes` asset. Check the box *Select to add as a layer* and click *Add select assets as layers*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin6.png')
+```
+
+7. A new layer `Land Cover Classes` will be added to the *Layers* panel and the landcover pixels for the region will be streamed in. Let's rename the layer so we can easily identify it later. Right-click and select *Rename Layer*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin7.png')
+```
+
+8. Enter the layer name as `2021` and press *Enter*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin8.png')
+```
+
+9. Switch back to the *STAC API Browser* window and load the `Land Cover Classes` asset for the year 2020.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin9.png')
+```
+
+10. Once the layer is loaded, rename it to `2020`.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin10.png')
+```
+
+11. We queries and successfully loaded 2 remote layers for the landcover classification for the year 2020 and 2021.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/stacplugin11.png')
+```
 
 ## 3.2 Analyze Landcover Change
 
-## 3.3 Create a Sentinel-2 RGB Composite
+We will now analyze the change in water class between the year 2020 and 2021 to locate all areas where surface water was lost.
+
+1. To perform raster algebra on cloud layers, we need to use a special version of the raster calculator. Open the Processing Toolbox from **Processing &rarr; Toolbox**. Search and locate the **Raster analysis &rarr; Raster calculator (virtual)**. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover1.png')
+```
+
+2. In the *Raster calculator (virtual)* dialog, click the *...* button next to *Input layers* and select the `2020` layer. Next click the *Expression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover2.png')
+```
+
+3. ESA WorldCover classification assigns the pixel value 80 to Permanent Water Bodies [View Documentation](https://worldcover2020.esa.int/data/docs/WorldCover_PUM_V1.1.pdf). Enter the following expression to select all pixels classified as water. Click *OK*.
+
+```
+"2020@1" = 80
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover3.png')
+```
+
+4. Back in the *Raster calculator (virtual)* dialog, enter `water_2020` as the *Output layer name* and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover4.png')
+```
+
+5. A new layer `water_2020` will be added to the *Layers* panel. This is a boolean layer with pixel values 1 for water and 0 for all other classes.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover5.png')
+```
+
+6. Repeat the process for the 2021 layer. This time enter `water_2021` as the *Output layer name*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover6.png')
+```
+
+7. We have now isolated the water pixels for both the years. Let's analyze the change between the years. Search and locate the **Raster analysis &rarr; Raster calculator (virtual)**. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover7.png')
+```
+
+8. In the *Raster calculator (virtual)* dialog, click the *...* button next to *Input layers* and select both the `water_2020` and `water_2021` layers. Next click the *Expression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover8.png')
+```
+
+9. We want to identify the loss in surface water. This can be done by selecting all pixels which were water in 2020 but not water in 2021. Enter the following expression to match these pixels.
+
+```
+("water_2020@1" = 1) AND ("water_2021@1" != 1)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover9.png')
+```
+
+10. Back in the *Raster calculator (virtual)* dialog, enter `waterlost` as the *Output layer name* and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover10.png')
+```
+
+11. A new layer `waterlost` will be added to the *Layers* panel. Everything we have done so far is a dynamic computation on the remote data layers. Let's perform the actual computation and save the results as a local raster. Right-click the `waterlost` layer and go to **Export &rarr; Save As...**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover11.png')
+```
+
+12. In the *Save Raster Layer as...* dialog, click the *...* button and browse to a folder on your computer. Enter `waterlost_export.tif` as the output file name. Expand the *Extent* section and click the *Map Canvas Extent* button to load the current extent. It is always a good idea to apply a lossless compression to raster files. Check the *Create Options* box and select `High Compression` as the *Profile*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover12.png')
+```
+
+13. Scroll down and check the *No data values* box. Click the **+** button and enter the values `0` as *From* and *To*. This will only keep the pixels with value 1 as data values in the output. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover13.png')
+```
+
+14. QGIS will now request the pixels within the given extent and perform the calculations as requested. It may take a few minutes depending on the size of the region and available internet bandwidth. Once complete, a new layer `waterlost_export` will be added to the *Layers* panel.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover14.png')
+```
+
+15. The `waterlost_export` is a local raster with pixels showing regions that experienced loss in surface water. Let's conver this layer to polygons. From the Processing Toolbox, search and locate the **GDAL &rarr; Raster Conversion &rarr; Polygonize (raster to vector)** algorithm.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover15.png')
+```
+
+16. In the *Polygonize (raster to vector)* dialog, select `waterlost_export` as the *Input layer*. Keep all other parameters to their default values. Click *...* next to *Vectorized* and browse to a folder on your computer. Enter the filename as `waterlost_polygons.gpkg`. Click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover16.png')
+```
+
+17. Once the conversion is complete, a new layer `waterlost_polygons` will be added to QGIS. Using a cloud-native workflow, we were able to do a landcover change analysis without downloading any data or incurring any cloud computation cost.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover17.png')
+```
 
 # 4. Creating and Hosting Cloud Native Geospatial Data
 
