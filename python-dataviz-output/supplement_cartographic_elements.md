@@ -84,7 +84,7 @@ gdf
 
 Initialize a map with a CRS.
 
-Referemce: [`eomaps.Maps()`](https://eomaps.readthedocs.io/en/latest/generated/eomaps.eomaps.Maps.html#eomaps.eomaps.Maps)
+Reference: [`eomaps.Maps()`](https://eomaps.readthedocs.io/en/latest/generated/eomaps.eomaps.Maps.html#eomaps.eomaps.Maps)
 
 
 ```python
