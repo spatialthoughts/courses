@@ -96,7 +96,7 @@ Set the map extent.
 
 ```python
 xmin, ymin, xmax, ymax = gdf.total_bounds
-buffer = 0.1
+buffer = 0.25
 m.set_extent([xmin-buffer, xmax+buffer, ymin-buffer, ymax+buffer])
 ```
 
@@ -134,7 +134,7 @@ s = m.add_scalebar(
     auto_position=(0.05,0.08),
     preset='bw',
     rotation=90,
-    label_props={'rotation':90, 'offset':1.5, 'family':'Helvetica', 'weight':0.5},
+    label_props={'rotation':90, 'offset':1.5, 'weight':0.5},
     scale_props={'colors': ('k','#bdbdbd','k','#bdbdbd','k')},
     line_props={'lw':0, 'ls': 'solid'}
 )
@@ -160,8 +160,23 @@ classification_kwds={
 m.add_gdf(gdf, column='density', cmap='RdYlGn_r', scheme='User_Defined',
           classification_kwds=classification_kwds,
           legend=True, legend_kwds=legend_kwds)
+
+# Change the last entry in the legend to '>5000'
+m.ax.get_legend().texts[-1].set_text('> 5000')
+m.add_title('California Population Density (2019)', y=0.97)
+
 m.show()
 ```
+
+
+    
+![](python-dataviz-output/supplement_cartographic_elements_files/supplement_cartographic_elements_22_0.png)
+    
+
+
+
+    <Figure size 640x480 with 0 Axes>
+
 
 Save the map.
 
@@ -169,11 +184,5 @@ Save the map.
 ```python
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'map.png')
-m.savefig(output_path)
+m.savefig(output_path, dpi=200)
 ```
-
-
-    
-![](python-dataviz-output/supplement_cartographic_elements_files/supplement_cartographic_elements_24_0.png)
-    
-
