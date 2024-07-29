@@ -1,6 +1,6 @@
 ### Creating Maps with Cartographic Elements
 
-This notebook shows how to use the [EOMaps](https://eomaps.readthedocs.io/en/latest/index.html) to crate maps with cartographic elements such as north arrow, scalebar and gridlines.
+This notebook shows how to use the [EOMaps](https://eomaps.readthedocs.io/en/latest/index.html) library to create maps with cartographic elements such as north arrow, scalebar and gridlines.
 
 #### Setup and Data Download
 
