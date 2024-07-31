@@ -1,0 +1,71 @@
+// Example script showing how to visualize
+// all the bands of an image
+// 1. Filmstrip: Create a tiled image with all the bands
+// 2. Animation: Create a video with a frame for each band
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+var geometry = ee.Geometry.Polygon([[
+  [77.57018, 12.96010],
+  [77.57018, 12.93953],
+  [77.59988, 12.93953],
+  [77.59988, 12.96010]]
+]);
+          
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Sort the collection and pick the least cloudy image
+var filteredS2Sorted = filteredS2.sort('CLOUDY_PIXEL_PERCENTAGE');
+var image = filteredS2Sorted.first();
+
+// Convert the multi-band image to an ImageCollection
+var bands = image.select('B.*').bandNames();
+
+// Remove the 'Cirrus' band
+var bandsToUse = bands.remove('B10');
+
+// Tip: change the bandsToUse variable to a smaller list
+// such as ['B1', 'B2', 'B3', 'B4] to create shorter 
+// filmstrips and repeat for other bands
+
+// map() a function on the list of bands
+var bandCol = ee.ImageCollection(bandsToUse.map(function(band) {
+  // All images in a collection are expected to have the same bands
+  // Set the name of hte bands to 'band'
+  var bandImage = image.select([band]).rename('band');
+  // Set the image ID to the actual name of the band. i.e. B1, B2 etc.
+  return bandImage.set('system:index', band);
+}));
+
+// Define arguments for the getFilmstripThumbURL function parameters.
+var filmArgs = {
+  dimensions: 800,
+  region: geometry,
+  crs: 'EPSG:3857',
+  min: 500,
+  max: 2700,
+  palette: ['black', 'white']
+};
+
+// Print a URL that will produce the filmstrip when accessed.
+print('Film Strip (click to view)', bandCol.getFilmstripThumbURL(filmArgs));
+
+// Create an Animation
+var videoArgs = {
+  dimensions: 800,
+  region: geometry,
+  crs: 'EPSG:3857',
+  framesPerSeconds: 1,
+  min: 500,
+  max: 2700,
+  palette: ['black', 'white']
+};
+
+print('Animation (click to view)', bandCol.getVideoThumbURL(videoArgs));
+
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+
+Map.centerObject(geometry, 10);
+Map.addLayer(image, rgbVis, 'Image');
+

@@ -78,18 +78,25 @@ function maskL8sr(image) {
       .copyProperties(image, ['system:time_start']);
 }
 
-// Apply cloud-mask and rename bands
+// Apply filters, cloud-mask and rename bands
+// Filters from https://github.com/google/earthengine-catalog/blob/main/pipelines/landsat.py
 var L5 = L5
+  .filter(ee.Filter.lt('WRS_ROW', 122))  // Remove night-time images.
   .map(maskL457sr)
-  .select(l5Bands,l5names)
+  .select(l5Bands,l5names);
 
 var L7 = L7
+  .filter(ee.Filter.lt('WRS_ROW', 122))  // Remove night-time images.
+  .filter(ee.Filter.date('1984-01-01', '2017-01-01'))  // Orbital drift after 2017.
   .map(maskL457sr)
-  .select(l7Bands,l7names)
+  .select(l7Bands,l7names);
 
 var L8 = L8
+  .filterDate(ee.Filter.date('2013-05-01', '2099-01-01')) // Images before May 1 had some pointing issues.
+  .filter(ee.Filter.neq('NADIR_OFFNADIR', 'OFFNADIR'))
+  .filter(ee.Filter.lt('WRS_ROW', 122))  // Remove night-time images.
   .map(maskL8sr)
-  .select(l8Bands,l8names)
+  .select(l8Bands,l8names);
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Step 3a: Verify Radiometric Calibration
