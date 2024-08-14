@@ -1,7 +1,8 @@
 [XEE](https://github.com/google/Xee) is an python package for working with Google Earth Engine data with [XArray](https://docs.xarray.dev/en/stable/). XEE makes it possible to leverage the strengths of both GEE and the Python ecosystem around XArray.
 
-We will learn how to use XEE to extract and process a NDVI time-series for a location.
+We will learn how to use XEE to extract and process a NDVI time-series for a single point location.
 
+If you want to download processed time-series images as GeoTIFF files, pleasee see [this notebook](https://courses.spatialthoughts.com/python-remote-sensing.html#processing-time-series).
 
 #### Installation
 

@@ -1,0 +1,53 @@
+// Example script showing how to create a chart of
+// Dynamic World Class Probabilities Over Time
+
+var location1 = ee.Geometry.Point([77.688, 12.894]);
+var location2 = ee.Geometry.Point([77.746, 12.889]);
+
+var geometry = ee.FeatureCollection([
+  ee.Feature(location1, {name: 'newly built'}),
+  ee.Feature(location2, {name: 'non-bullt'})
+  ])
+  
+Map.addLayer(geometry, {color: 'red'}, 'Selected Locations')
+Map.centerObject(geometry, 16)
+
+// Filter the Dynamic World collection for the time period and
+// location of interest.
+var startDate = ee.Date.fromYMD(2019, 1, 1);
+var endDate = startDate.advance(5, 'year');
+
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+
+var probabilityBands = [
+    'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+    'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+    ];
+
+// Select all probability bands
+var dwTimeSeries = dw.select(probabilityBands);
+
+// Plot the time series for a single class
+var chart = ui.Chart.image.seriesByRegion({
+  imageCollection: dwTimeSeries.select('built'),
+  regions: geometry,
+  reducer: ee.Reducer.mean(),
+  scale: 10,
+  seriesProperty: 'name'
+}).setOptions({
+      lineWidth: 0.5,
+      pointSize: 1,
+      title: 'Dynamic World Class Probability (Built)',
+      interpolateNulls: true,
+      vAxis: {title: 'Probability', viewWindow: {min:0, max:1}},
+      hAxis: {title: '', format: 'YYYY-MMM'},
+      series: {
+        0: {color: 'red', linewidth: 1},
+        1: {color: 'orange', lineWith: 0.5},
+      },
+      chartArea: {left:100, right:100},
+      legend: {position: 'top'}
+    });
+print(chart);
