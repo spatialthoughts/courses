@@ -2,9 +2,27 @@ var geometry = ee.Geometry.Point([77.5979, 13.00896]);
 Map.centerObject(geometry, 10)
 
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var s2WithCs = s2.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
 var rgbVis = {
   min: 0.0,
-  max: 0.3,
+  max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
 
@@ -15,20 +33,6 @@ var palette = [
 
 var ndviVis = {min:0, max:0.5, palette: palette }
 
-
-// Write a function for Cloud masking
-function maskS2clouds(image) {
-  var qa = image.select('QA60')
-  var cloudBitMask = 1 << 10;
-  var cirrusBitMask = 1 << 11;
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
-             qa.bitwiseAnd(cirrusBitMask).eq(0))
-  return image.updateMask(mask).divide(10000)
-      .select('B.*')
-      .copyProperties(image, ['system:time_start'])
-}
-
-
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
@@ -36,11 +40,11 @@ function addNDVI(image) {
 }
 
 function getComposite(geometry) {
-  var filtered = s2
+  var filtered = s2WithCs
   .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.bounds(geometry))
-  .map(maskS2clouds)
+  .map(maskLowQA);
   // Map the function over the collection
   var withNdvi = filtered.map(addNDVI);
 
@@ -105,10 +109,10 @@ var displayChart = function(point) {
   resetPanel.add(button)
   var geometry = ee.Geometry.Point(point['lon'], point['lat']);
   
-  var filtered = s2
+  var filtered = s2WithCs
     .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-    .map(maskS2clouds)
+    .map(maskLowQA)
     .map(addNDVI)
     .filter(ee.Filter.bounds(geometry))
   

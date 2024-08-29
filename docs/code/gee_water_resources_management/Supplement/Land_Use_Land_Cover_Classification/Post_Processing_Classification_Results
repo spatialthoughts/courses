@@ -1,14 +1,18 @@
 // Sentinel-2 Median Composite
-var composite = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
-Map.addLayer(composite, {min: 0, max: 0.3,   bands: ['B4', 'B3', 'B2']}, 'RGB Composite');
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_2019_composite');
+Map.addLayer(composite, {min: 0, max: 3000,   bands: ['B4', 'B3', 'B2']}, 'RGB Composite');
 
 // Raw Supervised Classification Results
-var classified = ee.Image("users/ujavalgandhi/e2e/arkavathy_final_classification");
+var classified = ee.Image('users/ujavalgandhi/e2e/arkavathy_final_classification');
 var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
 Map.addLayer(classified, {min: 0, max: 3, palette: palette}, 'Original');
 
-Map.centerObject(classified, 10)
+var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
 
+Map.centerObject(geometry, 10);
 
 //************************************************************************** 
 // Post process by clustering
@@ -38,7 +42,6 @@ Map.addLayer(clusterMajority, {min: 0, max: 3, palette: palette},
   'Processed using Clusters');
 
 
-
 //************************************************************************** 
 // Post process by replacing isolated pixels with surrounding value
 //************************************************************************** 
@@ -57,3 +60,29 @@ var filtered = classified.focal_mode({
 var connectedClassified =  classified.where(patchsize.lt(25),filtered);
 Map.addLayer(connectedClassified, {min: 0, max: 3, palette: palette}, 
   'Processed using Connected Pixels');
+
+//************************************************************************** 
+// Export the Results
+//************************************************************************** 
+// Pixel-based methods are scale dependent
+// Zooming in or out will change the results
+// Export the results at the required scale to see the final result.
+Export.image.toDrive({
+  image: clusterMajority,
+  description: 'Post_Processed_with_Clusters',
+  folder: 'earthengine',
+  fileNamePrefix: 'classification_clusters',
+  region: geometry,
+  scale: 10,
+  maxPixels: 1e10
+})
+
+Export.image.toDrive({
+  image: connectedClassified,
+  description: 'Post_Processed_with_ConnectedPixels',
+  folder: 'earthengine',
+  fileNamePrefix: 'classification_connected',
+  region: geometry,
+  scale: 10,
+  maxPixels: 1e10
+})
