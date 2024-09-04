@@ -42,7 +42,7 @@ knitr::include_graphics('images/spatial_thoughts_logo.png')
 
 # Introduction 
 
-This workshop will introduce participants to the modern approach to working with large datasets in QGIS. Modern data formats - such as Cloud-Optimized GeoTIFFs (COG), Cloud-Optimized Point Clouds (COPC), and FlatGeoBuf (FGB) allow datasets to be streamed from cloud storage without having to download entire files. Spatial Temporal Asset Catalog (STAC) provides a standardized way to query cloud-hosted datasets. Combined with QGIS, these technologies allow users to visualize and analyze large datasets which was not possible before.
+This workshop introduces participants to the modern approach to working with large datasets in QGIS. Modern data formats - such as Cloud-Optimized GeoTIFFs (COG), Cloud-Optimized Point Clouds (COPC), and FlatGeoBuf (FGB) allow datasets to be streamed from cloud storage without having to download entire files. Spatial Temporal Asset Catalog (STAC) provides a standardized way to query cloud-hosted datasets. Combined with QGIS, these technologies allow users to visualize and analyze large datasets which was not possible before.
 
 [![View Presentation](images/qgis_cloud_native_geospatial/introduction.png){width="400px"}](https://docs.google.com/presentation/d/1cpu1PcEX1pCpFvGZ9yyNH_YKfndmSoxV6qi2Bf7p_jk/edit?usp=sharing){target="_blank"}
 
@@ -410,7 +410,7 @@ knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover13.png')
 knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover14.png')
 ```
 
-15. The `waterlost_export` is a local raster with pixels showing regions that experienced loss in surface water. Let's conver this layer to polygons. From the Processing Toolbox, search and locate the **GDAL &rarr; Raster Conversion &rarr; Polygonize (raster to vector)** algorithm.
+15. The `waterlost_export` is a local raster with pixels showing regions that experienced loss in surface water. Let's convert this layer to polygons. From the Processing Toolbox, search and locate the **GDAL &rarr; Raster Conversion &rarr; Polygonize (raster to vector)** algorithm.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/qgis_cloud_native_geospatial/landcover15.png')
@@ -446,9 +446,159 @@ ogr2ogr -f FlatGeobuf admin2.fgb admin2.gpkg -select "adm2_name,adm1_name,adm0_n
 
 ## 4.2 Hosting Cloud Native Geospatial Data
 
+# Supplement
+
+## Analyzing Cloud-Hosted Satellite Imagery
+
+In this section, we will learn how to query a STAC catalog of Sentinel-2 L2A data, load and create a RGB composite and compute a spectral index using a cloud-native approach.
+
+1. Start by loading a basemap. From the *Browser* panel, scroll down and locate **XYZ Tiles &rarr; OpenStreetMap** tile layer. Drag and drop it to the main canvas. Zoom to your region of interest. We will use the *STAC API Browser* plugin to query for satellite images over this area. Open the plugin from **Plugins &rarr; STAC API Browser Plugin &rarr; Open STAC API Browser**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite1.png')
+```
+
+2. Select ``Earth Search`` from the *Connections* dropdown. Click *Edit* to view the connection details.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite2.png')
+```
+
+3. Make sure the URL is ``https://earth-search.aws.element84.com/v1`` and click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite3.png')
+```
+
+4. In the *STAC API Browser* window, click the *Fetch collections* button. Once the list updates, select the ``Sentinel-2 Level-2A`` collection. If you do not see this dataset listed, please go to the previous step and verify the URL is correct.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite4.png')
+```
+
+5. Check the *Filter by date* option and enter a start and end date. Sentinel-2 Level-2A dataset is available from 2017 onward and a new image is collected every 5 days. Check the *Extent* option and click *Map Canvas Extent* button to fill the coordinates of the region visible on the map. Click *Search*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite5.png')
+```
+
+6. In the *Results* tab, you will see the list of matching images. From the preview of the image, locate a reasonably cloud-free image and click *View assets*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite6.png')
+```
+
+7. For this exercise, we will load data for 4 image bands. Check the *Select to add as a layer* box for ``Blue (band 2)``, ``Green (band 3)``, ``Red (band 4)`` and ``SWIR 1 (band 11)``. Click *Add select assets as layers (4)*. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite7.png')
+```
+
+8. The selected bands will be loaded as new layers in the main QGIS canvas. Each band is a Cloud-Optimized GeoTIFF (COG) that is hosted on AWS and being streamed to your QGIS. We can combine multiple bands into a single image and visualize it. These are called *Color Composites*. Let's stack the Red, Green and Blue bands to create an natural color composite. Go to **Processing &rarr; Toolbox**. From the *Processing Toolbox*, search and locate the **GDAL &rarr; Raster miscellaneous &rarr; Build virtual raster** algorithm. Double-click to open it. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite8.png')
+```
+
+9. This algorithm creates a new layer in the [Virtual Raster](https://gdal.org/en/latest/drivers/raster/vrt.html) format which allows you to combine multiple raster layers in to a single file without consuming extra disk space. Select ``Blue (band 2)``, ``Green (band 3)``, ``Red (band 4)`` as *Input layers* and check *Place each input file into a separate band*. Click the ``...`` button next to *Virtual* and save the output file as ``rgb.vrt``. Next click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite9.png')
+```
+
+10. A new layer ``rgb`` will be added to the *Layers* panel. This layer contains references to the 3 different images. Note that the order of the bands in alphabetical, so the mapping in the virtual raster is as follows: *Band 1 &rarr; Blue (band 2)*, *Band 2 &rarr; Green (band 3)* and *Band 3 &rarr; Red (band 4)*. Open the *Layer Styling Panel* and place ``Band 3``, ``Band 2`` and ``Band 1`` as *Red*, *Green* and *Blue* bands. Change the *Min* and *Max* values to ``0`` and ``3000`` respectively. You will see the image now appear in natural colors.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite10.png')
+```
+
+11. We can also do some analysis with the satellite image bands. Let's calculate the **Modified Normalized Difference Water Index (MNDWI)**. This is a widely used spectral index for identifying and extracting water pixels from satellite images. This index is calculated by taking the normalized ratio of the Green (band 3) and the SWIR-1 (band 11) bands. From the *Processing Toolbox*, search and locate the **GDAL &rarr; Raster analysis &rarr; Raster calculator (virtual)** algorithm. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite11.png')
+```
+
+12. In the *Raster calculator (virtual)* dialog, click the ``..`` button for *Input layers*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite12.png')
+```
+
+13. Select the ``Green (band 3)`` and the ``SWIR 1 (band 11)`` layers and click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite13.png')
+```
+
+14. Next click the *Expression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite14.png')
+```
+
+15. Remember the formula for MNDWI is (Green - SWIR1)/(Green + SWIR1). You can click on the layer names to enter it in the *Raster Calculator Expression* and construct the expression as shown below. Once done, click *OK*. 
+
+```
+("Green (band 3) - 10m@1" - "SWIR 1 (band 11) - 10m@1")
+/ ("Green (band 3) - 10m@1" + "SWIR 1 (band 11) - 10m@1")
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite15.png')
+```
+
+16. Enter the *Output layer name* as ``MNDWI`` and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite16.png')
+```
+
+17. A new layer ``MNDWI`` will be added to the *Layers* panel. Click the open the *Layer Styling Panel* button. Change the renderer to ``Singleband psuedocolor``. Set the *Min* and *Max* values to ``0`` and ``0.8`` respectively. Choose the ``Blues`` as the *Color ramp*. You will see a visualization where all detected water pixels are highlighted in the blue color.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite17.png')
+```
+
+18. The MNDWI image contains values in the range -1 to +1 with pixel values 0 and above typically indicating presence of water. We can extract the water pixels to a new layer by applying a threshold of 0. From the *Processing Toolbox*, search and locate the **GDAL &rarr; Raster analysis &rarr; Raster calculator (virtual)** algorithm. Double-click to open it.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite18.png')
+```
+
+19. Select the ``MNDWI`` layer as the *Input layers* and enter the expression shown below. Set the *Output layer name* to ``Water`` and click *Run*.
+
+```
+"MNDWI@1" > 0
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite19.png')
+```
+
+20. A new layer named ``Water`` will be added to the *Layers* panel. Click the open the *Layer Styling Panel* button. Set the *Min* and *Max* values to ``0`` and ``1`` respectively. You will see all the extracted water pixels in white. Remember this image is still a virtual image being computed on-the-fly by streaming in the required data directly from the cloud-hosted COGs. You can Zoom and Pan the map and the water pixels will be extracted dynamically. We can save the results as a local GeoTIFF. Right-click on the ``Water`` layer and select **Export &rarr; Save As...**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite20.png')
+```
+
+21. Click the ``..`` button next to *File name* and save the file as ``extracted_water.tif``. Expand the *Extent* section and click the *Map Canvas Extent* button. Set both both *Horizontal* and *Vertical* values for *Resolution* to be ``10`` meters. Check the *Create options* box and select ``High Compression`` as the *Profile*. Click *OK* to start the export process. At this stage, QGIS will fetch the required pixels from the cloud dataset at the required resolution, perform the computation to calculate MNDWI and extract the water pixels. Depending on how big is your region, this process may take a few minutes.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite21.png')
+```
+
+22. Once complete, a new layer ``extracted_water`` will be added to the *Layers* panel. You were able visualize a satellite image and perform a complex calculation to extract water from the image without first having to download the entire scene. Saving time, bandwidth and computation resources.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_cloud_native_geospatial/satellite22.png')
+```
+
+
+
 # Data Credits
 
 * Global Edge-matched Subnational Boundaries: Humanitarian Edge Matched, FieldMaps, OCHA, geoBoundaries, U.S. Department of State, OpenStreetMap. Downloaded from https://fieldmaps.io/data
+* Sentinel-2 Level-2A: Contains Copernicus Sentinel data.
 
 
 # License
