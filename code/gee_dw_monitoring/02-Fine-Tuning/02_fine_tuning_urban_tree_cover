@@ -280,6 +280,7 @@ var built =
             })]),
     garden = 
     /* color: #ffc82d */
+    /* shown: false */
     /* displayProperties: [
       {
         "type": "rectangle"
@@ -857,6 +858,16 @@ var image = dw_comp.addBands(ndvi);
 // Create a single featurecollection from all training samples
 var fc = built.merge(nationalPark).merge(garden).merge(isolatedGreen).merge(waterbody).merge(openarea);
 
+// Define a dictionary with the target class names
+var classNames = ee.Dictionary({
+  '1': 'built',
+  '2': 'nationalPark',
+  '3': 'garden',
+  '4': 'isolatedGreen',
+  '5': 'waterbody',
+  '6': 'openarea'
+});
+
 // Create a chart showing distribution of different DW probabilities
 // for each landcover class from training samples
 // This helps visualize if the classes can be separated using the
@@ -866,23 +877,22 @@ var fc_prop = dw_comp.reduceRegions({
   collection: fc,
   reducer: ee.Reducer.mean(),
   scale: 10
-})
-
+});
 var aggregate = fc_prop.reduceColumns({
   reducer: ee.Reducer.mean().repeat(7).group(0, 'landcover'),
   selectors: ['landcover', 'water','trees','grass','crops','shrub_and_scrub','built','bare'], 
 });
-
 var processed = ee.List(aggregate.get('groups')).map(function(group) {
-  var landcover = ee.Dictionary(group).get('landcover')
-  var bands = ['water','trees','grass','crops','shrub_and_scrub','built','bare']
-  var values = ee.Dictionary(group).get('mean')
-  var probabilities = ee.Dictionary.fromLists(bands, values)
-  var classDict = ee.Dictionary({'landcover': ee.Dictionary(classNames).get(landcover)})
-  var properties = classDict.combine(probabilities)
-  return ee.Feature(null, properties)
-})
-
+  var landcover = ee.Dictionary(group).get('landcover');
+  var bands = ['water','trees','grass','crops','shrub_and_scrub','built','bare'];
+  var values = ee.Dictionary(group).get('mean');
+  var probabilities = ee.Dictionary.fromLists(bands, values);
+  var classDict = ee.Dictionary({
+    'landcover': ee.Dictionary(classNames).get(landcover)
+  });
+  var properties = classDict.combine(probabilities);
+  return ee.Feature(null, properties);
+});
 
 var chart = ui.Chart.feature.byFeature({
   features: processed,
@@ -895,8 +905,11 @@ var chart = ui.Chart.feature.byFeature({
       vAxis: {
         title: 'Probability',
       },
-    isStacked: true
-  })
+    isStacked: true,
+    legend: {position: 'top'},
+    chartArea: {left:100, right:100}
+
+  });
 print(chart);
 
 
@@ -933,7 +946,7 @@ Map.centerObject(geometry);
 Map.addLayer(s2_comp.clip(geometry),{bands:['B4','B3','B2'],min:500,max:2200},'Sentinel-2 Composite');
 Map.addLayer(dw_comp.clip(geometry),{bands:['built','trees','water']},'DW composite', false);
 Map.addLayer(ndvi,{},'S2 NDVI',false);
-Map.addLayer(classified.clip(geometry), viz_class,'classified');
+Map.addLayer(classified.clip(geometry), viz_class, 'Classified');
 
 var areaImage = ee.Image.pixelArea().divide(1e6).addBands(classified);
 
@@ -953,16 +966,6 @@ var classAreas = ee.List(areas.get('groups'))
 // Process results to extract the areas and
 // create a FeatureCollection
 
-// We can define a dictionary with class names
-var classNames = ee.Dictionary({
-  '1': 'built',
-  '2': 'nationalPark',
-  '3': 'garden',
-  '4': 'isolatedGreen',
-  '5': 'waterbody',
-  '6': 'openarea'
-});
-
 var classAreas = classAreas.map(function(item) {
   var areaDict = ee.Dictionary(item);
   var classNumber = ee.Number(areaDict.get('classification'));
@@ -976,7 +979,7 @@ print(classAreaFc);
 
 // Add a Legend
 
-var legend = ui.Panel({style: {position: 'middle-right', padding: '8px 15px'}});
+var legend = ui.Panel({style: {position: 'middle-left', padding: '8px 15px'}});
 
 var makeRow = function(color, name) {
   var colorBox = ui.Label({
