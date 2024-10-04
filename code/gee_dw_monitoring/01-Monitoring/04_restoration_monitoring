@@ -1,0 +1,189 @@
+// **************************************************************
+// Monitoring Restoration Trends using Dynamic World
+
+// This script show how to analyse the trend of landcover change
+// using a set of probability bands from Dynamic World
+
+// This script first aggregates the Dynamic World images
+// to monitor a forest restoration project in Maasai Mau Forest
+// block in Kenya. Several interventions have helped restore 
+// grassland and forest since 2019.
+
+// The original time-series is quite noisy so we first aggregate
+// it to a monthly mean probability time-series and compute a
+// per-pixel trend using Sens Slope reducer.
+// The resulting image is used to identify regions with positive
+// trend of 'grass' and 'trees' probabilities.
+// **************************************************************
+
+// Use the Boundary of the Maasai Mau Forest Block as the geometry
+var mmf = ee.FeatureCollection('users/ujavalgandhi/kenya/mmf');
+var geometry = mmf.geometry();
+Map.centerObject(geometry, 12);
+
+// Define the time periods for trend analysis
+var startYear = 2018;
+var endYear = 2022;
+
+var years = ee.List.sequence(startYear, endYear);
+var months = ee.List.sequence(1, 12);
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+var probabilityBands = [
+  'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+  'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+];
+
+// Filter the collection and select the 'built' band.
+var dwFiltered = dw
+  .filter(ee.Filter.bounds(geometry))
+  .select(probabilityBands);
+
+// Create monthly mean images
+var monthlyImages = years.map(function(year) {
+  return months.map(function(month) {
+    var filtered = dwFiltered
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'))
+    var monthly = filtered.mean()
+    return monthly.set({
+      'month': month,
+      'year': year,
+      'system:time_start': ee.Date.fromYMD(year, month, 1).millis(),
+      'num_images': filtered.size()
+    });
+  });
+}).flatten();
+
+// Create a collection and remove empty monthly images
+// (some months have no cloud-free images)
+var dwMonthly = ee.ImageCollection.fromImages(monthlyImages)
+  .filter(ee.Filter.gt('num_images', 0));
+
+// Create a chart with trendlines at a single pixel
+// Using a 'point' geometry defined below
+var point = ee.Geometry.Point([35.6411135927488, -0.7638615833843021]);
+var chart = ui.Chart.image.series({
+  imageCollection: dwMonthly.select(['crops', 'trees']),
+  region: point,
+  reducer: ee.Reducer.mean(),
+  scale: 10
+}).setOptions({
+      lineWidth: 1,
+      pointSize: 1,
+      title: 'Dynamic World Time Series',
+      interpolateNulls: true,
+      curveType: 'function',
+      vAxis: {
+        title: 'Probability',
+        gridlines: {color: '#f0f0f0'},
+        viewWindow: {min:0, max:1}
+      },
+      series: {
+        0: {
+          color: '#dfc35a',
+          visibleInLegend: false,
+        },
+        1: {
+          color: '#397d49',
+          visibleInLegend: false,
+        }
+      },
+      trendlines: {
+        0: {
+          type: 'linear', 
+          color: '#dfc35a',
+          lineWidth: 1,
+          pointSize: 0,
+          visibleInLegend: true,
+          labelInLegend: 'Trend of \'grass\' probabilty',
+        },
+        1: {
+          type: 'linear', 
+          color: '#397d49',
+          lineWidth: 1,
+          pointSize: 0,
+          visibleInLegend: true,
+          labelInLegend: 'Trend of \'trees\' probabilty',
+        }
+    },
+    chartArea: {
+        width: '80%',
+        height: '80%'
+      },
+    legend: {position:'in'},
+
+});
+print(chart);
+
+
+// Trend Analysis
+
+var addTimeBand = function(image) {
+  // Compute time in fractional years since the epoch.
+  var date = image.date();
+  var years = date.difference(ee.Date.fromYMD(1970, 1, 1), 'year');
+  var yearImage = ee.Image(years).rename('time').float();
+  // Return the image the time band
+  // As we are using 'year' as time, the trend will be in units
+  // of change per year
+  return image.addBands(yearImage);
+};
+
+var dwFilteredWithTime = dwMonthly.map(addTimeBand);
+
+// Calculate time series slope using sensSlope().
+// The resulting image has 2 bands: slope and intercept
+// We select the 'slope' band
+var grassSlope = dwFilteredWithTime.select(['time', 'grass'])
+  .reduce(ee.Reducer.sensSlope())
+  .select('slope');
+  
+// The unit of slope pixel values is Δprobability/year
+
+// Mask pixels with small slopes;
+var slopeThreshold = 0.1;
+var grassSlopeMasked = grassSlope.updateMask(
+  grassSlope.gt(slopeThreshold).or(grassSlope.lt(-slopeThreshold)));
+
+var treesSlope = dwFilteredWithTime.select(['time', 'trees'])
+  .reduce(ee.Reducer.sensSlope())
+  .select('slope');
+
+// Mask pixels with small slopes;
+var treesSlopeMasked = treesSlope.updateMask(
+  treesSlope.gt(slopeThreshold).or(treesSlope.lt(-slopeThreshold)));
+
+// Visualize the results
+
+// Add Sentinel-2 Composites to verify the results.
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+     .filterBounds(geometry)
+     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35));
+
+// Create a median composite from sentinel-2 images.
+var beforeS2 = s2.filter(ee.Filter.date(
+    ee.Date.fromYMD(startYear, 1, 1), 
+    ee.Date.fromYMD(startYear + 1, 1, 1)
+  )).median();
+var afterS2 = s2.filter(ee.Filter.date(
+    ee.Date.fromYMD(endYear, 1, 1), 
+    ee.Date.fromYMD(endYear + 1, 1, 1)
+  )).median();  
+// Visualize images
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 2500, gamma:1.1};
+var region = ee.FeatureCollection([ee.Feature(geometry)]);
+var border = ee.Image().byte().paint(region, 1, 1);
+Map.addLayer(border, {}, 'Maasai Mau Forest Block');
+  
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2', false);
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2', false);
+
+
+// Slope values are change in probability / year
+Map.addLayer(grassSlopeMasked.clip(geometry), 
+  {min: -0.2, max: 0.2, palette: ['brown', 'yellow']}, 'Grass Restoration Trend');
+Map.addLayer(treesSlopeMasked.clip(geometry), 
+  {min: -0.2, max: 0.2, palette: ['brown', 'green']}, 'Trees Restoration Trend');

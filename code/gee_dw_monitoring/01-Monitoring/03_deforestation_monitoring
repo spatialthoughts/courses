@@ -1,0 +1,203 @@
+// ================================================================
+// Monitoring Deforestation using Dynamic World
+
+// This script shows how to use Dynamic World 'trees' probability band
+// to identify forest pixels and calculate loss of forest
+// between the chosen years.
+
+// To calibrate the threshold for the selected region, we use the
+// EC JRC Forest cover baseline 2020 dataset and determine
+// the appropriate threshold for the 'trees' probability
+// by comparing the forest area from both the JRC and DW datasets
+// and picking the threshold with the closest match.
+
+// Finally the change detection output is masked using the JRC
+// dataset to detect areas deforested since the EC JRC Forest
+// cover baseline 2020.
+
+// This script adapted from the original example by
+// created by Hugh Lynch from Google
+// ================================================================
+
+// Choose a region
+// Delete the 'geometry' variable and draw a polygon
+var geometry = ee.Geometry.Polygon([[
+  [-41.014524684034946, -5.710627921629724],
+  [-41.014524684034946, -5.880045590317402],
+  [-40.70278762348807, -5.880045590317402],
+  [-40.70278762348807, -5.710627921629724]
+]]);
+          
+var baselineYear = 2020;
+var comparisonYear = 2023;
+
+// Create start and end dates for the before and after periods.
+var beforeStart = ee.Date.fromYMD(baselineYear, 1, 1);
+var beforeEnd = beforeStart.advance(1, 'year');
+
+var afterStart = ee.Date.fromYMD(comparisonYear, 1 , 1);
+var afterEnd = afterStart.advance(1, 'year');
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1');
+
+// Filter the collection and select the 'built' band.
+var dwFiltered = dw
+  .filter(ee.Filter.bounds(geometry))
+  .select('trees');
+
+// Create mean composites
+var beforeDw = dwFiltered.filter(
+  ee.Filter.date(beforeStart, beforeEnd)).mean();
+  
+var afterDw = dwFiltered.filter(
+  ee.Filter.date(afterStart, afterEnd)).mean();
+
+// ================================================================
+// Threshold Discovery
+// ================================================================
+
+// We do not know what is the appropriate threshold for
+// the 'trees' probabity band that represents
+// forest in the chosen region of interest
+
+// We can try a range of thresholds a pick the one
+// that has the best match with the baseline
+var treesThresholds = ee.List.sequence(0.15, 0.55, 0.05);
+
+// We compute the area of forest for each of threshold
+// including undercount and overcount of forest pixels
+// by comparing it with JRC baseline
+
+// Add EC JRC global map of forest cover 2020
+var jrcForest = ee.ImageCollection('JRC/GFC2020/V1').first();
+// When zoomed out, the JRC Forest value remains 1, but the mask is fractional.
+var jrcForestMask = jrcForest.mask().gt(0.5).rename('jrc_baseline');
+
+var thresholdData = treesThresholds.map(function(treesThreshold) {
+  var dwTrees = beforeDw.gt(ee.Number(treesThreshold)).rename('dw_trees');
+  var areaImage = ee.Image.cat([dwTrees, jrcForestMask])
+    .multiply(ee.Image.pixelArea())
+    .divide(1e6);
+  var stats = areaImage.reduceRegion({
+    reducer: ee.Reducer.sum(),
+    geometry: geometry,
+    scale: 10,
+    maxPixels: 1e10,
+    tileScale: 16
+  });
+
+  var properties = stats.combine({
+    'threshold': treesThreshold,
+  });
+  return ee.Feature(geometry, properties);
+});
+
+var thresholdFc = ee.FeatureCollection(thresholdData);
+
+// Create a chart
+var chart = ui.Chart.feature.byFeature({
+  features: thresholdFc,
+  xProperty: 'threshold',
+  yProperties: ['jrc_baseline', 'dw_trees']
+}).setChartType('LineChart')
+  .setOptions({
+    lineWidth: 1,
+    pointSize: 2,
+    title: 'Forest Area Comparison',
+    vAxis: {
+      title: 'Forest Area (Sq.Km.)',
+      gridlines: {color:'#d9d9d9'},
+      minorGridlines: {color:'#d9d9d9'}
+    },
+    hAxis: {
+      title: 'Trees Probability Threshold',
+      gridlines: {color:'#d9d9d9'},
+      minorGridlines: {color:'#d9d9d9'}
+    },
+    series: {
+      0: {color: 'green', labelInLegend: 'JRC 2020 Baseline'},
+      1: {color: 'red', labelInLegend: 'DW Tree Cover'}
+    },
+    chartArea: {left:50, right:100},
+    legend: {
+      position: 'top'
+    }
+
+  })
+;
+print(chart);
+
+// ================================================================
+// Change Detection
+// ================================================================
+
+// Select a threshold for Forest
+var treesThreshold = 0.3;
+// Find all pixels that were 
+// forest before and not forest after
+var beforeForest = beforeDw.gt(treesThreshold);
+var afterForest = afterDw.gt(treesThreshold);
+
+var lostForest = beforeForest.and(afterForest.not());
+// Mask pixels with small change
+var treeProbabilityLoss = beforeDw.subtract(afterDw);
+var noiseThreshold = 0.2;
+var lostForestSignificant = lostForest
+  .updateMask(treeProbabilityLoss.gt(noiseThreshold));
+
+// Select only loss pixels that were classified
+// as forest in the JRC 2020 baseline
+// Add EC JRC global map of forest cover 2020
+var jrcForest = ee.ImageCollection('JRC/GFC2020/V1').first();
+// When zoomed out, the JRC Forest value remains 1, but the mask is fractional.
+var jrcForestMask = jrcForest.mask().gt(0.5);
+var lostForestAndJrc = lostForestSignificant.updateMask(jrcForestMask);
+
+// ================================================================
+// Visualization
+// ================================================================
+
+// Add Sentinel-2 Composites to verify the results.
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
+
+var filtered = s2
+  .filter(ee.Filter.bounds(geometry));
+
+// Load the Cloud Score+ collection for cloud masking
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');
+
+var beforeS2 = filteredMasked
+  .filter(ee.Filter.date(beforeStart, beforeEnd))
+  .median();
+var afterS2 = filteredMasked
+  .filter(ee.Filter.date(afterStart, afterEnd))
+  .median();
+
+var s2Composite = filteredMasked.median();
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 300, max: 1500, gamma: 1.2};
+
+Map.centerObject(geometry);
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2 (Baseline)');
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2');
+Map.addLayer(jrcForest.clip(geometry), {palette: ['4D9221']}, 'JRC Forest Cover 2020', false);
+Map.addLayer(lostForestSignificant.clip(geometry), {palette: ['fa9fb5']}, 'Forest Loss', false);
+Map.addLayer(lostForestAndJrc.clip(geometry), {palette: ['red']}, 'Forest Loss within JRC Baseline)');

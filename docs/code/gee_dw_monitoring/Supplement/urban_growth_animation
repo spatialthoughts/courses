@@ -1,0 +1,172 @@
+// Script for animating urban growth over multiple years
+// usin Dynamic World
+
+// Here we apply the change detection over multiple 
+// years and visualize them as video frames
+
+// Delete the geometry and add your own
+var geometry = ee.Geometry.Polygon([[
+  [77.28505176172786, 13.157118842993766],
+  [77.28505176172786, 12.813208798033832],
+  [77.92637866602473, 12.813208798033832],
+  [77.92637866602473, 13.157118842993766]
+]]);
+Map.centerObject(geometry, 10);
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1');
+
+var baseYear = 2016;
+var endYear = 2024;
+var changeYears = ee.List.sequence(baseYear, ee.Number(endYear).subtract(1));
+
+// Create an image for the base year's urban extent
+var baseYearStart = ee.Date.fromYMD(baseYear, 1, 1);
+var baseYearEnd = baseYearStart.advance(1, 'year');
+
+var dwFiltered = dw
+  .filter(ee.Filter.date(baseYearStart, baseYearEnd))
+  .filter(ee.Filter.bounds(geometry))
+  .select('built');
+
+var baseYearUrban = dwFiltered.mean().gt(0.4);
+
+var urbanVisParams = {min: 0, max: 1, palette: ['white', '#f0f0f0']};
+Map.addLayer(baseYearUrban.clip(geometry), urbanVisParams, 'Base Year Urban Extent');
+
+// Function to calculate yearly changes
+var getChanges = function(year) {
+  var beforeYear = year;
+  var afterYear = ee.Number(year).add(1);
+
+  // Create start and end dates for the before and after periods.
+  var beforeStart = ee.Date.fromYMD(beforeYear, 1 , 1);
+  var beforeEnd = beforeStart.advance(1, 'year');
+  
+  var afterStart = ee.Date.fromYMD(afterYear, 1 , 1);
+  var afterEnd = afterStart.advance(1, 'year');
+  
+  // Filter the collection and select the 'built' band.
+  var dwFiltered = dw
+    .filter(ee.Filter.bounds(geometry))
+    .select('built');
+  
+  // Create a mean composite indicating the average probability through the year.
+  var beforeDw = dwFiltered.filter(
+    ee.Filter.date(beforeStart, beforeEnd)).mean();
+    
+  var afterDw = dwFiltered.filter(
+    ee.Filter.date(afterStart, afterEnd)).mean();
+  
+  // Select all pixels that have experienced large change
+  // in 'built' probbility
+  var builtChangeThreshold = 0.3; 
+  var newUrban = afterDw.subtract(beforeDw)
+    .gt(builtChangeThreshold)
+    .updateMask(baseYearUrban.not())
+    .unmask(0);
+
+  return newUrban.set({
+    'system:time_start': beforeStart.millis(),
+    'year': year
+  });
+  
+};
+// map() the function of list of years to generate 
+// change images. Each image shows change for 1 year
+var changeImages = changeYears.map(getChanges);
+
+// Create a collection from the change images
+var changeCol = ee.ImageCollection.fromImages(changeImages);
+
+// Since we want to show the animation of cumulative 
+// growth, we now create cumulative change images
+var getCumulativeChange = function(year) {
+  // Get all images upto the current year
+  var filtered = changeCol.filter(ee.Filter.lte('year', year));
+  var changes = filtered.sum();
+  // If a pixel is detected as change more than once,
+  // it should be still just a change pixel
+  var cumulativeChages = changes.gte(1);
+  return cumulativeChages.set({
+    'system:time_start': ee.Date.fromYMD(year, 1, 1).millis(),
+    'year': year
+  });
+};
+
+// map() the function to get a list of cumulative change images
+var cumulativeChageImages = changeYears.map(getCumulativeChange);
+// Create a collection from the change images
+var cumulativeChangeCol = ee.ImageCollection.fromImages(cumulativeChageImages);
+
+// Visualize and verify the last image having all
+// the changes over the entire period
+var changeVisParams = {min: 0, max: 1, palette: ['white', 'red']};
+var lastImage = ee.Image(cumulativeChangeCol.sort('system:time_start', false).first());
+Map.addLayer(lastImage.selfMask().clip(geometry), changeVisParams, 'Cumulative Changes');
+
+// Visualize the urban boundary
+// Uploaded shapefile of official city boundary
+// You need to upload your own if you change the region
+var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+var empty = ee.Image().byte();
+var boundary = empty.paint({
+  featureCollection: bangalore,
+  color: 1,
+  width: 1
+});
+var boundaryVisParams = {min: 0, max: 1, palette: ['white', 'black']};
+Map.addLayer(boundary, boundaryVisParams, 'Boundary');
+
+// Animating the changes
+
+// The cumulativeChangeCol collection has binary change images
+// We need to apply desired visualization to create RGB
+// images suitable for animation
+
+// Blend in the Base Year's image and city boundary
+// Create a visualized image
+
+var changeColVis = cumulativeChangeCol.map(function(image) {
+  var changeWithUrban = image.multiply(2).add(baseYearUrban);
+  var changeVisParams = {min: 0, max: 2, palette: ['white', '#f0f0f0', 'red']};
+  var newUrbanVis = changeWithUrban.visualize(changeVisParams);
+  var newUrbanVisWithBoundary = newUrbanVis.blend(boundary);
+  return newUrbanVisWithBoundary;
+});
+
+// Add the base year urban area as the first image
+var baseYearUrbanVis = baseYearUrban.visualize(urbanVisParams);
+var baseYearUrbanVisWithBoundary = baseYearUrbanVis.blend(boundary);
+
+var changeColVisWithBaseYear = ee.ImageCollection(
+  [baseYearUrbanVisWithBoundary]).merge(changeColVis);
+
+// Define arguments for animation function parameters.
+var videoArgs = {
+  dimensions: 1024,
+  region: geometry,
+  framesPerSecond: 1,
+  crs: 'EPSG:3857',
+};
+// See the animation
+print(ui.Thumbnail(changeColVisWithBaseYear, videoArgs));
+
+// Get the URL to see a larger version
+print(changeColVisWithBaseYear.getVideoThumbURL(videoArgs));
+
+// For higher quality, it is better to export the
+// results as video and convert to GIF later
+
+// For post-processing, export the video
+// Use ezgif.com to convert the exported MP4
+// to GIF and adding annotations
+Export.video.toDrive({
+  collection: changeColVisWithBaseYear,
+  description: 'video', 
+  folder: 'earthengine',
+  fileNamePrefix: 'urban_growth',
+  framesPerSecond: 1,
+  dimensions: 1024,
+  region: geometry
+}); 
