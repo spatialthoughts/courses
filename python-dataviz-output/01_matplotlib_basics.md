@@ -64,7 +64,7 @@ Note: Understanding `*args` and `**kwargs`
 
 Python functions accept 2 types of arguments.
 - *Non Keyword Arguments*: These are referred as `*args`. When the number of arguments that a function takes is not fixed, it is specified as `*args`. In the function `plot()` above, you can specify 1 argument, 2 arguments or even 6 arguments and the function will respond accordingly.
-- *Keyword Arguments*: These are referred as `**kwargs`. These are specified as `key=value` pairs and usually used to specify optional parameters. These should always be specified after the non-keyword arguments. The `color='green'` in the `plot()` function is a keyboard argument.
+- *Keyword Arguments*: These are referred as `**kwargs`. These are specified as `key=value` pairs and usually used to specify optional parameters. These should always be specified after the non-keyword arguments. The `color='green'` in the `plot()` function is a keyword argument.
 
 One problematic area for plotting geospatial data using matplotlib is that geospatial data is typically represented as a list of x and y coordinates. Let's say we want to plot the following 3 points defined as a list of (x,y) tuples.
 
