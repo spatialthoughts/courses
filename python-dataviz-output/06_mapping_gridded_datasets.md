@@ -106,7 +106,7 @@ fig.set_size_inches(15, 7)
 anomaly.plot.imshow(ax=ax,
     vmin=-3, vmax=3, add_labels=False, cmap='coolwarm')
 
-ax.set_title(f'Temperature Anomaly in {year} (°C)', fontsize = 14)
+ax.set_title(f'Temperature Anomaly in {year} (°K)', fontsize = 14)
 
 plt.show()
 ```
@@ -159,7 +159,7 @@ anomaly.plot.imshow(
     cbar_kwargs=cbar_kwargs)
 
 ax.coastlines()
-plt.title(f'Temperature Anomaly in {year} (°C)', fontsize = 14)
+plt.title(f'Temperature Anomaly in {year} (°K)', fontsize = 14)
 
 output_folder = 'output'
 output_path = os.path.join(output_folder, 'anomaly.jpg')
