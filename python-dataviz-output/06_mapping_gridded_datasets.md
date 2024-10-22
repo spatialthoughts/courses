@@ -10,7 +10,7 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !pip install cartopy
+  !pip install cartopy netCDF4
 ```
 
 
