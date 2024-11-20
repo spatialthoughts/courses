@@ -10,12 +10,13 @@ In this section, we will create a multi-layer interactive map using 2 vector dat
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !pip install mapclassify
+  !pip install mapclassify fiona
 ```
 
 
 ```python
 import os
+import fiona
 import folium
 from folium import Figure
 import geopandas as gpd
@@ -56,14 +57,19 @@ download(data_url + filename)
 
 ## Using GeoPandas explore()
 
-Read the individual layers from the GeoPackage using GeoPandas.
+Read the individual layers from the GeoPackage using GeoPandas. First we use `fiona` to list all available layers in the GeoPackage.
 
 
 ```python
 data_pkg_path = 'data'
 filename = 'karnataka.gpkg'
 path = os.path.join(data_pkg_path, filename)
+layers = fiona.listlayers(path)
+layers
+```
 
+
+```python
 roads_gdf = gpd.read_file(path, layer='karnataka_highways')
 districts_gdf = gpd.read_file(path, layer='karnataka_districts')
 state_gdf = gpd.read_file(path, layer='karnataka')
