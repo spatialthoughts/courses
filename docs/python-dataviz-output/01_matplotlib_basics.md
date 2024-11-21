@@ -125,7 +125,7 @@ Matplotlib provides many specialized functions for different types of plots. `sc
 
 ## Exercise
 
-Create a plot that displays the 2 given points with their x,y coordinates with different sumbology.
+Create a plot that displays the 2 given points with their x,y coordinates with different symbology.
 
 * `point1`: Plot it with green color and a triangle marker.
 * `point2`: Plot it with red color and a circle marker.
