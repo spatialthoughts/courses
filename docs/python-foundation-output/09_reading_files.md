@@ -9,7 +9,7 @@ To read a file, we must know the path of the file on the disk. Python has a modu
 import os
 ```
 
-To open a file, we need to know the path to the file. We will now open and read the file `worldcitites.csv` located in your data package. In your data package the data folder is in the `data/` directory. We can construct the relative path to the file using the `os.path.join()` method.
+To open a file, we need to know the path to the file. We will now open and read the file `worldcities.csv` located in your data package. In your data package the data folder is in the `data/` directory. We can construct the relative path to the file using the `os.path.join()` method.
 
 
 ```python
