@@ -1,6 +1,6 @@
 # Working with Pandas
 
-![](images/python_foundation/pandas-logo.png)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/pandas-logo.png?raw=1)
 
 Pandas is a powerful library for working with data. Pandas provides fast and easy functions for reading data from files, and analyzing it.
 
@@ -43,14 +43,14 @@ Once the file is read and a DataFrame object is created, we can inspect it using
 
 
 ```python
-print(df.head())
+df.head()
 ```
 
 There is also a `info()` method that shows basic information about the dataframe, such as number of rows/columns and data types of each column.
 
 
 ```python
-print(df.info())
+df.info()
 ```
 
 ## Filtering Data
@@ -102,7 +102,7 @@ To locate a particular row or column from a dataframe, Pandas providea `loc[]` a
 ```python
 home_city = 'Bengaluru'
 filtered = country_df[country_df['city_ascii'] == home_city]
-print(filtered.iloc[0])
+filtered.iloc[0]
 ```
 
 Now that we have filtered down the data to a single row, we can select individual column values using column names.
@@ -110,7 +110,7 @@ Now that we have filtered down the data to a single row, we can select individua
 
 ```python
 home_city_coordinates = (filtered.iloc[0]['lat'], filtered.iloc[0]['lng'])
-print(home_city_coordinates)
+home_city_coordinates
 ```
 
 ## Performing calculations
@@ -130,7 +130,7 @@ def calculate_distance(row):
     return distance.geodesic(city_coordinates, home_city_coordinates).km
 
 result = country_df.apply(calculate_distance, axis=1)
-print(result)
+result
 ```
 
 We can add these results to the dataframe by simply assigning the result to a new column.
@@ -138,7 +138,7 @@ We can add these results to the dataframe by simply assigning the result to a ne
 
 ```python
 country_df['distance'] = result
-print(country_df)
+country_df
 ```
 
 We are done with our analysis and ready to save the results. We can further filter the results to only certain columns.
@@ -146,7 +146,7 @@ We are done with our analysis and ready to save the results. We can further filt
 
 ```python
 filtered = country_df[['city_ascii','distance']]
-print(filtered)
+filtered
 ```
 
 Let's rename the `city_ascii` column to give it a more readable name.
@@ -154,7 +154,7 @@ Let's rename the `city_ascii` column to give it a more readable name.
 
 ```python
 filtered = filtered.rename(columns = {'city_ascii': 'city'})
-print(filtered)
+filtered
 ```
 
 Now that we have added filtered the original data and computed the distance for all cities, we can save the resulting dataframe to a file. Similar to read methods, Pandas have several write methods, such as `to_csv()`, `to_excel()` etc.

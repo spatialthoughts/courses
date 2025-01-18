@@ -37,7 +37,7 @@ column_names = [
 ]
 
 df = pd.read_csv(path, sep='\t', names=column_names)
-print(df.info())
+df.info()
 ```
 
 ## Filtering Data
@@ -47,7 +47,7 @@ The input data as a column `feature_class` categorizing the place into [9 featur
 
 ```python
 mountains = df[df['feature class']=='T']
-print(mountains.head()[['name', 'latitude', 'longitude', 'dem','feature class']])
+mountains.head()[['name', 'latitude', 'longitude', 'dem','feature class']]
 ```
 
 ## Creating Geometries
@@ -58,7 +58,7 @@ GeoPandas has a conveinent function `points_from_xy()` that creates a Geometry c
 ```python
 geometry = gpd.points_from_xy(mountains.longitude, mountains.latitude)
 gdf = gpd.GeoDataFrame(mountains, crs='EPSG:4326', geometry=geometry)
-print(gdf.info())
+gdf
 ```
 
 ## Writing Files

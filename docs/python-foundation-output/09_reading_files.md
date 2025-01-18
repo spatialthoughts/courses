@@ -23,21 +23,16 @@ To open the file, use the built-in `open()` function. We specify the *mode* as `
 
 Our input file also contains Unicode characters, so we specify `UTF-8` as the encoding.
 
-The open() function returns a file object. We can call the  `readline()` method for reading the content of the file, one line at a time.
-
-It is a good practice to always close the file when you are done with it. To close the file, we must call the `close()` method on the file object.
+It is a good practice to always close the file when you are done with it. To close the file, we must call the `close()` method on the file object after processing it.
 
 
 ```python
 f = open(path, 'r', encoding='utf-8')
-print(f.readline())
-print(f.readline())
+# Do something
 f.close()
 ```
 
-Calling `readline()` for each line of the file is tedious. Ideally, we want to loop through all the lines in file. You can iterate through the file object like below.
-
-We can loop through each line of the file and increase the `count` variable by 1 for each iteration of the loop. At the end, the count variable's value will be equal to the number of lines in the file.
+The easiest way to read the content of the file is to loop through it line by line. If we just wanted to read the first few lines of the file, we create a variable `count` and increase it by 1 for each iteration of the loop. When the `count` value reaches the desired number of lines, we use the `break` statement to exit the loop.
 
 
 ```python
@@ -45,16 +40,16 @@ f = open(path, 'r', encoding='utf-8')
 
 count = 0
 for line in f:
+    print(line)
     count += 1
+    if count == 5:
+        break
 f.close()
-print(count)
 ```
 
 ## Exercise
 
-Print first 5 lines of the file. 
-
-- Hint: Use break statement
+Count the number of lines in the file and print the total count. You can adapt the for-loop above to count the total number lines in the file.
 
 
 ```python
@@ -63,7 +58,7 @@ data_pkg_path = 'data'
 filename = 'worldcities.csv'
 path = os.path.join(data_pkg_path, filename)
 
-# Add code to open the file and read first 5 lines
+# Add code to open the file and print the total number of lines
+# Hint: You do not need to print the line, just increment the count 
+#       and print the value of the variable once the loop is finished.
 ```
-
-----
