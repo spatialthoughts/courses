@@ -119,7 +119,8 @@ Let's learn how to do calculations on a dataframe. We can iterate over each row 
 
 The `apply()` function takes 2 arguments. A function to apply, and the axis along which to apply it. `axis=0` means it will be applied to columns and `axis=1` means it will apply to rows.
 
-![](https://github.com/spatialthoughts/courses/blob/master/code/python_foundation/images/python_foundation/pandas_axis.png?raw=1)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/pandas_axis.png?raw=1)
+
 
 
 ```python
