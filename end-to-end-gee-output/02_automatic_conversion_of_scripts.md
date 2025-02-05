@@ -2,7 +2,11 @@
 
 It comes with a function that can help you translate your javascript earth engine code to Python automatically.
 
+> The reverse is also possible. The [Open Earth Engine Library (OEEL)](https://www.open-geocomputing.org/OpenEarthEngineLibrary/#.Python.run) allows you to run Python code in the Earth Engine Code Editor.
+
 The `geemap` package is pre-installed in Colab.
+
+
 
 
 ```python
