@@ -1,0 +1,51 @@
+// Determining Contiguous Built Environment
+// using Dynamic World
+
+// This example script shows how to detect and map
+// contiguous urban areas using connectedPixelCount()
+
+// This code is part of the 'Urban True Tree Cover Project
+// built during GEE Dynamic World Build-a-thon at New Delhi
+// Credit: Nishalini, Shweta, Raj Bhagat P, Janhavi Mane, Jyoti
+
+// Use the BBMP Municipal Boundary for Bangalore
+var bbmp = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+// Use a 10km buffer zone around exusing municipal boundary
+var geometry = bbmp.geometry().buffer(10000);
+
+var startDate = ee.Date('2023-01-01');
+var endDate = startDate.advance(4, 'month');
+
+
+var colFilter = ee.Filter.and(
+    ee.Filter.bounds(bbmp.geometry()),
+    ee.Filter.date(startDate, endDate));
+
+var dwCol = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(colFilter)
+  .select('built');
+
+var dw_urban = dwCol.mean().gt(0.4).selfMask();
+var urbanMask = dw_urban
+  .connectedPixelCount(1024) // 1024 is maximum
+  .gt(1000)
+  .selfMask();
+  
+var urbanVector = urbanMask.reduceToVectors({
+  geometry: geometry,
+  scale: 150 // Scale determines size of pixels
+});
+
+Map.centerObject(geometry);
+Map.addLayer(dw_urban,{},'DW_urban', false);
+Map.addLayer(urbanVector,{color: 'red'},'Contiguous Urban Area');
+
+// Visualize the boundary with just outline
+var empty = ee.Image().byte();
+var boundary = empty.paint({
+  featureCollection: bbmp,
+  color: 1,
+  width: 1
+});
+var boundaryVisParams = {min: 0, max: 1, palette: ['white', 'black']};
+Map.addLayer(boundary, boundaryVisParams, 'Municipal Boundary');

@@ -1,0 +1,176 @@
+// ================================================================
+// Monitoring Urban Growth - Counting Buildings
+
+// This script shows how to use Dynamic World to identify regions
+// where urban growth has occured during the chosen time period.
+
+// We further use the VIDA Global Building Footprints dataset
+// to count the number of new buildings built during the period.
+// ================================================================
+
+// Loads the 'admin2' layer and zoom to your region of interest
+// Switch to the Inspector tab and click on a polygon
+// Expand the '▶ Feature ...' section and note the value
+// for ADM0_NAME, ADM1_NAME and ADM2_NAME. Replace the value below with it.
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2');
+var ADM0_NAME = 'Brazil';
+var ADM1_NAME = 'Sao Paulo';
+var ADM2_NAME = 'Caieiras';
+var selected = admin2
+  .filter(ee.Filter.eq('ADM0_NAME', ADM0_NAME))
+  .filter(ee.Filter.eq('ADM1_NAME', ADM1_NAME))
+  .filter(ee.Filter.eq('ADM2_NAME', ADM2_NAME))
+var geometry = selected.geometry();
+Map.centerObject(geometry, 11);
+
+// Define the before and after time periods.
+var beforeYear = 2017;
+var afterYear = 2023;
+
+// Create start and end dates for the before and after periods.
+var beforeStart = ee.Date.fromYMD(beforeYear, 1 , 1);
+var beforeEnd = beforeStart.advance(1, 'year');
+
+var afterStart = ee.Date.fromYMD(afterYear, 1 , 1);
+var afterEnd = afterStart.advance(1, 'year');
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+// Filter the collection and select the 'built' band.
+var dwFiltered = dw
+  .filter(ee.Filter.bounds(geometry))
+  .select('built');
+
+// Create mean composites
+var beforeDw = dwFiltered.filter(
+  ee.Filter.date(beforeStart, beforeEnd)).mean();
+  
+var afterDw = dwFiltered.filter(
+  ee.Filter.date(afterStart, afterEnd)).mean();
+
+
+// Add Sentinel-2 Composites to verify the results.
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+     .filterBounds(geometry)
+     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35));
+
+// Create a median composite from sentinel-2 images.
+var beforeS2 = s2.filterDate(beforeStart, beforeEnd).median();
+var afterS2 = s2.filterDate(afterStart, afterEnd).median();
+  
+// Visualize images
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000};
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2');
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2');
+
+// **************************************************************
+// Find Change Pixels
+// **************************************************************
+
+// Select all pixels that have experienced large change
+// in 'built' probbility
+var builtChangeThreshold = 0.3; 
+var newUrban = afterDw.subtract(beforeDw).gt(builtChangeThreshold);
+
+
+// **************************************************************
+// Visualize 
+// **************************************************************
+
+// Mask all pixels with 0 value using selfMask()
+var newUrbanMasked = newUrban.selfMask();
+
+var changeVisParams = {min: 0, max: 1, palette: ['white', 'red']};
+Map.addLayer(
+  newUrbanMasked.clip(geometry), changeVisParams, 'New Urban Areas');
+
+// ================================================================
+// Count Buildings
+// ================================================================
+
+// Use Google-Microsoft Combined building Database by VIDA
+// Building dataset is current up to September 2023
+// Update the 3-letter ISO code of your country
+// i.e. USA for United States, BRA for Brazil etc.
+// --------------------------------------------------------
+var buildings = ee.FeatureCollection(
+  'projects/sat-io/open-datasets/VIDA_COMBINED/BRA');
+
+// Convert to Vector
+// -----------------
+var newUrbanPolygons = newUrbanMasked.toInt().reduceToVectors({
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10,
+  tileScale: 16
+});
+var newBuildings = buildings
+  .filter(ee.Filter.bounds(newUrbanPolygons.geometry()));
+
+// Helper function to render polygons with just borders
+function addBoundaryLayer(features, visParams, name) {
+  var border = ee.Image().byte().paint(features, 0, 2);
+  Map.addLayer(border, visParams, name);
+}
+
+addBoundaryLayer(newUrbanPolygons, {palette:'darkred'},
+  'New Urban Polygons');
+addBoundaryLayer(newBuildings, {palette:'blue'}, 'New Buildings');
+addBoundaryLayer(geometry, {palette: 'blue'}, 
+  'Selected Region');
+  
+var newBuildingsCount = newBuildings.size();
+
+// Calculate the total using reduceColumns.
+var total = newBuildings.reduceColumns({
+  reducer: ee.Reducer.sum(),
+  selectors: ['area_in_meters']
+});
+
+var newBuildingsTotalArea = total.getNumber('sum');
+
+// This is a large computation. If print values times-out
+// comment the print statement and export the results instead
+print('New buildings count:', newBuildingsCount);
+print('New buildings area (sqm): ', newBuildingsTotalArea);
+
+
+// Export Building Layer - This can be a large computation!
+
+// Exporting to a shape file does not support the complex 
+// 'geometry_wkt' property, which is also redundant with the
+// '.geo' property.
+// ---------------------------------------------------------
+newBuildings = newBuildings.map(function(f) {
+  var filteredProperties = f.propertyNames()
+    .filter(ee.Filter.neq('item', 'geometry_wkt'));
+  return f.select(filteredProperties);
+});
+
+var beforeYear = ee.String(beforeStart.get('year'));
+var dateRangeSuffix = beforeYear.cat('_').cat(afterStart.get('year'));
+
+dateRangeSuffix.evaluate(function(suffix) {
+  Export.table.toDrive({
+    collection: newBuildings,
+    description: 'New_Building_' + suffix,
+    folder: 'earthengine',
+    fileNamePrefix: 'new_buildings_' + suffix,
+    fileFormat: 'SHP',
+  });
+  
+  // Export Building Statistics
+  var exportFc = ee.FeatureCollection([ee.Feature(null, {
+    'building_count': newBuildingsCount,
+    'biulding_area': newBuildingsTotalArea
+  })]);
+  
+  Export.table.toDrive({
+    collection: exportFc,
+    description: 'New_Building_Statistics_' + suffix,
+    folder: 'earthengine',
+    fileNamePrefix: 'new_buildings_statistics_' + suffix,
+    fileFormat: 'CSV',
+  }); 
+});

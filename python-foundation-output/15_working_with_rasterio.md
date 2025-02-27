@@ -6,7 +6,7 @@ RasterIO is built on top of the popular [GDAL (Geospatial Data Abstraction Libra
 
 In this section, we will take 4 individual SRTM tiles around the Mt. Everest region and merge them to a single GeoTiff using RasterIO.
 
-![](images/python_foundation/srtm.png)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/srtm.png?raw=1)
 
 
 ```python
@@ -46,7 +46,7 @@ To read the pixel values, we need to call the `read()` method by passing it a ba
 
 ```python
 band1 = dataset.read(1)
-print(band1)
+band1
 ```
 
 Finally, when we are done with the dataset, we must close it. It is especially important when writing a dataset.
@@ -66,7 +66,7 @@ We first find all the individual files in the directory using the `os.listdir()`
 ```python
 srtm_path = os.path.join(data_pkg_path, 'srtm')
 all_files = os.listdir(srtm_path)
-print(all_files)
+all_files
 ```
 
 The rasterio.merge module has a `merge()` method that takes a list of *datasets* and returns the merged dataset. So we create an empty list, open each of the files and append it to the list.
@@ -77,7 +77,7 @@ dataset_list = []
 for file in all_files:
     path = os.path.join(srtm_path, file)
     dataset_list.append(rasterio.open(path))
-print(dataset_list)
+dataset_list
 ```
 
 We can pass on the list of tile dataset to the merge method, which will return us the merged data and a new *transform* which contains the updated extent of the merged raster.
@@ -86,7 +86,7 @@ We can pass on the list of tile dataset to the merge method, which will return u
 ```python
 from rasterio import merge
 merged_result = merge.merge(dataset_list)
-print(merged_result)
+merged_result
 ```
 
 We save the data and the transform to separate variables.
@@ -101,7 +101,7 @@ Verify that the resulting array shape the sum of individual rasters
 
 
 ```python
-print(merged_data.shape)
+merged_data.shape
 ```
 
 ## Writing Raster Data

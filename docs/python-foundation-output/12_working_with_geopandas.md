@@ -1,7 +1,6 @@
 # Working with Geopandas
 
-![](images/python_foundation/geopandas.png)
-
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/geopandas.png?raw=1)
 
 GeoPandas extends the Pandas library to enable spatial operations. It provides new data types such as **GeoDataFrame** and **GeoSeries** which are subclasses of Pandas **DataFrame** and **Series** and enables efficient vector data processing in Python.
 
@@ -39,14 +38,14 @@ GeoPandas has a `read_file()` method that is able to open a wide variety of vect
 
 ```python
 roads_gdf = gpd.read_file(path, layer='karnataka_major_roads')
-print(roads_gdf.info())
+roads_gdf.info()
 ```
 
 A GeoDataFrame contains a special column called *geometry*. All spatial operations on the GeoDataFrame are applied to the geomety column. The geometry column can be accessed using the `geometry` attribute.
 
 
 ```python
-print(roads_gdf.geometry)
+roads_gdf.geometry
 ```
 
 ## Filtering Data
@@ -58,7 +57,7 @@ For our analysis, we need to apply a filter to extract only the road segments wh
 
 ```python
 filtered = roads_gdf[roads_gdf['ref'].str.match('^NH') == True]
-print(filtered.head())
+filtered.head()
 ```
 
 ## Working with Projections
@@ -67,7 +66,7 @@ Dealing with projetions is a key aspect of working with spatial data. GeoPandas 
 
 
 ```python
-print(filtered.crs)
+filtered.crs
 ```
 
 Since our task is to compute line lengths, we need to use a Projected CRS. We can use the `to_crs()` method to reproject the GeoDataFrame.
@@ -75,7 +74,7 @@ Since our task is to compute line lengths, we need to use a Projected CRS. We ca
 
 ```python
 roads_reprojected = filtered.to_crs('EPSG:32643')
-print(roads_reprojected.crs)
+roads_reprojected.crs
 ```
 
 Now that the layer has been reprojected, we can calculate the length of each geometry using the `length` attribute. The result would be in meters. We can add the line lengths in a new column named `length`.
@@ -102,7 +101,7 @@ The `karnataka.gpkg` contains a layer called `karnataka_districts` with the dist
 
 ```python
 districts_gdf = gpd.read_file(path, layer='karnataka_districts')
-print(districts_gdf.head())
+districts_gdf.head()
 ```
 
 Before joining this layer to the roads, we must reproject it to match the CRS of the roads layer.
@@ -123,7 +122,7 @@ For our task, we can do a *left* join and add attributes of the district that *i
 
 ```python
 joined = gpd.sjoin(roads_reprojected, districts_reprojected, how='left', predicate='intersects')
-print(joined.head())
+joined.head()
 ```
 
 ## Group Statistics
@@ -133,7 +132,7 @@ The resulting geodataframe now has the matching column from the intersecting dis
 
 ```python
 results = joined.groupby('DISTRICT')['length'].sum()/1000
-print(results)
+results
 ```
 
 The result of the `group_by()` method is a Pandas *Series*. It can be saved to a CSV file using the `to_csv()` method.

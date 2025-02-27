@@ -1,0 +1,87 @@
+// Example script showing how to create and export
+// an animation of surface water change
+
+// Delete the 'geometry' and draw a polygon at 
+// your region of interest
+var geometry = ee.Geometry.Polygon([[
+  [76.3733, 12.5680],
+  [76.3733, 12.3736],
+  [76.6329, 12.3736],
+  [76.6329, 12.5680]
+]]);
+Map.centerObject(geometry, 10);
+
+var gswYearly = ee.ImageCollection("JRC/GSW1_4/YearlyHistory");
+
+var years = ee.List.sequence(1990, 2020);
+
+var yearlyWater = years.map(function(year) {
+  var filtered = gswYearly.filter(ee.Filter.eq('year', year));
+  var yearImage = ee.Image(filtered.first());
+  
+  // Select permanent or seasonal water
+  var water = yearImage.eq(2).or(yearImage.eq(3));
+  
+  // Mask '0' value pixels
+  return water.selfMask().set('year', year);
+});
+
+
+// Visualize the image
+var visParams = {
+  min:0,
+  max:1,
+  palette: ['white','blue']
+};
+
+var yearlyWaterVisualized = yearlyWater.map(function(image) {
+  return ee.Image(image)
+    .unmask(0)
+    .visualize(visParams)
+    .clip(geometry)
+    .set('label', ee.Image(image).getNumber('year').format('%04d'));
+});
+
+var yearlyWaterCol = ee.ImageCollection.fromImages(yearlyWaterVisualized);
+print(yearlyWaterCol);
+
+// Earth Engine doesn't have a way to add text labels
+// Use the 3rd-party text package to add annotations
+var text = require('users/gena/packages:text');
+var scale = Map.getScale();
+var fontSize = 18;
+var bounds = geometry.bounds();
+var image = yearlyWaterCol.first();
+  
+var annotations = [
+  {
+    // Use 'margin' for x-position and 'offset' for y-position
+    position: 'right', offset: '5%', margin: '20%',
+    property: 'label',
+    scale: scale,
+    fontType: 'Consolas', fontSize: 18
+  }
+];
+  
+var vis = {forceRgbOutput: true};
+
+// Test the parameters
+var results = text.annotateImage(image, vis, bounds, annotations);
+Map.addLayer(results, {}, 'Test Image with Annotation');
+
+// Apple labeling on all images
+var labeledImages = yearlyWaterCol.map(function(image) {
+  return text.annotateImage(image, vis, bounds, annotations);
+});
+
+// Export the collection as video
+
+Export.video.toDrive({
+  collection: labeledImages,
+  description: 'Animation_with_Label',
+  folder: 'earthengine',
+  fileNamePrefix: 'animation',
+  framesPerSecond: 1,
+  dimensions: 800,
+  region: geometry,
+});

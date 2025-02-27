@@ -22,6 +22,16 @@ except:
     ee.Initialize(project=cloud_project)
 ```
 
+
+```python
+
+```
+
+
+```python
+
+```
+
 #### Create a Collection
 
 
@@ -138,7 +148,7 @@ australia = lsib.filter(ee.Filter.eq('country_na', 'Australia'))
 geometry = australia.geometry()
 
 terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE')
-tmax = terraclimate.select('tmmx')
+tmax = terraclimate.select('soil')
 
 def scale(image):
   return image.multiply(0.1) \
@@ -147,8 +157,8 @@ def scale(image):
 tmaxScaled = tmax.map(scale)
 
 filtered = tmaxScaled \
-  .filter(ee.Filter.date('2020-01-01', '2021-01-01')) \
-  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.date('2023-01-01', '2025-01-01')) \
+  #.filter(ee.Filter.bounds(geometry))
 
 image_ids = filtered.aggregate_array('system:index').getInfo()
 print('Total images: ', len(image_ids))
@@ -160,10 +170,20 @@ Replace the comments with your code.
 ```python
 for i, image_id in enumerate(image_ids):
     exportImage = ee.Image(filtered.filter(ee.Filter.eq('system:index', image_id)).first())
-    # Clip the image to the region geometry
-    clippedImage = exportImage.clip(geometry)
+    geometry = ee.Algorithms.GeometryConstructors.BBox(-180, -90, 180, 90)
 
     ## Create the export task using ee.batch.Export.image.toDrive()
-
+    task = ee.batch.Export.image.toDrive(**{
+        'image': exportImage,
+        'description': 'Terraclimate Image Export {}'.format(i+1),
+        'fileNamePrefix': image_id,
+        'folder':'earthengine',
+        'scale': 4638.3,
+        'region': geometry,
+        'maxPixels': 1e10,
+        'formatOptions': {'cloudOptimized': True},
+    })
+    task.start()
+    print('Started Task: ', i+1)
     ## Start the task
 ```

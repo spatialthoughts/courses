@@ -1,0 +1,89 @@
+// Example script for k-Fold Cross Validation 
+// of Supervised Classification
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_multiband_composite');
+
+// Function to split a featurecollection into k-folds
+var kFoldSplit = function(features, folds) {
+    var step = ee.Number(1).divide(folds);
+    var thresholds = ee.List.sequence(
+        0, ee.Number(1).subtract(step), step);
+
+    // Use seed so the distribution is stable across
+    // all calls of the function
+    features = features.randomColumn({seed: 0});
+
+    var splits = thresholds.map(function (threshold) {
+      var trainingSplit = features.filter(
+          ee.Filter.or(
+            ee.Filter.lt('random', threshold),
+            ee.Filter.gte('random', ee.Number(threshold).add(step))
+            )
+        );
+      var validationSplit = features.filter(
+          ee.Filter.and(
+            ee.Filter.gt('random', threshold),
+            ee.Filter.lte('random', ee.Number(threshold).add(step))
+            )
+      )
+      return ee.Feature(null, {
+        'training': trainingSplit,
+        'validation': validationSplit
+      });
+    
+    });
+    return ee.FeatureCollection(splits);
+};
+
+// Use k=10
+var folds = kFoldSplit(gcp, 10);
+
+// Check the split
+print('Fold 0 Training Samples', folds.first().get('training'));
+print('Fold 0 Validation Samples', folds.first().get('validation'));
+
+// Assess the accuracy for each pair of training and validation
+
+var accuracies = ee.FeatureCollection(folds.map(function(fold) {
+  var trainingGcp = fold.get('training');
+  var validationGcp = fold.get('validation');
+  // Overlay the point on the image to get training data.
+  var training = composite.sampleRegions({
+    collection: trainingGcp,
+    properties: ['landcover'],
+    scale: 10,
+    tileScale: 16
+  });
+
+  // Train a classifier.
+  var classifier = ee.Classifier.smileRandomForest(50)
+  .train({
+    features: training,  
+    classProperty: 'landcover',
+    inputProperties: composite.bandNames()
+  });
+  
+  var test = composite.sampleRegions({
+    collection: validationGcp,
+    properties: ['landcover'],
+    scale: 10,
+    tileScale: 16
+  });
+  
+  var accuracy = test
+    .classify(classifier)
+    .errorMatrix('landcover', 'classification')
+    .accuracy();
+  
+  return ee.Feature(null, {'accuracy': accuracy});
+}));
+
+print('K-fold Validation Results', 
+  accuracies.aggregate_array('accuracy'));
+
+var meanAccuracy = accuracies.reduceColumns({
+  reducer: ee.Reducer.mean(),
+  selectors: ['accuracy']});
+print('Mean Accuracy', meanAccuracy.get('mean'));

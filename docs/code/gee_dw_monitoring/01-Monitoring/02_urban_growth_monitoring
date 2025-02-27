@@ -1,0 +1,83 @@
+// **************************************************************
+// Monitoring Urban Growth with Dynamic World
+
+// This script shows how to track changes in built environment 
+// using the 'built' probability band of Dynamic World dataset
+
+// It selects all pixels with large changes in 'built' probability
+// over the selected time period.
+// **************************************************************
+
+// Choose a region
+var geometry = ee.Geometry.Polygon([[
+  [-46.95235487694674, -23.325163502957597],
+  [-46.95235487694674, -23.83113543079588],
+  [-46.29592177147799, -23.83113543079588],
+  [-46.29592177147799, -23.325163502957597]
+]]);
+          
+// Delete the 'geometry' variable and draw a polygon
+// over a waterbody
+Map.centerObject(geometry, 10);
+
+// Define the before and after time periods.
+var beforeYear = 2017;
+var afterYear = 2023;
+
+// Create start and end dates for the before and after periods.
+var beforeStart = ee.Date.fromYMD(beforeYear, 1 , 1);
+var beforeEnd = beforeStart.advance(1, 'year');
+
+var afterStart = ee.Date.fromYMD(afterYear, 1 , 1);
+var afterEnd = afterStart.advance(1, 'year');
+
+// Load the Dynamic World collection
+var dw = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+
+// Filter the collection and select the 'built' band.
+var dwFiltered = dw
+  .filter(ee.Filter.bounds(geometry))
+  .select('built');
+
+// Create mean composites
+var beforeDw = dwFiltered.filter(
+  ee.Filter.date(beforeStart, beforeEnd)).mean();
+  
+var afterDw = dwFiltered.filter(
+  ee.Filter.date(afterStart, afterEnd)).mean();
+
+
+// Add Sentinel-2 Composites to verify the results.
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+     .filterBounds(geometry)
+     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 35));
+
+// Create a median composite from sentinel-2 images.
+var beforeS2 = s2.filterDate(beforeStart, beforeEnd).median();
+var afterS2 = s2.filterDate(afterStart, afterEnd).median();
+  
+// Visualize images
+var s2VisParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000};
+Map.addLayer(beforeS2.clip(geometry), s2VisParams, 'Before S2');
+Map.addLayer(afterS2.clip(geometry), s2VisParams, 'After S2');
+
+// **************************************************************
+// Find Change Pixels
+// **************************************************************
+
+// Select all pixels that have experienced large change
+// in 'built' probbility
+var builtChangeThreshold = 0.3; 
+var newUrban = afterDw.subtract(beforeDw).gt(builtChangeThreshold);
+
+
+// **************************************************************
+// Visualize 
+// **************************************************************
+
+// Mask all pixels with 0 value using selfMask()
+var newUrbanMasked = newUrban.selfMask();
+
+var changeVisParams = {min: 0, max: 1, palette: ['white', 'red']};
+Map.addLayer(
+  newUrbanMasked.clip(geometry), changeVisParams, 'New Urban Areas');

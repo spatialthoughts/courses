@@ -12,10 +12,10 @@
 <meta name="author" content="Ujaval Gandhi" />
 
 
-<title>Building Your First QGIS Plugin (Full workshop Material)</title>
+<title>Building Your First QGIS Plugin (Full workshop)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -53,6 +53,7 @@
     </style>
 
 
+
 <style type="text/css">
   code {
     white-space: pre;
@@ -63,7 +64,7 @@
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -354,7 +362,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Building Your First QGIS Plugin (Full
-workshop Material)</h1>
+workshop)</h1>
 <h3 class="subtitle">Learn the basics of the QGIS plugin architecture
 and create your first functional plugin.</h3>
 <h4 class="author">Ujaval Gandhi</h4>
@@ -371,6 +379,8 @@ Setting up the Environment</a>
 <li><a href="#install-qgis" id="toc-install-qgis">Install QGIS</a></li>
 <li><a href="#get-a-text-editor" id="toc-get-a-text-editor">Get a Text
 Editor</a></li>
+<li><a href="#get-the-data-package" id="toc-get-the-data-package">Get
+the Data Package</a></li>
 </ul></li>
 <li><a href="#building-a-plugin" id="toc-building-a-plugin">Building a
 Plugin</a>
@@ -437,6 +447,13 @@ spaces are treated properly.</li>
 <li>Mac: <a href="https://macromates.com/">TextMate</a> is an
 open-source editor for Mac that is currently available for free.</li>
 </ul>
+</div>
+<div id="get-the-data-package" class="section level2">
+<h2>Get the Data Package</h2>
+<p>We have created a data package containing ready-to-use plugin files
+for each section. You can download the data package from <a
+href="https://github.com/spatialthoughts/courses/releases/download/data/qgis_plugin_workshop.zip">qgis_plugin_workshop.zip</a>.
+Once downloaded, unzip the contents to a folder on your computer.</p>
 </div>
 </div>
 <div id="building-a-plugin" class="section level1">
@@ -522,9 +539,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a hr
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    <span class="cf">return</span> BasemapLoaderPlugin(iface)</span></code></pre></div>
 <ol start="4" style="list-style-type: decimal">
 <li>Create these 3 files and put them in a folder named
-<code>basemap_loader</code>. Download the <a
-href="https://courses.spatialthoughts.com/images/qgis_plugin_workshop/logo.png">logo.png</a>
-file and copy to this folder.</li>
+<code>basemap_loader</code>. Copy the <code>logo.png</code> file from
+your data package and copy to this folder.</li>
 </ol>
 <p><img src="images/qgis_plugin_workshop/pluginbasemapfiles.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="5" style="list-style-type: decimal">
@@ -551,6 +567,10 @@ plugin.</li>
 the <em>Hello from Plugin</em> message is displayed.</li>
 </ol>
 <p><img src="images/qgis_plugin_workshop/pluginbasemaphello.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Your data package contains a folder
+<code>basemap_loader_minimal</code> with all the required files created
+for this section. You may use them directly to catch up to this point in
+the workshop.</p>
 </div>
 <div id="add-core-functionality" class="section level2">
 <h2>2. Add Core Functionality</h2>
@@ -620,6 +640,10 @@ plugin. Click <em>Reload</em> to reload the plugin.</li>
 toolbar and you will see the basemap layer loaded in QGIS.</li>
 </ol>
 <p><img src="images/qgis_plugin_workshop/pluginbasemapcomplete.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Your data package contains a folder
+<code>basemap_loader_complete</code> with all the required files created
+for this section. You may use them directly to catch up to this point in
+the workshop.</p>
 </div>
 <div id="add-user-interface" class="section level2">
 <h2>3. Add User Interface</h2>
@@ -710,6 +734,9 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a hr
 <li>Reload the plugin to see the toolbar.</li>
 </ol>
 <p><img src="images/qgis_plugin_workshop/pluginbasemapui.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>Your data package contains a folder <code>basemap_loader_ui</code>
+with all the required files created for this section. You may use them
+directly to catch up to this point in the workshop.</p>
 </div>
 <div id="package-and-share-your-plugin" class="section level2">
 <h2>4. Package and Share Your Plugin</h2>

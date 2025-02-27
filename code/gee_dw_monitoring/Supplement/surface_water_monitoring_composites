@@ -1,0 +1,178 @@
+// **************************************************************
+// Monitoring Surface Water with Dynamic World (5-day Composites)
+
+// This script shows how to use Dynamic World 'water' probability
+// band to select a threshold and extract water pixels
+// for the chosen region and calculate surface water area
+
+// The script is a modified version of the script from Module 1
+// which first creates 5-day composites from the Dynamic World
+// images allowing monitoring of water bodies that span across
+// multiple images.
+// **************************************************************
+
+// Choose a region
+
+// Delete the 'geometry' variable and draw a polygon
+// over a waterbody
+var geometry = ee.Geometry.Polygon([[
+  [-111.60825646200841, 37.2224814473236],
+  [-111.60825646200841, 36.90249210134051],
+  [-110.83646691122716, 36.90249210134051],
+  [-110.83646691122716, 37.2224814473236]
+]]);
+Map.centerObject(geometry);
+// Choose a time period
+var startDate = ee.Date.fromYMD(2023, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Visualize the Dynamic World images
+// for the chosen region and time period
+
+var probabilityBands = [
+  'water', 'trees', 'grass', 'flooded_vegetation', 'crops',
+  'shrub_and_scrub', 'built', 'bare', 'snow_and_ice'
+];
+
+// Filter the Dynamic World collection
+var dwFiltered = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1')
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry))
+  .select(probabilityBands);
+
+// Aggregate to 5-day composites
+var interval = 5; // days
+var numDays = endDate.difference(startDate, 'day');
+var daysList = ee.List.sequence(0, numDays, interval);
+
+var daysImages = daysList.map(function(days) {
+  var compositeStart = startDate.advance(days, 'day');
+  var compositeEnd = compositeStart.advance(interval, 'day');
+  var periodImages =  dwFiltered
+    .filter(ee.Filter.date(compositeStart, compositeEnd));
+  return periodImages
+    .mean()
+    .set({
+      'system:time_start': compositeStart.millis(),
+      'system:time_end': compositeEnd.millis(),
+      'start_date': compositeStart.format('YYYY-MM-dd'),
+      'end_date': compositeEnd.format('YYYY-MM-dd'),
+      'num_images': periodImages.size()
+    });
+});
+
+// Create a collection and remove empty composites
+var compositesCol = ee.ImageCollection.fromImages(daysImages)
+  .filter(ee.Filter.gt('num_images', 0));
+
+// Function that adds a property to each image
+// with the percentage of cloud-free pixels in the
+// chosen geometry
+var calculateCloudCover = function(image) {
+  // The Dynamic World images have some pixels
+  // that are masked.
+  // We count the number of unmasked pixels
+  // Select any band, since all bands have the same mask
+  // Working with a single band makes the analysis simpler
+  var bandName = 'water';
+  var band = image.select(bandName);
+  var withMaskStats = band.reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: geometry,
+    scale: 100,
+    bestEffort: true
+  });
+  var cloudFreePixels = withMaskStats.getNumber(bandName);
+  
+  // Remove the mask and count all pixels
+  var withoutMaskStats = band.unmask(0).reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: geometry,
+    scale: 100,
+    bestEffort: true
+  });
+  
+  var totalPixels = withoutMaskStats.getNumber(bandName);
+  
+  var cloudCoverPercentage = ee.Number.expression(
+    '100*(totalPixels-cloudFreePixels)/totalPixels', {
+      totalPixels: totalPixels,
+      cloudFreePixels: cloudFreePixels
+    });
+  
+  // Add a 'date' property for ease of selection  
+  var dateString = ee.Date(image.date()).format('YYYY-MM-dd');
+
+  return image.set({
+    'CLOUDY_PIXEL_PERCENTAGE_REGION': cloudCoverPercentage,
+    'date': dateString
+  });
+};
+
+var compositesColWithCount = compositesCol.map(calculateCloudCover);
+
+print(compositesColWithCount.first());
+
+// Filter using the newly created property
+var dwComposites = compositesColWithCount
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE_REGION', 1));
+print('Cloud Free Composites in Region', dwComposites.size());
+
+var images = dwComposites;
+
+var getWater = function(image) {
+  // Select a threshold for water probability
+  var waterThreshold = 0.4;
+  // Select all pixels where 
+  // 'water' probability > waterThreshold
+  var water = image.select('water').gt(waterThreshold);
+  return water.selfMask();
+};
+
+
+// Display the image with the given ID.
+var display = function(date) {
+  var layers = Map.layers();
+  layers.forEach(function(layer) {
+    layer.setShown(false);
+  });
+  
+  var image = images.filter(ee.Filter.eq('date', date)).mosaic();
+  var cloudMask = image.select('water').mask();
+  
+  var probabilityVis = {min:0, max:1, bands: ['water'], 
+    palette: ['#8c510a','#d8b365','#f6e8c3','#c7eae5','#5ab4ac','#01665e']};
+  
+  Map.addLayer(image, probabilityVis, 'Water Probability_' + date);
+  
+  var water = getWater(image);
+
+  var waterVis = {min:0, max:1, palette: ['white', 'blue']};
+  
+  var region = ee.FeatureCollection([ee.Feature(geometry)]);
+  var border = ee.Image().byte().paint(region, 1, 1);
+  Map.addLayer(border, {}, 'Selected Region');
+  
+  Map.addLayer(water.clip(geometry), waterVis, 'Water_' + date, false);
+  
+  // Calculate Surface Water Area
+  var area = water.multiply(ee.Image.pixelArea()).reduceRegion({
+    reducer: ee.Reducer.sum(),
+    geometry: geometry,
+    scale: 10,
+    maxPixels: 1e10,
+    tileScale: 16
+  });
+  var waterArea = area.getNumber('water').divide(1e6).format('%.2f');
+  print('Surface Water Area (Sq.Km.) ' + date, waterArea);
+};
+
+// Get the list of IDs and put them into a select
+images.aggregate_array('date').distinct().evaluate(function(ids) {
+  var selector = ui.Select({
+    items: ids,
+    onChange: display,
+  });
+  Map.add(selector);
+  selector.setValue(ids[0], true);
+});

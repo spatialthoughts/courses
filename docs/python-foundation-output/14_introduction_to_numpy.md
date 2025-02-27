@@ -1,6 +1,6 @@
 # Introduction to NumPy
 
-![](images/python_foundation/numpy.png)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/numpy.png?raw=1)
 
 NumPy (Numerical Python) is an important Python library for scientific computation. Libraries such as Pandas and GeoPandas are built on top of NumPy. 
 
@@ -20,7 +20,7 @@ The array object in NumPy is called `ndarray`. It provides a lot of supporting f
 
 ```python
 a = np.array([1, 2, 3, 4])
-print(type(a))
+type(a)
 ```
 
 Arrays can have any *dimensions*. We can create a 2D array like below. `ndarray` objects have the property `ndim` that stores the number of array dimensions. You can also check the array size using the `shape` property.
@@ -37,12 +37,12 @@ You can access elements of arrays like Python lists using `[]` notation.
 
 
 ```python
-print(b[0])
+b[0]
 ```
 
 
 ```python
-print(b[0][2])
+b[0][2]
 ```
 
 ## Array Operations
@@ -51,7 +51,7 @@ Mathematical operations on numpy arrays are easy and fast. NumPy as many built-i
 
 
 ```python
-print(np.sum(b))
+np.sum(b)
 ```
 
 You can also use the functions operations on arrays. 
@@ -59,14 +59,14 @@ You can also use the functions operations on arrays.
 
 ```python
 c = np.array([[2, 2, 2], [2, 2, 2]])
-print(np.divide(b, c))
+np.divide(b, c)
 ```
 
 If the objects are numpy objects, you can use the Python operators as well
 
 
 ```python
-print(b/c)
+b/c
 ```
 
 You can also combine array and scalar objects. The scalar operation is applied to each item in the array.
@@ -100,7 +100,7 @@ Sum the array `b` along Axis-1. What do you think will be the result?
 import numpy as np
 
 b = np.array([[1, 2, 4], [3, 4, 5]])
-print(b)
+b
 ```
 
 ----

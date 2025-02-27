@@ -86,7 +86,7 @@ print(response.status_code)
 
 ## Calculating Distance using OpenRouteService API
 
-![](images/python_foundation/ors_direction.png)
+![](https://github.com/spatialthoughts/python-foundation-web/blob/master/images/python_foundation/ors_direction.png?raw=1)
 
 [OpenRouteService (ORS)](https://openrouteservice.org/) provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.
 

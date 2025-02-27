@@ -14,24 +14,25 @@ var geometry = ee.Geometry.Point([75.71168046831512, 13.30751919691132]);
 Map.centerObject(geometry, 10)
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
 
-var rgbVis = {
-  min: 0.0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
 
+var filtered = s2
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.bounds(geometry));
 
-// Function to remove cloud and snow pixels from Sentinel-2 SR image
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(5);
-  var snow = snowProb.lt(5);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 5% or cloud shadow classification
-  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
@@ -42,14 +43,15 @@ function addNDVI(image) {
   return image.addBands(ndvi);
 }
 
-var s2Filtered = s2
-  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
-  .filter(ee.Filter.bounds(geometry))
-  .map(maskCloudAndShadowsSR)
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');
+  
+var filteredWithNdvi = filteredMasked
   .map(addNDVI)
-
-
-var composite = s2Filtered.median()
+  
+var composite = filteredWithNdvi.median();
+var rgbVis = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
 Map.addLayer(composite, rgbVis, 'Composite')  
 
 
@@ -69,28 +71,20 @@ var byMonth = months.map(function(month) {
     var totalRain = monthlyRain.sum()
     // Next month's average NDVI
     var nextMonth = ee.Number(month).add(1)
-    var monthly = s2Filtered
+    var monthly = filteredWithNdvi
       .filter(ee.Filter.calendarRange(nextMonth, nextMonth, 'month'))
-    var medianComposite = monthly.median()
+    var medianComposite = monthly.median().select('ndvi')
   
     return totalRain.addBands(medianComposite).set({'month': month})
 })
+
 var monthlyCol = ee.ImageCollection.fromImages(byMonth);
 
-// Display Composites
-var julImage = ee.Image(monthlyCol.filter(ee.Filter.eq('month', 7)).first())
-var augImage = ee.Image(monthlyCol.filter(ee.Filter.eq('month', 8)).first())
-var sepImage = ee.Image(monthlyCol.filter(ee.Filter.eq('month', 9)).first())
-
-Map.addLayer(julImage, rgbVis, 'July', false)
-Map.addLayer(augImage, rgbVis, 'August', false)
-Map.addLayer(sepImage, rgbVis, 'September', false)
-
-
-var correlationCol = monthlyCol.select(['precipitation', 'ndvi'])
-
+// Compute Correlation
+var correlationCol = monthlyCol.select(['precipitation', 'ndvi']);
 var correlation = correlationCol.reduce(ee.Reducer.pearsonsCorrelation());
 
+// Select all pixels with positive correlation
 var positive = correlation.select('correlation').gt(0.5)
 
 Map.addLayer(correlation.select('correlation'), 
