@@ -124,8 +124,6 @@ client = Client()  # set up local cluster on the machine
 client
 ```
 
-## Analysis
-
 ### Calculate Yearly Time-Series
 
 We want to analyze the long-term yearly trend of monthly maximum temperatures.
@@ -201,7 +199,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/climate_trends_files/climate_trends_26_0.png)
+![](python-remote-sensing-output/climate_trends_files/climate_trends_25_0.png)
     
 
 
@@ -252,7 +250,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/climate_trends_files/climate_trends_31_0.png)
+![](python-remote-sensing-output/climate_trends_files/climate_trends_30_0.png)
     
 
 
