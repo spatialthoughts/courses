@@ -282,3 +282,7 @@ if not os.path.exists(local_subset_filepath):
     da_yearly.to_netcdf(path=local_subset_filepath)
     print('Saved the file at ', local_subset_filepath)
 ```
+
+### Exercise
+
+Carry out the trend analysis for your region of interest. Replace the country and region with a chosen Admin-2 region.
