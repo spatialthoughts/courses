@@ -1,0 +1,46 @@
+// Script comparing Median vs. Medoid compositing
+// Learn more at https://www.mdpi.com/2072-4292/5/12/6481
+var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+
+// Apply the filters and find candidate images
+
+// Medoid will find the image with all band values closest to
+// the median, so make sure to select the bands of interest
+// Here we select all spectral bands (B1 - B13)
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+  
+// Median Composite
+
+// Create a median composite
+var median = filtered.median();
+
+// Medoid Composite
+
+// Calculate the difference between each image and the median.
+var diffFromMedian = filtered.map(function(image) {
+  var diff = image.subtract(median).pow(2)
+    .reduce(ee.Reducer.sum()).rename('difference');
+  return diff.addBands(image).copyProperties(image, ['system:time_start']);
+});
+
+// Generate a composite image by selecting the pixel
+// closest to the median.
+var bandNames = diffFromMedian.first().bandNames();
+var bandPositions = ee.List.sequence(1, bandNames.length().subtract(1));
+var medoid = diffFromMedian.reduce(ee.Reducer.min(bandNames.length()))
+  .select(bandPositions, bandNames.slice(1));
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'], 
+};
+Map.centerObject(geometry, 10);
+Map.addLayer(median, rgbVis, 'Median');
+Map.addLayer(medoid, rgbVis, 'Medoid');
+  
