@@ -1,0 +1,38 @@
+var geometry = ee.Geometry.Polygon([[
+  [-1.8611, 4.9272],
+  [-1.8611, 4.8448],
+  [-1.7141, 4.8448],
+  [-1.7141, 4.9272]
+]]);
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2022-01-01', '2022-04-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+
+// Median Composite
+
+var medianComposite = filtered.median();
+
+// Create a 25th-percentile Composite
+var percentileComposite = filtered.reduce(ee.Reducer.percentile([25]));
+// ee.Reducer.percentile([25]) adds '_p25' to band names, remove them
+var percentileComposite = percentileComposite.regexpRename('_p25', '');
+
+// Display the composites
+
+Map.centerObject(geometry);
+
+Map.addLayer(medianComposite.clip(geometry) , rgbVis, 'Median Composite');
+Map.addLayer(percentileComposite.clip(geometry) , rgbVis, '25-Percentile Composite'); 
+ 
