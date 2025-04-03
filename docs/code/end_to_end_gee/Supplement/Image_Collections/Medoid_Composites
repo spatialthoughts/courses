@@ -1,4 +1,4 @@
-// Script comparing Median vs. Medoid compositing
+// Script comparing Median vs. Medoid vs. Geometric Median compositing
 // Learn more at https://www.mdpi.com/2072-4292/5/12/6481
 var geometry = ee.Geometry.Point([77.60412933051538, 12.952912912328241]);
 var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
@@ -35,12 +35,22 @@ var bandPositions = ee.List.sequence(1, bandNames.length().subtract(1));
 var medoid = diffFromMedian.reduce(ee.Reducer.min(bandNames.length()))
   .select(bandPositions, bandNames.slice(1));
 
+// Geometric Median Composite
+// use the ee.Reducer.geometricMedian() to select the value
+// that minimizes the euclidean distance 
+var bandNames = filtered.first().bandNames();
+var bandPositions = ee.List.sequence(0, bandNames.length().subtract(1));
+var geomad = filtered.reduce(ee.Reducer.geometricMedian(bandNames.length()))
+  .select(bandPositions, bandNames);
 var rgbVis = {
   min: 0.0,
   max: 3000,
   bands: ['B4', 'B3', 'B2'], 
 };
+
 Map.centerObject(geometry, 10);
 Map.addLayer(median, rgbVis, 'Median Composite');
 Map.addLayer(medoid, rgbVis, 'Medoid Composite');
+Map.addLayer(geomad, rgbVis, 'Geometric Median Composite');
+
   
