@@ -19,11 +19,32 @@ var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
 // Create a median composite
 var median = filtered.median();
 
+// Geometric Median Composite
+
+// use the ee.Reducer.geometricMedian() to select the value
+// that minimizes the euclidean distance 
+var bandNames = filtered.first().bandNames();
+var bandPositions = ee.List.sequence(0, bandNames.length().subtract(1));
+var geomedian = filtered
+  .reduce(ee.Reducer.geometricMedian(bandNames.length()))
+  .select(bandPositions, bandNames);
+  
 // Medoid Composite
+
+// Medoid composites import a constraint that all the band
+// values must be from the same image. 
+
+// We calculate the distance between each image and the median
+// and choose the one that minimizes the distance.
+
+// The definitions of medoid vary. Some use distance to median
+// and others use distance to geometric median. You can choose
+// the median measure you want to use.
+var medianMeasure = median; // use 'geomedian' for geometric median
 
 // Calculate the difference between each image and the median.
 var diffFromMedian = filtered.map(function(image) {
-  var diff = image.subtract(median).pow(2)
+  var diff = image.subtract(medianMeasure).pow(2)
     .reduce(ee.Reducer.sum()).rename('difference');
   return diff.addBands(image).copyProperties(image, ['system:time_start']);
 });
@@ -35,13 +56,7 @@ var bandPositions = ee.List.sequence(1, bandNames.length().subtract(1));
 var medoid = diffFromMedian.reduce(ee.Reducer.min(bandNames.length()))
   .select(bandPositions, bandNames.slice(1));
 
-// Geometric Median Composite
-// use the ee.Reducer.geometricMedian() to select the value
-// that minimizes the euclidean distance 
-var bandNames = filtered.first().bandNames();
-var bandPositions = ee.List.sequence(0, bandNames.length().subtract(1));
-var geomedian = filtered.reduce(ee.Reducer.geometricMedian(bandNames.length()))
-  .select(bandPositions, bandNames);
+
 var rgbVis = {
   min: 0.0,
   max: 3000,
@@ -50,7 +65,6 @@ var rgbVis = {
 
 Map.centerObject(geometry, 10);
 Map.addLayer(median, rgbVis, 'Median Composite');
-Map.addLayer(medoid, rgbVis, 'Medoid Composite');
 Map.addLayer(geomedian, rgbVis, 'Geometric Median Composite');
-
+Map.addLayer(medoid, rgbVis, 'Medoid Composite');
   
