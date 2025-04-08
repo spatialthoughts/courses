@@ -12,8 +12,7 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray
-    !pip install --upgrade dask
+    !pip install pystac-client odc-stac rioxarray dask
 ```
 
 
