@@ -1,0 +1,88 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[77.33805339753269, 13.172747824409155],
+          [77.33805339753269, 12.749845445070495],
+          [77.83793132722019, 12.749845445070495],
+          [77.83793132722019, 13.172747824409155]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script showing how to export metadata of
+// all images in a collection as a CSV file
+
+// Learn more functions for extracting metadata 
+// statistics at
+// https://developers.google.com/earth-engine/guides/ic_info
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED");
+Map.centerObject(geometry);
+
+var filtered = s2
+  .filter(ee.Filter.date('2017-01-01', '2018-01-01'))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.bounds(geometry));
+// Print an image to check the metadata properties
+// of interest
+print('Image', filtered.first().toDictionary());
+
+// We create a function to extract the required 
+// properties and create a FeatureCollection
+var getMetadata = function(image) {
+  // Get the image date
+  var date = image.date();
+  var formattedDate = date.format('YYYY-MM-dd');
+  // Get the image id
+  var imageId = image.id();
+  // Extract the image footprint
+  var footprint = image.geometry();
+  
+  // Extract the ,mtadata of interest
+  var cloudCover = image.get('CLOUDY_PIXEL_PERCENTAGE');
+  var satelliteName = image.get('SPACECRAFT_NAME');
+  var mgrsTile = image.get('MGRS_TILE');
+  // Create a feature with image footprint
+  // and extracted metadata
+  var feature = ee.Feature(footprint, {
+    'image_id': imageId,
+    'date': formattedDate,
+    'cloud_cover': cloudCover,
+    'satellite': satelliteName,
+    'mgrs_tile': mgrsTile
+  });
+  return feature;
+};
+
+
+// map() the function on the ImageCollection
+var metadataList = filtered.map(getMetadata);
+var metadataFc = ee.FeatureCollection(metadataList);
+
+// Export the results
+
+// Use the 'selectors' parameter to maintain the
+// order of columns
+// '.geo' refers to the geometry column
+Export.table.toDrive({
+  collection: metadataFc,
+  description: 'Collection_Metadata_GeoJSON',
+  folder: 'earthengine',
+  fileNamePrefix: 'metadata',
+  fileFormat: 'GeoJSON',
+  selectors: ['image_id', 'date', 'cloud_cover',
+    'satellite', 'mgrs_tile', '.geo']
+});
+
+// Export as a CSV (without geometry)
+Export.table.toDrive({
+  collection: metadataFc,
+  description: 'Collection_Metadata_CSV',
+  folder: 'earthengine',
+  fileNamePrefix: 'metadata',
+  fileFormat: 'CSV',
+  selectors: ['image_id', 'date', 'cloud_cover',
+    'satellite', 'mgrs_tile']
+});

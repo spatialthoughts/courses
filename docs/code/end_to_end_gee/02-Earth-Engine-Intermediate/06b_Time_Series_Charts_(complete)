@@ -22,26 +22,38 @@ var csPlusBands = csPlus.first().bandNames();
 var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
 
 // Function to mask pixels with low CS+ QA scores.
-function maskLowQA(image) {
+var maskLowQA = function(image) {
   var qaBand = 'cs';
   var clearThreshold = 0.5;
   var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
-}
+};
 
-
+// map() the function to mask all images
 var filteredMasked = filteredS2WithCs
-  .map(maskLowQA);
-  
-// Write a function that computes NDVI for an image and adds it as a band
-function addNDVI(image) {
+  .map(maskLowQA)
+  .select('B.*');
+
+// Function to scale pixel values to reflectance
+var scaleValues = function(image) {
+  var scaledImage = image.multiply(0.0001);
+  // This creates a new image and we lose the properties
+  // copy the system:time_start property 
+  // from the originalimage
+  return scaledImage
+    .copyProperties(image, ['system:time_start']);
+};
+
+// Function that computes NDVI for an image and adds it as a band
+var addNDVI = function(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
   return image.addBands(ndvi);
-}
+};
 
-// Map the function over the collection
-var withNdvi = filteredMasked.map(addNDVI);
-
+// Map the functions over the collection
+var withNdvi = filteredMasked
+  .map(scaleValues)
+  .map(addNDVI);
 
 // Display a time-series chart
 var chart = ui.Chart.image.series({
