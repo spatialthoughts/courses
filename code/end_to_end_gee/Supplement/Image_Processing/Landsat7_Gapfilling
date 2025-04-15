@@ -1,0 +1,134 @@
+// Example code for filling landsat 7 SLC-off gap-filling
+// This code is based on Landsat 7 SLC-off Gap-Filled Products Phase Two Methodology
+// https://www.usgs.gov/media/files/landsat-7-slc-gap-filled-products-phase-two-methodology
+// Adapted from original implementation by Noel Gorelick
+var L7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
+
+var l7Bands = ['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'];
+var l7names = ['blue','green','red','nir','swir1','swir2'];
+
+// Cloud masking function for Landsat 4,5 and 7
+function maskL457sr(image) {
+  var qaMask = image.select('QA_PIXEL').bitwiseAnd(parseInt('11111', 2)).eq(0);
+  var saturationMask = image.select('QA_RADSAT').eq(0);
+
+  // Apply the scaling factors to the appropriate bands.
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBand = image.select('ST_B6').multiply(0.00341802).add(149.0);
+
+  // Replace the original bands with the scaled ones and apply the masks.
+  return image.addBands(opticalBands, null, true)
+      .addBands(thermalBand, null, true)
+      .updateMask(qaMask)
+      .updateMask(saturationMask)
+      .copyProperties(image, ['system:time_start']);
+}
+
+// Prepare the full L7 collection
+var L7 = L7
+  .filter(ee.Filter.date('1984-01-01', '2017-01-01'))
+  .map(maskL457sr)
+  .select(l7Bands,l7names);
+
+
+// #####################################################
+// Gap-filling Function
+// #####################################################
+
+var gapFill = function(image) {
+  // We need a reference 'fill' image without gaps or clouds
+  // that will be used to derive missing pixels
+  // Here we use a median composite created from images
+  // from a 6-month period around from each image date
+  // You may adjust this to shorter/longer period
+  var start = image.date().advance(-3, 'month');
+  var end = image.date().advance(3, 'month');
+  // Create a gap-free version as the target image
+  var fill = L7.filter(ee.Filter.date(start, end)).median();
+  var kernelSize = 20;// Tried with 5, 10, 20, 30
+  var kernel = ee.Kernel.square(kernelSize * 30, 'meters', false);
+  var MIN_SCALE = 1/3;
+  var MAX_SCALE = 3;
+  var MIN_NEIGHBORS = 144;
+  
+  // Find the pixels common to both scenes.
+  var common = image.mask().and(fill.mask());
+  var fc = fill.updateMask(common);
+  var sc = image.updateMask(common);
+
+  // Find the primary scaling factors with a regression.
+  var regress = fill.addBands(image); 
+  regress = regress.select(regress.bandNames().sort());
+  var fit = regress.reduceNeighborhood(
+    ee.Reducer.linearFit().forEach(image.bandNames()),  kernel, null, false);
+  var offset = fit.select('.*_offset');
+  var scale = fit.select('.*_scale');
+
+  // Find the secondary scaling factors using just means and stddev
+  var reducer = ee.Reducer.mean().combine(ee.Reducer.stdDev(), null, true);
+  var src_stats = image.reduceNeighborhood(reducer, kernel, null, false);
+  var fill_stats = fill.reduceNeighborhood(reducer, kernel, null, false);
+  var scale2 = src_stats.select('.*stdDev')
+    .divide(fill_stats.select('.*stdDev'));
+  var offset2 = src_stats.select('.*mean')
+    .subtract(fill_stats.select('.*mean').multiply(scale2));
+
+  var invalid = scale.lt(MIN_SCALE).or(scale.gt(MAX_SCALE));
+  scale = scale.where(invalid, scale2);
+  offset = offset.where(invalid, offset2);
+
+  // When all else fails, just use the difference of means as an offset.  
+  var invalid2 = scale.lt(MIN_SCALE).or(scale.gt(MAX_SCALE));
+  scale = scale.where(invalid2, 1);
+  offset = offset.where(invalid2, src_stats.select('.*mean')
+    .subtract(fill_stats.select('.*mean')));
+
+  // Apply the scaling and mask off pixels that didn't have enough neighbors.
+  var count = common.reduceNeighborhood(
+    ee.Reducer.count(), kernel, null, true, 'boxcar');
+  var scaled = fill.multiply(scale).add(offset)
+      .updateMask(count.gte(MIN_NEIGHBORS));
+
+  return image.unmask(scaled, true);
+};
+
+
+var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+var geometry = bangalore.geometry();
+
+var L7Filtered = L7
+  .filter(ee.Filter.date('2012-02-01', '2012-04-01'))
+  .filter(ee.Filter.bounds(geometry));
+
+// Composite without gap-filling
+var composite = L7Filtered.median();
+
+Map.centerObject(geometry, 11);
+var visParams = {bands: ['red', 'green', 'blue'], min: 0, max: 0.3};
+Map.addLayer(composite.clip(geometry), visParams, 'Original Image');
+
+// Apply Gap-filling
+var L7GapFilled = L7Filtered.map(gapFill);
+var compositeGapFill = L7GapFilled.median();
+
+// Gap-filling is a computationally expensive operation
+// so it cannot be visualized interactively
+// Export the results and import the asset to visualize
+
+// Change the asset id to your own asset path
+var assetId = 'users/ujavalgandhi/e2e/l7_gapfilled';
+
+Export.image.toAsset({
+  image: compositeGapFill.clip(geometry),
+  description: 'L7_Gapfill_Export',
+  assetId: assetId,
+  region: geometry,
+  scale:30,
+  maxPixels: 1e10
+});
+
+// Wait for the export to finish and then uncomment
+// the below lines to see exported results
+
+// var exportedGapFilledImage = ee.Image(assetId);
+// Map.addLayer(exportedGapFilledImage.clip(geometry), visParams, 'Gap-Filled Image');
