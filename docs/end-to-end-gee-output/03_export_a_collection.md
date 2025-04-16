@@ -22,16 +22,6 @@ except:
     ee.Initialize(project=cloud_project)
 ```
 
-
-```python
-
-```
-
-
-```python
-
-```
-
 #### Create a Collection
 
 
@@ -91,15 +81,19 @@ print('Total images: ', len(image_ids))
 # Export with 100m resolution for this demo
 for i, image_id in enumerate(image_ids):
   image = ee.Image(withNdvi.filter(ee.Filter.eq('system:index', image_id)).first())
+  geometry = image.geometry()
+
+  # Create an export task using ee.batch.Export.image.toDrive()
   task = ee.batch.Export.image.toDrive(**{
     'image': image.select('ndvi'),
     'description': 'Image Export {}'.format(i+1),
     'fileNamePrefix': image_id,
     'folder':'earthengine',
     'scale': 100,
-    'region': image.geometry(),
+    'region': geometry,
     'maxPixels': 1e10
   })
+  # Start the task
   task.start()
   print('Started Task: ', i+1)
 ```
@@ -170,20 +164,10 @@ Replace the comments with your code.
 ```python
 for i, image_id in enumerate(image_ids):
     exportImage = ee.Image(filtered.filter(ee.Filter.eq('system:index', image_id)).first())
-    geometry = ee.Algorithms.GeometryConstructors.BBox(-180, -90, 180, 90)
+    # clip the image
+    clippedImage = exportImage.clip(geometry)
 
     ## Create the export task using ee.batch.Export.image.toDrive()
-    task = ee.batch.Export.image.toDrive(**{
-        'image': exportImage,
-        'description': 'Terraclimate Image Export {}'.format(i+1),
-        'fileNamePrefix': image_id,
-        'folder':'earthengine',
-        'scale': 4638.3,
-        'region': geometry,
-        'maxPixels': 1e10,
-        'formatOptions': {'cloudOptimized': True},
-    })
-    task.start()
-    print('Started Task: ', i+1)
+
     ## Start the task
 ```

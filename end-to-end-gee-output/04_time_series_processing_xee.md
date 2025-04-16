@@ -57,8 +57,6 @@ geometry = ee.Geometry.Point([82.60759592318209, 27.163481733946846])
 We start with the Sentinel-2 L1C collection. We pre-process the data by applying cloud masking and pixel scaling.
 
 
-
-
 ```python
 s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 

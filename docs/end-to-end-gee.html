@@ -5137,98 +5137,98 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb86-1"><a h
 <span id="cb86-5"><a href="#cb86-5" tabindex="-1"></a><span class="cf">except</span>:</span>
 <span id="cb86-6"><a href="#cb86-6" tabindex="-1"></a>    ee.Authenticate()</span>
 <span id="cb86-7"><a href="#cb86-7" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span></code></pre></div>
-<div class="sourceCode" id="cb87"><pre
-class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb88"><pre
-class="sourceCode python"><code class="sourceCode python"></code></pre></div>
 </div>
 <div id="create-a-collection" class="section level4">
 <h4>Create a Collection</h4>
-<div class="sourceCode" id="cb89"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
-<span id="cb89-2"><a href="#cb89-2" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)</span>
-<span id="cb89-3"><a href="#cb89-3" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
-<span id="cb89-4"><a href="#cb89-4" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
-<span id="cb89-5"><a href="#cb89-5" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
-<span id="cb89-6"><a href="#cb89-6" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
-<span id="cb89-7"><a href="#cb89-7" tabindex="-1"></a>}</span>
-<span id="cb89-8"><a href="#cb89-8" tabindex="-1"></a></span>
-<span id="cb89-9"><a href="#cb89-9" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
-<span id="cb89-10"><a href="#cb89-10" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb89-11"><a href="#cb89-11" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
-<span id="cb89-12"><a href="#cb89-12" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry)) <span class="op">\</span></span>
-<span id="cb89-13"><a href="#cb89-13" tabindex="-1"></a></span>
-<span id="cb89-14"><a href="#cb89-14" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
-<span id="cb89-15"><a href="#cb89-15" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
-<span id="cb89-16"><a href="#cb89-16" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
-<span id="cb89-17"><a href="#cb89-17" tabindex="-1"></a></span>
-<span id="cb89-18"><a href="#cb89-18" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
-<span id="cb89-19"><a href="#cb89-19" tabindex="-1"></a><span class="co"># image in the collection</span></span>
-<span id="cb89-20"><a href="#cb89-20" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
-<span id="cb89-21"><a href="#cb89-21" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
-<span id="cb89-22"><a href="#cb89-22" tabindex="-1"></a></span>
-<span id="cb89-23"><a href="#cb89-23" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
-<span id="cb89-24"><a href="#cb89-24" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
-<span id="cb89-25"><a href="#cb89-25" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
-<span id="cb89-26"><a href="#cb89-26" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
-<span id="cb89-27"><a href="#cb89-27" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
-<span id="cb89-28"><a href="#cb89-28" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
-<span id="cb89-29"><a href="#cb89-29" tabindex="-1"></a></span>
-<span id="cb89-30"><a href="#cb89-30" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
-<span id="cb89-31"><a href="#cb89-31" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
-<span id="cb89-32"><a href="#cb89-32" tabindex="-1"></a></span>
-<span id="cb89-33"><a href="#cb89-33" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb89-34"><a href="#cb89-34" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
-<span id="cb89-35"><a href="#cb89-35" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
-<span id="cb89-36"><a href="#cb89-36" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
-<span id="cb89-37"><a href="#cb89-37" tabindex="-1"></a></span>
-<span id="cb89-38"><a href="#cb89-38" tabindex="-1"></a>withNdvi <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">107.61303468448624</span>, <span class="fl">12.130969369851766</span>])</span>
+<span id="cb87-2"><a href="#cb87-2" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb87-3"><a href="#cb87-3" tabindex="-1"></a>rgbVis <span class="op">=</span> {</span>
+<span id="cb87-4"><a href="#cb87-4" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="fl">0.0</span>,</span>
+<span id="cb87-5"><a href="#cb87-5" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">3000</span>,</span>
+<span id="cb87-6"><a href="#cb87-6" tabindex="-1"></a>  <span class="st">&#39;bands&#39;</span>: [<span class="st">&#39;B4&#39;</span>, <span class="st">&#39;B3&#39;</span>, <span class="st">&#39;B2&#39;</span>],</span>
+<span id="cb87-7"><a href="#cb87-7" tabindex="-1"></a>}</span>
+<span id="cb87-8"><a href="#cb87-8" tabindex="-1"></a></span>
+<span id="cb87-9"><a href="#cb87-9" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb87-10"><a href="#cb87-10" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2019-01-01&#39;</span>, <span class="st">&#39;2020-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb87-11"><a href="#cb87-11" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb87-12"><a href="#cb87-12" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry)) <span class="op">\</span></span>
+<span id="cb87-13"><a href="#cb87-13" tabindex="-1"></a></span>
+<span id="cb87-14"><a href="#cb87-14" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
+<span id="cb87-15"><a href="#cb87-15" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb87-16"><a href="#cb87-16" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
+<span id="cb87-17"><a href="#cb87-17" tabindex="-1"></a></span>
+<span id="cb87-18"><a href="#cb87-18" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb87-19"><a href="#cb87-19" tabindex="-1"></a><span class="co"># image in the collection</span></span>
+<span id="cb87-20"><a href="#cb87-20" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
+<span id="cb87-21"><a href="#cb87-21" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
+<span id="cb87-22"><a href="#cb87-22" tabindex="-1"></a></span>
+<span id="cb87-23"><a href="#cb87-23" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb87-24"><a href="#cb87-24" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
+<span id="cb87-25"><a href="#cb87-25" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
+<span id="cb87-26"><a href="#cb87-26" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb87-27"><a href="#cb87-27" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
+<span id="cb87-28"><a href="#cb87-28" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
+<span id="cb87-29"><a href="#cb87-29" tabindex="-1"></a></span>
+<span id="cb87-30"><a href="#cb87-30" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
+<span id="cb87-31"><a href="#cb87-31" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
+<span id="cb87-32"><a href="#cb87-32" tabindex="-1"></a></span>
+<span id="cb87-33"><a href="#cb87-33" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb87-34"><a href="#cb87-34" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb87-35"><a href="#cb87-35" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B5&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb87-36"><a href="#cb87-36" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
+<span id="cb87-37"><a href="#cb87-37" tabindex="-1"></a></span>
+<span id="cb87-38"><a href="#cb87-38" tabindex="-1"></a>withNdvi <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
 </div>
 <div id="export-all-images" class="section level4">
 <h4>Export All Images</h4>
 <p>Exports are done via the <code>ee.batch</code> module. This module
 allows you to automatically start an export - making it suitable for
 batch exports.</p>
-<div class="sourceCode" id="cb90"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb90-2"><a href="#cb90-2" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
-<div class="sourceCode" id="cb91"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
-<span id="cb91-2"><a href="#cb91-2" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb91-3"><a href="#cb91-3" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb91-4"><a href="#cb91-4" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
-<span id="cb91-5"><a href="#cb91-5" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>),</span>
-<span id="cb91-6"><a href="#cb91-6" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
-<span id="cb91-7"><a href="#cb91-7" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
-<span id="cb91-8"><a href="#cb91-8" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
-<span id="cb91-9"><a href="#cb91-9" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
-<span id="cb91-10"><a href="#cb91-10" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: image.geometry(),</span>
-<span id="cb91-11"><a href="#cb91-11" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
-<span id="cb91-12"><a href="#cb91-12" tabindex="-1"></a>  })</span>
-<span id="cb91-13"><a href="#cb91-13" tabindex="-1"></a>  task.start()</span>
-<span id="cb91-14"><a href="#cb91-14" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb88"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1" tabindex="-1"></a>image_ids <span class="op">=</span> withNdvi.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb88-2"><a href="#cb88-2" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
+<div class="sourceCode" id="cb89"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" tabindex="-1"></a><span class="co"># Export with 100m resolution for this demo</span></span>
+<span id="cb89-2"><a href="#cb89-2" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb89-3"><a href="#cb89-3" tabindex="-1"></a>  image <span class="op">=</span> ee.Image(withNdvi.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb89-4"><a href="#cb89-4" tabindex="-1"></a>  geometry <span class="op">=</span> image.geometry()</span>
+<span id="cb89-5"><a href="#cb89-5" tabindex="-1"></a></span>
+<span id="cb89-6"><a href="#cb89-6" tabindex="-1"></a>  <span class="co"># Create an export task using ee.batch.Export.image.toDrive()</span></span>
+<span id="cb89-7"><a href="#cb89-7" tabindex="-1"></a>  task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
+<span id="cb89-8"><a href="#cb89-8" tabindex="-1"></a>    <span class="st">&#39;image&#39;</span>: image.select(<span class="st">&#39;ndvi&#39;</span>),</span>
+<span id="cb89-9"><a href="#cb89-9" tabindex="-1"></a>    <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
+<span id="cb89-10"><a href="#cb89-10" tabindex="-1"></a>    <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
+<span id="cb89-11"><a href="#cb89-11" tabindex="-1"></a>    <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
+<span id="cb89-12"><a href="#cb89-12" tabindex="-1"></a>    <span class="st">&#39;scale&#39;</span>: <span class="dv">100</span>,</span>
+<span id="cb89-13"><a href="#cb89-13" tabindex="-1"></a>    <span class="st">&#39;region&#39;</span>: geometry,</span>
+<span id="cb89-14"><a href="#cb89-14" tabindex="-1"></a>    <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
+<span id="cb89-15"><a href="#cb89-15" tabindex="-1"></a>  })</span>
+<span id="cb89-16"><a href="#cb89-16" tabindex="-1"></a>  <span class="co"># Start the task</span></span>
+<span id="cb89-17"><a href="#cb89-17" tabindex="-1"></a>  task.start()</span>
+<span id="cb89-18"><a href="#cb89-18" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
 </div>
 <div id="manage-runningwaiting-tasks" class="section level4">
 <h4>Manage Running/Waiting Tasks</h4>
 <p>You can manage tasks as well. Get a list of tasks and get state
 information on them</p>
-<div class="sourceCode" id="cb92"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
-<span id="cb92-2"><a href="#cb92-2" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
-<span id="cb92-3"><a href="#cb92-3" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
-<span id="cb92-4"><a href="#cb92-4" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
-<span id="cb92-5"><a href="#cb92-5" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
+<div class="sourceCode" id="cb90"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
+<span id="cb90-2"><a href="#cb90-2" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
+<span id="cb90-3"><a href="#cb90-3" tabindex="-1"></a>  task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
+<span id="cb90-4"><a href="#cb90-4" tabindex="-1"></a>  task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
+<span id="cb90-5"><a href="#cb90-5" tabindex="-1"></a>  <span class="bu">print</span>(task_id, task_state)</span></code></pre></div>
 <p>You can cancel tasks as well</p>
-<div class="sourceCode" id="cb93"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
-<span id="cb93-2"><a href="#cb93-2" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
-<span id="cb93-3"><a href="#cb93-3" tabindex="-1"></a>    task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
-<span id="cb93-4"><a href="#cb93-4" tabindex="-1"></a>    task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
-<span id="cb93-5"><a href="#cb93-5" tabindex="-1"></a>    <span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
-<span id="cb93-6"><a href="#cb93-6" tabindex="-1"></a>        task.cancel()</span>
-<span id="cb93-7"><a href="#cb93-7" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
-<span id="cb93-8"><a href="#cb93-8" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb93-9"><a href="#cb93-9" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
+<div class="sourceCode" id="cb91"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" tabindex="-1"></a>tasks <span class="op">=</span> ee.batch.Task.<span class="bu">list</span>()</span>
+<span id="cb91-2"><a href="#cb91-2" tabindex="-1"></a><span class="cf">for</span> task <span class="kw">in</span> tasks:</span>
+<span id="cb91-3"><a href="#cb91-3" tabindex="-1"></a>    task_id <span class="op">=</span> task.status()[<span class="st">&#39;id&#39;</span>]</span>
+<span id="cb91-4"><a href="#cb91-4" tabindex="-1"></a>    task_state <span class="op">=</span> task.status()[<span class="st">&#39;state&#39;</span>]</span>
+<span id="cb91-5"><a href="#cb91-5" tabindex="-1"></a>    <span class="cf">if</span> task_state <span class="op">==</span> <span class="st">&#39;RUNNING&#39;</span> <span class="kw">or</span> task_state <span class="op">==</span> <span class="st">&#39;READY&#39;</span>:</span>
+<span id="cb91-6"><a href="#cb91-6" tabindex="-1"></a>        task.cancel()</span>
+<span id="cb91-7"><a href="#cb91-7" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> canceled&#39;</span>.<span class="bu">format</span>(task_id))</span>
+<span id="cb91-8"><a href="#cb91-8" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb91-9"><a href="#cb91-9" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&#39;Task </span><span class="sc">{}</span><span class="st"> state is </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(task_id, task_state))</span></code></pre></div>
 </div>
 <div id="exercise-30" class="section level3">
 <h3>Exercise</h3>
@@ -5243,48 +5243,38 @@ australia.</p>
 <li><strong>Hint2</strong>: You need to export the image contained in
 the clippedImage variable</li>
 </ul>
-<div class="sourceCode" id="cb94"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb94-2"><a href="#cb94-2" tabindex="-1"></a></span>
-<span id="cb94-3"><a href="#cb94-3" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
-<span id="cb94-4"><a href="#cb94-4" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
-<span id="cb94-5"><a href="#cb94-5" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
-<span id="cb94-6"><a href="#cb94-6" tabindex="-1"></a></span>
-<span id="cb94-7"><a href="#cb94-7" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
-<span id="cb94-8"><a href="#cb94-8" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;soil&#39;</span>)</span>
-<span id="cb94-9"><a href="#cb94-9" tabindex="-1"></a></span>
-<span id="cb94-10"><a href="#cb94-10" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
-<span id="cb94-11"><a href="#cb94-11" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
-<span id="cb94-12"><a href="#cb94-12" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb94-13"><a href="#cb94-13" tabindex="-1"></a></span>
-<span id="cb94-14"><a href="#cb94-14" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
-<span id="cb94-15"><a href="#cb94-15" tabindex="-1"></a></span>
-<span id="cb94-16"><a href="#cb94-16" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
-<span id="cb94-17"><a href="#cb94-17" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2023-01-01&#39;</span>, <span class="st">&#39;2025-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb94-18"><a href="#cb94-18" tabindex="-1"></a>  <span class="co">#.filter(ee.Filter.bounds(geometry))</span></span>
-<span id="cb94-19"><a href="#cb94-19" tabindex="-1"></a></span>
-<span id="cb94-20"><a href="#cb94-20" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb94-21"><a href="#cb94-21" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
+<div class="sourceCode" id="cb92"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb92-2"><a href="#cb92-2" tabindex="-1"></a></span>
+<span id="cb92-3"><a href="#cb92-3" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
+<span id="cb92-4"><a href="#cb92-4" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
+<span id="cb92-5"><a href="#cb92-5" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
+<span id="cb92-6"><a href="#cb92-6" tabindex="-1"></a></span>
+<span id="cb92-7"><a href="#cb92-7" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
+<span id="cb92-8"><a href="#cb92-8" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;soil&#39;</span>)</span>
+<span id="cb92-9"><a href="#cb92-9" tabindex="-1"></a></span>
+<span id="cb92-10"><a href="#cb92-10" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
+<span id="cb92-11"><a href="#cb92-11" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
+<span id="cb92-12"><a href="#cb92-12" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb92-13"><a href="#cb92-13" tabindex="-1"></a></span>
+<span id="cb92-14"><a href="#cb92-14" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
+<span id="cb92-15"><a href="#cb92-15" tabindex="-1"></a></span>
+<span id="cb92-16"><a href="#cb92-16" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
+<span id="cb92-17"><a href="#cb92-17" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2023-01-01&#39;</span>, <span class="st">&#39;2025-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb92-18"><a href="#cb92-18" tabindex="-1"></a>  <span class="co">#.filter(ee.Filter.bounds(geometry))</span></span>
+<span id="cb92-19"><a href="#cb92-19" tabindex="-1"></a></span>
+<span id="cb92-20"><a href="#cb92-20" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb92-21"><a href="#cb92-21" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Total images: &#39;</span>, <span class="bu">len</span>(image_ids))</span></code></pre></div>
 <p>Replace the comments with your code.</p>
-<div class="sourceCode" id="cb95"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a>    geometry <span class="op">=</span> ee.Algorithms.GeometryConstructors.BBox(<span class="op">-</span><span class="dv">180</span>, <span class="op">-</span><span class="dv">90</span>, <span class="dv">180</span>, <span class="dv">90</span>)</span>
-<span id="cb95-4"><a href="#cb95-4" tabindex="-1"></a></span>
-<span id="cb95-5"><a href="#cb95-5" tabindex="-1"></a>    <span class="co">## Create the export task using ee.batch.Export.image.toDrive()</span></span>
-<span id="cb95-6"><a href="#cb95-6" tabindex="-1"></a>    task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
-<span id="cb95-7"><a href="#cb95-7" tabindex="-1"></a>        <span class="st">&#39;image&#39;</span>: exportImage,</span>
-<span id="cb95-8"><a href="#cb95-8" tabindex="-1"></a>        <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Terraclimate Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
-<span id="cb95-9"><a href="#cb95-9" tabindex="-1"></a>        <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
-<span id="cb95-10"><a href="#cb95-10" tabindex="-1"></a>        <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
-<span id="cb95-11"><a href="#cb95-11" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>: <span class="fl">4638.3</span>,</span>
-<span id="cb95-12"><a href="#cb95-12" tabindex="-1"></a>        <span class="st">&#39;region&#39;</span>: geometry,</span>
-<span id="cb95-13"><a href="#cb95-13" tabindex="-1"></a>        <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span>,</span>
-<span id="cb95-14"><a href="#cb95-14" tabindex="-1"></a>        <span class="st">&#39;formatOptions&#39;</span>: {<span class="st">&#39;cloudOptimized&#39;</span>: <span class="va">True</span>},</span>
-<span id="cb95-15"><a href="#cb95-15" tabindex="-1"></a>    })</span>
-<span id="cb95-16"><a href="#cb95-16" tabindex="-1"></a>    task.start()</span>
-<span id="cb95-17"><a href="#cb95-17" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span>
-<span id="cb95-18"><a href="#cb95-18" tabindex="-1"></a>    <span class="co">## Start the task</span></span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb93-2"><a href="#cb93-2" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb93-3"><a href="#cb93-3" tabindex="-1"></a>    <span class="co"># clip the image</span></span>
+<span id="cb93-4"><a href="#cb93-4" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
+<span id="cb93-5"><a href="#cb93-5" tabindex="-1"></a></span>
+<span id="cb93-6"><a href="#cb93-6" tabindex="-1"></a>    <span class="co">## Create the export task using ee.batch.Export.image.toDrive()</span></span>
+<span id="cb93-7"><a href="#cb93-7" tabindex="-1"></a></span>
+<span id="cb93-8"><a href="#cb93-8" tabindex="-1"></a>    <span class="co">## Start the task</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="images/end_to_end_gee/exporting_a_collection.png" alt="Launching multiple tasks using the  Python API" width="100%" />
 <p class="caption">
@@ -5312,14 +5302,14 @@ notebook</a>.</p>
 <div id="installation" class="section level4">
 <h4>Installation</h4>
 <p>Let’s install the required packages in the Colab environment.</p>
-<div class="sourceCode" id="cb96"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb96-2"><a href="#cb96-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a>    <span class="op">!</span>pip install <span class="op">--</span>upgrade xee</span></code></pre></div>
-<div class="sourceCode" id="cb97"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb97-2"><a href="#cb97-2" tabindex="-1"></a><span class="im">import</span> xarray</span>
-<span id="cb97-3"><a href="#cb97-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
+<div class="sourceCode" id="cb94"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb94-2"><a href="#cb94-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb94-3"><a href="#cb94-3" tabindex="-1"></a>    <span class="op">!</span>pip install <span class="op">--</span>upgrade xee</span></code></pre></div>
+<div class="sourceCode" id="cb95"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a><span class="im">import</span> xarray</span>
+<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code></pre></div>
 </div>
 <div id="initialization-3" class="section level4">
 <h4>Initialization</h4>
@@ -5332,152 +5322,152 @@ href="https://console.cloud.google.com/">Google Cloud Console</a>.</p>
 href="https://developers.google.com/earth-engine/cloud/highvolume">High-volume
 Endpoint</a> which supports large number of concurrent requests and is
 recommended when working with XEE.</p>
-<div class="sourceCode" id="cb98"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
-<span id="cb98-2"><a href="#cb98-2" tabindex="-1"></a></span>
-<span id="cb98-3"><a href="#cb98-3" tabindex="-1"></a><span class="cf">try</span>:</span>
-<span id="cb98-4"><a href="#cb98-4" tabindex="-1"></a>    ee.Initialize(</span>
-<span id="cb98-5"><a href="#cb98-5" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
-<span id="cb98-6"><a href="#cb98-6" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
-<span id="cb98-7"><a href="#cb98-7" tabindex="-1"></a>    )</span>
-<span id="cb98-8"><a href="#cb98-8" tabindex="-1"></a><span class="cf">except</span>:</span>
-<span id="cb98-9"><a href="#cb98-9" tabindex="-1"></a>    ee.Authenticate()</span>
-<span id="cb98-10"><a href="#cb98-10" tabindex="-1"></a>    ee.Initialize(</span>
-<span id="cb98-11"><a href="#cb98-11" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
-<span id="cb98-12"><a href="#cb98-12" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
-<span id="cb98-13"><a href="#cb98-13" tabindex="-1"></a>    )</span></code></pre></div>
+<div class="sourceCode" id="cb96"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
+<span id="cb96-2"><a href="#cb96-2" tabindex="-1"></a></span>
+<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb96-4"><a href="#cb96-4" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb96-5"><a href="#cb96-5" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb96-6"><a href="#cb96-6" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
+<span id="cb96-7"><a href="#cb96-7" tabindex="-1"></a>    )</span>
+<span id="cb96-8"><a href="#cb96-8" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb96-9"><a href="#cb96-9" tabindex="-1"></a>    ee.Authenticate()</span>
+<span id="cb96-10"><a href="#cb96-10" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb96-11"><a href="#cb96-11" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb96-12"><a href="#cb96-12" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span></span>
+<span id="cb96-13"><a href="#cb96-13" tabindex="-1"></a>    )</span></code></pre></div>
 </div>
 <div id="select-a-location." class="section level4">
 <h4>Select a location.</h4>
-<div class="sourceCode" id="cb99"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">82.60759592318209</span>, <span class="fl">27.163481733946846</span>])</span></code></pre></div>
+<div class="sourceCode" id="cb97"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([<span class="fl">82.60759592318209</span>, <span class="fl">27.163481733946846</span>])</span></code></pre></div>
 </div>
 <div id="preprocess-the-data-in-gee" class="section level4">
 <h4>Preprocess the data in GEE</h4>
 <p>We start with the Sentinel-2 L1C collection. We pre-process the data
 by applying cloud masking and pixel scaling.</p>
-<div class="sourceCode" id="cb100"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)</span>
-<span id="cb100-2"><a href="#cb100-2" tabindex="-1"></a></span>
-<span id="cb100-3"><a href="#cb100-3" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
-<span id="cb100-4"><a href="#cb100-4" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2017-01-01&#39;</span>, <span class="st">&#39;2018-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb100-5"><a href="#cb100-5" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
-<span id="cb100-6"><a href="#cb100-6" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
-<span id="cb100-7"><a href="#cb100-7" tabindex="-1"></a></span>
-<span id="cb100-8"><a href="#cb100-8" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
-<span id="cb100-9"><a href="#cb100-9" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
-<span id="cb100-10"><a href="#cb100-10" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
-<span id="cb100-11"><a href="#cb100-11" tabindex="-1"></a></span>
-<span id="cb100-12"><a href="#cb100-12" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
-<span id="cb100-13"><a href="#cb100-13" tabindex="-1"></a><span class="co"># image in the collection</span></span>
-<span id="cb100-14"><a href="#cb100-14" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
-<span id="cb100-15"><a href="#cb100-15" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
-<span id="cb100-16"><a href="#cb100-16" tabindex="-1"></a></span>
-<span id="cb100-17"><a href="#cb100-17" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
-<span id="cb100-18"><a href="#cb100-18" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
-<span id="cb100-19"><a href="#cb100-19" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
-<span id="cb100-20"><a href="#cb100-20" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
-<span id="cb100-21"><a href="#cb100-21" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
-<span id="cb100-22"><a href="#cb100-22" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
-<span id="cb100-23"><a href="#cb100-23" tabindex="-1"></a></span>
-<span id="cb100-24"><a href="#cb100-24" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
-<span id="cb100-25"><a href="#cb100-25" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
-<span id="cb100-26"><a href="#cb100-26" tabindex="-1"></a></span>
-<span id="cb100-27"><a href="#cb100-27" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
-<span id="cb100-28"><a href="#cb100-28" tabindex="-1"></a><span class="co"># Create a new image to overcome https://github.com/google/Xee/issues/88</span></span>
-<span id="cb100-29"><a href="#cb100-29" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
-<span id="cb100-30"><a href="#cb100-30" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B8&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
-<span id="cb100-31"><a href="#cb100-31" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.0001</span>).addBands(ndvi)<span class="op">\</span></span>
-<span id="cb100-32"><a href="#cb100-32" tabindex="-1"></a>    .copyProperties(image, [<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb100-33"><a href="#cb100-33" tabindex="-1"></a></span>
-<span id="cb100-34"><a href="#cb100-34" tabindex="-1"></a><span class="co"># Map the function over the collection</span></span>
-<span id="cb100-35"><a href="#cb100-35" tabindex="-1"></a>withNdvi <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
+<div class="sourceCode" id="cb98"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb98-2"><a href="#cb98-2" tabindex="-1"></a></span>
+<span id="cb98-3"><a href="#cb98-3" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb98-4"><a href="#cb98-4" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2017-01-01&#39;</span>, <span class="st">&#39;2018-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb98-5"><a href="#cb98-5" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb98-6"><a href="#cb98-6" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb98-7"><a href="#cb98-7" tabindex="-1"></a></span>
+<span id="cb98-8"><a href="#cb98-8" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
+<span id="cb98-9"><a href="#cb98-9" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb98-10"><a href="#cb98-10" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
+<span id="cb98-11"><a href="#cb98-11" tabindex="-1"></a></span>
+<span id="cb98-12"><a href="#cb98-12" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb98-13"><a href="#cb98-13" tabindex="-1"></a><span class="co"># image in the collection</span></span>
+<span id="cb98-14"><a href="#cb98-14" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
+<span id="cb98-15"><a href="#cb98-15" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
+<span id="cb98-16"><a href="#cb98-16" tabindex="-1"></a></span>
+<span id="cb98-17"><a href="#cb98-17" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb98-18"><a href="#cb98-18" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
+<span id="cb98-19"><a href="#cb98-19" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
+<span id="cb98-20"><a href="#cb98-20" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb98-21"><a href="#cb98-21" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
+<span id="cb98-22"><a href="#cb98-22" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
+<span id="cb98-23"><a href="#cb98-23" tabindex="-1"></a></span>
+<span id="cb98-24"><a href="#cb98-24" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
+<span id="cb98-25"><a href="#cb98-25" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
+<span id="cb98-26"><a href="#cb98-26" tabindex="-1"></a></span>
+<span id="cb98-27"><a href="#cb98-27" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb98-28"><a href="#cb98-28" tabindex="-1"></a><span class="co"># Create a new image to overcome https://github.com/google/Xee/issues/88</span></span>
+<span id="cb98-29"><a href="#cb98-29" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb98-30"><a href="#cb98-30" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B8&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb98-31"><a href="#cb98-31" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.0001</span>).addBands(ndvi)<span class="op">\</span></span>
+<span id="cb98-32"><a href="#cb98-32" tabindex="-1"></a>    .copyProperties(image, [<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb98-33"><a href="#cb98-33" tabindex="-1"></a></span>
+<span id="cb98-34"><a href="#cb98-34" tabindex="-1"></a><span class="co"># Map the function over the collection</span></span>
+<span id="cb98-35"><a href="#cb98-35" tabindex="-1"></a>withNdvi <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI)</span></code></pre></div>
 </div>
 <div id="load-imagecollection-as-xarray-dataset" class="section level4">
 <h4>Load ImageCollection as XArray Dataset</h4>
 <p>Now we have an ImageCollection that we want to get it as a XArray
 Dataset. We define the region of interest and extract the
 ImageCollection using the <code>ee</code> engine.</p>
-<div class="sourceCode" id="cb101"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" tabindex="-1"></a>ds <span class="op">=</span> xarray.open_dataset(</span>
-<span id="cb101-2"><a href="#cb101-2" tabindex="-1"></a>    withNdvi,</span>
-<span id="cb101-3"><a href="#cb101-3" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;ee&#39;</span>,</span>
-<span id="cb101-4"><a href="#cb101-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:3857&#39;</span>,</span>
-<span id="cb101-5"><a href="#cb101-5" tabindex="-1"></a>    scale<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb101-6"><a href="#cb101-6" tabindex="-1"></a>    geometry<span class="op">=</span>geometry,</span>
-<span id="cb101-7"><a href="#cb101-7" tabindex="-1"></a>    ee_mask_value<span class="op">=-</span><span class="dv">9999</span>,</span>
-<span id="cb101-8"><a href="#cb101-8" tabindex="-1"></a>)</span>
-<span id="cb101-9"><a href="#cb101-9" tabindex="-1"></a></span>
-<span id="cb101-10"><a href="#cb101-10" tabindex="-1"></a>ds</span></code></pre></div>
+<div class="sourceCode" id="cb99"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" tabindex="-1"></a>ds <span class="op">=</span> xarray.open_dataset(</span>
+<span id="cb99-2"><a href="#cb99-2" tabindex="-1"></a>    withNdvi,</span>
+<span id="cb99-3"><a href="#cb99-3" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;ee&#39;</span>,</span>
+<span id="cb99-4"><a href="#cb99-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:3857&#39;</span>,</span>
+<span id="cb99-5"><a href="#cb99-5" tabindex="-1"></a>    scale<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb99-6"><a href="#cb99-6" tabindex="-1"></a>    geometry<span class="op">=</span>geometry,</span>
+<span id="cb99-7"><a href="#cb99-7" tabindex="-1"></a>    ee_mask_value<span class="op">=-</span><span class="dv">9999</span>,</span>
+<span id="cb99-8"><a href="#cb99-8" tabindex="-1"></a>)</span>
+<span id="cb99-9"><a href="#cb99-9" tabindex="-1"></a></span>
+<span id="cb99-10"><a href="#cb99-10" tabindex="-1"></a>ds</span></code></pre></div>
 <p>Select the <code>ndvi</code> band.</p>
-<div class="sourceCode" id="cb102"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" tabindex="-1"></a>ndvi_time_series <span class="op">=</span> ds.ndvi</span></code></pre></div>
+<div class="sourceCode" id="cb100"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a>ndvi_time_series <span class="op">=</span> ds.ndvi</span></code></pre></div>
 <p>Run <code>compute()</code> to fetch the pixels from Earth Engine.
 This may take some time depending on the size of the request. This is a
 time-series at a single pixel, so we also <code>squeeze()</code> to
 remove the X and Y dimensions and get an array of NDVI values.</p>
-<div class="sourceCode" id="cb103"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a>original_time_series <span class="op">=</span> ndvi_time_series.compute()</span>
-<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a>original_time_series <span class="op">=</span> original_time_series.squeeze()</span>
-<span id="cb103-3"><a href="#cb103-3" tabindex="-1"></a>original_time_series</span></code></pre></div>
+<div class="sourceCode" id="cb101"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" tabindex="-1"></a>original_time_series <span class="op">=</span> ndvi_time_series.compute()</span>
+<span id="cb101-2"><a href="#cb101-2" tabindex="-1"></a>original_time_series <span class="op">=</span> original_time_series.squeeze()</span>
+<span id="cb101-3"><a href="#cb101-3" tabindex="-1"></a>original_time_series</span></code></pre></div>
 <p>Plot the time-series.</p>
-<div class="sourceCode" id="cb104"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb104-2"><a href="#cb104-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
-<span id="cb104-3"><a href="#cb104-3" tabindex="-1"></a>original_time_series.plot.line(</span>
-<span id="cb104-4"><a href="#cb104-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb104-5"><a href="#cb104-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb104-6"><a href="#cb104-6" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb102"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb102-2"><a href="#cb102-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
+<span id="cb102-3"><a href="#cb102-3" tabindex="-1"></a>original_time_series.plot.line(</span>
+<span id="cb102-4"><a href="#cb102-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb102-5"><a href="#cb102-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb102-6"><a href="#cb102-6" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="process-time-series-using-xarray" class="section level4">
 <h4>Process Time-Series using XArray</h4>
 <p>We use XArray’s excellent time-series processing functionality to
 process the time-series. First, we create a regularly spaced
 time-series.</p>
-<div class="sourceCode" id="cb105"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> original_time_series<span class="op">\</span></span>
-<span id="cb105-2"><a href="#cb105-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>)</span>
-<span id="cb105-3"><a href="#cb105-3" tabindex="-1"></a>time_series_resampled</span></code></pre></div>
+<div class="sourceCode" id="cb103"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> original_time_series<span class="op">\</span></span>
+<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>)</span>
+<span id="cb103-3"><a href="#cb103-3" tabindex="-1"></a>time_series_resampled</span></code></pre></div>
 <p>Next we fill the cloud-masked pixels with linearly interpolated
 values from temporal neighbors.</p>
-<div class="sourceCode" id="cb106"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled<span class="op">\</span></span>
-<span id="cb106-2"><a href="#cb106-2" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb106-3"><a href="#cb106-3" tabindex="-1"></a>time_series_interpolated</span></code></pre></div>
+<div class="sourceCode" id="cb104"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled<span class="op">\</span></span>
+<span id="cb104-2"><a href="#cb104-2" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb104-3"><a href="#cb104-3" tabindex="-1"></a>time_series_interpolated</span></code></pre></div>
 <p>We also apply a moving-window smoothing to remove noise.</p>
-<div class="sourceCode" id="cb107"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" tabindex="-1"></a>time_series_smooth <span class="op">=</span> time_series_interpolated<span class="op">\</span></span>
-<span id="cb107-2"><a href="#cb107-2" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span>
-<span id="cb107-3"><a href="#cb107-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
+<div class="sourceCode" id="cb105"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" tabindex="-1"></a>time_series_smooth <span class="op">=</span> time_series_interpolated<span class="op">\</span></span>
+<span id="cb105-2"><a href="#cb105-2" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span>
+<span id="cb105-3"><a href="#cb105-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
 <p>A moving-window smoothing removed the first and last values of the
 time-series. We anchor the smoothed time-series with the values from the
 original time-series.</p>
-<div class="sourceCode" id="cb108"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" tabindex="-1"></a>time_series_smooth[<span class="dv">0</span>] <span class="op">=</span> original_time_series[<span class="dv">0</span>]</span>
-<span id="cb108-2"><a href="#cb108-2" tabindex="-1"></a>time_series_smooth[<span class="op">-</span><span class="dv">1</span>] <span class="op">=</span> original_time_series[<span class="op">-</span><span class="dv">1</span>]</span>
-<span id="cb108-3"><a href="#cb108-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
+<div class="sourceCode" id="cb106"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" tabindex="-1"></a>time_series_smooth[<span class="dv">0</span>] <span class="op">=</span> original_time_series[<span class="dv">0</span>]</span>
+<span id="cb106-2"><a href="#cb106-2" tabindex="-1"></a>time_series_smooth[<span class="op">-</span><span class="dv">1</span>] <span class="op">=</span> original_time_series[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb106-3"><a href="#cb106-3" tabindex="-1"></a>time_series_smooth</span></code></pre></div>
 <p>Plot the original and smoothed time-series.</p>
-<div class="sourceCode" id="cb109"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb109-2"><a href="#cb109-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
-<span id="cb109-3"><a href="#cb109-3" tabindex="-1"></a>original_time_series.plot.line(</span>
-<span id="cb109-4"><a href="#cb109-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb109-5"><a href="#cb109-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb109-6"><a href="#cb109-6" tabindex="-1"></a>time_series_smooth.plot.line(</span>
-<span id="cb109-7"><a href="#cb109-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb109-8"><a href="#cb109-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb109-9"><a href="#cb109-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb107"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb107-2"><a href="#cb107-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">5</span>)</span>
+<span id="cb107-3"><a href="#cb107-3" tabindex="-1"></a>original_time_series.plot.line(</span>
+<span id="cb107-4"><a href="#cb107-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb107-5"><a href="#cb107-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb107-6"><a href="#cb107-6" tabindex="-1"></a>time_series_smooth.plot.line(</span>
+<span id="cb107-7"><a href="#cb107-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb107-8"><a href="#cb107-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb107-9"><a href="#cb107-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="download-the-time-series" class="section level4">
 <h4>Download the Time-Series</h4>
 <p>Convert the DataArray to a Pandas DataFrame and save it as a CSV
 file.</p>
-<div class="sourceCode" id="cb110"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb110-1"><a href="#cb110-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smooth.to_dataframe(<span class="st">&#39;ndvi&#39;</span>).reset_index()</span>
-<span id="cb110-2"><a href="#cb110-2" tabindex="-1"></a>df</span></code></pre></div>
-<div class="sourceCode" id="cb111"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;smoothed_time_series.csv&#39;</span></span>
-<span id="cb111-2"><a href="#cb111-2" tabindex="-1"></a>df[[<span class="st">&#39;time&#39;</span>, <span class="st">&#39;ndvi&#39;</span>]].to_csv(output_filename, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb108"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smooth.to_dataframe(<span class="st">&#39;ndvi&#39;</span>).reset_index()</span>
+<span id="cb108-2"><a href="#cb108-2" tabindex="-1"></a>df</span></code></pre></div>
+<div class="sourceCode" id="cb109"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;smoothed_time_series.csv&#39;</span></span>
+<span id="cb109-2"><a href="#cb109-2" tabindex="-1"></a>df[[<span class="st">&#39;time&#39;</span>, <span class="st">&#39;ndvi&#39;</span>]].to_csv(output_filename, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
 </div>
 <div id="exercise-31" class="section level3">
 <h3>Exercise</h3>
@@ -5510,74 +5500,74 @@ create a script to download data from GEE.</p>
 <li>Create a new file named <code>download_data.py</code> with the
 content shown below.</li>
 </ol>
-<div class="sourceCode" id="cb112"><pre
-class="sourceCode py"><code class="sourceCode python"><span id="cb112-1"><a href="#cb112-1" tabindex="-1"></a><span class="im">import</span> datetime</span>
-<span id="cb112-2"><a href="#cb112-2" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb112-3"><a href="#cb112-3" tabindex="-1"></a><span class="im">import</span> csv</span>
-<span id="cb112-4"><a href="#cb112-4" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb112-5"><a href="#cb112-5" tabindex="-1"></a></span>
-<span id="cb112-6"><a href="#cb112-6" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
-<span id="cb112-7"><a href="#cb112-7" tabindex="-1"></a></span>
-<span id="cb112-8"><a href="#cb112-8" tabindex="-1"></a><span class="cf">try</span>:</span>
-<span id="cb112-9"><a href="#cb112-9" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
-<span id="cb112-10"><a href="#cb112-10" tabindex="-1"></a><span class="cf">except</span>:</span>
-<span id="cb112-11"><a href="#cb112-11" tabindex="-1"></a>    ee.Authenticate()</span>
-<span id="cb112-12"><a href="#cb112-12" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
-<span id="cb112-13"><a href="#cb112-13" tabindex="-1"></a></span>
-<span id="cb112-14"><a href="#cb112-14" tabindex="-1"></a><span class="co"># Get current date</span></span>
-<span id="cb112-15"><a href="#cb112-15" tabindex="-1"></a>now <span class="op">=</span> datetime.datetime.now()</span>
-<span id="cb112-16"><a href="#cb112-16" tabindex="-1"></a></span>
-<span id="cb112-17"><a href="#cb112-17" tabindex="-1"></a><span class="co"># Define the period of past 1-week</span></span>
-<span id="cb112-18"><a href="#cb112-18" tabindex="-1"></a>end_date <span class="op">=</span> ee.Date(now)</span>
-<span id="cb112-19"><a href="#cb112-19" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">1</span>, <span class="st">&#39;week&#39;</span>)</span>
-<span id="cb112-20"><a href="#cb112-20" tabindex="-1"></a></span>
-<span id="cb112-21"><a href="#cb112-21" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM_dd&#39;</span>)</span>
-<span id="cb112-22"><a href="#cb112-22" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
-<span id="cb112-23"><a href="#cb112-23" tabindex="-1"></a></span>
-<span id="cb112-24"><a href="#cb112-24" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
-<span id="cb112-25"><a href="#cb112-25" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
-<span id="cb112-26"><a href="#cb112-26" tabindex="-1"></a></span>
-<span id="cb112-27"><a href="#cb112-27" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/SMAP/SPL4SMGP/007&#39;</span>)</span>
-<span id="cb112-28"><a href="#cb112-28" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;FAO/GAUL_SIMPLIFIED_500m/2015/level2&#39;</span>)</span>
-<span id="cb112-29"><a href="#cb112-29" tabindex="-1"></a></span>
-<span id="cb112-30"><a href="#cb112-30" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
-<span id="cb112-31"><a href="#cb112-31" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
-<span id="cb112-32"><a href="#cb112-32" tabindex="-1"></a></span>
-<span id="cb112-33"><a href="#cb112-33" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
-<span id="cb112-34"><a href="#cb112-34" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;sm_surface&#39;</span>)</span>
-<span id="cb112-35"><a href="#cb112-35" tabindex="-1"></a></span>
-<span id="cb112-36"><a href="#cb112-36" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
-<span id="cb112-37"><a href="#cb112-37" tabindex="-1"></a></span>
-<span id="cb112-38"><a href="#cb112-38" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
-<span id="cb112-39"><a href="#cb112-39" tabindex="-1"></a></span>
-<span id="cb112-40"><a href="#cb112-40" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
-<span id="cb112-41"><a href="#cb112-41" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
-<span id="cb112-42"><a href="#cb112-42" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
-<span id="cb112-43"><a href="#cb112-43" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">11000</span>,</span>
-<span id="cb112-44"><a href="#cb112-44" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
-<span id="cb112-45"><a href="#cb112-45" tabindex="-1"></a>  })</span>
-<span id="cb112-46"><a href="#cb112-46" tabindex="-1"></a></span>
-<span id="cb112-47"><a href="#cb112-47" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
-<span id="cb112-48"><a href="#cb112-48" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
-<span id="cb112-49"><a href="#cb112-49" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb112-50"><a href="#cb112-50" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
-<span id="cb112-51"><a href="#cb112-51" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
-<span id="cb112-52"><a href="#cb112-52" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
-<span id="cb112-53"><a href="#cb112-53" tabindex="-1"></a></span>
-<span id="cb112-54"><a href="#cb112-54" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
-<span id="cb112-55"><a href="#cb112-55" tabindex="-1"></a></span>
-<span id="cb112-56"><a href="#cb112-56" tabindex="-1"></a>data <span class="op">=</span> []</span>
-<span id="cb112-57"><a href="#cb112-57" tabindex="-1"></a></span>
-<span id="cb112-58"><a href="#cb112-58" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
-<span id="cb112-59"><a href="#cb112-59" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
-<span id="cb112-60"><a href="#cb112-60" tabindex="-1"></a></span>
-<span id="cb112-61"><a href="#cb112-61" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
-<span id="cb112-62"><a href="#cb112-62" tabindex="-1"></a></span>
-<span id="cb112-63"><a href="#cb112-63" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
-<span id="cb112-64"><a href="#cb112-64" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
-<span id="cb112-65"><a href="#cb112-65" tabindex="-1"></a>    writer.writeheader()</span>
-<span id="cb112-66"><a href="#cb112-66" tabindex="-1"></a>    writer.writerows(data)</span>
-<span id="cb112-67"><a href="#cb112-67" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
+<div class="sourceCode" id="cb110"><pre
+class="sourceCode py"><code class="sourceCode python"><span id="cb110-1"><a href="#cb110-1" tabindex="-1"></a><span class="im">import</span> datetime</span>
+<span id="cb110-2"><a href="#cb110-2" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb110-3"><a href="#cb110-3" tabindex="-1"></a><span class="im">import</span> csv</span>
+<span id="cb110-4"><a href="#cb110-4" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb110-5"><a href="#cb110-5" tabindex="-1"></a></span>
+<span id="cb110-6"><a href="#cb110-6" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span></span>
+<span id="cb110-7"><a href="#cb110-7" tabindex="-1"></a></span>
+<span id="cb110-8"><a href="#cb110-8" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb110-9"><a href="#cb110-9" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
+<span id="cb110-10"><a href="#cb110-10" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb110-11"><a href="#cb110-11" tabindex="-1"></a>    ee.Authenticate()</span>
+<span id="cb110-12"><a href="#cb110-12" tabindex="-1"></a>    ee.Initialize(project<span class="op">=</span>cloud_project)</span>
+<span id="cb110-13"><a href="#cb110-13" tabindex="-1"></a></span>
+<span id="cb110-14"><a href="#cb110-14" tabindex="-1"></a><span class="co"># Get current date</span></span>
+<span id="cb110-15"><a href="#cb110-15" tabindex="-1"></a>now <span class="op">=</span> datetime.datetime.now()</span>
+<span id="cb110-16"><a href="#cb110-16" tabindex="-1"></a></span>
+<span id="cb110-17"><a href="#cb110-17" tabindex="-1"></a><span class="co"># Define the period of past 1-week</span></span>
+<span id="cb110-18"><a href="#cb110-18" tabindex="-1"></a>end_date <span class="op">=</span> ee.Date(now)</span>
+<span id="cb110-19"><a href="#cb110-19" tabindex="-1"></a>start_date <span class="op">=</span> end_date.advance(<span class="op">-</span><span class="dv">1</span>, <span class="st">&#39;week&#39;</span>)</span>
+<span id="cb110-20"><a href="#cb110-20" tabindex="-1"></a></span>
+<span id="cb110-21"><a href="#cb110-21" tabindex="-1"></a>date_string <span class="op">=</span> end_date.<span class="bu">format</span>(<span class="st">&#39;YYYY_MM_dd&#39;</span>)</span>
+<span id="cb110-22"><a href="#cb110-22" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&#39;ssm_</span><span class="sc">{}</span><span class="st">.csv&#39;</span>.<span class="bu">format</span>(date_string.getInfo())</span>
+<span id="cb110-23"><a href="#cb110-23" tabindex="-1"></a></span>
+<span id="cb110-24"><a href="#cb110-24" tabindex="-1"></a><span class="co"># Saving to current directory. You can change the path to appropriate location</span></span>
+<span id="cb110-25"><a href="#cb110-25" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(filename)</span>
+<span id="cb110-26"><a href="#cb110-26" tabindex="-1"></a></span>
+<span id="cb110-27"><a href="#cb110-27" tabindex="-1"></a>soilmoisture <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/SMAP/SPL4SMGP/007&#39;</span>)</span>
+<span id="cb110-28"><a href="#cb110-28" tabindex="-1"></a>admin2 <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;FAO/GAUL_SIMPLIFIED_500m/2015/level2&#39;</span>)</span>
+<span id="cb110-29"><a href="#cb110-29" tabindex="-1"></a></span>
+<span id="cb110-30"><a href="#cb110-30" tabindex="-1"></a><span class="co"># Filter to a state</span></span>
+<span id="cb110-31"><a href="#cb110-31" tabindex="-1"></a>karnataka <span class="op">=</span> admin2.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;ADM1_NAME&#39;</span>, <span class="st">&#39;Karnataka&#39;</span>))</span>
+<span id="cb110-32"><a href="#cb110-32" tabindex="-1"></a></span>
+<span id="cb110-33"><a href="#cb110-33" tabindex="-1"></a><span class="co"># Select the ssm band</span></span>
+<span id="cb110-34"><a href="#cb110-34" tabindex="-1"></a>ssm  <span class="op">=</span> soilmoisture.select(<span class="st">&#39;sm_surface&#39;</span>)</span>
+<span id="cb110-35"><a href="#cb110-35" tabindex="-1"></a></span>
+<span id="cb110-36"><a href="#cb110-36" tabindex="-1"></a>filtered <span class="op">=</span> ssm .<span class="bu">filter</span>(ee.Filter.date(start_date, end_date))</span>
+<span id="cb110-37"><a href="#cb110-37" tabindex="-1"></a></span>
+<span id="cb110-38"><a href="#cb110-38" tabindex="-1"></a>mean <span class="op">=</span> filtered.mean()</span>
+<span id="cb110-39"><a href="#cb110-39" tabindex="-1"></a></span>
+<span id="cb110-40"><a href="#cb110-40" tabindex="-1"></a>stats <span class="op">=</span> mean.reduceRegions(<span class="op">**</span>{</span>
+<span id="cb110-41"><a href="#cb110-41" tabindex="-1"></a>  <span class="st">&#39;collection&#39;</span>: karnataka,</span>
+<span id="cb110-42"><a href="#cb110-42" tabindex="-1"></a>  <span class="st">&#39;reducer&#39;</span>: ee.Reducer.mean().setOutputs([<span class="st">&#39;meanssm&#39;</span>]),</span>
+<span id="cb110-43"><a href="#cb110-43" tabindex="-1"></a>  <span class="st">&#39;scale&#39;</span>: <span class="dv">11000</span>,</span>
+<span id="cb110-44"><a href="#cb110-44" tabindex="-1"></a>  <span class="st">&#39;crs&#39;</span>: <span class="st">&#39;EPSG:32643&#39;</span></span>
+<span id="cb110-45"><a href="#cb110-45" tabindex="-1"></a>  })</span>
+<span id="cb110-46"><a href="#cb110-46" tabindex="-1"></a></span>
+<span id="cb110-47"><a href="#cb110-47" tabindex="-1"></a><span class="co"># Select columns to keep and remove geometry to make the result lightweight</span></span>
+<span id="cb110-48"><a href="#cb110-48" tabindex="-1"></a><span class="co"># Change column names to match your uploaded shapefile</span></span>
+<span id="cb110-49"><a href="#cb110-49" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb110-50"><a href="#cb110-50" tabindex="-1"></a>exportCollection <span class="op">=</span> stats.select(<span class="op">**</span>{</span>
+<span id="cb110-51"><a href="#cb110-51" tabindex="-1"></a>    <span class="st">&#39;propertySelectors&#39;</span>: columns,</span>
+<span id="cb110-52"><a href="#cb110-52" tabindex="-1"></a>    <span class="st">&#39;retainGeometry&#39;</span>: <span class="va">False</span>})</span>
+<span id="cb110-53"><a href="#cb110-53" tabindex="-1"></a></span>
+<span id="cb110-54"><a href="#cb110-54" tabindex="-1"></a>features <span class="op">=</span> exportCollection.getInfo()[<span class="st">&#39;features&#39;</span>]</span>
+<span id="cb110-55"><a href="#cb110-55" tabindex="-1"></a></span>
+<span id="cb110-56"><a href="#cb110-56" tabindex="-1"></a>data <span class="op">=</span> []</span>
+<span id="cb110-57"><a href="#cb110-57" tabindex="-1"></a></span>
+<span id="cb110-58"><a href="#cb110-58" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> features:</span>
+<span id="cb110-59"><a href="#cb110-59" tabindex="-1"></a>    data.append(f[<span class="st">&#39;properties&#39;</span>])</span>
+<span id="cb110-60"><a href="#cb110-60" tabindex="-1"></a></span>
+<span id="cb110-61"><a href="#cb110-61" tabindex="-1"></a>field_names <span class="op">=</span> [<span class="st">&#39;ADM2_NAME&#39;</span>, <span class="st">&#39;meanssm&#39;</span>]</span>
+<span id="cb110-62"><a href="#cb110-62" tabindex="-1"></a></span>
+<span id="cb110-63"><a href="#cb110-63" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> csvfile:</span>
+<span id="cb110-64"><a href="#cb110-64" tabindex="-1"></a>    writer <span class="op">=</span> csv.DictWriter(csvfile, fieldnames <span class="op">=</span> field_names)</span>
+<span id="cb110-65"><a href="#cb110-65" tabindex="-1"></a>    writer.writeheader()</span>
+<span id="cb110-66"><a href="#cb110-66" tabindex="-1"></a>    writer.writerows(data)</span>
+<span id="cb110-67"><a href="#cb110-67" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Success: File written at&#39;</span>, output_path)</span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>From the terminal, navigate to the directory where you have created
 the file and type the command below to run the script.</li>
@@ -5614,51 +5604,51 @@ href="#install-gee-python-api.html">step-by-step instructions</a>.</p>
 Export job using a service account. The code snippet assumes that the
 private key file is in the same directory as the scirpt and saved as a
 file named <code>.private_key.json</code>.</p>
-<div class="sourceCode" id="cb114"><pre
-class="sourceCode py"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb114-2"><a href="#cb114-2" tabindex="-1"></a><span class="co"># Replace the service account with your service account email</span></span>
-<span id="cb114-3"><a href="#cb114-3" tabindex="-1"></a>service_account <span class="op">=</span> <span class="st">&#39;export-data-gee@spatialthoughts.iam.gserviceaccount.com&#39;</span></span>
-<span id="cb114-4"><a href="#cb114-4" tabindex="-1"></a><span class="co"># Replace the value with the path to your private key json file</span></span>
-<span id="cb114-5"><a href="#cb114-5" tabindex="-1"></a>private_key_path <span class="op">=</span> <span class="st">&#39;.private_key.json&#39;</span></span>
-<span id="cb114-6"><a href="#cb114-6" tabindex="-1"></a>credentials <span class="op">=</span> ee.ServiceAccountCredentials(service_account, private_key_path)</span>
-<span id="cb114-7"><a href="#cb114-7" tabindex="-1"></a>ee.Initialize(credentials)</span>
-<span id="cb114-8"><a href="#cb114-8" tabindex="-1"></a></span>
-<span id="cb114-9"><a href="#cb114-9" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
-<span id="cb114-10"><a href="#cb114-10" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
-<span id="cb114-11"><a href="#cb114-11" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
-<span id="cb114-12"><a href="#cb114-12" tabindex="-1"></a></span>
-<span id="cb114-13"><a href="#cb114-13" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
-<span id="cb114-14"><a href="#cb114-14" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span>
-<span id="cb114-15"><a href="#cb114-15" tabindex="-1"></a></span>
-<span id="cb114-16"><a href="#cb114-16" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
-<span id="cb114-17"><a href="#cb114-17" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
-<span id="cb114-18"><a href="#cb114-18" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
-<span id="cb114-19"><a href="#cb114-19" tabindex="-1"></a></span>
-<span id="cb114-20"><a href="#cb114-20" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
-<span id="cb114-21"><a href="#cb114-21" tabindex="-1"></a></span>
-<span id="cb114-22"><a href="#cb114-22" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
-<span id="cb114-23"><a href="#cb114-23" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2020-01-01&#39;</span>, <span class="st">&#39;2021-01-01&#39;</span>)) <span class="op">\</span></span>
-<span id="cb114-24"><a href="#cb114-24" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
-<span id="cb114-25"><a href="#cb114-25" tabindex="-1"></a></span>
-<span id="cb114-26"><a href="#cb114-26" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
-<span id="cb114-27"><a href="#cb114-27" tabindex="-1"></a></span>
-<span id="cb114-28"><a href="#cb114-28" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
-<span id="cb114-29"><a href="#cb114-29" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(</span>
-<span id="cb114-30"><a href="#cb114-30" tabindex="-1"></a>        ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
-<span id="cb114-31"><a href="#cb114-31" tabindex="-1"></a></span>
-<span id="cb114-32"><a href="#cb114-32" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
-<span id="cb114-33"><a href="#cb114-33" tabindex="-1"></a>    </span>
-<span id="cb114-34"><a href="#cb114-34" tabindex="-1"></a>    task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
-<span id="cb114-35"><a href="#cb114-35" tabindex="-1"></a>        <span class="st">&#39;image&#39;</span>: clippedImage,</span>
-<span id="cb114-36"><a href="#cb114-36" tabindex="-1"></a>        <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Terraclimate Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
-<span id="cb114-37"><a href="#cb114-37" tabindex="-1"></a>        <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
-<span id="cb114-38"><a href="#cb114-38" tabindex="-1"></a>        <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
-<span id="cb114-39"><a href="#cb114-39" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>: <span class="fl">4638.3</span>,</span>
-<span id="cb114-40"><a href="#cb114-40" tabindex="-1"></a>        <span class="st">&#39;region&#39;</span>: geometry,</span>
-<span id="cb114-41"><a href="#cb114-41" tabindex="-1"></a>        <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
-<span id="cb114-42"><a href="#cb114-42" tabindex="-1"></a>    })</span>
-<span id="cb114-43"><a href="#cb114-43" tabindex="-1"></a>    task.start()</span>
-<span id="cb114-44"><a href="#cb114-44" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb112"><pre
+class="sourceCode py"><code class="sourceCode python"><span id="cb112-1"><a href="#cb112-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb112-2"><a href="#cb112-2" tabindex="-1"></a><span class="co"># Replace the service account with your service account email</span></span>
+<span id="cb112-3"><a href="#cb112-3" tabindex="-1"></a>service_account <span class="op">=</span> <span class="st">&#39;export-data-gee@spatialthoughts.iam.gserviceaccount.com&#39;</span></span>
+<span id="cb112-4"><a href="#cb112-4" tabindex="-1"></a><span class="co"># Replace the value with the path to your private key json file</span></span>
+<span id="cb112-5"><a href="#cb112-5" tabindex="-1"></a>private_key_path <span class="op">=</span> <span class="st">&#39;.private_key.json&#39;</span></span>
+<span id="cb112-6"><a href="#cb112-6" tabindex="-1"></a>credentials <span class="op">=</span> ee.ServiceAccountCredentials(service_account, private_key_path)</span>
+<span id="cb112-7"><a href="#cb112-7" tabindex="-1"></a>ee.Initialize(credentials)</span>
+<span id="cb112-8"><a href="#cb112-8" tabindex="-1"></a></span>
+<span id="cb112-9"><a href="#cb112-9" tabindex="-1"></a>lsib <span class="op">=</span> ee.FeatureCollection(<span class="st">&#39;USDOS/LSIB_SIMPLE/2017&#39;</span>)</span>
+<span id="cb112-10"><a href="#cb112-10" tabindex="-1"></a>australia <span class="op">=</span> lsib.<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;country_na&#39;</span>, <span class="st">&#39;Australia&#39;</span>))</span>
+<span id="cb112-11"><a href="#cb112-11" tabindex="-1"></a>geometry <span class="op">=</span> australia.geometry()</span>
+<span id="cb112-12"><a href="#cb112-12" tabindex="-1"></a></span>
+<span id="cb112-13"><a href="#cb112-13" tabindex="-1"></a>terraclimate <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;IDAHO_EPSCOR/TERRACLIMATE&#39;</span>)</span>
+<span id="cb112-14"><a href="#cb112-14" tabindex="-1"></a>tmax <span class="op">=</span> terraclimate.select(<span class="st">&#39;tmmx&#39;</span>)</span>
+<span id="cb112-15"><a href="#cb112-15" tabindex="-1"></a></span>
+<span id="cb112-16"><a href="#cb112-16" tabindex="-1"></a><span class="kw">def</span> scale(image):</span>
+<span id="cb112-17"><a href="#cb112-17" tabindex="-1"></a>  <span class="cf">return</span> image.multiply(<span class="fl">0.1</span>) <span class="op">\</span></span>
+<span id="cb112-18"><a href="#cb112-18" tabindex="-1"></a>    .copyProperties(image,[<span class="st">&#39;system:time_start&#39;</span>])</span>
+<span id="cb112-19"><a href="#cb112-19" tabindex="-1"></a></span>
+<span id="cb112-20"><a href="#cb112-20" tabindex="-1"></a>tmaxScaled <span class="op">=</span> tmax.<span class="bu">map</span>(scale)</span>
+<span id="cb112-21"><a href="#cb112-21" tabindex="-1"></a></span>
+<span id="cb112-22"><a href="#cb112-22" tabindex="-1"></a>filtered <span class="op">=</span> tmaxScaled <span class="op">\</span></span>
+<span id="cb112-23"><a href="#cb112-23" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(<span class="st">&#39;2020-01-01&#39;</span>, <span class="st">&#39;2021-01-01&#39;</span>)) <span class="op">\</span></span>
+<span id="cb112-24"><a href="#cb112-24" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb112-25"><a href="#cb112-25" tabindex="-1"></a></span>
+<span id="cb112-26"><a href="#cb112-26" tabindex="-1"></a>image_ids <span class="op">=</span> filtered.aggregate_array(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb112-27"><a href="#cb112-27" tabindex="-1"></a></span>
+<span id="cb112-28"><a href="#cb112-28" tabindex="-1"></a><span class="cf">for</span> i, image_id <span class="kw">in</span> <span class="bu">enumerate</span>(image_ids):</span>
+<span id="cb112-29"><a href="#cb112-29" tabindex="-1"></a>    exportImage <span class="op">=</span> ee.Image(filtered.<span class="bu">filter</span>(</span>
+<span id="cb112-30"><a href="#cb112-30" tabindex="-1"></a>        ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, image_id)).first())</span>
+<span id="cb112-31"><a href="#cb112-31" tabindex="-1"></a></span>
+<span id="cb112-32"><a href="#cb112-32" tabindex="-1"></a>    clippedImage <span class="op">=</span> exportImage.clip(geometry)</span>
+<span id="cb112-33"><a href="#cb112-33" tabindex="-1"></a>    </span>
+<span id="cb112-34"><a href="#cb112-34" tabindex="-1"></a>    task <span class="op">=</span> ee.batch.Export.image.toDrive(<span class="op">**</span>{</span>
+<span id="cb112-35"><a href="#cb112-35" tabindex="-1"></a>        <span class="st">&#39;image&#39;</span>: clippedImage,</span>
+<span id="cb112-36"><a href="#cb112-36" tabindex="-1"></a>        <span class="st">&#39;description&#39;</span>: <span class="st">&#39;Terraclimate Image Export </span><span class="sc">{}</span><span class="st">&#39;</span>.<span class="bu">format</span>(i<span class="op">+</span><span class="dv">1</span>),</span>
+<span id="cb112-37"><a href="#cb112-37" tabindex="-1"></a>        <span class="st">&#39;fileNamePrefix&#39;</span>: image_id,</span>
+<span id="cb112-38"><a href="#cb112-38" tabindex="-1"></a>        <span class="st">&#39;folder&#39;</span>:<span class="st">&#39;earthengine&#39;</span>,</span>
+<span id="cb112-39"><a href="#cb112-39" tabindex="-1"></a>        <span class="st">&#39;scale&#39;</span>: <span class="fl">4638.3</span>,</span>
+<span id="cb112-40"><a href="#cb112-40" tabindex="-1"></a>        <span class="st">&#39;region&#39;</span>: geometry,</span>
+<span id="cb112-41"><a href="#cb112-41" tabindex="-1"></a>        <span class="st">&#39;maxPixels&#39;</span>: <span class="fl">1e10</span></span>
+<span id="cb112-42"><a href="#cb112-42" tabindex="-1"></a>    })</span>
+<span id="cb112-43"><a href="#cb112-43" tabindex="-1"></a>    task.start()</span>
+<span id="cb112-44"><a href="#cb112-44" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Started Task: &#39;</span>, i<span class="op">+</span><span class="dv">1</span>)</span></code></pre></div>
 </div>
 <div id="using-the-google-earth-engine-qgis-plugin"
 class="section level2">
@@ -5688,53 +5678,53 @@ Paste the following code and click the <strong>Run</strong> button. Once
 the code runs, the resulting image computed by Earth Engine and will be
 streamed to QGIS as a new layer.</p>
 <p><img src="images/end_to_end_gee/ee_qgis1.png" width="75%" style="display: block; margin: auto;" /></p>
-<div class="sourceCode" id="cb115"><pre
-class="sourceCode py"><code class="sourceCode python"><span id="cb115-1"><a href="#cb115-1" tabindex="-1"></a><span class="im">import</span> ee</span>
-<span id="cb115-2"><a href="#cb115-2" tabindex="-1"></a><span class="im">from</span> ee_plugin <span class="im">import</span> Map</span>
-<span id="cb115-3"><a href="#cb115-3" tabindex="-1"></a></span>
-<span id="cb115-4"><a href="#cb115-4" tabindex="-1"></a><span class="co"># Use the CMIP6 Climate Projections Dataset</span></span>
-<span id="cb115-5"><a href="#cb115-5" tabindex="-1"></a>cmip6 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/GDDP-CMIP6&#39;</span>)</span>
-<span id="cb115-6"><a href="#cb115-6" tabindex="-1"></a></span>
-<span id="cb115-7"><a href="#cb115-7" tabindex="-1"></a><span class="co"># Select a model and a scenario</span></span>
-<span id="cb115-8"><a href="#cb115-8" tabindex="-1"></a></span>
-<span id="cb115-9"><a href="#cb115-9" tabindex="-1"></a>model <span class="op">=</span> <span class="st">&#39;ACCESS-CM2&#39;</span></span>
-<span id="cb115-10"><a href="#cb115-10" tabindex="-1"></a>scenario <span class="op">=</span> <span class="st">&#39;ssp245&#39;</span></span>
-<span id="cb115-11"><a href="#cb115-11" tabindex="-1"></a></span>
-<span id="cb115-12"><a href="#cb115-12" tabindex="-1"></a><span class="co"># Select the band</span></span>
-<span id="cb115-13"><a href="#cb115-13" tabindex="-1"></a><span class="co"># Here we are using maximum air temperature</span></span>
-<span id="cb115-14"><a href="#cb115-14" tabindex="-1"></a>band <span class="op">=</span> <span class="st">&#39;tasmax&#39;</span></span>
-<span id="cb115-15"><a href="#cb115-15" tabindex="-1"></a></span>
-<span id="cb115-16"><a href="#cb115-16" tabindex="-1"></a><span class="co"># Select the date range</span></span>
-<span id="cb115-17"><a href="#cb115-17" tabindex="-1"></a>startDate <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2030</span>, <span class="dv">3</span>, <span class="dv">1</span>)</span>
-<span id="cb115-18"><a href="#cb115-18" tabindex="-1"></a>endDate <span class="op">=</span> startDate.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
-<span id="cb115-19"><a href="#cb115-19" tabindex="-1"></a></span>
-<span id="cb115-20"><a href="#cb115-20" tabindex="-1"></a>filtered <span class="op">=</span> cmip6 <span class="op">\</span></span>
-<span id="cb115-21"><a href="#cb115-21" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(startDate, endDate)) <span class="op">\</span></span>
-<span id="cb115-22"><a href="#cb115-22" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;model&#39;</span>, model)) <span class="op">\</span></span>
-<span id="cb115-23"><a href="#cb115-23" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;scenario&#39;</span>, scenario)) <span class="op">\</span></span>
-<span id="cb115-24"><a href="#cb115-24" tabindex="-1"></a>  .select(band)</span>
-<span id="cb115-25"><a href="#cb115-25" tabindex="-1"></a></span>
-<span id="cb115-26"><a href="#cb115-26" tabindex="-1"></a><span class="co"># Temperature values are in Kelvin</span></span>
-<span id="cb115-27"><a href="#cb115-27" tabindex="-1"></a><span class="co"># convert to Celcius</span></span>
-<span id="cb115-28"><a href="#cb115-28" tabindex="-1"></a></span>
-<span id="cb115-29"><a href="#cb115-29" tabindex="-1"></a><span class="kw">def</span> scaleValues(image):</span>
-<span id="cb115-30"><a href="#cb115-30" tabindex="-1"></a>  <span class="cf">return</span> image <span class="op">\</span></span>
-<span id="cb115-31"><a href="#cb115-31" tabindex="-1"></a>    .subtract(<span class="fl">273.15</span>) <span class="op">\</span></span>
-<span id="cb115-32"><a href="#cb115-32" tabindex="-1"></a>    .copyProperties(image,</span>
-<span id="cb115-33"><a href="#cb115-33" tabindex="-1"></a>      [<span class="st">&#39;system:time_start&#39;</span>, <span class="st">&#39;model&#39;</span>, <span class="st">&#39;scenario&#39;</span>])</span>
-<span id="cb115-34"><a href="#cb115-34" tabindex="-1"></a></span>
-<span id="cb115-35"><a href="#cb115-35" tabindex="-1"></a>scaled <span class="op">=</span> filtered.<span class="bu">map</span>(scaleValues)</span>
-<span id="cb115-36"><a href="#cb115-36" tabindex="-1"></a></span>
-<span id="cb115-37"><a href="#cb115-37" tabindex="-1"></a><span class="co"># Calculate average daily maximum temperature</span></span>
-<span id="cb115-38"><a href="#cb115-38" tabindex="-1"></a>mean <span class="op">=</span> scaled.mean()</span>
-<span id="cb115-39"><a href="#cb115-39" tabindex="-1"></a></span>
-<span id="cb115-40"><a href="#cb115-40" tabindex="-1"></a>tempVis <span class="op">=</span> {</span>
-<span id="cb115-41"><a href="#cb115-41" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="dv">10</span>,</span>
-<span id="cb115-42"><a href="#cb115-42" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">40</span>,</span>
-<span id="cb115-43"><a href="#cb115-43" tabindex="-1"></a>  <span class="st">&#39;palette&#39;</span>: [<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;purple&#39;</span>, <span class="st">&#39;cyan&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;yellow&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
-<span id="cb115-44"><a href="#cb115-44" tabindex="-1"></a>}</span>
-<span id="cb115-45"><a href="#cb115-45" tabindex="-1"></a></span>
-<span id="cb115-46"><a href="#cb115-46" tabindex="-1"></a>Map.addLayer(mean, tempVis, <span class="st">&#39;Average Daily Maximum Air Temperature&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb113"><pre
+class="sourceCode py"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb113-2"><a href="#cb113-2" tabindex="-1"></a><span class="im">from</span> ee_plugin <span class="im">import</span> Map</span>
+<span id="cb113-3"><a href="#cb113-3" tabindex="-1"></a></span>
+<span id="cb113-4"><a href="#cb113-4" tabindex="-1"></a><span class="co"># Use the CMIP6 Climate Projections Dataset</span></span>
+<span id="cb113-5"><a href="#cb113-5" tabindex="-1"></a>cmip6 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;NASA/GDDP-CMIP6&#39;</span>)</span>
+<span id="cb113-6"><a href="#cb113-6" tabindex="-1"></a></span>
+<span id="cb113-7"><a href="#cb113-7" tabindex="-1"></a><span class="co"># Select a model and a scenario</span></span>
+<span id="cb113-8"><a href="#cb113-8" tabindex="-1"></a></span>
+<span id="cb113-9"><a href="#cb113-9" tabindex="-1"></a>model <span class="op">=</span> <span class="st">&#39;ACCESS-CM2&#39;</span></span>
+<span id="cb113-10"><a href="#cb113-10" tabindex="-1"></a>scenario <span class="op">=</span> <span class="st">&#39;ssp245&#39;</span></span>
+<span id="cb113-11"><a href="#cb113-11" tabindex="-1"></a></span>
+<span id="cb113-12"><a href="#cb113-12" tabindex="-1"></a><span class="co"># Select the band</span></span>
+<span id="cb113-13"><a href="#cb113-13" tabindex="-1"></a><span class="co"># Here we are using maximum air temperature</span></span>
+<span id="cb113-14"><a href="#cb113-14" tabindex="-1"></a>band <span class="op">=</span> <span class="st">&#39;tasmax&#39;</span></span>
+<span id="cb113-15"><a href="#cb113-15" tabindex="-1"></a></span>
+<span id="cb113-16"><a href="#cb113-16" tabindex="-1"></a><span class="co"># Select the date range</span></span>
+<span id="cb113-17"><a href="#cb113-17" tabindex="-1"></a>startDate <span class="op">=</span> ee.Date.fromYMD(<span class="dv">2030</span>, <span class="dv">3</span>, <span class="dv">1</span>)</span>
+<span id="cb113-18"><a href="#cb113-18" tabindex="-1"></a>endDate <span class="op">=</span> startDate.advance(<span class="dv">1</span>, <span class="st">&#39;month&#39;</span>)</span>
+<span id="cb113-19"><a href="#cb113-19" tabindex="-1"></a></span>
+<span id="cb113-20"><a href="#cb113-20" tabindex="-1"></a>filtered <span class="op">=</span> cmip6 <span class="op">\</span></span>
+<span id="cb113-21"><a href="#cb113-21" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(startDate, endDate)) <span class="op">\</span></span>
+<span id="cb113-22"><a href="#cb113-22" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;model&#39;</span>, model)) <span class="op">\</span></span>
+<span id="cb113-23"><a href="#cb113-23" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;scenario&#39;</span>, scenario)) <span class="op">\</span></span>
+<span id="cb113-24"><a href="#cb113-24" tabindex="-1"></a>  .select(band)</span>
+<span id="cb113-25"><a href="#cb113-25" tabindex="-1"></a></span>
+<span id="cb113-26"><a href="#cb113-26" tabindex="-1"></a><span class="co"># Temperature values are in Kelvin</span></span>
+<span id="cb113-27"><a href="#cb113-27" tabindex="-1"></a><span class="co"># convert to Celcius</span></span>
+<span id="cb113-28"><a href="#cb113-28" tabindex="-1"></a></span>
+<span id="cb113-29"><a href="#cb113-29" tabindex="-1"></a><span class="kw">def</span> scaleValues(image):</span>
+<span id="cb113-30"><a href="#cb113-30" tabindex="-1"></a>  <span class="cf">return</span> image <span class="op">\</span></span>
+<span id="cb113-31"><a href="#cb113-31" tabindex="-1"></a>    .subtract(<span class="fl">273.15</span>) <span class="op">\</span></span>
+<span id="cb113-32"><a href="#cb113-32" tabindex="-1"></a>    .copyProperties(image,</span>
+<span id="cb113-33"><a href="#cb113-33" tabindex="-1"></a>      [<span class="st">&#39;system:time_start&#39;</span>, <span class="st">&#39;model&#39;</span>, <span class="st">&#39;scenario&#39;</span>])</span>
+<span id="cb113-34"><a href="#cb113-34" tabindex="-1"></a></span>
+<span id="cb113-35"><a href="#cb113-35" tabindex="-1"></a>scaled <span class="op">=</span> filtered.<span class="bu">map</span>(scaleValues)</span>
+<span id="cb113-36"><a href="#cb113-36" tabindex="-1"></a></span>
+<span id="cb113-37"><a href="#cb113-37" tabindex="-1"></a><span class="co"># Calculate average daily maximum temperature</span></span>
+<span id="cb113-38"><a href="#cb113-38" tabindex="-1"></a>mean <span class="op">=</span> scaled.mean()</span>
+<span id="cb113-39"><a href="#cb113-39" tabindex="-1"></a></span>
+<span id="cb113-40"><a href="#cb113-40" tabindex="-1"></a>tempVis <span class="op">=</span> {</span>
+<span id="cb113-41"><a href="#cb113-41" tabindex="-1"></a>  <span class="st">&#39;min&#39;</span>: <span class="dv">10</span>,</span>
+<span id="cb113-42"><a href="#cb113-42" tabindex="-1"></a>  <span class="st">&#39;max&#39;</span>: <span class="dv">40</span>,</span>
+<span id="cb113-43"><a href="#cb113-43" tabindex="-1"></a>  <span class="st">&#39;palette&#39;</span>: [<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;purple&#39;</span>, <span class="st">&#39;cyan&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;yellow&#39;</span>, <span class="st">&#39;red&#39;</span>],</span>
+<span id="cb113-44"><a href="#cb113-44" tabindex="-1"></a>}</span>
+<span id="cb113-45"><a href="#cb113-45" tabindex="-1"></a></span>
+<span id="cb113-46"><a href="#cb113-46" tabindex="-1"></a>Map.addLayer(mean, tempVis, <span class="st">&#39;Average Daily Maximum Air Temperature&#39;</span>)</span></code></pre></div>
 <p>You can now use this layer in your QGIS project or Print Layout.
 Here’s an example of visualizing the layer on a custom globe using the
 <a href="https://plugins.qgis.org/plugins/GlobeBuilder/">Globe Builder
