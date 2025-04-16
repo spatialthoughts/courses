@@ -135,8 +135,6 @@ The code below uses the TerraClimate data and creates an ImageCollection with 12
 
 
 ```python
-import ee
-
 lsib = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')
 australia = lsib.filter(ee.Filter.eq('country_na', 'Australia'))
 geometry = australia.geometry()
@@ -151,7 +149,7 @@ def scale(image):
 tmaxScaled = tmax.map(scale)
 
 filtered = tmaxScaled \
-  .filter(ee.Filter.date('2023-01-01', '2025-01-01')) \
+  .filter(ee.Filter.date('2023-01-01', '2024-01-01')) \
   #.filter(ee.Filter.bounds(geometry))
 
 image_ids = filtered.aggregate_array('system:index').getInfo()
