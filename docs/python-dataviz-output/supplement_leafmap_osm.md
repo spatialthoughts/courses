@@ -1,9 +1,6 @@
 ### Downloading and Visualizing OSM Data with LeafMap
 
-[Leafmap](https://leafmap.org/) comes with handy utilities to work with OpenStreetMap data. Using the popular package OSMNx in the background, it provides utility functions to download and visualize data from the OSM database.
-
-* [Leafmap OpenStreetMap Features](https://leafmap.org/notebooks/15_openstreetmap/)
-* [`leafmap.osm` module](https://leafmap.org/osm/)
+We can use the popular package OSMNx to download data from the OSM database and visualize it using leafmap.
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/leafmap_osm.png' width=600/>
 
@@ -22,6 +19,7 @@ if 'google.colab' in str(get_ipython()):
 import folium
 import geopandas as gpd
 import leafmap.foliumap as leafmap
+import osmnx as ox
 import os
 ```
 
@@ -38,16 +36,16 @@ if not os.path.exists(output_folder):
 
 #### Downloading OSM Data
 
-We can easily download data for a city or a region by its name using the `leafmap.osm_gdf_from_place()` function. We can specify the list of required tags using a dictionary. See [OSM Wiki](https://wiki.openstreetmap.org/wiki/Map_features) for a complete list of tags and values.
+We can easily download data for a city or a region by its name using the `osmnx.features.features_from_place()` function. We can specify the list of required tags using a dictionary. See [OSM Wiki](https://wiki.openstreetmap.org/wiki/Map_features) for a complete list of tags and values.
 
-You can also download data using a bounding box using `leafmap.osm.osm_gdf_from_bbox()` function.
+You can also download data using a bounding box using `osmnx.features.features_from_bbox()` function.
 
-Reference: [`leafmap.osm_gdf_from_place`](https://leafmap.org/osm/#leafmap.osm.osm_gdf_from_place)
+Reference: [`osmnx.features.features_from_place`](https://osmnx.readthedocs.io/en/stable/user-reference.html#osmnx.features.features_from_place)
 
 
 ```python
-parking_gdf = leafmap.osm_gdf_from_place(
-    'Bangalore',
+parking_gdf = ox.features.features_from_place(
+    query='Bangalore',
     tags={'amenity': ['parking', 'parking_space', 'parking_entrance']}
   )
 ```
@@ -88,13 +86,21 @@ parking_locations.to_file(driver='GPKG', filename=output_path, layer='locations'
 
 #### Visualizing OSM Data
 
-The `leafmap.osm` module has many functions that can add OSM data directy to the map. Here we use `add_osm_from_geocode()` function to add the boundary of a region from OSM. In addition, we can select a basemap from `leafmap.basemaps.keys()` for the map.
+For visualizing the data, we first download the city boundary from OSM. We use `osmnx.geocoder.geocode_to_gdf` function to extract the boundary as a GeoDataFrame.
+
+Reference: [`osmnx.geocoder.geocode_to_gdf`](https://osmnx.readthedocs.io/en/stable/user-reference.html#osmnx.geocoder.geocode_to_gdf)
+
+
+```python
+boundary = ox.geocoder.geocode_to_gdf(query='Bangalore')
+```
+
+We initialize a leafmap Map and select a basemap. See all available basemaps names using `leafmap.basemaps.keys()`.
 
 
 ```python
 m = leafmap.Map(width=800, height=500)
 m.add_basemap('CartoDB.DarkMatter')
-m.add_osm_from_geocode('Bangalore', layer_name='Bangalore', info_mode=None)
 m
 ```
 
@@ -104,7 +110,13 @@ We can add the GeoDataFrame to the map as well using GeoPanda's `explore()` func
 ```python
 m = leafmap.Map(width=800, height=500)
 m.add_basemap('CartoDB.DarkMatter')
-m.add_osm_from_geocode('Bangalore', layer_name='Bangalore', info_mode=None)
+m.zoom_to_gdf(boundary)
+
+boundary.explore(
+  style_kwds={'fillColor': 'None', 'color': 'blue'},
+  m=m,
+  name='Bangalore'
+)
 
 parking_zones.explore(
     style_kwds={'fillOpacity': 0.3, 'weight': 0.5},

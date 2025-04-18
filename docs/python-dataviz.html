@@ -5652,16 +5652,8 @@ alt="Open In Colab" /></a></p>
 <div id="downloading-and-visualizing-osm-data-with-leafmap"
 class="section level3">
 <h3>Downloading and Visualizing OSM Data with LeafMap</h3>
-<p><a href="https://leafmap.org/">Leafmap</a> comes with handy utilities
-to work with OpenStreetMap data. Using the popular package OSMNx in the
-background, it provides utility functions to download and visualize data
-from the OSM database.</p>
-<ul>
-<li><a href="https://leafmap.org/notebooks/15_openstreetmap/">Leafmap
-OpenStreetMap Features</a></li>
-<li><a href="https://leafmap.org/osm/"><code>leafmap.osm</code>
-module</a></li>
-</ul>
+<p>We can use the popular package OSMNx to download data from the OSM
+database and visualize it using leafmap.</p>
 <p><img src='https://courses.spatialthoughts.com/images/python_dataviz/leafmap_osm.png' width=600/></p>
 <div id="setup-and-data-download-19" class="section level4">
 <h4>Setup and Data Download</h4>
@@ -5673,7 +5665,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb320-1"><a 
 class="sourceCode python"><code class="sourceCode python"><span id="cb321-1"><a href="#cb321-1" tabindex="-1"></a><span class="im">import</span> folium</span>
 <span id="cb321-2"><a href="#cb321-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
 <span id="cb321-3"><a href="#cb321-3" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
-<span id="cb321-4"><a href="#cb321-4" tabindex="-1"></a><span class="im">import</span> os</span></code></pre></div>
+<span id="cb321-4"><a href="#cb321-4" tabindex="-1"></a><span class="im">import</span> osmnx <span class="im">as</span> ox</span>
+<span id="cb321-5"><a href="#cb321-5" tabindex="-1"></a><span class="im">import</span> os</span></code></pre></div>
 <div class="sourceCode" id="cb322"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb322-1"><a href="#cb322-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
 <span id="cb322-2"><a href="#cb322-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
@@ -5686,17 +5679,17 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb322-1"><a 
 <div id="downloading-osm-data" class="section level4">
 <h4>Downloading OSM Data</h4>
 <p>We can easily download data for a city or a region by its name using
-the <code>leafmap.osm_gdf_from_place()</code> function. We can specify
-the list of required tags using a dictionary. See <a
+the <code>osmnx.features.features_from_place()</code> function. We can
+specify the list of required tags using a dictionary. See <a
 href="https://wiki.openstreetmap.org/wiki/Map_features">OSM Wiki</a> for
 a complete list of tags and values.</p>
 <p>You can also download data using a bounding box using
-<code>leafmap.osm.osm_gdf_from_bbox()</code> function.</p>
+<code>osmnx.features.features_from_bbox()</code> function.</p>
 <p>Reference: <a
-href="https://leafmap.org/osm/#leafmap.osm.osm_gdf_from_place"><code>leafmap.osm_gdf_from_place</code></a></p>
+href="https://osmnx.readthedocs.io/en/stable/user-reference.html#osmnx.features.features_from_place"><code>osmnx.features.features_from_place</code></a></p>
 <div class="sourceCode" id="cb323"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb323-1"><a href="#cb323-1" tabindex="-1"></a>parking_gdf <span class="op">=</span> leafmap.osm_gdf_from_place(</span>
-<span id="cb323-2"><a href="#cb323-2" tabindex="-1"></a>    <span class="st">&#39;Bangalore&#39;</span>,</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb323-1"><a href="#cb323-1" tabindex="-1"></a>parking_gdf <span class="op">=</span> ox.features.features_from_place(</span>
+<span id="cb323-2"><a href="#cb323-2" tabindex="-1"></a>    query<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>,</span>
 <span id="cb323-3"><a href="#cb323-3" tabindex="-1"></a>    tags<span class="op">=</span>{<span class="st">&#39;amenity&#39;</span>: [<span class="st">&#39;parking&#39;</span>, <span class="st">&#39;parking_space&#39;</span>, <span class="st">&#39;parking_entrance&#39;</span>]}</span>
 <span id="cb323-4"><a href="#cb323-4" tabindex="-1"></a>  )</span></code></pre></div>
 <p>The GeoDataFrame has a hierarchical MultiIndex. Let’s flatten it
@@ -5722,37 +5715,46 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb327-1"><a 
 </div>
 <div id="visualizing-osm-data" class="section level4">
 <h4>Visualizing OSM Data</h4>
-<p>The <code>leafmap.osm</code> module has many functions that can add
-OSM data directy to the map. Here we use
-<code>add_osm_from_geocode()</code> function to add the boundary of a
-region from OSM. In addition, we can select a basemap from
-<code>leafmap.basemaps.keys()</code> for the map.</p>
+<p>For visualizing the data, we first download the city boundary from
+OSM. We use <code>osmnx.geocoder.geocode_to_gdf</code> function to
+extract the boundary as a GeoDataFrame.</p>
+<p>Reference: <a
+href="https://osmnx.readthedocs.io/en/stable/user-reference.html#osmnx.geocoder.geocode_to_gdf"><code>osmnx.geocoder.geocode_to_gdf</code></a></p>
 <div class="sourceCode" id="cb328"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb328-1"><a href="#cb328-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
-<span id="cb328-2"><a href="#cb328-2" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
-<span id="cb328-3"><a href="#cb328-3" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
-<span id="cb328-4"><a href="#cb328-4" tabindex="-1"></a>m</span></code></pre></div>
-<p>We can add the GeoDataFrame to the map as well using GeoPanda’s
-<code>explore()</code> function which allows us to customize the
-marker’s shape, size for the point layer.</p>
+class="sourceCode python"><code class="sourceCode python"><span id="cb328-1"><a href="#cb328-1" tabindex="-1"></a>boundary <span class="op">=</span> ox.geocoder.geocode_to_gdf(query<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>)</span></code></pre></div>
+<p>We initialize a leafmap Map and select a basemap. See all available
+basemaps names using <code>leafmap.basemaps.keys()</code>.</p>
 <div class="sourceCode" id="cb329"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb329-1"><a href="#cb329-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
 <span id="cb329-2"><a href="#cb329-2" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
-<span id="cb329-3"><a href="#cb329-3" tabindex="-1"></a>m.add_osm_from_geocode(<span class="st">&#39;Bangalore&#39;</span>, layer_name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span>, info_mode<span class="op">=</span><span class="va">None</span>)</span>
-<span id="cb329-4"><a href="#cb329-4" tabindex="-1"></a></span>
-<span id="cb329-5"><a href="#cb329-5" tabindex="-1"></a>parking_zones.explore(</span>
-<span id="cb329-6"><a href="#cb329-6" tabindex="-1"></a>    style_kwds<span class="op">=</span>{<span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
-<span id="cb329-7"><a href="#cb329-7" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;orange&#39;</span>,</span>
-<span id="cb329-8"><a href="#cb329-8" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking zones&#39;</span>,</span>
-<span id="cb329-9"><a href="#cb329-9" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
-<span id="cb329-10"><a href="#cb329-10" tabindex="-1"></a></span>
-<span id="cb329-11"><a href="#cb329-11" tabindex="-1"></a>parking_locations.explore(</span>
-<span id="cb329-12"><a href="#cb329-12" tabindex="-1"></a>    marker_type<span class="op">=</span><span class="st">&#39;circle&#39;</span>,</span>
-<span id="cb329-13"><a href="#cb329-13" tabindex="-1"></a>    marker_kwds<span class="op">=</span>{<span class="st">&#39;radius&#39;</span>: <span class="dv">1</span>},</span>
-<span id="cb329-14"><a href="#cb329-14" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;yellow&#39;</span>,</span>
-<span id="cb329-15"><a href="#cb329-15" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking locations&#39;</span>,</span>
-<span id="cb329-16"><a href="#cb329-16" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
-<span id="cb329-17"><a href="#cb329-17" tabindex="-1"></a>m</span></code></pre></div>
+<span id="cb329-3"><a href="#cb329-3" tabindex="-1"></a>m</span></code></pre></div>
+<p>We can add the GeoDataFrame to the map as well using GeoPanda’s
+<code>explore()</code> function which allows us to customize the
+marker’s shape, size for the point layer.</p>
+<div class="sourceCode" id="cb330"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb330-1"><a href="#cb330-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
+<span id="cb330-2"><a href="#cb330-2" tabindex="-1"></a>m.add_basemap(<span class="st">&#39;CartoDB.DarkMatter&#39;</span>)</span>
+<span id="cb330-3"><a href="#cb330-3" tabindex="-1"></a>m.zoom_to_gdf(boundary)</span>
+<span id="cb330-4"><a href="#cb330-4" tabindex="-1"></a></span>
+<span id="cb330-5"><a href="#cb330-5" tabindex="-1"></a>boundary.explore(</span>
+<span id="cb330-6"><a href="#cb330-6" tabindex="-1"></a>  style_kwds<span class="op">=</span>{<span class="st">&#39;fillColor&#39;</span>: <span class="st">&#39;None&#39;</span>, <span class="st">&#39;color&#39;</span>: <span class="st">&#39;blue&#39;</span>},</span>
+<span id="cb330-7"><a href="#cb330-7" tabindex="-1"></a>  m<span class="op">=</span>m,</span>
+<span id="cb330-8"><a href="#cb330-8" tabindex="-1"></a>  name<span class="op">=</span><span class="st">&#39;Bangalore&#39;</span></span>
+<span id="cb330-9"><a href="#cb330-9" tabindex="-1"></a>)</span>
+<span id="cb330-10"><a href="#cb330-10" tabindex="-1"></a></span>
+<span id="cb330-11"><a href="#cb330-11" tabindex="-1"></a>parking_zones.explore(</span>
+<span id="cb330-12"><a href="#cb330-12" tabindex="-1"></a>    style_kwds<span class="op">=</span>{<span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
+<span id="cb330-13"><a href="#cb330-13" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;orange&#39;</span>,</span>
+<span id="cb330-14"><a href="#cb330-14" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking zones&#39;</span>,</span>
+<span id="cb330-15"><a href="#cb330-15" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
+<span id="cb330-16"><a href="#cb330-16" tabindex="-1"></a></span>
+<span id="cb330-17"><a href="#cb330-17" tabindex="-1"></a>parking_locations.explore(</span>
+<span id="cb330-18"><a href="#cb330-18" tabindex="-1"></a>    marker_type<span class="op">=</span><span class="st">&#39;circle&#39;</span>,</span>
+<span id="cb330-19"><a href="#cb330-19" tabindex="-1"></a>    marker_kwds<span class="op">=</span>{<span class="st">&#39;radius&#39;</span>: <span class="dv">1</span>},</span>
+<span id="cb330-20"><a href="#cb330-20" tabindex="-1"></a>    color<span class="op">=</span><span class="st">&#39;yellow&#39;</span>,</span>
+<span id="cb330-21"><a href="#cb330-21" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;parking locations&#39;</span>,</span>
+<span id="cb330-22"><a href="#cb330-22" tabindex="-1"></a>    m<span class="op">=</span>m)</span>
+<span id="cb330-23"><a href="#cb330-23" tabindex="-1"></a>m</span></code></pre></div>
 <p><a
 href="https://colab.research.google.com/github/spatialthoughts/python-dataviz-web/blob/main/supplement_lonboard_leafmap.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
@@ -5786,88 +5788,88 @@ Leafmap and Lonboard.</p>
 <p><img src='https://courses.spatialthoughts.com/images/python_dataviz/lonboard_rivers.png' width=800/></p>
 <div id="setup-and-data-download-20" class="section level4">
 <h4>Setup and Data Download</h4>
-<div class="sourceCode" id="cb330"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb330-1"><a href="#cb330-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb330-2"><a href="#cb330-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb330-3"><a href="#cb330-3" tabindex="-1"></a>  <span class="op">!</span>pip install leafmap lonboard palettable</span></code></pre></div>
 <div class="sourceCode" id="cb331"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb331-1"><a href="#cb331-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb331-2"><a href="#cb331-2" tabindex="-1"></a><span class="im">import</span> leafmap.deckgl <span class="im">as</span> leafmap</span>
-<span id="cb331-3"><a href="#cb331-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb331-4"><a href="#cb331-4" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb331-5"><a href="#cb331-5" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb331-6"><a href="#cb331-6" tabindex="-1"></a><span class="im">import</span> palettable</span>
-<span id="cb331-7"><a href="#cb331-7" tabindex="-1"></a><span class="im">import</span> lonboard</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb331-1"><a href="#cb331-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb331-2"><a href="#cb331-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb331-3"><a href="#cb331-3" tabindex="-1"></a>  <span class="op">!</span>pip install leafmap lonboard palettable</span></code></pre></div>
 <div class="sourceCode" id="cb332"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb332-1"><a href="#cb332-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb332-2"><a href="#cb332-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb332-3"><a href="#cb332-3" tabindex="-1"></a></span>
-<span id="cb332-4"><a href="#cb332-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb332-5"><a href="#cb332-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb332-6"><a href="#cb332-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb332-7"><a href="#cb332-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb332-1"><a href="#cb332-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb332-2"><a href="#cb332-2" tabindex="-1"></a><span class="im">import</span> leafmap.deckgl <span class="im">as</span> leafmap</span>
+<span id="cb332-3"><a href="#cb332-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb332-4"><a href="#cb332-4" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb332-5"><a href="#cb332-5" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb332-6"><a href="#cb332-6" tabindex="-1"></a><span class="im">import</span> palettable</span>
+<span id="cb332-7"><a href="#cb332-7" tabindex="-1"></a><span class="im">import</span> lonboard</span></code></pre></div>
 <div class="sourceCode" id="cb333"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb333-1"><a href="#cb333-1" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
-<span id="cb333-2"><a href="#cb333-2" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
-<span id="cb333-3"><a href="#cb333-3" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
-<span id="cb333-4"><a href="#cb333-4" tabindex="-1"></a>      <span class="cf">with</span> requests.get(url, stream<span class="op">=</span><span class="va">True</span>, allow_redirects<span class="op">=</span><span class="va">True</span>) <span class="im">as</span> r:</span>
-<span id="cb333-5"><a href="#cb333-5" tabindex="-1"></a>          <span class="cf">with</span> <span class="bu">open</span>(filename, <span class="st">&#39;wb&#39;</span>) <span class="im">as</span> f:</span>
-<span id="cb333-6"><a href="#cb333-6" tabindex="-1"></a>              <span class="cf">for</span> chunk <span class="kw">in</span> r.iter_content(chunk_size<span class="op">=</span><span class="dv">8192</span>):</span>
-<span id="cb333-7"><a href="#cb333-7" tabindex="-1"></a>                  f.write(chunk)</span>
-<span id="cb333-8"><a href="#cb333-8" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;Downloaded&#39;</span>, filename)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb333-1"><a href="#cb333-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb333-2"><a href="#cb333-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb333-3"><a href="#cb333-3" tabindex="-1"></a></span>
+<span id="cb333-4"><a href="#cb333-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb333-5"><a href="#cb333-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb333-6"><a href="#cb333-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb333-7"><a href="#cb333-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
 <div class="sourceCode" id="cb334"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb334-1"><a href="#cb334-1" tabindex="-1"></a>countries_file <span class="op">=</span> <span class="st">&#39;ne_10m_admin_0_countries_ind.zip&#39;</span></span>
-<span id="cb334-2"><a href="#cb334-2" tabindex="-1"></a></span>
-<span id="cb334-3"><a href="#cb334-3" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/releases/download/&#39;</span></span>
-<span id="cb334-4"><a href="#cb334-4" tabindex="-1"></a></span>
-<span id="cb334-5"><a href="#cb334-5" tabindex="-1"></a><span class="co"># This is a subset of the main HydroRivers dataset of all</span></span>
-<span id="cb334-6"><a href="#cb334-6" tabindex="-1"></a><span class="co"># rivers having `UPLAND_SKM` value  greater than 100 sq. km.</span></span>
-<span id="cb334-7"><a href="#cb334-7" tabindex="-1"></a>hydrorivers_file <span class="op">=</span> <span class="st">&#39;hydrorivers_100.gpkg&#39;</span></span>
-<span id="cb334-8"><a href="#cb334-8" tabindex="-1"></a>hydrorivers_url <span class="op">=</span> data_url <span class="op">+</span> <span class="st">&#39;hydrosheds/&#39;</span></span>
-<span id="cb334-9"><a href="#cb334-9" tabindex="-1"></a></span>
-<span id="cb334-10"><a href="#cb334-10" tabindex="-1"></a>countries_file <span class="op">=</span> <span class="st">&#39;ne_10m_admin_0_countries_ind.zip&#39;</span></span>
-<span id="cb334-11"><a href="#cb334-11" tabindex="-1"></a>countries_url <span class="op">=</span> data_url <span class="op">+</span> <span class="st">&#39;naturalearth/&#39;</span></span>
-<span id="cb334-12"><a href="#cb334-12" tabindex="-1"></a></span>
-<span id="cb334-13"><a href="#cb334-13" tabindex="-1"></a></span>
-<span id="cb334-14"><a href="#cb334-14" tabindex="-1"></a>download(hydrorivers_url <span class="op">+</span> hydrorivers_file)</span>
-<span id="cb334-15"><a href="#cb334-15" tabindex="-1"></a>download(countries_url <span class="op">+</span> countries_file)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb334-1"><a href="#cb334-1" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
+<span id="cb334-2"><a href="#cb334-2" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
+<span id="cb334-3"><a href="#cb334-3" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
+<span id="cb334-4"><a href="#cb334-4" tabindex="-1"></a>      <span class="cf">with</span> requests.get(url, stream<span class="op">=</span><span class="va">True</span>, allow_redirects<span class="op">=</span><span class="va">True</span>) <span class="im">as</span> r:</span>
+<span id="cb334-5"><a href="#cb334-5" tabindex="-1"></a>          <span class="cf">with</span> <span class="bu">open</span>(filename, <span class="st">&#39;wb&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb334-6"><a href="#cb334-6" tabindex="-1"></a>              <span class="cf">for</span> chunk <span class="kw">in</span> r.iter_content(chunk_size<span class="op">=</span><span class="dv">8192</span>):</span>
+<span id="cb334-7"><a href="#cb334-7" tabindex="-1"></a>                  f.write(chunk)</span>
+<span id="cb334-8"><a href="#cb334-8" tabindex="-1"></a>      <span class="bu">print</span>(<span class="st">&#39;Downloaded&#39;</span>, filename)</span></code></pre></div>
+<div class="sourceCode" id="cb335"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb335-1"><a href="#cb335-1" tabindex="-1"></a>countries_file <span class="op">=</span> <span class="st">&#39;ne_10m_admin_0_countries_ind.zip&#39;</span></span>
+<span id="cb335-2"><a href="#cb335-2" tabindex="-1"></a></span>
+<span id="cb335-3"><a href="#cb335-3" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/releases/download/&#39;</span></span>
+<span id="cb335-4"><a href="#cb335-4" tabindex="-1"></a></span>
+<span id="cb335-5"><a href="#cb335-5" tabindex="-1"></a><span class="co"># This is a subset of the main HydroRivers dataset of all</span></span>
+<span id="cb335-6"><a href="#cb335-6" tabindex="-1"></a><span class="co"># rivers having `UPLAND_SKM` value  greater than 100 sq. km.</span></span>
+<span id="cb335-7"><a href="#cb335-7" tabindex="-1"></a>hydrorivers_file <span class="op">=</span> <span class="st">&#39;hydrorivers_100.gpkg&#39;</span></span>
+<span id="cb335-8"><a href="#cb335-8" tabindex="-1"></a>hydrorivers_url <span class="op">=</span> data_url <span class="op">+</span> <span class="st">&#39;hydrosheds/&#39;</span></span>
+<span id="cb335-9"><a href="#cb335-9" tabindex="-1"></a></span>
+<span id="cb335-10"><a href="#cb335-10" tabindex="-1"></a>countries_file <span class="op">=</span> <span class="st">&#39;ne_10m_admin_0_countries_ind.zip&#39;</span></span>
+<span id="cb335-11"><a href="#cb335-11" tabindex="-1"></a>countries_url <span class="op">=</span> data_url <span class="op">+</span> <span class="st">&#39;naturalearth/&#39;</span></span>
+<span id="cb335-12"><a href="#cb335-12" tabindex="-1"></a></span>
+<span id="cb335-13"><a href="#cb335-13" tabindex="-1"></a></span>
+<span id="cb335-14"><a href="#cb335-14" tabindex="-1"></a>download(hydrorivers_url <span class="op">+</span> hydrorivers_file)</span>
+<span id="cb335-15"><a href="#cb335-15" tabindex="-1"></a>download(countries_url <span class="op">+</span> countries_file)</span></code></pre></div>
 </div>
 <div id="data-pre-processing-12" class="section level4">
 <h4>Data Pre-Processing</h4>
 <p>Read the countries shapefile.</p>
-<div class="sourceCode" id="cb335"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb335-1"><a href="#cb335-1" tabindex="-1"></a>countries_filepath <span class="op">=</span> os.path.join(data_folder, countries_file)</span></code></pre></div>
+<div class="sourceCode" id="cb336"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb336-1"><a href="#cb336-1" tabindex="-1"></a>countries_filepath <span class="op">=</span> os.path.join(data_folder, countries_file)</span></code></pre></div>
 <p>For the assignment, you need to pick the country for which you want
 to create the map. We can print a list of values from the
 <code>SOVEREIGNT</code> column of <code>country_gdf</code> GeoDataFrame
 using <code>country_gdf.SOVEREIGNT.values</code> to know the names of
 all countries.</p>
-<div class="sourceCode" id="cb336"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb336-1"><a href="#cb336-1" tabindex="-1"></a>country_gdf <span class="op">=</span> gpd.read_file(countries_filepath)</span>
-<span id="cb336-2"><a href="#cb336-2" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">sorted</span>(country_gdf.SOVEREIGNT.unique()))</span></code></pre></div>
+<div class="sourceCode" id="cb337"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb337-1"><a href="#cb337-1" tabindex="-1"></a>country_gdf <span class="op">=</span> gpd.read_file(countries_filepath)</span>
+<span id="cb337-2"><a href="#cb337-2" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">sorted</span>(country_gdf.SOVEREIGNT.unique()))</span></code></pre></div>
 <p>Select a country name. Replace the value below with your chosen
 country.</p>
-<div class="sourceCode" id="cb337"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb337-1"><a href="#cb337-1" tabindex="-1"></a>country <span class="op">=</span> <span class="st">&#39;United States of America&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb338"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb338-1"><a href="#cb338-1" tabindex="-1"></a>country <span class="op">=</span> <span class="st">&#39;United States of America&#39;</span></span></code></pre></div>
 <p>Apply filters to select the country feature. We use an additional
 filter <code>TYPE != 'Dependency'</code> to exclude overseas
 territories. You may have to adjust the filter to get the correct
 country polygon.</p>
-<div class="sourceCode" id="cb338"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb338-1"><a href="#cb338-1" tabindex="-1"></a>selected_country <span class="op">=</span> country_gdf[</span>
-<span id="cb338-2"><a href="#cb338-2" tabindex="-1"></a>    (country_gdf[<span class="st">&#39;SOVEREIGNT&#39;</span>] <span class="op">==</span> country) <span class="op">&amp;</span></span>
-<span id="cb338-3"><a href="#cb338-3" tabindex="-1"></a>    (country_gdf[<span class="st">&#39;TYPE&#39;</span>] <span class="op">!=</span> <span class="st">&#39;Dependency&#39;</span>)</span>
-<span id="cb338-4"><a href="#cb338-4" tabindex="-1"></a>]</span>
-<span id="cb338-5"><a href="#cb338-5" tabindex="-1"></a>selected_country</span></code></pre></div>
+<div class="sourceCode" id="cb339"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb339-1"><a href="#cb339-1" tabindex="-1"></a>selected_country <span class="op">=</span> country_gdf[</span>
+<span id="cb339-2"><a href="#cb339-2" tabindex="-1"></a>    (country_gdf[<span class="st">&#39;SOVEREIGNT&#39;</span>] <span class="op">==</span> country) <span class="op">&amp;</span></span>
+<span id="cb339-3"><a href="#cb339-3" tabindex="-1"></a>    (country_gdf[<span class="st">&#39;TYPE&#39;</span>] <span class="op">!=</span> <span class="st">&#39;Dependency&#39;</span>)</span>
+<span id="cb339-4"><a href="#cb339-4" tabindex="-1"></a>]</span>
+<span id="cb339-5"><a href="#cb339-5" tabindex="-1"></a>selected_country</span></code></pre></div>
 <p>We read the river network data from HydroRivers. We specify the
 <code>mask</code> parameter which clips the layer to the country
 boundary while reading the data.</p>
 <p><em>This step can take a few minutes depending on the size of the
 country.</em></p>
-<div class="sourceCode" id="cb339"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb339-1"><a href="#cb339-1" tabindex="-1"></a>hydrorivers_filepath <span class="op">=</span> os.path.join(data_folder, hydrorivers_file)</span>
-<span id="cb339-2"><a href="#cb339-2" tabindex="-1"></a>river_gdf <span class="op">=</span> gpd.read_file(hydrorivers_filepath, mask<span class="op">=</span>selected_country)</span>
-<span id="cb339-3"><a href="#cb339-3" tabindex="-1"></a>river_gdf</span></code></pre></div>
+<div class="sourceCode" id="cb340"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb340-1"><a href="#cb340-1" tabindex="-1"></a>hydrorivers_filepath <span class="op">=</span> os.path.join(data_folder, hydrorivers_file)</span>
+<span id="cb340-2"><a href="#cb340-2" tabindex="-1"></a>river_gdf <span class="op">=</span> gpd.read_file(hydrorivers_filepath, mask<span class="op">=</span>selected_country)</span>
+<span id="cb340-3"><a href="#cb340-3" tabindex="-1"></a>river_gdf</span></code></pre></div>
 </div>
 <div id="visualize-geodataframe-using-lonboard" class="section level4">
 <h4>Visualize GeoDataFrame using Lonboard</h4>
@@ -5875,61 +5877,61 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb339-1"><a 
 href="https://developmentseed.org/lonboard/latest/api/layers/path-layer/"><code>PathLayer</code></a>
 object. We supply the lonboard parameters as keyword arguents to
 leafmap.</p>
-<div class="sourceCode" id="cb340"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb340-1"><a href="#cb340-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(height<span class="op">=</span><span class="dv">600</span>)</span>
-<span id="cb340-2"><a href="#cb340-2" tabindex="-1"></a>m.add_gdf(river_gdf,</span>
-<span id="cb340-3"><a href="#cb340-3" tabindex="-1"></a>          zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb340-4"><a href="#cb340-4" tabindex="-1"></a>          pickable<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb340-5"><a href="#cb340-5" tabindex="-1"></a>          get_width<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="cb340-6"><a href="#cb340-6" tabindex="-1"></a>          get_color<span class="op">=</span><span class="st">&#39;blue&#39;</span>,</span>
-<span id="cb340-7"><a href="#cb340-7" tabindex="-1"></a>          width_units<span class="op">=</span><span class="st">&#39;pixels&#39;</span></span>
-<span id="cb340-8"><a href="#cb340-8" tabindex="-1"></a>)</span>
-<span id="cb340-9"><a href="#cb340-9" tabindex="-1"></a>m</span></code></pre></div>
+<div class="sourceCode" id="cb341"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb341-1"><a href="#cb341-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(height<span class="op">=</span><span class="dv">600</span>)</span>
+<span id="cb341-2"><a href="#cb341-2" tabindex="-1"></a>m.add_gdf(river_gdf,</span>
+<span id="cb341-3"><a href="#cb341-3" tabindex="-1"></a>          zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb341-4"><a href="#cb341-4" tabindex="-1"></a>          pickable<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb341-5"><a href="#cb341-5" tabindex="-1"></a>          get_width<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb341-6"><a href="#cb341-6" tabindex="-1"></a>          get_color<span class="op">=</span><span class="st">&#39;blue&#39;</span>,</span>
+<span id="cb341-7"><a href="#cb341-7" tabindex="-1"></a>          width_units<span class="op">=</span><span class="st">&#39;pixels&#39;</span></span>
+<span id="cb341-8"><a href="#cb341-8" tabindex="-1"></a>)</span>
+<span id="cb341-9"><a href="#cb341-9" tabindex="-1"></a>m</span></code></pre></div>
 <p>We want to style the rivers so that the width of the line is
 proportional to the value in the <code>UPLAND_SKM</code> attribute. We
 add a new column <code>width</code> to the GeoDataFrame by scaling the
 input values to a range of target widths.</p>
-<div class="sourceCode" id="cb341"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb341-1"><a href="#cb341-1" tabindex="-1"></a>original_min <span class="op">=</span> <span class="dv">300</span></span>
-<span id="cb341-2"><a href="#cb341-2" tabindex="-1"></a>original_max <span class="op">=</span> <span class="dv">10000</span></span>
-<span id="cb341-3"><a href="#cb341-3" tabindex="-1"></a>target_min <span class="op">=</span> <span class="fl">0.1</span></span>
-<span id="cb341-4"><a href="#cb341-4" tabindex="-1"></a>target_max <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb341-5"><a href="#cb341-5" tabindex="-1"></a>scaled <span class="op">=</span> (river_gdf[<span class="st">&#39;UPLAND_SKM&#39;</span>] <span class="op">-</span> original_min) <span class="op">/</span> (original_max <span class="op">-</span> original_min)</span>
-<span id="cb341-6"><a href="#cb341-6" tabindex="-1"></a>river_gdf[<span class="st">&#39;width&#39;</span>] <span class="op">=</span> scaled.clip(<span class="dv">0</span>, <span class="dv">1</span>) <span class="op">*</span> (target_max <span class="op">-</span> target_min) <span class="op">+</span> target_min</span>
-<span id="cb341-7"><a href="#cb341-7" tabindex="-1"></a>river_gdf_final <span class="op">=</span> river_gdf.sort_values([<span class="st">&#39;UPLAND_SKM&#39;</span>, <span class="st">&#39;width&#39;</span>])[</span>
-<span id="cb341-8"><a href="#cb341-8" tabindex="-1"></a>    [<span class="st">&#39;MAIN_RIV&#39;</span>, <span class="st">&#39;UPLAND_SKM&#39;</span>, <span class="st">&#39;width&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
-<span id="cb341-9"><a href="#cb341-9" tabindex="-1"></a>river_gdf_final</span></code></pre></div>
+<div class="sourceCode" id="cb342"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb342-1"><a href="#cb342-1" tabindex="-1"></a>original_min <span class="op">=</span> <span class="dv">300</span></span>
+<span id="cb342-2"><a href="#cb342-2" tabindex="-1"></a>original_max <span class="op">=</span> <span class="dv">10000</span></span>
+<span id="cb342-3"><a href="#cb342-3" tabindex="-1"></a>target_min <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb342-4"><a href="#cb342-4" tabindex="-1"></a>target_max <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb342-5"><a href="#cb342-5" tabindex="-1"></a>scaled <span class="op">=</span> (river_gdf[<span class="st">&#39;UPLAND_SKM&#39;</span>] <span class="op">-</span> original_min) <span class="op">/</span> (original_max <span class="op">-</span> original_min)</span>
+<span id="cb342-6"><a href="#cb342-6" tabindex="-1"></a>river_gdf[<span class="st">&#39;width&#39;</span>] <span class="op">=</span> scaled.clip(<span class="dv">0</span>, <span class="dv">1</span>) <span class="op">*</span> (target_max <span class="op">-</span> target_min) <span class="op">+</span> target_min</span>
+<span id="cb342-7"><a href="#cb342-7" tabindex="-1"></a>river_gdf_final <span class="op">=</span> river_gdf.sort_values([<span class="st">&#39;UPLAND_SKM&#39;</span>, <span class="st">&#39;width&#39;</span>])[</span>
+<span id="cb342-8"><a href="#cb342-8" tabindex="-1"></a>    [<span class="st">&#39;MAIN_RIV&#39;</span>, <span class="st">&#39;UPLAND_SKM&#39;</span>, <span class="st">&#39;width&#39;</span>, <span class="st">&#39;geometry&#39;</span>]]</span>
+<span id="cb342-9"><a href="#cb342-9" tabindex="-1"></a>river_gdf_final</span></code></pre></div>
 <p>We want to assign a color based on the <code>MAIN_RIV</code>
 attribute. We will split the rivers into 10 equal bins.</p>
-<div class="sourceCode" id="cb342"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb342-1"><a href="#cb342-1" tabindex="-1"></a>river_gdf_final[<span class="st">&#39;color&#39;</span>] <span class="op">=</span> pd.qcut(</span>
-<span id="cb342-2"><a href="#cb342-2" tabindex="-1"></a>    river_gdf_final.MAIN_RIV, q<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb342-3"><a href="#cb342-3" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">False</span>, duplicates<span class="op">=</span><span class="st">&#39;drop&#39;</span>)</span>
-<span id="cb342-4"><a href="#cb342-4" tabindex="-1"></a>river_gdf_final</span></code></pre></div>
-<p>We create a discreate colormap by assigning a color to each bin.</p>
 <div class="sourceCode" id="cb343"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb343-1"><a href="#cb343-1" tabindex="-1"></a>cmap <span class="op">=</span> palettable.colorbrewer.diverging.Spectral_10</span>
-<span id="cb343-2"><a href="#cb343-2" tabindex="-1"></a></span>
-<span id="cb343-3"><a href="#cb343-3" tabindex="-1"></a>colormap <span class="op">=</span> {}</span>
-<span id="cb343-4"><a href="#cb343-4" tabindex="-1"></a><span class="cf">for</span> i, color <span class="kw">in</span> <span class="bu">enumerate</span>(cmap.colors):</span>
-<span id="cb343-5"><a href="#cb343-5" tabindex="-1"></a>    colormap[i] <span class="op">=</span> color</span>
-<span id="cb343-6"><a href="#cb343-6" tabindex="-1"></a>colormap</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb343-1"><a href="#cb343-1" tabindex="-1"></a>river_gdf_final[<span class="st">&#39;color&#39;</span>] <span class="op">=</span> pd.qcut(</span>
+<span id="cb343-2"><a href="#cb343-2" tabindex="-1"></a>    river_gdf_final.MAIN_RIV, q<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb343-3"><a href="#cb343-3" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">False</span>, duplicates<span class="op">=</span><span class="st">&#39;drop&#39;</span>)</span>
+<span id="cb343-4"><a href="#cb343-4" tabindex="-1"></a>river_gdf_final</span></code></pre></div>
+<p>We create a discreate colormap by assigning a color to each bin.</p>
 <div class="sourceCode" id="cb344"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb344-1"><a href="#cb344-1" tabindex="-1"></a>basemap <span class="op">=</span> lonboard.basemap.CartoBasemap.DarkMatterNoLabels</span>
-<span id="cb344-2"><a href="#cb344-2" tabindex="-1"></a>cmap <span class="op">=</span> palettable.colorbrewer.diverging.Spectral_10</span>
-<span id="cb344-3"><a href="#cb344-3" tabindex="-1"></a>widths <span class="op">=</span> river_gdf_final[<span class="st">&#39;width&#39;</span>]</span>
-<span id="cb344-4"><a href="#cb344-4" tabindex="-1"></a>colors <span class="op">=</span> lonboard.colormap.apply_categorical_cmap(</span>
-<span id="cb344-5"><a href="#cb344-5" tabindex="-1"></a>    river_gdf_final[<span class="st">&#39;color&#39;</span>], colormap)</span>
-<span id="cb344-6"><a href="#cb344-6" tabindex="-1"></a></span>
-<span id="cb344-7"><a href="#cb344-7" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(height<span class="op">=</span><span class="dv">700</span>, basemap_style<span class="op">=</span>basemap)</span>
-<span id="cb344-8"><a href="#cb344-8" tabindex="-1"></a>m.add_gdf(river_gdf_final,</span>
-<span id="cb344-9"><a href="#cb344-9" tabindex="-1"></a>          zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb344-10"><a href="#cb344-10" tabindex="-1"></a>          pickable<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb344-11"><a href="#cb344-11" tabindex="-1"></a>          get_width<span class="op">=</span>widths,</span>
-<span id="cb344-12"><a href="#cb344-12" tabindex="-1"></a>          get_color<span class="op">=</span>colors,</span>
-<span id="cb344-13"><a href="#cb344-13" tabindex="-1"></a>          width_units<span class="op">=</span><span class="st">&#39;pixels&#39;</span></span>
-<span id="cb344-14"><a href="#cb344-14" tabindex="-1"></a>)</span>
-<span id="cb344-15"><a href="#cb344-15" tabindex="-1"></a>m</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb344-1"><a href="#cb344-1" tabindex="-1"></a>cmap <span class="op">=</span> palettable.colorbrewer.diverging.Spectral_10</span>
+<span id="cb344-2"><a href="#cb344-2" tabindex="-1"></a></span>
+<span id="cb344-3"><a href="#cb344-3" tabindex="-1"></a>colormap <span class="op">=</span> {}</span>
+<span id="cb344-4"><a href="#cb344-4" tabindex="-1"></a><span class="cf">for</span> i, color <span class="kw">in</span> <span class="bu">enumerate</span>(cmap.colors):</span>
+<span id="cb344-5"><a href="#cb344-5" tabindex="-1"></a>    colormap[i] <span class="op">=</span> color</span>
+<span id="cb344-6"><a href="#cb344-6" tabindex="-1"></a>colormap</span></code></pre></div>
+<div class="sourceCode" id="cb345"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb345-1"><a href="#cb345-1" tabindex="-1"></a>basemap <span class="op">=</span> lonboard.basemap.CartoBasemap.DarkMatterNoLabels</span>
+<span id="cb345-2"><a href="#cb345-2" tabindex="-1"></a>cmap <span class="op">=</span> palettable.colorbrewer.diverging.Spectral_10</span>
+<span id="cb345-3"><a href="#cb345-3" tabindex="-1"></a>widths <span class="op">=</span> river_gdf_final[<span class="st">&#39;width&#39;</span>]</span>
+<span id="cb345-4"><a href="#cb345-4" tabindex="-1"></a>colors <span class="op">=</span> lonboard.colormap.apply_categorical_cmap(</span>
+<span id="cb345-5"><a href="#cb345-5" tabindex="-1"></a>    river_gdf_final[<span class="st">&#39;color&#39;</span>], colormap)</span>
+<span id="cb345-6"><a href="#cb345-6" tabindex="-1"></a></span>
+<span id="cb345-7"><a href="#cb345-7" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(height<span class="op">=</span><span class="dv">700</span>, basemap_style<span class="op">=</span>basemap)</span>
+<span id="cb345-8"><a href="#cb345-8" tabindex="-1"></a>m.add_gdf(river_gdf_final,</span>
+<span id="cb345-9"><a href="#cb345-9" tabindex="-1"></a>          zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb345-10"><a href="#cb345-10" tabindex="-1"></a>          pickable<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb345-11"><a href="#cb345-11" tabindex="-1"></a>          get_width<span class="op">=</span>widths,</span>
+<span id="cb345-12"><a href="#cb345-12" tabindex="-1"></a>          get_color<span class="op">=</span>colors,</span>
+<span id="cb345-13"><a href="#cb345-13" tabindex="-1"></a>          width_units<span class="op">=</span><span class="st">&#39;pixels&#39;</span></span>
+<span id="cb345-14"><a href="#cb345-14" tabindex="-1"></a>)</span>
+<span id="cb345-15"><a href="#cb345-15" tabindex="-1"></a>m</span></code></pre></div>
 </div>
 </div>
 </div>
@@ -5948,93 +5950,93 @@ to make the map interactive.</p>
 href="https://interactive-mapping-dashboard.streamlit.app/"><img
 src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg"
 alt="An Interactive Mapping Dashboard App" /></a></p>
-<div class="sourceCode" id="cb345"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb345-1"><a href="#cb345-1" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
-<span id="cb345-2"><a href="#cb345-2" tabindex="-1"></a><span class="im">import</span> folium</span>
-<span id="cb345-3"><a href="#cb345-3" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
-<span id="cb345-4"><a href="#cb345-4" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb345-5"><a href="#cb345-5" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb345-6"><a href="#cb345-6" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb345-7"><a href="#cb345-7" tabindex="-1"></a></span>
-<span id="cb345-8"><a href="#cb345-8" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;selected_district&#39;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
-<span id="cb345-9"><a href="#cb345-9" tabindex="-1"></a>    st.session_state[<span class="st">&#39;selected_district&#39;</span>] <span class="op">=</span> <span class="st">&#39;Bidar&#39;</span></span>
-<span id="cb345-10"><a href="#cb345-10" tabindex="-1"></a>    </span>
-<span id="cb345-11"><a href="#cb345-11" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&quot;Dashboard&quot;</span>, layout<span class="op">=</span><span class="st">&quot;wide&quot;</span>)</span>
-<span id="cb345-12"><a href="#cb345-12" tabindex="-1"></a></span>
-<span id="cb345-13"><a href="#cb345-13" tabindex="-1"></a>st.title(<span class="st">&#39;Interactive Highway Dashboard&#39;</span>)</span>
-<span id="cb345-14"><a href="#cb345-14" tabindex="-1"></a></span>
-<span id="cb345-15"><a href="#cb345-15" tabindex="-1"></a>st.sidebar.title(<span class="st">&quot;About&quot;</span>)</span>
-<span id="cb345-16"><a href="#cb345-16" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Roads&#39;</span>)</span>
-<span id="cb345-17"><a href="#cb345-17" tabindex="-1"></a>st.sidebar.markdown(<span class="st">&#39;Click on any feature to see the stats. &#39;</span></span>
-<span id="cb345-18"><a href="#cb345-18" tabindex="-1"></a>  <span class="st">&#39;The text and chart below will update as you click on the map.&#39;</span>)</span>
-<span id="cb345-19"><a href="#cb345-19" tabindex="-1"></a></span>
-<span id="cb345-20"><a href="#cb345-20" tabindex="-1"></a>selected <span class="op">=</span> st.sidebar.markdown(<span class="ss">f&#39;Current selection: :red[</span><span class="sc">{</span>st<span class="sc">.</span>session_state<span class="sc">.</span>selected_district<span class="sc">}</span><span class="ss">]&#39;</span>)</span>
-<span id="cb345-21"><a href="#cb345-21" tabindex="-1"></a></span>
-<span id="cb345-22"><a href="#cb345-22" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/releases/&#39;</span> \</span>
-<span id="cb345-23"><a href="#cb345-23" tabindex="-1"></a>        <span class="st">&#39;download/osm/&#39;</span></span>
-<span id="cb345-24"><a href="#cb345-24" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
-<span id="cb345-25"><a href="#cb345-25" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
-<span id="cb345-26"><a href="#cb345-26" tabindex="-1"></a></span>
-<span id="cb345-27"><a href="#cb345-27" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
-<span id="cb345-28"><a href="#cb345-28" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
-<span id="cb345-29"><a href="#cb345-29" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
-<span id="cb345-30"><a href="#cb345-30" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
-<span id="cb345-31"><a href="#cb345-31" tabindex="-1"></a></span>
-<span id="cb345-32"><a href="#cb345-32" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
-<span id="cb345-33"><a href="#cb345-33" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
-<span id="cb345-34"><a href="#cb345-34" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb345-35"><a href="#cb345-35" tabindex="-1"></a>    <span class="cf">return</span> df</span>
-<span id="cb345-36"><a href="#cb345-36" tabindex="-1"></a>    </span>
-<span id="cb345-37"><a href="#cb345-37" tabindex="-1"></a>   </span>
-<span id="cb345-38"><a href="#cb345-38" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
-<span id="cb345-39"><a href="#cb345-39" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
-<span id="cb345-40"><a href="#cb345-40" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
-<span id="cb345-41"><a href="#cb345-41" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
-<span id="cb345-42"><a href="#cb345-42" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
-<span id="cb345-43"><a href="#cb345-43" tabindex="-1"></a></span>
-<span id="cb345-44"><a href="#cb345-44" tabindex="-1"></a></span>
-<span id="cb345-45"><a href="#cb345-45" tabindex="-1"></a></span>
-<span id="cb345-46"><a href="#cb345-46" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(</span>
-<span id="cb345-47"><a href="#cb345-47" tabindex="-1"></a>    layers_control<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb345-48"><a href="#cb345-48" tabindex="-1"></a>    draw_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb345-49"><a href="#cb345-49" tabindex="-1"></a>    measure_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb345-50"><a href="#cb345-50" tabindex="-1"></a>    fullscreen_control<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb345-51"><a href="#cb345-51" tabindex="-1"></a>)</span>
-<span id="cb345-52"><a href="#cb345-52" tabindex="-1"></a></span>
-<span id="cb345-53"><a href="#cb345-53" tabindex="-1"></a>m.add_gdf(</span>
-<span id="cb345-54"><a href="#cb345-54" tabindex="-1"></a>    gdf<span class="op">=</span>districts_gdf,</span>
-<span id="cb345-55"><a href="#cb345-55" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;districts&#39;</span>,</span>
-<span id="cb345-56"><a href="#cb345-56" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb345-57"><a href="#cb345-57" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb345-58"><a href="#cb345-58" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;black&#39;</span>, <span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
-<span id="cb345-59"><a href="#cb345-59" tabindex="-1"></a>    )</span>
-<span id="cb345-60"><a href="#cb345-60" tabindex="-1"></a></span>
-<span id="cb345-61"><a href="#cb345-61" tabindex="-1"></a> </span>
-<span id="cb345-62"><a href="#cb345-62" tabindex="-1"></a>map_data <span class="op">=</span> m.to_streamlit(<span class="dv">800</span>, <span class="dv">600</span>, bidirectional<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb345-63"><a href="#cb345-63" tabindex="-1"></a></span>
-<span id="cb345-64"><a href="#cb345-64" tabindex="-1"></a></span>
-<span id="cb345-65"><a href="#cb345-65" tabindex="-1"></a></span>
-<span id="cb345-66"><a href="#cb345-66" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> st.session_state.selected_district]</span>
-<span id="cb345-67"><a href="#cb345-67" tabindex="-1"></a></span>
-<span id="cb345-68"><a href="#cb345-68" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb345-69"><a href="#cb345-69" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>, <span class="st">&#39;gray&#39;</span>], </span>
-<span id="cb345-70"><a href="#cb345-70" tabindex="-1"></a>  ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
-<span id="cb345-71"><a href="#cb345-71" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
-<span id="cb345-72"><a href="#cb345-72" tabindex="-1"></a>ax.set_ylim(<span class="dv">0</span>, <span class="dv">2500</span>)</span>
-<span id="cb345-73"><a href="#cb345-73" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span>
-<span id="cb345-74"><a href="#cb345-74" tabindex="-1"></a></span>
-<span id="cb345-75"><a href="#cb345-75" tabindex="-1"></a><span class="cf">if</span> map_data[<span class="st">&#39;last_object_clicked&#39;</span>]:</span>
-<span id="cb345-76"><a href="#cb345-76" tabindex="-1"></a>    clicked_district <span class="op">=</span> map_data[<span class="st">&#39;last_active_drawing&#39;</span>][<span class="st">&#39;properties&#39;</span>][<span class="st">&#39;DISTRICT&#39;</span>]</span>
-<span id="cb345-77"><a href="#cb345-77" tabindex="-1"></a>    st.session_state.selected_district <span class="op">=</span> clicked_district</span>
-<span id="cb345-78"><a href="#cb345-78" tabindex="-1"></a>    selected.write(<span class="ss">f&#39;Current selection: :red[</span><span class="sc">{</span>st<span class="sc">.</span>session_state<span class="sc">.</span>selected_district<span class="sc">}</span><span class="ss">]&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb346"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb346-1"><a href="#cb346-1" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb346-2"><a href="#cb346-2" tabindex="-1"></a><span class="im">import</span> folium</span>
+<span id="cb346-3"><a href="#cb346-3" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
+<span id="cb346-4"><a href="#cb346-4" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb346-5"><a href="#cb346-5" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb346-6"><a href="#cb346-6" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb346-7"><a href="#cb346-7" tabindex="-1"></a></span>
+<span id="cb346-8"><a href="#cb346-8" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;selected_district&#39;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
+<span id="cb346-9"><a href="#cb346-9" tabindex="-1"></a>    st.session_state[<span class="st">&#39;selected_district&#39;</span>] <span class="op">=</span> <span class="st">&#39;Bidar&#39;</span></span>
+<span id="cb346-10"><a href="#cb346-10" tabindex="-1"></a>    </span>
+<span id="cb346-11"><a href="#cb346-11" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">&quot;Dashboard&quot;</span>, layout<span class="op">=</span><span class="st">&quot;wide&quot;</span>)</span>
+<span id="cb346-12"><a href="#cb346-12" tabindex="-1"></a></span>
+<span id="cb346-13"><a href="#cb346-13" tabindex="-1"></a>st.title(<span class="st">&#39;Interactive Highway Dashboard&#39;</span>)</span>
+<span id="cb346-14"><a href="#cb346-14" tabindex="-1"></a></span>
+<span id="cb346-15"><a href="#cb346-15" tabindex="-1"></a>st.sidebar.title(<span class="st">&quot;About&quot;</span>)</span>
+<span id="cb346-16"><a href="#cb346-16" tabindex="-1"></a>st.sidebar.info(<span class="st">&#39;Explore the Roads&#39;</span>)</span>
+<span id="cb346-17"><a href="#cb346-17" tabindex="-1"></a>st.sidebar.markdown(<span class="st">&#39;Click on any feature to see the stats. &#39;</span></span>
+<span id="cb346-18"><a href="#cb346-18" tabindex="-1"></a>  <span class="st">&#39;The text and chart below will update as you click on the map.&#39;</span>)</span>
+<span id="cb346-19"><a href="#cb346-19" tabindex="-1"></a></span>
+<span id="cb346-20"><a href="#cb346-20" tabindex="-1"></a>selected <span class="op">=</span> st.sidebar.markdown(<span class="ss">f&#39;Current selection: :red[</span><span class="sc">{</span>st<span class="sc">.</span>session_state<span class="sc">.</span>selected_district<span class="sc">}</span><span class="ss">]&#39;</span>)</span>
+<span id="cb346-21"><a href="#cb346-21" tabindex="-1"></a></span>
+<span id="cb346-22"><a href="#cb346-22" tabindex="-1"></a>data_url <span class="op">=</span> <span class="st">&#39;https://github.com/spatialthoughts/python-dataviz-web/releases/&#39;</span> \</span>
+<span id="cb346-23"><a href="#cb346-23" tabindex="-1"></a>        <span class="st">&#39;download/osm/&#39;</span></span>
+<span id="cb346-24"><a href="#cb346-24" tabindex="-1"></a>gpkg_file <span class="op">=</span> <span class="st">&#39;karnataka.gpkg&#39;</span></span>
+<span id="cb346-25"><a href="#cb346-25" tabindex="-1"></a>csv_file <span class="op">=</span> <span class="st">&#39;highway_lengths_by_district.csv&#39;</span></span>
+<span id="cb346-26"><a href="#cb346-26" tabindex="-1"></a></span>
+<span id="cb346-27"><a href="#cb346-27" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
+<span id="cb346-28"><a href="#cb346-28" tabindex="-1"></a><span class="kw">def</span> read_gdf(url, layer):</span>
+<span id="cb346-29"><a href="#cb346-29" tabindex="-1"></a>    gdf <span class="op">=</span> gpd.read_file(url, layer<span class="op">=</span>layer)</span>
+<span id="cb346-30"><a href="#cb346-30" tabindex="-1"></a>    <span class="cf">return</span> gdf</span>
+<span id="cb346-31"><a href="#cb346-31" tabindex="-1"></a></span>
+<span id="cb346-32"><a href="#cb346-32" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
+<span id="cb346-33"><a href="#cb346-33" tabindex="-1"></a><span class="kw">def</span> read_csv(url):</span>
+<span id="cb346-34"><a href="#cb346-34" tabindex="-1"></a>    df <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb346-35"><a href="#cb346-35" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb346-36"><a href="#cb346-36" tabindex="-1"></a>    </span>
+<span id="cb346-37"><a href="#cb346-37" tabindex="-1"></a>   </span>
+<span id="cb346-38"><a href="#cb346-38" tabindex="-1"></a>gpkg_url <span class="op">=</span> data_url <span class="op">+</span> gpkg_file</span>
+<span id="cb346-39"><a href="#cb346-39" tabindex="-1"></a>csv_url <span class="op">=</span> data_url <span class="op">+</span> csv_file</span>
+<span id="cb346-40"><a href="#cb346-40" tabindex="-1"></a>districts_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_districts&#39;</span>)</span>
+<span id="cb346-41"><a href="#cb346-41" tabindex="-1"></a>roads_gdf <span class="op">=</span> read_gdf(gpkg_url, <span class="st">&#39;karnataka_highways&#39;</span>)</span>
+<span id="cb346-42"><a href="#cb346-42" tabindex="-1"></a>lengths_df <span class="op">=</span> read_csv(csv_url)</span>
+<span id="cb346-43"><a href="#cb346-43" tabindex="-1"></a></span>
+<span id="cb346-44"><a href="#cb346-44" tabindex="-1"></a></span>
+<span id="cb346-45"><a href="#cb346-45" tabindex="-1"></a></span>
+<span id="cb346-46"><a href="#cb346-46" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(</span>
+<span id="cb346-47"><a href="#cb346-47" tabindex="-1"></a>    layers_control<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb346-48"><a href="#cb346-48" tabindex="-1"></a>    draw_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb346-49"><a href="#cb346-49" tabindex="-1"></a>    measure_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb346-50"><a href="#cb346-50" tabindex="-1"></a>    fullscreen_control<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb346-51"><a href="#cb346-51" tabindex="-1"></a>)</span>
+<span id="cb346-52"><a href="#cb346-52" tabindex="-1"></a></span>
+<span id="cb346-53"><a href="#cb346-53" tabindex="-1"></a>m.add_gdf(</span>
+<span id="cb346-54"><a href="#cb346-54" tabindex="-1"></a>    gdf<span class="op">=</span>districts_gdf,</span>
+<span id="cb346-55"><a href="#cb346-55" tabindex="-1"></a>    layer_name<span class="op">=</span><span class="st">&#39;districts&#39;</span>,</span>
+<span id="cb346-56"><a href="#cb346-56" tabindex="-1"></a>    zoom_to_layer<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb346-57"><a href="#cb346-57" tabindex="-1"></a>    info_mode<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb346-58"><a href="#cb346-58" tabindex="-1"></a>    style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>: <span class="st">&#39;black&#39;</span>, <span class="st">&#39;fillOpacity&#39;</span>: <span class="fl">0.3</span>, <span class="st">&#39;weight&#39;</span>: <span class="fl">0.5</span>},</span>
+<span id="cb346-59"><a href="#cb346-59" tabindex="-1"></a>    )</span>
+<span id="cb346-60"><a href="#cb346-60" tabindex="-1"></a></span>
+<span id="cb346-61"><a href="#cb346-61" tabindex="-1"></a> </span>
+<span id="cb346-62"><a href="#cb346-62" tabindex="-1"></a>map_data <span class="op">=</span> m.to_streamlit(<span class="dv">800</span>, <span class="dv">600</span>, bidirectional<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb346-63"><a href="#cb346-63" tabindex="-1"></a></span>
+<span id="cb346-64"><a href="#cb346-64" tabindex="-1"></a></span>
+<span id="cb346-65"><a href="#cb346-65" tabindex="-1"></a></span>
+<span id="cb346-66"><a href="#cb346-66" tabindex="-1"></a>district_lengths <span class="op">=</span> lengths_df[lengths_df[<span class="st">&#39;DISTRICT&#39;</span>] <span class="op">==</span> st.session_state.selected_district]</span>
+<span id="cb346-67"><a href="#cb346-67" tabindex="-1"></a></span>
+<span id="cb346-68"><a href="#cb346-68" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb346-69"><a href="#cb346-69" tabindex="-1"></a>district_lengths.plot(kind<span class="op">=</span><span class="st">&#39;bar&#39;</span>, ax<span class="op">=</span>ax, color<span class="op">=</span>[<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;red&#39;</span>, <span class="st">&#39;gray&#39;</span>], </span>
+<span id="cb346-70"><a href="#cb346-70" tabindex="-1"></a>  ylabel<span class="op">=</span><span class="st">&#39;Kilometers&#39;</span>, xlabel<span class="op">=</span><span class="st">&#39;Category&#39;</span>)</span>
+<span id="cb346-71"><a href="#cb346-71" tabindex="-1"></a>ax.get_xaxis().set_ticklabels([])</span>
+<span id="cb346-72"><a href="#cb346-72" tabindex="-1"></a>ax.set_ylim(<span class="dv">0</span>, <span class="dv">2500</span>)</span>
+<span id="cb346-73"><a href="#cb346-73" tabindex="-1"></a>stats <span class="op">=</span> st.sidebar.pyplot(fig)</span>
+<span id="cb346-74"><a href="#cb346-74" tabindex="-1"></a></span>
+<span id="cb346-75"><a href="#cb346-75" tabindex="-1"></a><span class="cf">if</span> map_data[<span class="st">&#39;last_object_clicked&#39;</span>]:</span>
+<span id="cb346-76"><a href="#cb346-76" tabindex="-1"></a>    clicked_district <span class="op">=</span> map_data[<span class="st">&#39;last_active_drawing&#39;</span>][<span class="st">&#39;properties&#39;</span>][<span class="st">&#39;DISTRICT&#39;</span>]</span>
+<span id="cb346-77"><a href="#cb346-77" tabindex="-1"></a>    st.session_state.selected_district <span class="op">=</span> clicked_district</span>
+<span id="cb346-78"><a href="#cb346-78" tabindex="-1"></a>    selected.write(<span class="ss">f&#39;Current selection: :red[</span><span class="sc">{</span>st<span class="sc">.</span>session_state<span class="sc">.</span>selected_district<span class="sc">}</span><span class="ss">]&#39;</span>)</span></code></pre></div>
 <p>We must make sure to include a <code>requirements.txt</code> with the
 following content.</p>
-<div class="sourceCode" id="cb346"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb346-1"><a href="#cb346-1" tabindex="-1"></a>streamlit</span>
-<span id="cb346-2"><a href="#cb346-2" tabindex="-1"></a>leafmap</span>
-<span id="cb346-3"><a href="#cb346-3" tabindex="-1"></a>pandas</span>
-<span id="cb346-4"><a href="#cb346-4" tabindex="-1"></a>geopandas</span>
-<span id="cb346-5"><a href="#cb346-5" tabindex="-1"></a>streamlit<span class="op">-</span>folium</span></code></pre></div>
+<div class="sourceCode" id="cb347"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb347-1"><a href="#cb347-1" tabindex="-1"></a>streamlit</span>
+<span id="cb347-2"><a href="#cb347-2" tabindex="-1"></a>leafmap</span>
+<span id="cb347-3"><a href="#cb347-3" tabindex="-1"></a>pandas</span>
+<span id="cb347-4"><a href="#cb347-4" tabindex="-1"></a>geopandas</span>
+<span id="cb347-5"><a href="#cb347-5" tabindex="-1"></a>streamlit<span class="op">-</span>folium</span></code></pre></div>
 </div>
 <div id="bouding-box-app" class="section level3">
 <h3>Bouding Box App</h3>
@@ -6049,87 +6051,87 @@ zoom level.</p>
 <p>See the live demo: <a href="https://boundingbox.streamlit.app/"><img
 src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg"
 alt="Bounding Box App" /></a></p>
-<div class="sourceCode" id="cb347"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb347-1"><a href="#cb347-1" tabindex="-1"></a><span class="co"># import folium</span></span>
-<span id="cb347-2"><a href="#cb347-2" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
-<span id="cb347-3"><a href="#cb347-3" tabindex="-1"></a><span class="im">from</span> geopy.geocoders <span class="im">import</span> Nominatim</span>
-<span id="cb347-4"><a href="#cb347-4" tabindex="-1"></a><span class="im">import</span> folium</span>
-<span id="cb347-5"><a href="#cb347-5" tabindex="-1"></a><span class="im">from</span> streamlit_folium <span class="im">import</span> st_folium</span>
-<span id="cb347-6"><a href="#cb347-6" tabindex="-1"></a></span>
-<span id="cb347-7"><a href="#cb347-7" tabindex="-1"></a><span class="co"># Initialize session state</span></span>
-<span id="cb347-8"><a href="#cb347-8" tabindex="-1"></a><span class="cf">if</span> <span class="st">&quot;center&quot;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
-<span id="cb347-9"><a href="#cb347-9" tabindex="-1"></a>    st.session_state[<span class="st">&quot;center&quot;</span>] <span class="op">=</span> [<span class="fl">37.7749</span>, <span class="op">-</span><span class="fl">122.4194</span>]  <span class="co"># Default to San Francisco</span></span>
-<span id="cb347-10"><a href="#cb347-10" tabindex="-1"></a><span class="cf">if</span> <span class="st">&quot;zoom&quot;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
-<span id="cb347-11"><a href="#cb347-11" tabindex="-1"></a>    st.session_state[<span class="st">&quot;zoom&quot;</span>] <span class="op">=</span> <span class="dv">13</span></span>
-<span id="cb347-12"><a href="#cb347-12" tabindex="-1"></a>    </span>
-<span id="cb347-13"><a href="#cb347-13" tabindex="-1"></a>st.title(<span class="st">&#39;Bounding Box Tool&#39;</span>)</span>
-<span id="cb347-14"><a href="#cb347-14" tabindex="-1"></a>st.markdown(<span class="st">&#39;This app allows you to get coordinates and bounding box for any &#39;</span></span>
-<span id="cb347-15"><a href="#cb347-15" tabindex="-1"></a>  <span class="st">&#39;place in the world - powered by OpenStreetMap.&#39;</span>)</span>
-<span id="cb347-16"><a href="#cb347-16" tabindex="-1"></a></span>
-<span id="cb347-17"><a href="#cb347-17" tabindex="-1"></a>address <span class="op">=</span> st.text_input(<span class="st">&#39;Enter an address.&#39;</span>)</span>
-<span id="cb347-18"><a href="#cb347-18" tabindex="-1"></a></span>
-<span id="cb347-19"><a href="#cb347-19" tabindex="-1"></a>col1, col2 <span class="op">=</span> st.columns([<span class="fl">0.3</span>, <span class="fl">0.7</span>])</span>
-<span id="cb347-20"><a href="#cb347-20" tabindex="-1"></a>col1.text(<span class="st">&#39;Center Coordinates&#39;</span>)</span>
-<span id="cb347-21"><a href="#cb347-21" tabindex="-1"></a>col1.caption(<span class="st">&#39;Format is X,Y (Longitude/Latitude)&#39;</span>)</span>
-<span id="cb347-22"><a href="#cb347-22" tabindex="-1"></a>coordinate_text <span class="op">=</span> col2.text(<span class="st">&#39;&#39;</span>)</span>
-<span id="cb347-23"><a href="#cb347-23" tabindex="-1"></a>col3, col4 <span class="op">=</span> st.columns([<span class="fl">0.3</span>, <span class="fl">0.7</span>])</span>
-<span id="cb347-24"><a href="#cb347-24" tabindex="-1"></a>col3.text(<span class="st">&#39;Bounding Box&#39;</span>)</span>
-<span id="cb347-25"><a href="#cb347-25" tabindex="-1"></a>col3.caption(<span class="st">&#39;Format is [Xmin,Ymin,XMax,YMax]&#39;</span>)</span>
-<span id="cb347-26"><a href="#cb347-26" tabindex="-1"></a>boundingbox_text <span class="op">=</span> col4.text(<span class="st">&#39;&#39;</span>)</span>
-<span id="cb347-27"><a href="#cb347-27" tabindex="-1"></a></span>
-<span id="cb347-28"><a href="#cb347-28" tabindex="-1"></a><span class="co"># Function to update the center</span></span>
-<span id="cb347-29"><a href="#cb347-29" tabindex="-1"></a><span class="kw">def</span> update_map(lat, lon, zoom):</span>
-<span id="cb347-30"><a href="#cb347-30" tabindex="-1"></a>    st.session_state[<span class="st">&quot;center&quot;</span>] <span class="op">=</span> [lat, lon]</span>
-<span id="cb347-31"><a href="#cb347-31" tabindex="-1"></a>    st.session_state[<span class="st">&#39;zoom&#39;</span>] <span class="op">=</span> zoom</span>
-<span id="cb347-32"><a href="#cb347-32" tabindex="-1"></a>    </span>
-<span id="cb347-33"><a href="#cb347-33" tabindex="-1"></a></span>
-<span id="cb347-34"><a href="#cb347-34" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
-<span id="cb347-35"><a href="#cb347-35" tabindex="-1"></a><span class="kw">def</span> geocode(query):</span>
-<span id="cb347-36"><a href="#cb347-36" tabindex="-1"></a>    geolocator <span class="op">=</span> Nominatim(user_agent<span class="op">=</span><span class="st">&#39;streamlit-boundingbox&#39;</span>)</span>
-<span id="cb347-37"><a href="#cb347-37" tabindex="-1"></a>    location <span class="op">=</span> geolocator.geocode(address)</span>
-<span id="cb347-38"><a href="#cb347-38" tabindex="-1"></a>    <span class="cf">return</span> location</span>
-<span id="cb347-39"><a href="#cb347-39" tabindex="-1"></a>    </span>
-<span id="cb347-40"><a href="#cb347-40" tabindex="-1"></a><span class="cf">if</span> address:</span>
-<span id="cb347-41"><a href="#cb347-41" tabindex="-1"></a>    location <span class="op">=</span> geocode(address)</span>
-<span id="cb347-42"><a href="#cb347-42" tabindex="-1"></a>    <span class="cf">if</span> location:</span>
-<span id="cb347-43"><a href="#cb347-43" tabindex="-1"></a>        geocode_lat <span class="op">=</span> location.latitude</span>
-<span id="cb347-44"><a href="#cb347-44" tabindex="-1"></a>        geocode_lng <span class="op">=</span> location.longitude</span>
-<span id="cb347-45"><a href="#cb347-45" tabindex="-1"></a>        zoom <span class="op">=</span> <span class="dv">8</span></span>
-<span id="cb347-46"><a href="#cb347-46" tabindex="-1"></a>        update_map(geocode_lat, geocode_lng, zoom)</span>
-<span id="cb347-47"><a href="#cb347-47" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb347-48"><a href="#cb347-48" tabindex="-1"></a>        st.error(<span class="st">&#39;Request failed. No results.&#39;</span>)</span>
-<span id="cb347-49"><a href="#cb347-49" tabindex="-1"></a></span>
-<span id="cb347-50"><a href="#cb347-50" tabindex="-1"></a><span class="co"># Create a folium map</span></span>
-<span id="cb347-51"><a href="#cb347-51" tabindex="-1"></a>m <span class="op">=</span> folium.Map(location<span class="op">=</span>st.session_state[<span class="st">&quot;center&quot;</span>], zoom_start<span class="op">=</span>st.session_state[<span class="st">&quot;zoom&quot;</span>])</span>
-<span id="cb347-52"><a href="#cb347-52" tabindex="-1"></a></span>
-<span id="cb347-53"><a href="#cb347-53" tabindex="-1"></a><span class="co"># Display the map</span></span>
-<span id="cb347-54"><a href="#cb347-54" tabindex="-1"></a>st_data <span class="op">=</span> st_folium(</span>
-<span id="cb347-55"><a href="#cb347-55" tabindex="-1"></a>    m,</span>
-<span id="cb347-56"><a href="#cb347-56" tabindex="-1"></a>    center<span class="op">=</span>st.session_state[<span class="st">&quot;center&quot;</span>],</span>
-<span id="cb347-57"><a href="#cb347-57" tabindex="-1"></a>    zoom<span class="op">=</span>st.session_state[<span class="st">&quot;zoom&quot;</span>],</span>
-<span id="cb347-58"><a href="#cb347-58" tabindex="-1"></a>    key<span class="op">=</span><span class="st">&quot;map&quot;</span>,</span>
-<span id="cb347-59"><a href="#cb347-59" tabindex="-1"></a>    height<span class="op">=</span><span class="dv">400</span>,</span>
-<span id="cb347-60"><a href="#cb347-60" tabindex="-1"></a>    width<span class="op">=</span><span class="dv">700</span>,</span>
-<span id="cb347-61"><a href="#cb347-61" tabindex="-1"></a>)</span>
-<span id="cb347-62"><a href="#cb347-62" tabindex="-1"></a>        </span>
-<span id="cb347-63"><a href="#cb347-63" tabindex="-1"></a>center <span class="op">=</span> st_data[<span class="st">&#39;center&#39;</span>]</span>
-<span id="cb347-64"><a href="#cb347-64" tabindex="-1"></a>lat <span class="op">=</span> center[<span class="st">&#39;lat&#39;</span>]</span>
-<span id="cb347-65"><a href="#cb347-65" tabindex="-1"></a>lng <span class="op">=</span> center[<span class="st">&#39;lng&#39;</span>]</span>
-<span id="cb347-66"><a href="#cb347-66" tabindex="-1"></a>bounds <span class="op">=</span> st_data[<span class="st">&#39;bounds&#39;</span>]</span>
-<span id="cb347-67"><a href="#cb347-67" tabindex="-1"></a>lowerleft <span class="op">=</span> bounds[<span class="st">&#39;_southWest&#39;</span>]</span>
-<span id="cb347-68"><a href="#cb347-68" tabindex="-1"></a>upperright <span class="op">=</span> bounds[<span class="st">&#39;_northEast&#39;</span>]</span>
-<span id="cb347-69"><a href="#cb347-69" tabindex="-1"></a>ymin <span class="op">=</span> lowerleft[<span class="st">&#39;lat&#39;</span>]</span>
-<span id="cb347-70"><a href="#cb347-70" tabindex="-1"></a>xmin <span class="op">=</span> lowerleft[<span class="st">&#39;lng&#39;</span>]</span>
-<span id="cb347-71"><a href="#cb347-71" tabindex="-1"></a>ymax <span class="op">=</span> upperright[<span class="st">&#39;lat&#39;</span>]</span>
-<span id="cb347-72"><a href="#cb347-72" tabindex="-1"></a>xmax <span class="op">=</span> upperright[<span class="st">&#39;lng&#39;</span>]</span>
-<span id="cb347-73"><a href="#cb347-73" tabindex="-1"></a></span>
-<span id="cb347-74"><a href="#cb347-74" tabindex="-1"></a>coordinate_text.text(<span class="ss">f&#39;</span><span class="sc">{</span>lng<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>lat<span class="sc">:.4f}</span><span class="ss">&#39;</span>)</span>
-<span id="cb347-75"><a href="#cb347-75" tabindex="-1"></a>boundingbox_text.text(<span class="ss">f&#39;[</span><span class="sc">{</span>xmin<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>ymin<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>xmax<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>ymax<span class="sc">:.4f}</span><span class="ss">]&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb348"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb348-1"><a href="#cb348-1" tabindex="-1"></a><span class="co"># import folium</span></span>
+<span id="cb348-2"><a href="#cb348-2" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb348-3"><a href="#cb348-3" tabindex="-1"></a><span class="im">from</span> geopy.geocoders <span class="im">import</span> Nominatim</span>
+<span id="cb348-4"><a href="#cb348-4" tabindex="-1"></a><span class="im">import</span> folium</span>
+<span id="cb348-5"><a href="#cb348-5" tabindex="-1"></a><span class="im">from</span> streamlit_folium <span class="im">import</span> st_folium</span>
+<span id="cb348-6"><a href="#cb348-6" tabindex="-1"></a></span>
+<span id="cb348-7"><a href="#cb348-7" tabindex="-1"></a><span class="co"># Initialize session state</span></span>
+<span id="cb348-8"><a href="#cb348-8" tabindex="-1"></a><span class="cf">if</span> <span class="st">&quot;center&quot;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
+<span id="cb348-9"><a href="#cb348-9" tabindex="-1"></a>    st.session_state[<span class="st">&quot;center&quot;</span>] <span class="op">=</span> [<span class="fl">37.7749</span>, <span class="op">-</span><span class="fl">122.4194</span>]  <span class="co"># Default to San Francisco</span></span>
+<span id="cb348-10"><a href="#cb348-10" tabindex="-1"></a><span class="cf">if</span> <span class="st">&quot;zoom&quot;</span> <span class="kw">not</span> <span class="kw">in</span> st.session_state:</span>
+<span id="cb348-11"><a href="#cb348-11" tabindex="-1"></a>    st.session_state[<span class="st">&quot;zoom&quot;</span>] <span class="op">=</span> <span class="dv">13</span></span>
+<span id="cb348-12"><a href="#cb348-12" tabindex="-1"></a>    </span>
+<span id="cb348-13"><a href="#cb348-13" tabindex="-1"></a>st.title(<span class="st">&#39;Bounding Box Tool&#39;</span>)</span>
+<span id="cb348-14"><a href="#cb348-14" tabindex="-1"></a>st.markdown(<span class="st">&#39;This app allows you to get coordinates and bounding box for any &#39;</span></span>
+<span id="cb348-15"><a href="#cb348-15" tabindex="-1"></a>  <span class="st">&#39;place in the world - powered by OpenStreetMap.&#39;</span>)</span>
+<span id="cb348-16"><a href="#cb348-16" tabindex="-1"></a></span>
+<span id="cb348-17"><a href="#cb348-17" tabindex="-1"></a>address <span class="op">=</span> st.text_input(<span class="st">&#39;Enter an address.&#39;</span>)</span>
+<span id="cb348-18"><a href="#cb348-18" tabindex="-1"></a></span>
+<span id="cb348-19"><a href="#cb348-19" tabindex="-1"></a>col1, col2 <span class="op">=</span> st.columns([<span class="fl">0.3</span>, <span class="fl">0.7</span>])</span>
+<span id="cb348-20"><a href="#cb348-20" tabindex="-1"></a>col1.text(<span class="st">&#39;Center Coordinates&#39;</span>)</span>
+<span id="cb348-21"><a href="#cb348-21" tabindex="-1"></a>col1.caption(<span class="st">&#39;Format is X,Y (Longitude/Latitude)&#39;</span>)</span>
+<span id="cb348-22"><a href="#cb348-22" tabindex="-1"></a>coordinate_text <span class="op">=</span> col2.text(<span class="st">&#39;&#39;</span>)</span>
+<span id="cb348-23"><a href="#cb348-23" tabindex="-1"></a>col3, col4 <span class="op">=</span> st.columns([<span class="fl">0.3</span>, <span class="fl">0.7</span>])</span>
+<span id="cb348-24"><a href="#cb348-24" tabindex="-1"></a>col3.text(<span class="st">&#39;Bounding Box&#39;</span>)</span>
+<span id="cb348-25"><a href="#cb348-25" tabindex="-1"></a>col3.caption(<span class="st">&#39;Format is [Xmin,Ymin,XMax,YMax]&#39;</span>)</span>
+<span id="cb348-26"><a href="#cb348-26" tabindex="-1"></a>boundingbox_text <span class="op">=</span> col4.text(<span class="st">&#39;&#39;</span>)</span>
+<span id="cb348-27"><a href="#cb348-27" tabindex="-1"></a></span>
+<span id="cb348-28"><a href="#cb348-28" tabindex="-1"></a><span class="co"># Function to update the center</span></span>
+<span id="cb348-29"><a href="#cb348-29" tabindex="-1"></a><span class="kw">def</span> update_map(lat, lon, zoom):</span>
+<span id="cb348-30"><a href="#cb348-30" tabindex="-1"></a>    st.session_state[<span class="st">&quot;center&quot;</span>] <span class="op">=</span> [lat, lon]</span>
+<span id="cb348-31"><a href="#cb348-31" tabindex="-1"></a>    st.session_state[<span class="st">&#39;zoom&#39;</span>] <span class="op">=</span> zoom</span>
+<span id="cb348-32"><a href="#cb348-32" tabindex="-1"></a>    </span>
+<span id="cb348-33"><a href="#cb348-33" tabindex="-1"></a></span>
+<span id="cb348-34"><a href="#cb348-34" tabindex="-1"></a><span class="at">@st.cache_data</span></span>
+<span id="cb348-35"><a href="#cb348-35" tabindex="-1"></a><span class="kw">def</span> geocode(query):</span>
+<span id="cb348-36"><a href="#cb348-36" tabindex="-1"></a>    geolocator <span class="op">=</span> Nominatim(user_agent<span class="op">=</span><span class="st">&#39;streamlit-boundingbox&#39;</span>)</span>
+<span id="cb348-37"><a href="#cb348-37" tabindex="-1"></a>    location <span class="op">=</span> geolocator.geocode(address)</span>
+<span id="cb348-38"><a href="#cb348-38" tabindex="-1"></a>    <span class="cf">return</span> location</span>
+<span id="cb348-39"><a href="#cb348-39" tabindex="-1"></a>    </span>
+<span id="cb348-40"><a href="#cb348-40" tabindex="-1"></a><span class="cf">if</span> address:</span>
+<span id="cb348-41"><a href="#cb348-41" tabindex="-1"></a>    location <span class="op">=</span> geocode(address)</span>
+<span id="cb348-42"><a href="#cb348-42" tabindex="-1"></a>    <span class="cf">if</span> location:</span>
+<span id="cb348-43"><a href="#cb348-43" tabindex="-1"></a>        geocode_lat <span class="op">=</span> location.latitude</span>
+<span id="cb348-44"><a href="#cb348-44" tabindex="-1"></a>        geocode_lng <span class="op">=</span> location.longitude</span>
+<span id="cb348-45"><a href="#cb348-45" tabindex="-1"></a>        zoom <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb348-46"><a href="#cb348-46" tabindex="-1"></a>        update_map(geocode_lat, geocode_lng, zoom)</span>
+<span id="cb348-47"><a href="#cb348-47" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb348-48"><a href="#cb348-48" tabindex="-1"></a>        st.error(<span class="st">&#39;Request failed. No results.&#39;</span>)</span>
+<span id="cb348-49"><a href="#cb348-49" tabindex="-1"></a></span>
+<span id="cb348-50"><a href="#cb348-50" tabindex="-1"></a><span class="co"># Create a folium map</span></span>
+<span id="cb348-51"><a href="#cb348-51" tabindex="-1"></a>m <span class="op">=</span> folium.Map(location<span class="op">=</span>st.session_state[<span class="st">&quot;center&quot;</span>], zoom_start<span class="op">=</span>st.session_state[<span class="st">&quot;zoom&quot;</span>])</span>
+<span id="cb348-52"><a href="#cb348-52" tabindex="-1"></a></span>
+<span id="cb348-53"><a href="#cb348-53" tabindex="-1"></a><span class="co"># Display the map</span></span>
+<span id="cb348-54"><a href="#cb348-54" tabindex="-1"></a>st_data <span class="op">=</span> st_folium(</span>
+<span id="cb348-55"><a href="#cb348-55" tabindex="-1"></a>    m,</span>
+<span id="cb348-56"><a href="#cb348-56" tabindex="-1"></a>    center<span class="op">=</span>st.session_state[<span class="st">&quot;center&quot;</span>],</span>
+<span id="cb348-57"><a href="#cb348-57" tabindex="-1"></a>    zoom<span class="op">=</span>st.session_state[<span class="st">&quot;zoom&quot;</span>],</span>
+<span id="cb348-58"><a href="#cb348-58" tabindex="-1"></a>    key<span class="op">=</span><span class="st">&quot;map&quot;</span>,</span>
+<span id="cb348-59"><a href="#cb348-59" tabindex="-1"></a>    height<span class="op">=</span><span class="dv">400</span>,</span>
+<span id="cb348-60"><a href="#cb348-60" tabindex="-1"></a>    width<span class="op">=</span><span class="dv">700</span>,</span>
+<span id="cb348-61"><a href="#cb348-61" tabindex="-1"></a>)</span>
+<span id="cb348-62"><a href="#cb348-62" tabindex="-1"></a>        </span>
+<span id="cb348-63"><a href="#cb348-63" tabindex="-1"></a>center <span class="op">=</span> st_data[<span class="st">&#39;center&#39;</span>]</span>
+<span id="cb348-64"><a href="#cb348-64" tabindex="-1"></a>lat <span class="op">=</span> center[<span class="st">&#39;lat&#39;</span>]</span>
+<span id="cb348-65"><a href="#cb348-65" tabindex="-1"></a>lng <span class="op">=</span> center[<span class="st">&#39;lng&#39;</span>]</span>
+<span id="cb348-66"><a href="#cb348-66" tabindex="-1"></a>bounds <span class="op">=</span> st_data[<span class="st">&#39;bounds&#39;</span>]</span>
+<span id="cb348-67"><a href="#cb348-67" tabindex="-1"></a>lowerleft <span class="op">=</span> bounds[<span class="st">&#39;_southWest&#39;</span>]</span>
+<span id="cb348-68"><a href="#cb348-68" tabindex="-1"></a>upperright <span class="op">=</span> bounds[<span class="st">&#39;_northEast&#39;</span>]</span>
+<span id="cb348-69"><a href="#cb348-69" tabindex="-1"></a>ymin <span class="op">=</span> lowerleft[<span class="st">&#39;lat&#39;</span>]</span>
+<span id="cb348-70"><a href="#cb348-70" tabindex="-1"></a>xmin <span class="op">=</span> lowerleft[<span class="st">&#39;lng&#39;</span>]</span>
+<span id="cb348-71"><a href="#cb348-71" tabindex="-1"></a>ymax <span class="op">=</span> upperright[<span class="st">&#39;lat&#39;</span>]</span>
+<span id="cb348-72"><a href="#cb348-72" tabindex="-1"></a>xmax <span class="op">=</span> upperright[<span class="st">&#39;lng&#39;</span>]</span>
+<span id="cb348-73"><a href="#cb348-73" tabindex="-1"></a></span>
+<span id="cb348-74"><a href="#cb348-74" tabindex="-1"></a>coordinate_text.text(<span class="ss">f&#39;</span><span class="sc">{</span>lng<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>lat<span class="sc">:.4f}</span><span class="ss">&#39;</span>)</span>
+<span id="cb348-75"><a href="#cb348-75" tabindex="-1"></a>boundingbox_text.text(<span class="ss">f&#39;[</span><span class="sc">{</span>xmin<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>ymin<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>xmax<span class="sc">:.4f}</span><span class="ss">, </span><span class="sc">{</span>ymax<span class="sc">:.4f}</span><span class="ss">]&#39;</span>)</span></code></pre></div>
 <p>We must make sure to include a <code>requirements.txt</code> with the
 following content.</p>
-<div class="sourceCode" id="cb348"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb348-1"><a href="#cb348-1" tabindex="-1"></a>streamlit<span class="op">-</span>folium</span>
-<span id="cb348-2"><a href="#cb348-2" tabindex="-1"></a>geopy</span></code></pre></div>
+<div class="sourceCode" id="cb349"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb349-1"><a href="#cb349-1" tabindex="-1"></a>streamlit<span class="op">-</span>folium</span>
+<span id="cb349-2"><a href="#cb349-2" tabindex="-1"></a>geopy</span></code></pre></div>
 </div>
 </div>
 </div>
