@@ -21,13 +21,13 @@ distance = d.measureLine([point1, point3, point2])
 print('Total Distance {} meters'.format(distance))
 
 # We can conver the distance to miles
-distance_miles = d.convertLengthMeasurement(distance, QgsUnitTypes.DistanceMiles)
+distance_mi = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.Miles)
 
-print('Total Distance {} miles'.format(distance_miles))
+print('Total Distance {} miles'.format(distance_mi))
 
 # We can also format the distance by rounding to 2 decimals
 distance_formatted = QgsDistanceArea.formatDistance(
-  distance_miles, 2, QgsUnitTypes.DistanceKilometers)
+  distance_mi, 2, Qgis.DistanceUnit.Kilometers)
   
 print('Total Distance {}'.format(distance_formatted))
 
@@ -43,7 +43,7 @@ vertices1 = d.geodesicLine(point1, point3, 100000)
 vertices2 = d.geodesicLine(point3, point2, 100000)
 geodesic_line = QgsGeometry.fromPolylineXY(vertices1[0] + vertices2[0])
 f.setGeometry(geodesic_line)
-f.setAttributes([distance_miles])
+f.setAttributes([distance_mi])
 provider.addFeature(f)
 
 vlayer.updateExtents() 

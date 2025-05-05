@@ -17,9 +17,9 @@ point2 = QgsPointXY(lon2, lat2)
 distance = d.measureLine([point1, point2])
 print('Distance in meters', distance)
 
-distance_km = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.DistanceKilometers)
+distance_km = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.Kilometers)
 print('Distance in kilometers', distance_km)
 
-distance_mi = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.DistanceMiles)
+distance_mi = d.convertLengthMeasurement(distance, Qgis.DistanceUnit.Miles)
 print('Distance in miles', distance_mi)
 
