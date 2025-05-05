@@ -1,4 +1,4 @@
-from qgis.core import QgsDistanceArea
+from qgis.core import QgsDistanceArea, QgsPointXY
 
 san_francisco = (37.7749, -122.4194)
 new_york = (40.661, -73.944)
