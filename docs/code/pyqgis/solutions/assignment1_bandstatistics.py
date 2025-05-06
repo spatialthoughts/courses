@@ -1,7 +1,6 @@
 import os
-import math
 
-qgis_dir = QgsApplication.prefixPath()
+qgis_dir = QgsApplication.pkgDataPath()
 icon_path = os.path.join(qgis_dir, 'svg', 'crosses', 'Cross6.svg')
 
 def show_statistics():
@@ -21,7 +20,7 @@ def show_statistics():
     provider = layer.dataProvider()
 
     # Get the raster statistics of band 1
-    stats = provider.bandStatistics(1, QgsRasterBandStats.All, extent)
+    stats = provider.bandStatistics(1, Qgis.RasterBandStatistic.All, extent)
 
     # Get the average value
     mean = stats.mean

@@ -20,7 +20,7 @@ def show_statistics():
     provider = layer.dataProvider()
 
     # Get the raster statistics of band 1
-    stats = provider.bandStatistics(1, QgsRasterBandStats.All, extent)
+    stats = provider.bandStatistics(1, Qgis.RasterBandStatistic.All, extent)
 
     # Get the average value
     mean = stats.mean
