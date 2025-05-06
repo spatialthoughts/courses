@@ -1,7 +1,6 @@
 import os
-import math
 
-qgis_dir = QgsApplication.prefixPath()
+qgis_dir = QgsApplication.pkgDataPath()
 icon_path = os.path.join(qgis_dir, 'svg', 'crosses', 'Cross6.svg')
 
 def show_statistics():
