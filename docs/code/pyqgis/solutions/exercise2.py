@@ -8,7 +8,7 @@ icon_path = os.path.join(data_dir, icon)
 def show_time():
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
-    iface.messageBar().pushWarning('Current Time', current_time)
+    iface.messageBar().pushMessage('Current Time', current_time, level=Qgis.Warning, duration=5)
 
 action = QAction('Show Time')
 action.triggered.connect(show_time)
