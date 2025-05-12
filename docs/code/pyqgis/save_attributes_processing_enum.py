@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
+from qgis.core import (Qgis,
+                       QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
@@ -17,7 +18,7 @@ class SaveAttributesAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 'INPUT',
                 'Input layer',
-                [QgsProcessing.TypeVectorAnyGeometry]
+                [Qgis.ProcessingSourceType.VectorAnyGeometry]
             )
         )
         
