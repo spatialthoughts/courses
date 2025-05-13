@@ -1,6 +1,5 @@
 import os
-import sys
-import inspect
+import os
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
 

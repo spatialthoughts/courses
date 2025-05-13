@@ -1,5 +1,4 @@
 import os
-import inspect
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
 from qgis.core import QgsRasterLayer, QgsProject

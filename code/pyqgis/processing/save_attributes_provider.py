@@ -1,5 +1,5 @@
 import os
-import inspect
+import os
 from PyQt5.QtGui import QIcon
 
 from qgis.core import QgsProcessingProvider
