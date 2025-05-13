@@ -9,7 +9,7 @@ import processing
 from .save_attributes_provider import SaveAttributesProvider
 
 
-cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
+plugin_dir = os.path.dirname(__file__)
 
 class SaveAttributesPlugin:
     def __init__(self, iface):
@@ -21,7 +21,7 @@ class SaveAttributesPlugin:
         
     def initGui(self):
       self.initProcessing()
-      icon = os.path.join(os.path.join(cmd_folder, 'logo.png'))
+      icon = os.path.join(os.path.join(plugin_dir, 'logo.png'))
       self.action = QAction(QIcon(icon), 'Save Attributes as CSV', self.iface.mainWindow())
       self.action.triggered.connect(self.run)
       self.iface.addPluginToMenu('&Save Attributes', self.action)
