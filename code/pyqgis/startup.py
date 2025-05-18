@@ -7,5 +7,5 @@ def customize():
 	iface.mainWindow().setWindowTitle(f'{title} | {version}')
 
 
-iface.initializationCompleted.connect(customize)
-
+iface.newProjectCreated.connect(customize)
+iface.projectRead.connect(customize)
