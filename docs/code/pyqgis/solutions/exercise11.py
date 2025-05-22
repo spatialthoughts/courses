@@ -32,4 +32,4 @@ second_degree_neighbors = second_degree_neighbors.difference(
 second_degree_neighbors.discard(fid)
 
 # Apply the selection
-layer.selectByIds(list(second_degree_neighbors), QgsVectorLayer.AddToSelection)
+layer.selectByIds(list(second_degree_neighbors), Qgis.SelectBehavior.AddToSelection)
