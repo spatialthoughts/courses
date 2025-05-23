@@ -280,6 +280,10 @@ id="toc-operators-and-conditionals">1. Operators and Conditionals</a>
 <ul>
 <li><a href="#challenge-2" id="toc-challenge-2">Challenge 2</a></li>
 </ul></li>
+<li><a href="#geometries" id="toc-geometries">3. Geometries</a>
+<ul>
+<li><a href="#challenge-3" id="toc-challenge-3">Challenge 3</a></li>
+</ul></li>
 <li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
@@ -527,8 +531,8 @@ double-click to launch it.</li>
 <p><img src="images/qgis_expressions/functions7.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="8" style="list-style-type: decimal">
 <li>We want to find the names of all power plant features intersecting
-each admin1 polygon. The <code>overlay_intersect</code> function allows
-you to locate intersecting features from another layer. Enter the
+each admin1 polygon. The <code>overlay_intersect()</code> function
+allows you to locate intersecting features from another layer. Enter the
 following expression.</li>
 </ol>
 <pre><code>overlay_intersects(
@@ -564,10 +568,10 @@ type</em>.</li>
 <p><img src="images/qgis_expressions/functions11.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="12" style="list-style-type: decimal">
 <li>Similar to the previous step, we can use the
-<code>overlay_intersects</code> function to get a list of values for the
-<em>capacity_mw</em> attribute for all intersecting power plant
+<code>overlay_intersects()</code> function to get a list of values for
+the <em>capacity_mw</em> attribute for all intersecting power plant
 features. As we want to calculate the total capacity, we can use the
-<code>array_sum</code> function to calculate the total. Enter the
+<code>array_sum()</code> function to calculate the total. Enter the
 following expression.</li>
 </ol>
 <pre><code>array_sum(
@@ -646,6 +650,107 @@ number of hydro power plants in each admin1 region.</p>
 function for calculating number of items in a list.</p>
 </div>
 </div>
+<div id="geometries" class="section level1">
+<h1>3. Geometries</h1>
+<p>In this section, we will learn how to create and manipulate feature
+geometry using expressions. The QGIS expression engine comes with a
+large number of functions that can be used to create, update, transform
+geometries of features.</p>
+<ol style="list-style-type: decimal">
+<li>Locate and open the <strong>Nearest_Neighbor</strong> project. This
+project contains 2 point layers. The layer <code>schools</code> has the
+locations schools and the layer <code>colleges</code> has locations of
+all the colleges in the state of Kerala, India. Our goal for this
+section is to connect each school point to the nearest college point
+with a line.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry1.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>Select the <code>schools</code> layer and click the <em>Open the
+Layer Styling Panel</em> button. The layer is styled using the
+<strong>Simple Marker</strong> symbol layer. Click the <em>Add symbol
+layer</em> / <em>+</em> button.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry2.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>A new symbol layer of type <strong>Simple Marker</strong> will be
+added. Click on the dropdown next to <em>Symbol layer type</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="4" style="list-style-type: decimal">
+<li>Choose <strong>Geometry Generator</strong> as the <em>Symbol layer
+type</em>. This is a special layer type that allows us to write an
+expression to create new geometries and render them on-the-fly with
+chosen symbology. As we want to create and render a line, choose
+<strong>LineString / MultiLineString</strong> as the <em>Geometry
+type</em>. Next, click the <em>Expression</em> button.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry4.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="5" style="list-style-type: decimal">
+<li>We want to find the nearest college to each school feature. The
+<code>overlay_nearest()</code> function allows us to find nearest
+features from another layer. We build an expression to find the
+<code>@geometry</code> of the nearest college and then use the
+<code>make_line()</code> function to create a line from the school point
+to the nearest college point. Enter the following expression and click
+<em>OK</em>.</li>
+</ol>
+<pre><code>make_line(
+    @geometry,
+    overlay_nearest(
+        layer:=&#39;colleges&#39;,
+        expression:=@geometry,
+        limit:=1,
+    )
+)</code></pre>
+<p><img src="images/qgis_expressions/geometry5.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="6" style="list-style-type: decimal">
+<li>You will see the map update and show lines connecting each school
+feature to the nearest college. These lines are being constructed and
+rendered on-the-fly using the specified expression. The underlying
+data-source does not change in any way. Geometry Generator symbol layers
+are particularly useful for such applications to dynamically visualize
+the data in a different way. Let’s update the expression. Click the
+<em>Expression</em> button.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry6.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="7" style="list-style-type: decimal">
+<li>The <code>overlay_nearest()</code> function has an optional
+parameter <code>max_distance</code> that allows us to specify the
+maximum search distance and only return the feature from another layer
+within the specified distance. Let’s update the expression to find the
+nearest college within 5km (5000 meters) distance.</li>
+</ol>
+<pre><code>make_line(
+    @geometry,
+    overlay_nearest(
+        layer:=&#39;colleges&#39;,
+        expression:=@geometry,
+        limit:=1,
+        max_distance:=5000
+    )
+)</code></pre>
+<p><img src="images/qgis_expressions/geometry7.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="8" style="list-style-type: decimal">
+<li>The map will update to show the line connections only between
+schools and colleges within 5km distance.</li>
+</ol>
+<p><img src="images/qgis_expressions/geometry8.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>We have now finished this section. You can load the
+<code>Nearest_Neighbor_CheckPoint1.qgz</code> project in the
+<code>solutions</code> folder to catch up to this point and do the
+challenge.</p>
+<div id="challenge-3" class="section level2">
+<h2>Challenge 3</h2>
+<p>The Processing Toolbox comes with a handy tool called <em>Geometry by
+expression</em>. This algorithm allows you to take an input layer and
+create a new layer by transforming the geometries using expression. Use
+this tool to create a new layer
+<code>schools_with_nearest_college.gpkg</code> showing the connections
+from school points to the nearest college.</p>
+<p><img src="images/qgis_expressions/challenge3.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+</div>
 <div id="data-credits" class="section level1">
 <h1>Data Credits</h1>
 <ul>
@@ -659,6 +764,13 @@ through <a
 href="https://datasets.wri.org/datasets/global-power-plant-database"
 class="uri">https://datasets.wri.org/datasets/global-power-plant-database</a>
 on <date></li>
+<li>School and College locations: Data Copyright 2023 OpenStreetMap
+Contributors. Downloaded using QuickOSM plugin in QGIS.</li>
+<li>District boundaries: Downloaded from GeoBoundaries. Runfola, D. et
+al. (2020) geoBoundaries: A global database of political administrative
+boundaries. PLoS ONE 15(4): e0231866. <a
+href="https://doi.org/10.1371/journal.pone.0231866"
+class="uri">https://doi.org/10.1371/journal.pone.0231866</a></li>
 </ul>
 </div>
 <div id="license" class="section level1">

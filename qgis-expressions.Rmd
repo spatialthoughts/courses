@@ -249,7 +249,7 @@ knitr::include_graphics('images/qgis_expressions/functions6.png')
 knitr::include_graphics('images/qgis_expressions/functions7.png')
 ```
 
-8. We want to find the names of all power plant features intersecting each admin1 polygon. The `overlay_intersect` function allows you to locate intersecting features from another layer. Enter the following expression.
+8. We want to find the names of all power plant features intersecting each admin1 polygon. The `overlay_intersect()` function allows you to locate intersecting features from another layer. Enter the following expression.
 
 ```
 overlay_intersects(
@@ -280,7 +280,7 @@ knitr::include_graphics('images/qgis_expressions/functions10.png')
 knitr::include_graphics('images/qgis_expressions/functions11.png')
 ```
 
-12. Similar to the previous step, we can use the `overlay_intersects` function to get a list of values for the *capacity_mw* attribute for all intersecting power plant features. As we want to calculate the total capacity, we can use the `array_sum` function to calculate the total. Enter the following expression.
+12. Similar to the previous step, we can use the `overlay_intersects()` function to get a list of values for the *capacity_mw* attribute for all intersecting power plant features. As we want to calculate the total capacity, we can use the `array_sum()` function to calculate the total. Enter the following expression.
 
 ```
 array_sum(
@@ -357,12 +357,97 @@ Add a new column **power_plant_count** with the total number of hydro power plan
 
 Hint: Look under the `array_` section to find a suitable function for calculating number of items in a list.
 
+# 3. Geometries
+
+In this section, we will learn how to create and manipulate feature geometry using expressions. The QGIS expression engine comes with a large number of functions that can be used to create, update, transform geometries of features. 
+
+1. Locate and open the **Nearest_Neighbor** project. This project contains 2 point layers. The layer `schools` has the locations schools and the layer `colleges` has locations of all the colleges in the state of Kerala, India. Our goal for this section is to connect each school point to the nearest college point with a line.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry1.png')
+```
+
+2. Select the `schools` layer and click the *Open the Layer Styling Panel* button. The layer is styled using the **Simple Marker** symbol layer. Click the *Add symbol layer* / *+* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry2.png')
+```
+
+3. A new symbol layer of type **Simple Marker** will be added. Click on the dropdown next to *Symbol layer type*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry3.png')
+```
+
+4. Choose **Geometry Generator** as the *Symbol layer type*. This is a special layer type that allows us to write an expression to create new geometries and render them on-the-fly with chosen symbology. As we want to create and render a line, choose **LineString / MultiLineString** as the *Geometry type*. Next, click the *Expression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry4.png')
+```
+
+5. We want to find the nearest college to each school feature. The `overlay_nearest()` function allows us to find nearest features from another layer. We build an expression to find the `@geometry` of the nearest college and then use the `make_line()` function to create a line from the school point to the nearest college point. Enter the following expression and click *OK*.
+
+```
+make_line(
+	@geometry,
+	overlay_nearest(
+		layer:='colleges',
+		expression:=@geometry,
+		limit:=1,
+	)
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry5.png')
+```
+
+6. You will see the map update and show lines connecting each school feature to the nearest college. These lines are being constructed and rendered on-the-fly using the specified expression. The underlying data-source does not change in any way. Geometry Generator symbol layers are particularly useful for such applications to dynamically visualize the data in a different way. Let's update the expression. Click the *Expression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry6.png')
+```
+
+7. The `overlay_nearest()` function has an optional parameter `max_distance` that allows us to specify the maximum search distance and only return the feature from another layer within the specified distance. Let's update the expression to find the nearest college within 5km (5000 meters) distance.
+
+```
+make_line(
+	@geometry,
+	overlay_nearest(
+		layer:='colleges',
+		expression:=@geometry,
+		limit:=1,
+		max_distance:=5000
+	)
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry7.png')
+```
+
+8. The map will update to show the line connections only between schools and colleges within 5km distance.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/geometry8.png')
+```
+
+We have now finished this section. You can load the `Nearest_Neighbor_CheckPoint1.qgz` project in the `solutions` folder to catch up to this point and do the challenge.
+
+## Challenge 3
+
+The Processing Toolbox comes with a handy tool called *Geometry by expression*. This algorithm allows you to take an input layer and create a new layer by transforming the geometries using expression. Use this tool to create a new layer `schools_with_nearest_college.gpkg` showing the connections from school points to the nearest college.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/challenge3.png')
+```
 
 # Data Credits
 
 * Admin 1 – States, Provinces: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com. Admin1 boundaries were edited and combined with countries (India POV) boundaries.
 * Global Power Plant Database: Global Energy Observatory, Google, KTH Royal Institute of Technology in Stockholm, Enipedia, World Resources Institute. 2021. Global Power Plant Database version 1.3.0. Accessed through https://datasets.wri.org/datasets/global-power-plant-database on <date>
-
+* School and College locations: Data Copyright 2023 OpenStreetMap Contributors. Downloaded using QuickOSM plugin in QGIS.
+* District boundaries: Downloaded from GeoBoundaries. Runfola, D. et al. (2020) geoBoundaries: A global database of political administrative boundaries. PLoS ONE 15(4): e0231866. https://doi.org/10.1371/journal.pone.0231866
 
 # License
 
