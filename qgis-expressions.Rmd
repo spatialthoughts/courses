@@ -442,6 +442,156 @@ The Processing Toolbox comes with a handy tool called *Geometry by expression*. 
 knitr::include_graphics('images/qgis_expressions/challenge3.png')
 ```
 
+
+# 4. Iteration
+
+The QGIS expression engine has array functions that allow you to iterate and process each item from the array using expressions. This enables some very powerful use-cases. In this section we will explore the `array_foreach()` and `array_filter()` functions.
+
+1. Continuing from the previous section, select the `schools` layer and open the **Vector table &rarr; Field calculator** algorithm from the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration1.png')
+```
+
+2. In the *Vector Table - Field Calculator* dialog, select `schools` as the *Input Layer*. Enter **colleges** as the *Field name*. Select **String List** as the *Result field type*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration2.png')
+```
+
+3. We want to get the list of college names within 5km of each school. Enter the following expression and see the output shown in the *Preview*.
+
+```
+overlay_nearest(
+	layer:='colleges',
+	expression:="collegename",
+	max_distance:=5000,
+	limit:=-1
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration3.png')
+```
+
+4. Let's say we want to convert each name to title case. We can use the `array_foreach()` function which allows us to run an expression on each item. Within the function, you refer to each item in the array with the variable `@element`. Update the expression as below.
+
+```
+array_foreach(
+	overlay_nearest(
+		layer:='colleges',
+		expression:="collegename",
+		max_distance:=5000,
+		limit:=-1
+	),
+	title(@element)
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration4.png')
+```
+
+5. Click the *...* next to *Calculated* and select **Save to File...**. Enter the name of the output file as ``nearest_colleges.gpkg`` and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration5.png')
+```
+
+6.  Once the processing finishes, a new layer `nearest_colleges` will be added to the *Layers* panel. Open the attribute table and you will notice that the *colleges* column has the list of colleges in title case. Open the **Vector table &rarr; Field calculator** algorithm again.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration6.png')
+```
+
+7. In the *Vector Table - Field Calculator* dialog, select `nearest_colleges` as the *Input Layer*. Enter **science_colleges** as the *Field name*. Select **String List** as the *Result field type*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration7.png')
+```
+
+8. From our list of colleges, we want to select only the colleges with the word **Science** in their names. To achieve this, we can use the `array_filter()` function to iterate through each item and check if the text is present. This can be achieved using the `regexp_match()` function. Enter the expression as below.
+
+```
+array_filter(
+	array_foreach(
+		overlay_nearest(
+			layer:='colleges',
+			expression:="collegename",
+			max_distance:=5000,
+			limit:=-1
+		),
+		title(@element)
+	),
+	regexp_match(@element, 'Science')
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration8.png')
+```
+
+9. Click the *...* next to *Calculated* and select **Save to File...**. Enter the name of the output file as ``nearest_science_colleges.gpkg`` and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration9.png')
+```
+
+10. Once the processing finishes, a new layer `nearest_science_colleges` will be added to the *Layers* panel. Open the attribute table and you will notice that the *science_colleges* column has the list of colleges containing the keyword *Science*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration10.png')
+```
+
+11. Select both the `nearest_colleges` and `nearest_science_colleges` layers. Right-click and select *Remove Layer*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration11.png')
+```
+
+12. We will now apply these concept of iteration and filtering to our problem of connecting schools to the nearest college. We will apply an additional criteria to connect each school to the nearest college that **belongs to the same district as the school**. Let's update the expression to apply this filter. Select the `schools` layer and click the *Open the Layer Styling Panel* button. Select the *Geometry Generator* symbol layer.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration12.png')
+```
+
+13. We will update the `overlay_nearest()` function to return us the list of `@feature` instead of `@geometry`. This will allow us to run the filter on the attributes. We then use `array_filter()` to select all college features where the value of *district* is the same as the value of *district* for the school. Finally we select the first matching feature using `[0]` and use `geometry()` to extract the geometry of the feature. The finaly expression for creating a line from the school to the nearest college in the same district is as follows.
+
+```
+make_line(
+	@geometry,
+	geometry(array_filter(
+		overlay_nearest(
+			layer:='colleges',
+			expression:=@feature,
+			max_distance:=5000,
+			limit:=-1
+		),
+	"district"=attribute(@element, 'district'))[0])
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration13.png')
+```
+
+14. Once you apply the expression, the map will update and you will see that each school is now connected to the nearest college that belongs to the same administrative area.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/iteration14.png')
+```
+
+You can now load the `Nearest_Neighbor_CheckPoint2.qgz` project in the `solutions` folder to catch up to this point and do the challenge.
+
+## Challenge 4
+
+You will notice that there are many schools with no connection to colleges. The challenge is select all schools which have no nearby college in the same district. You can use the *Select by expression* algorithm in the Processing Toolbox to select features using an expression. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_expressions/challenge4.png')
+```
+
+
 # Data Credits
 
 * Admin 1 – States, Provinces: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com. Admin1 boundaries were edited and combined with countries (India POV) boundaries.

@@ -284,6 +284,10 @@ id="toc-operators-and-conditionals">1. Operators and Conditionals</a>
 <ul>
 <li><a href="#challenge-3" id="toc-challenge-3">Challenge 3</a></li>
 </ul></li>
+<li><a href="#iteration" id="toc-iteration">4. Iteration</a>
+<ul>
+<li><a href="#challenge-4" id="toc-challenge-4">Challenge 4</a></li>
+</ul></li>
 <li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
@@ -749,6 +753,171 @@ this tool to create a new layer
 <code>schools_with_nearest_college.gpkg</code> showing the connections
 from school points to the nearest college.</p>
 <p><img src="images/qgis_expressions/challenge3.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="iteration" class="section level1">
+<h1>4. Iteration</h1>
+<p>The QGIS expression engine has array functions that allow you to
+iterate and process each item from the array using expressions. This
+enables some very powerful use-cases. In this section we will explore
+the <code>array_foreach()</code> and <code>array_filter()</code>
+functions.</p>
+<ol style="list-style-type: decimal">
+<li>Continuing from the previous section, select the
+<code>schools</code> layer and open the <strong>Vector table → Field
+calculator</strong> algorithm from the Processing Toolbox.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration1.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>In the <em>Vector Table - Field Calculator</em> dialog, select
+<code>schools</code> as the <em>Input Layer</em>. Enter
+<strong>colleges</strong> as the <em>Field name</em>. Select
+<strong>String List</strong> as the <em>Result field type</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration2.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>We want to get the list of college names within 5km of each school.
+Enter the following expression and see the output shown in the
+<em>Preview</em>.</li>
+</ol>
+<pre><code>overlay_nearest(
+    layer:=&#39;colleges&#39;,
+    expression:=&quot;collegename&quot;,
+    max_distance:=5000,
+    limit:=-1
+)</code></pre>
+<p><img src="images/qgis_expressions/iteration3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="4" style="list-style-type: decimal">
+<li>Let’s say we want to convert each name to title case. We can use the
+<code>array_foreach()</code> function which allows us to run an
+expression on each item. Within the function, you refer to each item in
+the array with the variable <code>@element</code>. Update the expression
+as below.</li>
+</ol>
+<pre><code>array_foreach(
+    overlay_nearest(
+        layer:=&#39;colleges&#39;,
+        expression:=&quot;collegename&quot;,
+        max_distance:=5000,
+        limit:=-1
+    ),
+    title(@element)
+)</code></pre>
+<p><img src="images/qgis_expressions/iteration4.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="5" style="list-style-type: decimal">
+<li>Click the <em>…</em> next to <em>Calculated</em> and select
+<strong>Save to File…</strong>. Enter the name of the output file as
+<code>nearest_colleges.gpkg</code> and click <em>Run</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration5.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="6" style="list-style-type: decimal">
+<li>Once the processing finishes, a new layer
+<code>nearest_colleges</code> will be added to the <em>Layers</em>
+panel. Open the attribute table and you will notice that the
+<em>colleges</em> column has the list of colleges in title case. Open
+the <strong>Vector table → Field calculator</strong> algorithm
+again.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration6.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="7" style="list-style-type: decimal">
+<li>In the <em>Vector Table - Field Calculator</em> dialog, select
+<code>nearest_colleges</code> as the <em>Input Layer</em>. Enter
+<strong>science_colleges</strong> as the <em>Field name</em>. Select
+<strong>String List</strong> as the <em>Result field type</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration7.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="8" style="list-style-type: decimal">
+<li>From our list of colleges, we want to select only the colleges with
+the word <strong>Science</strong> in their names. To achieve this, we
+can use the <code>array_filter()</code> function to iterate through each
+item and check if the text is present. This can be achieved using the
+<code>regexp_match()</code> function. Enter the expression as
+below.</li>
+</ol>
+<pre><code>array_filter(
+    array_foreach(
+        overlay_nearest(
+            layer:=&#39;colleges&#39;,
+            expression:=&quot;collegename&quot;,
+            max_distance:=5000,
+            limit:=-1
+        ),
+        title(@element)
+    ),
+    regexp_match(@element, &#39;Science&#39;)
+)</code></pre>
+<p><img src="images/qgis_expressions/iteration8.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="9" style="list-style-type: decimal">
+<li>Click the <em>…</em> next to <em>Calculated</em> and select
+<strong>Save to File…</strong>. Enter the name of the output file as
+<code>nearest_science_colleges.gpkg</code> and click <em>Run</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration9.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="10" style="list-style-type: decimal">
+<li>Once the processing finishes, a new layer
+<code>nearest_science_colleges</code> will be added to the
+<em>Layers</em> panel. Open the attribute table and you will notice that
+the <em>science_colleges</em> column has the list of colleges containing
+the keyword <em>Science</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration10.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="11" style="list-style-type: decimal">
+<li>Select both the <code>nearest_colleges</code> and
+<code>nearest_science_colleges</code> layers. Right-click and select
+<em>Remove Layer</em>.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration11.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="12" style="list-style-type: decimal">
+<li>We will now apply these concept of iteration and filtering to our
+problem of connecting schools to the nearest college. We will apply an
+additional criteria to connect each school to the nearest college that
+<strong>belongs to the same district as the school</strong>. Let’s
+update the expression to apply this filter. Select the
+<code>schools</code> layer and click the <em>Open the Layer Styling
+Panel</em> button. Select the <em>Geometry Generator</em> symbol
+layer.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration12.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="13" style="list-style-type: decimal">
+<li>We will update the <code>overlay_nearest()</code> function to return
+us the list of <code>@feature</code> instead of <code>@geometry</code>.
+This will allow us to run the filter on the attributes. We then use
+<code>array_filter()</code> to select all college features where the
+value of <em>district</em> is the same as the value of <em>district</em>
+for the school. Finally we select the first matching feature using
+<code>[0]</code> and use <code>geometry()</code> to extract the geometry
+of the feature. The finaly expression for creating a line from the
+school to the nearest college in the same district is as follows.</li>
+</ol>
+<pre><code>make_line(
+    @geometry,
+    geometry(array_filter(
+        overlay_nearest(
+            layer:=&#39;colleges&#39;,
+            expression:=@feature,
+            max_distance:=5000,
+            limit:=-1
+        ),
+    &quot;district&quot;=attribute(@element, &#39;district&#39;))[0])
+)</code></pre>
+<p><img src="images/qgis_expressions/iteration13.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="14" style="list-style-type: decimal">
+<li>Once you apply the expression, the map will update and you will see
+that each school is now connected to the nearest college that belongs to
+the same administrative area.</li>
+</ol>
+<p><img src="images/qgis_expressions/iteration14.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>You can now load the <code>Nearest_Neighbor_CheckPoint2.qgz</code>
+project in the <code>solutions</code> folder to catch up to this point
+and do the challenge.</p>
+<div id="challenge-4" class="section level2">
+<h2>Challenge 4</h2>
+<p>You will notice that there are many schools with no connection to
+colleges. The challenge is select all schools which have no nearby
+college in the same district. You can use the <em>Select by
+expression</em> algorithm in the Processing Toolbox to select features
+using an expression.</p>
+<p><img src="images/qgis_expressions/challenge4.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="data-credits" class="section level1">
