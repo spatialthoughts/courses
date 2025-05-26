@@ -1,10 +1,9 @@
 import os
-import inspect
 from PyQt5.QtWidgets import QAction, QComboBox, QLabel, QPushButton
 from PyQt5.QtGui import QIcon
 from qgis.core import QgsRasterLayer, QgsProject, QgsCoordinateReferenceSystem
 
-cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
+plugin_dir = os.path.dirname(__file__)
 
 # We create a dictionary of all the basemaps and their URLs to be used
 osm = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -28,8 +27,8 @@ class BasemapLoaderPlugin:
         # Create a Toolbar
         self.basemapToolbar = self.iface.addToolBar('Basemap Selector')
         
-        # Create an Action with Logo
-        icon = os.path.join(os.path.join(cmd_folder, 'logo.png'))
+        # Create an action with Logo
+        icon = os.path.join(os.path.join(plugin_dir, 'logo.png'))
         self.action = QAction(QIcon(icon), 'Load Basemap', self.basemapToolbar)
         
         # Create a label
@@ -60,7 +59,11 @@ class BasemapLoaderPlugin:
         zmax = 19
         crs = 'EPSG:3857'
         
-        uri = f'type=xyz&url={basemap_url}&zmax={zmax}&zmin={zmin}$crs={crs}'
+        # Replace '=' and '&' in the URL to ensure it is properly encoded
+        encoded_url = basemap_url.replace('=', '%3D').replace('&', '%26')
+        uri = f'type=xyz&url={encoded_url}&zmax={zmax}&zmin={zmin}$crs={crs}'
+
+        # Create a QgsRasterLayer with the constructed URI
         rlayer = QgsRasterLayer(uri, selected_basemap, 'wms')
         if rlayer.isValid():
             QgsProject.instance().addMapLayer(rlayer)

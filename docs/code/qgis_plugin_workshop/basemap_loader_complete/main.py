@@ -1,19 +1,21 @@
 import os
-import inspect
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
 from qgis.core import QgsRasterLayer, QgsProject, QgsCoordinateReferenceSystem
 
-cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
+plugin_dir = os.path.dirname(__file__)
 
 class BasemapLoaderPlugin:
     def __init__(self, iface):
         self.iface = iface
 
     def initGui(self):
-        icon = os.path.join(os.path.join(cmd_folder, 'logo.png'))
+        # Create an action (i.e. a button) with Logo
+        icon = os.path.join(os.path.join(plugin_dir, 'logo.png'))
         self.action = QAction(QIcon(icon), 'Load Basemap', self.iface.mainWindow())
+        # Add the action to the toolbar
         self.iface.addToolBarIcon(self.action)
+        # Connect the run() method to the action
         self.action.triggered.connect(self.run)
       
     def unload(self):
@@ -26,7 +28,11 @@ class BasemapLoaderPlugin:
         zmax = 19
         crs = 'EPSG:3857'
         
-        uri = f'type=xyz&url={basemap_url}&zmax={zmax}&zmin={zmin}$crs={crs}'
+        # Replace '=' and '&' in the URL to ensure it is properly encoded
+        encoded_url = basemap_url.replace('=', '%3D').replace('&', '%26')
+        uri = f'type=xyz&url={encoded_url}&zmax={zmax}&zmin={zmin}$crs={crs}'
+        
+        # Create a QgsRasterLayer with the URI
         rlayer = QgsRasterLayer(uri, 'OpenStreetMap', 'wms')
         if rlayer.isValid():
             QgsProject.instance().addMapLayer(rlayer)
