@@ -14,8 +14,8 @@
 
 <title>PyQGIS Masterclass - Customizing QGIS with Python (Full Course)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -51,6 +51,7 @@
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
     </style>
+
 
 
 <style type="text/css">
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -548,6 +556,8 @@ Scripts</a></li>
 <li><a href="#renaming-temporary-output-layers"
 id="toc-renaming-temporary-output-layers">Renaming Temporary Output
 Layers</a></li>
+<li><a href="#using-code-from-plugins"
+id="toc-using-code-from-plugins">Using Code from Plugins</a></li>
 <li><a href="#specifying-plugin-dependencies"
 id="toc-specifying-plugin-dependencies">Specifying Plugin
 Dependencies</a></li>
@@ -3623,6 +3633,22 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb87-1"><a h
 <span id="cb87-19"><a href="#cb87-19" tabindex="-1"></a>output_layer.setName(<span class="ss">f&#39;</span><span class="sc">{</span>input_layer_name<span class="sc">}</span><span class="ss">_hillshade&#39;</span>)</span>
 <span id="cb87-20"><a href="#cb87-20" tabindex="-1"></a>QgsProject.instance().addMapLayer(output_layer)</span></code></pre></div>
 </div>
+<div id="using-code-from-plugins" class="section level2">
+<h2>Using Code from Plugins</h2>
+<p>It is possible to access classes and methods from plugins using
+PyQGIS. You can access all installed plugins using the
+<code>qgis.utils</code> module and use code from them as shown
+below.</p>
+<p>Print the list of installed plugins.</p>
+<div class="sourceCode" id="cb88"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1" tabindex="-1"></a><span class="bu">print</span>(qgis.utils.plugins.keys())</span></code></pre></div>
+<p>Access the method from a plugin. Replace <code>PluginName</code> with
+the name from the list above.</p>
+<div class="sourceCode" id="cb89"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" tabindex="-1"></a>myPlugin <span class="op">=</span> qgis.utils.plugins[<span class="st">&#39;PluginName&#39;</span>]</span>
+<span id="cb89-2"><a href="#cb89-2" tabindex="-1"></a>A <span class="op">=</span> myPlugin.A()</span>
+<span id="cb89-3"><a href="#cb89-3" tabindex="-1"></a>A.my_method()</span></code></pre></div>
+</div>
 <div id="specifying-plugin-dependencies" class="section level2">
 <h2>Specifying Plugin Dependencies</h2>
 <p>QGIS Plugin Manager supports installation of other plugin
@@ -3683,8 +3709,8 @@ href="https://www.geeksforgeeks.org/creating-symbolic-links-on-windows/">MKLINK
 command</a> from the Windows Command Prompt to create a link.</p>
 <p>The following command will create a symbolic link folder in your
 profile that points to an actual folder on the computer.</p>
-<div class="sourceCode" id="cb90"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb90-1"><a href="#cb90-1" tabindex="-1"></a><span class="ex">mklink</span> /d <span class="op">&lt;</span>plugin folder path in profile<span class="op">&gt;</span> <span class="op">&lt;</span>plugin folder path in your dev environment<span class="op">&gt;</span> </span></code></pre></div>
+<div class="sourceCode" id="cb92"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a><span class="ex">mklink</span> /d <span class="op">&lt;</span>plugin folder path in profile<span class="op">&gt;</span> <span class="op">&lt;</span>plugin folder path in your dev environment<span class="op">&gt;</span> </span></code></pre></div>
 </div>
 <div id="linuxmac" class="section level3">
 <h3>Linux/Mac</h3>
@@ -3696,13 +3722,13 @@ command</a> can be used to create symbolic links from a terminal.</p>
 href="https://unix.stackexchange.com/questions/541795/tips-for-remembering-the-order-of-parameters-for-ln">non-intuitive
 order of the parameters</a>.</p>
 </blockquote>
-<div class="sourceCode" id="cb91"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb91-1"><a href="#cb91-1" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> <span class="op">&lt;</span>plugin folder path in your dev environment<span class="op">&gt;</span> <span class="op">&lt;</span>plugin folder path in profile<span class="op">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb93-1"><a href="#cb93-1" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> <span class="op">&lt;</span>plugin folder path in your dev environment<span class="op">&gt;</span> <span class="op">&lt;</span>plugin folder path in profile<span class="op">&gt;</span></span></code></pre></div>
 <p>For example the command below creates a symlink in the plugin folder
 in the default profile that points to a folder on the Desktop.</p>
-<div class="sourceCode" id="cb92"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a><span class="va">PROFILE_FOLDER</span><span class="op">=</span>/Users/ujavalgandhi/Library/Application\ Support/QGIS/QGIS3/profiles/default</span>
-<span id="cb92-2"><a href="#cb92-2" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> ~/Desktop/basemap_loader <span class="va">$PROFILE_FOLDER</span>/python/plugins/basemap_loader</span></code></pre></div>
+<div class="sourceCode" id="cb94"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb94-1"><a href="#cb94-1" tabindex="-1"></a><span class="va">PROFILE_FOLDER</span><span class="op">=</span>/Users/ujavalgandhi/Library/Application\ Support/QGIS/QGIS3/profiles/default</span>
+<span id="cb94-2"><a href="#cb94-2" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> ~/Desktop/basemap_loader <span class="va">$PROFILE_FOLDER</span>/python/plugins/basemap_loader</span></code></pre></div>
 <p><em><a href="#" style="float:right">Back to Top</a></em></p>
 </div>
 </div>
