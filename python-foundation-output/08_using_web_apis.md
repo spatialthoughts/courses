@@ -90,9 +90,9 @@ print(response.status_code)
 
 [OpenRouteService (ORS)](https://openrouteservice.org/) provides a free API for routing, distance matrix, geocoding, route optimization etc. using OpenStreetMap data. We will learn how to use this API through Python and get real-world distance between cities.
 
-Almost all APIs require you to sign-up and obtain a *key*. The *key* is used to identify you and enforce usage limits so that you do not overwhelm the servers. We will obtain a key from OpenRouteServie so we can use their API
+Almost all APIs require you to sign-up and obtain a *key*. The *key* is used to identify you and enforce usage limits so that you do not overwhelm the servers. We will obtain a key from OpenRouteService so we can use their API. 
 
-Visit [OpenRouteService Sign-up page](https://openrouteservice.org/dev/#/signup) and create an account. Once your account is activated, visit your Dashboard and request a token. Select *Standard* as the Token type and enter ``python_foundation`` as the Token name. Click *CREATE TOKEN*. Once created, copy the long string displayed under Key and enter below.
+The API is maintained by HeiGIT (Heidelberg Institute for Geoinformation Technology). Visit [HeiGIT Sign Up page](https://account.heigit.org/signup) and create an account. Once your account is activated, visit your Dashboard and copy the long string displayed under *Basic Key* and enter below.
 
 
 ```python
