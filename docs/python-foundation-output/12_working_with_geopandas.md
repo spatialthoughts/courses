@@ -38,7 +38,7 @@ GeoPandas has a `read_file()` method that is able to open a wide variety of vect
 
 ```python
 roads_gdf = gpd.read_file(path, layer='karnataka_major_roads')
-roads_gdf.info()
+roads_gdf
 ```
 
 A GeoDataFrame contains a special column called *geometry*. All spatial operations on the GeoDataFrame are applied to the geomety column. The geometry column can be accessed using the `geometry` attribute.
@@ -57,7 +57,7 @@ For our analysis, we need to apply a filter to extract only the road segments wh
 
 ```python
 filtered = roads_gdf[roads_gdf['ref'].str.match('^NH') == True]
-filtered.head()
+filtered
 ```
 
 ## Working with Projections
@@ -101,7 +101,7 @@ The `karnataka.gpkg` contains a layer called `karnataka_districts` with the dist
 
 ```python
 districts_gdf = gpd.read_file(path, layer='karnataka_districts')
-districts_gdf.head()
+districts_gdf
 ```
 
 Before joining this layer to the roads, we must reproject it to match the CRS of the roads layer.
@@ -122,7 +122,20 @@ For our task, we can do a *left* join and add attributes of the district that *i
 
 ```python
 joined = gpd.sjoin(roads_reprojected, districts_reprojected, how='left', predicate='intersects')
-joined.head()
+```
+
+Note: In this example, some road segments cross polygon boundaries. A spatial join will duplicate these segments for each polygon they intersect, resulting in an overestimation of the total length. A more accurate method is to use a [Spatial Overlay]((https://geopandas.org/en/stable/docs/reference/api/geopandas.overlay.html)), which splits segments at polygon boundaries. The code example below demonstrates this approach.
+
+```
+joined = gpd.overlay(roads_reprojected, districts_reprojected, 
+                     how='intersection', keep_geom_type=True)
+# Update the length of each segment after the overlay
+joined['length'] = joined.geometry.length
+```
+
+
+```python
+joined
 ```
 
 ## Group Statistics
