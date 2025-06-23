@@ -77,31 +77,19 @@ Filtered dataframe is a just view of the original data and we cannot make change
 country_df = df[df['country'] == home_country].copy()
 ```
 
-
-```python
-home_city = 'Mumbai'
-city_df = df[df['city'] == home_city].iloc[0]['lng']
-city_df
-```
-
-
-```python
-# iloc[]
-```
+Let's try to apply a filter to match a specific row. We want to select a row with the name of the chosen `home_city`.
 
 
 ```python
 home_city = 'Bengaluru'
-
-country_df[country_df['city_ascii'] == home_city].iloc[0]['lng']
+filtered = country_df[country_df['city_ascii'] == home_city]
+filtered
 ```
 
 To locate a particular row or column from a dataframe, Pandas providea `loc[]` and `iloc[]` methods - that allows you to *locate* particular slices of data. Learn about [different indexing methods](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#different-choices-for-indexing) in Pandas. Here we can use `iloc[]` to find the row matching the `home_city` name. Since `iloc[]` uses index, the *0* here refers to the first row.
 
 
 ```python
-home_city = 'Bengaluru'
-filtered = country_df[country_df['city_ascii'] == home_city]
 filtered.iloc[0]
 ```
 
@@ -110,7 +98,7 @@ Now that we have filtered down the data to a single row, we can select individua
 
 ```python
 home_city_coordinates = (filtered.iloc[0]['lat'], filtered.iloc[0]['lng'])
-home_city_coordinates
+print(home_city_coordinates)
 ```
 
 ## Performing calculations
