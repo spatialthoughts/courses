@@ -10,7 +10,7 @@ We will explore the capabilities of Leafmap and create a map that includes vecto
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-  !pip install leafmap
+  !pip install leafmap rioxarray
 ```
 
 
