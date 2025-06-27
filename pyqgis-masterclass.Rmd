@@ -1943,6 +1943,50 @@ output_layer.setName(f'{input_layer_name}_hillshade')
 QgsProject.instance().addMapLayer(output_layer)
 ```
 
+## Select Connected Features using Actions
+
+In the [Selecting Neighbors](#selecting-neighbors) section, we saw you to create an action that can select the first- and second-degree neighbors of a feature. We can extend this code to select nth-degree neighbors which allows us to quick select contiguous regions in a layer. You can create a Python Action *Select Connected Features* with the code below. Using the action on a feature will select all connected features in a single-click.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/pyqgis/select_connected.png')
+```
+
+```{python eval=FALSE}
+layer_id = '[%@layer_id%]'
+fid = [% $id %]
+
+layer = QgsProject.instance().mapLayer(layer_id)
+
+def get_neighbors(feature):
+    bbox = feature.geometry().boundingBox()
+    neighbors = []
+    for f in layer.getFeatures(bbox):
+        if f.id() != feature.id() and f.geometry().intersects(feature.geometry()):
+            neighbors.append(f.id())
+    return neighbors
+
+# Initialize selection with the clicked feature
+visited = set()
+to_visit = set([fid])
+
+while to_visit:
+    current_id = to_visit.pop()
+    if current_id in visited:
+        continue
+
+    visited.add(current_id)
+    current_feature = layer.getFeature(current_id)
+    neighbors = get_neighbors(current_feature)
+
+    # Add unvisited neighbors to the queue
+    new_neighbors = set(neighbors) - visited
+    to_visit.update(new_neighbors)
+
+# Apply the final selection
+layer.selectByIds(list(visited))
+```
+
+
 ## Using Code from Plugins
 
 It is possible to access classes and methods from plugins using PyQGIS. You can access all installed plugins using the `qgis.utils` module and use code from them as shown below.
