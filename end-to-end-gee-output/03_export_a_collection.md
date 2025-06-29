@@ -140,7 +140,7 @@ australia = lsib.filter(ee.Filter.eq('country_na', 'Australia'))
 geometry = australia.geometry()
 
 terraclimate = ee.ImageCollection('IDAHO_EPSCOR/TERRACLIMATE')
-tmax = terraclimate.select('soil')
+tmax = terraclimate.select('tmmx')
 
 def scale(image):
   return image.multiply(0.1) \
