@@ -1,10 +1,17 @@
-### Using Matplotlib Themes
+### Using Matplotlib Themes and Custom Fonts
 
-Matplotlib default style of plots is quite plain. You can easily improve the look of the charts by applying a pre-configured stylesheet. This notebook shows how to apply the [Seaborn theme](https://seaborn.pydata.org/tutorial/aesthetics.html) along with many of the built-in [Matplotlib themes](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html) to create aesthetically pleasing charts.
+Matplotlib default style of plots is quite plain. You can easily improve the look of the charts by applying a pre-configured stylesheet. We can also use custom fonts to make our charts look more professional. This notebook shows how to apply the [Seaborn theme](https://seaborn.pydata.org/tutorial/aesthetics.html) along with many of the built-in [Matplotlib themes](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html) to create aesthetically pleasing charts. We will also use the [PyFonts](https://pypi.org/project/pyfonts/) module to load and use custom fonts.
 
 #### Setup and Data Download
 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
+
+
+```python
+%%capture
+if 'google.colab' in str(get_ipython()):
+  !pip install pyfonts
+```
 
 
 ```python
@@ -13,6 +20,7 @@ import numpy as np
 import os
 import pandas as pd
 import requests
+import pyfonts
 ```
 
 
@@ -116,7 +124,7 @@ for bar in bars.patches:
         textcoords="offset points", ha='center', va='bottom',
         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'))
 
-# Extra: Custmize X-Axis labels
+# Extra: Customize X-Axis labels
 
 labels = []
 for date in pd.to_datetime(monthly_counts.index):
@@ -137,7 +145,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_11_0.png)
+![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_12_0.png)
     
 
 
@@ -167,7 +175,7 @@ for bar in bars.patches:
         textcoords="offset points", ha='center', va='bottom',
         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'))
 
-# Extra: Custmize X-Axis labels
+# Extra: Customize X-Axis labels
 
 labels = []
 for date in pd.to_datetime(monthly_counts.index):
@@ -186,7 +194,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_12_0.png)
+![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_13_0.png)
     
 
 
@@ -195,6 +203,15 @@ Matplotlib comes with many built-in themes. Let's see what styles are available.
 
 ```python
 plt.style.available
+```
+
+[Google Fonts](https://fonts.google.com/) provides open-source fonts that can be used on the web. The PyFonts package allows us to load any of the font styles from Google Fonts using the `load_google_fonts()` function.
+
+
+```python
+regular = pyfonts.load_google_font('Roboto')
+bold = pyfonts.load_google_font('Roboto', weight='bold')
+italic = pyfonts.load_google_font('Roboto', italic=True)
 ```
 
 
@@ -206,9 +223,11 @@ fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(12,6)
 bars = monthly_counts.plot(kind='bar', ax=ax)
 
-ax.set_title('Total Crime by Month (ggplot Style)', loc='left', pad=20)
+fig.text(x=0.13, y=0.95, s='Total Crime by Month ', size=20, font=bold)
+fig.text(x=0.13, y=0.90, s='Using ggplot Theme + Custom Fonts', size=12, font=italic)
+
 ax.set_xlabel('')
-ax.set_ylabel('Total Incidents')
+ax.set_ylabel('Total Incidents', font=regular, size=12)
 ax.set_xticks(np.arange(len(monthly_counts)))
 
 # Extra: Add labels on bars
@@ -219,19 +238,22 @@ for bar in bars.patches:
         xy=(bar.get_x() + bar.get_width() / 2, height),
         xytext=(0, 10),
         fontsize=8,
+        font=regular,
         textcoords="offset points", ha='center', va='bottom',
         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'))
 
-# Extra: Custmize X-Axis labels
-
+# Customize X-Axis labels
 labels = []
 for date in pd.to_datetime(monthly_counts.index):
   labels.append(date.strftime('%b'))
-ax.set_xticklabels(labels)
+ax.set_xticklabels(labels, font=regular)
+
+# Customize Y-Axis labels
+for label in ax.get_yticklabels():
+    label.set_fontproperties(regular)
 
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-plt.tight_layout()
 
 output_path = os.path.join(output_folder, 'ggplot.png')
 plt.savefig(output_path, dpi=300)
@@ -241,6 +263,6 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_15_0.png)
+![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_18_0.png)
     
 

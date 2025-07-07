@@ -250,7 +250,7 @@ plt.show()
 ## Exercise
 
 1. Our eclipse dataset also contains polygons for penumbra contours. Add them to the visualization. This layer has a column `Obscur` that contains the obscuration value (the fraction of the Sun's area covered by the Moon). Style the contours by the obscuration value and add it to the map.
-2. Instead of the OpenTopoMap, create a visualization using another basemap. Some options to try are  `Esri.WorldTerrain`, `CartoDB.Positron` and `TopPlusOpen.Grey`.
+2. Instead of the OpenTopoMap, create a visualization using another basemap. Some options to try are  `Esri.WorldTerrain`, `CartoDB.Positron` and `USGS.USTopo`.
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_path.png' width=800/>
 
