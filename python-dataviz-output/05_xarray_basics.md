@@ -193,7 +193,7 @@ median_da = median.to_array('band')
 median_da
 ```
 
-The easy way to visualize the data without the outliers is to pass the parameter `robust=True`. This will use the 2nd and 98th percentiles of the data to compute the color limits.
+The easy way to visualize the data without the outliers is to pass the parameter `robust=True`. This will use the 2nd and 98th percentiles of the data to compute the color limits. We also specify the `set_aspect('equal')` to ensure the original aspect ratio is maintained and the image is not stretched.
 
 
 ```python
@@ -204,6 +204,7 @@ median_da.sel(band=['red', 'green', 'blue']).plot.imshow(
     robust=True)
 ax.set_title('RGB Visualization')
 ax.set_axis_off()
+ax.set_aspect('equal')
 plt.show()
 ```
 
@@ -212,6 +213,15 @@ plt.show()
 ![](python-dataviz-output/05_xarray_basics_files/05_xarray_basics_41_0.png)
     
 
+
+We can save the resulting median compositeas a multi-band GeoTIFF file.
+
+
+```python
+output_file = 'median_composite.tif'
+output_file_path = os.path.join(output_folder, output_file)
+median_da.rio.to_raster(output_file_path, compress='LZW')
+```
 
 ## Exercise
 
