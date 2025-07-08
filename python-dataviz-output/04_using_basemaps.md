@@ -254,7 +254,7 @@ plt.show()
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/eclipse_path.png' width=800/>
 
-The code below reads and re-projects the penumbra shapefile. Start your exercise by rendering the polygons by the `Obsur` column and then add it to the main chart.
+The code below reads and re-projects the penumbra shapefile.
 
 
 ```python
@@ -263,4 +263,29 @@ penumbra_shapefile_path = os.path.join(
 penumbra_gdf = gpd.read_file(penumbra_shapefile_path)
 penumbra_reprojected = penumbra_gdf.to_crs(crs)
 penumbra_reprojected
+```
+
+You can use the code block below for creating the visualization. It render the Penumbra polygons by the `Obsur` column using a transparency value of `0.2` (20%). Complete the exercise by rendering the Path and Umbra layers on top and add a basemap of your choice.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(15,7)
+
+# Set the bounds
+ax.set_xlim(bounds[0], bounds[2])
+ax.set_ylim(bounds[1], bounds[3])
+
+penumbra_reprojected.plot(
+    ax=ax,
+    column='Obscur',
+    cmap='Greys',
+    linewidth=1,
+    alpha=0.2
+)
+
+ax.set_axis_off()
+ax.set_title('2017 Total Solar Eclipse Path', size = 18)
+
+plt.show()
 ```
