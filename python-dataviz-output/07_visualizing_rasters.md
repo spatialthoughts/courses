@@ -58,7 +58,7 @@ data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
   'download/srtm/'
 
 for tile in srtm_tiles:
-  url = '{}/{}'.format(data_url, tile)
+  url = f'{data_url}/{tile}'
   download(url)
 ```
 
@@ -215,8 +215,8 @@ Reference: [matplotlib.pyplot.annotate
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(12, 10)
 merged.plot.imshow(ax=ax, cmap='viridis', add_labels=False)
-ax.plot(max_x, max_y, '^r', markersize=11)
-ax.annotate('Mt. Everest (elevation:{}m)'.format(max_elev),
+ax.plot(max_x, max_y, color='red', marker='^', markersize=11)
+ax.annotate(f'Mt. Everest (elevation:{max_elev}m)',
             xy=(max_x, max_y), xycoords='data',
             xytext=(20, 20), textcoords='offset points',
             arrowprops={'arrowstyle':'->', 'color':'black'}

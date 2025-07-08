@@ -75,27 +75,47 @@ fig, axes = plt.subplots(2, 2,edgecolor='black')
 fig.set_size_inches(7,7)
 for index, ax in enumerate(axes.flat):
     da = datasets[index]
-    im = da.plot.imshow(ax=ax, cmap='Greys_r',add_colorbar=False)
+    im = da.plot.imshow(
+        ax=ax, cmap='Greys_r',
+        vmin=1000, vmax=8000,
+        add_colorbar=False)
     filename = srtm_tiles[index]
     ax.tick_params(axis='both', which='major', labelsize=7)
     ax.set_title(filename,fontsize=9)
-    ax.set_xlabel('longitude',fontsize = 7)
-    ax.set_ylabel('latitude',fontsize = 7)
+    ax.set_xlabel('',fontsize = 7)
+    ax.set_ylabel('',fontsize = 7)
+    if index in [0, 2]:
+        ax.set_ylabel('latitude',fontsize = 7)
+    if index in [2, 3]:
+        ax.set_xlabel('longitude',fontsize = 7)
+
     ax.set_aspect('equal') # maintain aspect ratio
 
 plt.suptitle('SRTM 30m Elevation Tiles', fontsize=12)
 
 # Add a frame
-frame = patches.Rectangle((0, 0), 1, 1,
+frame = patches.Rectangle((-0.02, -0.02), 1.04, 1.04,
                           transform=fig.transFigure,
                           edgecolor='black',
                           facecolor='none',
                           linewidth=1.5)
 fig.patches.append(frame)
 
-plt.tight_layout()
+# Create a new axes for the colorbar at the bottom spanning two axes
+# [left, bottom, width, height] in figure coordinates
+cax = fig.add_axes([0.25, 0.02, 0.5, 0.03])
+
+cbar = fig.colorbar(im, cax=cax, orientation='horizontal')
+cbar.ax.tick_params(labelsize=7) # Set fontsize of colorbar labels
+
 plt.show()
 ```
+
+
+    
+![](python-dataviz-output/supplement_matplotlib_anatomy_files/supplement_matplotlib_anatomy_8_0.png)
+    
+
 
 #### Adding Arrow Annotations
 
@@ -169,7 +189,7 @@ for index, ax in enumerate(axes.flat):
     da = datasets[index]
     im = da.plot.imshow(ax=ax, cmap='Greys_r',add_colorbar=False)
     filename = srtm_tiles[index]
-    ax.margins(0.2)
+    ax.margins(0.2) # Add padding around the axes
     ax.tick_params(axis='both', which='major', labelsize=7)
     ax.set_title('')
     ax.set_xlabel('longitude',fontsize = 7)
