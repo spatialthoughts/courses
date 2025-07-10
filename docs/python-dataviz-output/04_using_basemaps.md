@@ -128,6 +128,14 @@ providers = cx.providers
 providers
 ```
 
+Some of the providers are open-access while others require registration and obtaining an API key. We can filter the list to only open-access providers.
+
+
+```python
+open_access_providers = providers.filter(requires_token=False)
+open_access_providers
+```
+
 For overlaying the eclipse path, let's use the *OpenTopoMap* basemap. We need to specify a CRS for the map. For now, let's use the CRS of the original shapefile.
 
 
@@ -243,7 +251,7 @@ plt.show()
 
 
     
-![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_27_0.png)
+![](python-dataviz-output/04_using_basemaps_files/04_using_basemaps_29_0.png)
     
 
 
