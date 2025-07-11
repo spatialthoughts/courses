@@ -11,6 +11,7 @@ In this section, we will learn how to create an interactive map showing driving 
 ```python
 import os
 import folium
+import json
 ```
 
 
@@ -22,13 +23,6 @@ if not os.path.exists(data_folder):
     os.mkdir(data_folder)
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
-```
-
-We will be using [OpenRouteService API](https://openrouteservice.org/) to calculate the directions. Please sign-up for a free account and create an API key. If you already have an account, the API key is obtained from the [OpenRouteService Dashboard](https://openrouteservice.org/dev/#/home). Enter your API key below.
-
-
-```python
-ORS_API_KEY = ''
 ```
 
 ## Folium Basics
@@ -55,7 +49,7 @@ The default map spans the full width of the Jupyter notebook - making it difficu
 ```python
 from folium import Figure
 fig = Figure(width=800, height=400)
-m = folium.Map(location=[39.83, -98.58], zoom_start=4)
+m = folium.Map(location=[39.83, -98.58], zoom_start=4, width=800, height=400)
 fig.add_child(m)
 ```
 
@@ -76,15 +70,30 @@ The markers can be customized to have a different color or icons. You can check 
 from folium import Figure
 fig = Figure(width=800, height=400)
 m = folium.Map(location=[39.83, -98.58], zoom_start=4)
-folium.Marker(san_francisco, popup='San Francisco',
-              icon=folium.Icon(
-                  color='green', icon='crosshairs', prefix='fa')
-             ).add_to(m)
-folium.Marker(new_york, popup='New York',
-              icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
-             ).add_to(m)
+
+folium.Marker(
+    san_francisco,
+    popup='San Francisco',
+    icon=folium.Icon(
+        color='green', icon='crosshairs', prefix='fa')
+    ).add_to(m)
+
+folium.Marker(
+    new_york,
+    popup='New York',
+    icon=folium.Icon(
+        color='red', icon='crosshairs', prefix='fa')
+    ).add_to(m)
+
 fig.add_child(m)
 
+```
+
+We will be using [OpenRouteService API](https://openrouteservice.org/) to calculate the directions. Visit [HeiGIT Sign Up](https://account.heigit.org/signup) page and create an account. Once your account is activated, visit your [Dashboard](https://account.heigit.org/manage/key). Copy the long string for **Basic Key** key and enter it below.
+
+
+```python
+ORS_API_KEY = ''
 ```
 
 
@@ -105,63 +114,40 @@ response = requests.get(
 
 if response.status_code == 200:
     print('Request successful.')
-    data = response.json()
+    data = response.text
 else:
     print('Request failed.')
 
 ```
 
-Extract the coordinates for the driving directions.
+The API response is formatted as a GeoJSON string.
 
 
 ```python
-route= data['features'][0]['geometry']['coordinates']
+data
 ```
 
-
-```python
-route[:5]
-```
-
-The coordinates returned by OpenRouteService API is in the order [X,Y] (i.e. [Longitude, Latitude]) whereas Folium requires the coordinates in [Y,X] (i.e. [Latitude, Longitude]) order. We can swap them before plotting.
+We can parse the GeoJSON as a dictionary and extract the route summary returned by the API which contains the total driving distance in meters.
 
 
 ```python
-route_xy = []
-for x, y in route:
-    route_xy.append((y,x))
-route_xy[:5]
-```
-
-An easier way to accomplish the same is by using a Python [List Comprehension](https://www.w3schools.com/python/python_lists_comprehension.asp).
-
-
-```python
-route_xy = [(y, x) for x, y in route]
-route_xy[:5]
-```
-
-We extract the route summary returned by the API which contains the total driving distance in meters.
-
-
-```python
-summary = data['features'][0]['properties']['summary']
+parsed_data = json.loads(data)
+summary = parsed_data['features'][0]['properties']['summary']
 distance = round(summary['distance']/1000)
 tooltip = 'Driving Distance: {} km'.format(distance)
+tooltip
 ```
 
-We can use the [`folium.vector_layers.Polyline`](https://python-visualization.github.io/folium/modules.html#folium.vector_layers.PolyLine) class to add a line to the map. The class has a `smooth_factor` parameter which can be used to simplify the line displayed when zoomed-out. Setting a higher number results in better performance.
+We can use the [`folium.features.GeoJson`](https://python-visualization.github.io/folium/latest/user_guide/geojson/geojson.html) class to load any data in the GeoJSON format directly. We can specify a `smooth_factor` parameter which can be used to simplify the line displayed when zoomed-out. Setting a higher number results in better performance.
 
 
 ```python
-folium.PolyLine(route_xy, tooltip=tooltip, smooth_factor=1).add_to(m)
+folium.GeoJson(
+    data,
+    tooltip=tooltip,
+    smooth_factor=1
+    ).add_to(m)
 m
-```
-
-> Folium also provides a [`GeoJson`](https://python-visualization.github.io/folium/latest/user_guide/geojson/geojson.html) method to load any data in the GeoJSON format directly. Instead of extracting the coordinates, and creating a Polyline, we can also directly use the GeoJSON response returned by the OpenRouteService API like this. This is the preferred method as it gives you additional features for styling and layer manipulation.
-
-```
-folium.GeoJson(data, tooltip=tooltip, smooth_factor=1)
 ```
 
 Folium maps can be saved to a HTML file by calling `save()` on the map object.
@@ -179,7 +165,7 @@ m.save(output_path)
 
 1. Create an interactive map of driving directions between two of your chosen cities.
 2. Cutomize the marker icons to a *car* icon. Reference [`folium.map.Icon`](https://python-visualization.github.io/folium/modules.html#folium.map.Icon).
-3. Change the route line to *red* color with a line width of 1 pixels. Reference [`folium.vector_layers.Polyline`](https://python-visualization.github.io/folium/modules.html#folium.vector_layers.PolyLine) and [`leaflet.Path`](https://leafletjs.com/reference.html#path)
+3. Change the route line to *red* color with a line width of 1 pixels. Reference [`folium.features.GeoJSON` Styling](https://python-visualization.github.io/folium/latest/user_guide/geojson/geojson.html#Styling)
 
 
 <img src='https://courses.spatialthoughts.com/images/python_dataviz/folium_route.png' width=600/>
@@ -190,6 +176,8 @@ Use the code block below as the starting point and replace the variables below w
 
 ```python
 import folium
+from folium import Figure
+import json
 import requests
 
 ###############################
@@ -213,29 +201,40 @@ response = requests.get(
 
 if response.status_code == 200:
     print('Request successful.')
-    data = response.json()
+    data = response.text
 else:
     print('Request failed.')
 
-route= data['features'][0]['geometry']['coordinates']
-summary = data['features'][0]['properties']['summary']
-
-route_xy = [(y, x) for x, y in route]
+parsed_data = json.loads(data)
+summary = parsed_data['features'][0]['properties']['summary']
 distance = round(summary['distance']/1000)
 tooltip = 'Driving Distance: {} km'.format(distance)
 
-from folium import Figure
 fig = Figure(width=800, height=400)
 
 m = folium.Map(location=map_center, zoom_start=4)
-folium.Marker(origin, popup=origin_name,
-              icon=folium.Icon(
-                  color='green', icon='crosshairs', prefix='fa')
-             ).add_to(m)
-folium.Marker(destination, popup=destination_name,
-              icon=folium.Icon(color='red', icon='crosshairs', prefix='fa')
-             ).add_to(m)
-folium.PolyLine(route_xy, tooltip=tooltip).add_to(m)
+
+folium.Marker(
+    origin, 
+    popup=origin_name,
+    icon=folium.Icon(
+        color='green', icon='car', prefix='fa')
+    ).add_to(m)
+
+folium.Marker(
+    destination, 
+    popup=destination_name,
+    icon=folium.Icon(
+        color='red', icon='car', prefix='fa')
+    ).add_to(m)
+
+folium.GeoJson(
+    data,
+    tooltip=tooltip,
+    smooth_factor=1,
+   ).add_to(m)
+
+
 fig.add_child(m)
 ```
 
