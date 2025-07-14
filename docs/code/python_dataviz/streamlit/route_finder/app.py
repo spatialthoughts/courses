@@ -1,7 +1,6 @@
 import folium
 import streamlit as st
 from streamlit_folium import st_folium
-from streamlit_folium import folium_static
 import requests
 
 st.set_page_config(page_title='Route Finder')
@@ -102,4 +101,4 @@ if button:
     with open('directions.html') as file:
         placeholder.download_button('Download Directions', data=file, file_name='directions.html')
     
-folium_static(m, width=800)
+st_folium(m, width=800, returned_objects=[])

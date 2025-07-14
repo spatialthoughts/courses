@@ -1,7 +1,7 @@
 import folium
 import requests
 import streamlit as st
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 
 st.title('A Simple Geocoder')
 st.markdown('This app uses the [OpenRouteService API](https://openrouteservice.org/) '
@@ -38,7 +38,9 @@ if address:
                 popup=address,
                 icon=folium.Icon(color='green', icon='crosshairs', prefix='fa')
                 ).add_to(m)
-        folium_static(m, width=800)
+        # call to render Folium map in Streamlit, but don't get any data back
+        # from the map (so that it won't rerun the app when the user interacts)
+        st_folium(m, width=800, returned_objects=[])
         
     else:
         st.error('Request failed. No results.')
