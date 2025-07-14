@@ -1,6 +1,6 @@
 ### Using Matplotlib Themes and Custom Fonts
 
-Matplotlib default style of plots is quite plain. You can easily improve the look of the charts by applying a pre-configured stylesheet. We can also use custom fonts to make our charts look more professional. This notebook shows how to apply the [Seaborn theme](https://seaborn.pydata.org/tutorial/aesthetics.html) along with many of the built-in [Matplotlib themes](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html) to create aesthetically pleasing charts. We will also use the [PyFonts](https://pypi.org/project/pyfonts/) module to load and use custom fonts.
+Matplotlib default style of plots is quite plain. You can easily improve the look of the charts by applying a pre-configured stylesheet. We can also use custom fonts to make our charts look more professional. This notebook shows how to apply many of the built-in [Matplotlib themes](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html) to create aesthetically pleasing charts. We will also use the [PyFonts](https://pypi.org/project/pyfonts/) module to load and use custom fonts.
 
 #### Setup and Data Download
 
@@ -149,17 +149,23 @@ plt.show()
     
 
 
+Matplotlib comes with many built-in themes. Let's see what styles are available.
+
 
 ```python
-# Use seaborn style
-import seaborn as sns
-sns.set_theme()
+plt.style.available
+```
+
+
+```python
+# Use ggplot style
+plt.style.use('ggplot')
 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(12,6)
 bars = monthly_counts.plot(kind='bar', ax=ax)
 
-ax.set_title('Total Crime by Month (Seaborn Style)', loc='left', pad=20)
+ax.set_title('Total Crime by Month (ggplot)', loc='left', pad=20)
 ax.set_xlabel('')
 ax.set_ylabel('Total Incidents')
 ax.set_xticks(np.arange(len(monthly_counts)))
@@ -194,16 +200,9 @@ plt.show()
 
 
     
-![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_13_0.png)
+![](python-dataviz-output/supplement_matplotlib_themes_files/supplement_matplotlib_themes_15_0.png)
     
 
-
-Matplotlib comes with many built-in themes. Let's see what styles are available.
-
-
-```python
-plt.style.available
-```
 
 [Google Fonts](https://fonts.google.com/) provides open-source fonts that can be used on the web. The PyFonts package allows us to load any of the font styles from Google Fonts using the `load_google_fonts()` function.
 

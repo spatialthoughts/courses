@@ -12,7 +12,7 @@ address = st.text_input('Enter an address.')
 @st.cache_data
 def geocode(query):
     parameters = {
-        'api_key': 'st.secrets['ORS_API_KEY']',
+        'api_key': st.secrets['ORS_API_KEY'],
         'text' : query
     }
 
