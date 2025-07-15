@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 st.title('A Simple Dashboard')
 st.write('This dashboard displays a chart for the selected region.')
 
-@st.cache
+@st.cache_data
 def load_data():
     data_url = 'https://github.com/spatialthoughts/python-dataviz-web/releases/' \
         'download/osm/'
@@ -24,8 +24,8 @@ filtered = df[df['DISTRICT'] == district]
 
 col1, col2, col3 = st.columns(3)
 
-nh_color = col1.color_picker('Pick NH Color', '#0000FF', key='nh')
-sh_color = col2.color_picker('Pick SH Color', '#FF0000', key='sh')
+nh_color = col1.color_picker('Pick NH Color', '#0000FF')
+sh_color = col2.color_picker('Pick SH Color', '#FF0000')
 units = col3.radio('Units', ['Kilometers', 'Miles'])
 
 

@@ -24,8 +24,8 @@ filtered = df[df['DISTRICT'] == district]
 
 col1, col2 = st.columns(2)
 
-nh_color = col1.color_picker('Pick NH Color', '#0000FF', key='nh')
-sh_color = col2.color_picker('Pick SH Color', '#FF0000', key='sh')
+nh_color = col1.color_picker('Pick NH Color', '#0000FF')
+sh_color = col2.color_picker('Pick SH Color', '#FF0000')
 
     
 fig, ax = plt.subplots(1, 1)
