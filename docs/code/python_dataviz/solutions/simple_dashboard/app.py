@@ -31,11 +31,13 @@ units = col3.radio('Units', ['Kilometers', 'Miles'])
 
 if units == 'Miles':
     filtered = filtered[['NH', 'SH']]*0.621371
-    
+    ylabel = 'Miles'
+else:
+    ylabel = 'Kilometers'
 fig, ax = plt.subplots(1, 1)
 
 filtered.plot(kind='bar', ax=ax, color=[nh_color, sh_color],
-    ylabel='Kilometers', xlabel='Category')
+    ylabel=ylabel, xlabel='Category')
 ax.set_title('Length of Highways')
 ax.set_ylim(0, 2500)
 ax.get_xaxis().set_ticklabels([])
