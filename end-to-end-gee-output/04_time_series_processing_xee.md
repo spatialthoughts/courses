@@ -1,11 +1,8 @@
 [XEE](https://github.com/google/Xee) is an python package for working with Google Earth Engine data with [XArray](https://docs.xarray.dev/en/stable/). XEE makes it possible to leverage the strengths of both GEE and the Python ecosystem around XArray.
 
-In this section, we will learn how to use XEE to extract and process and download a NDVI time-series for a single point location.
+In this section, we will learn how to use XEE to extract and process NDVI time-series using built-in time-series processing function of XArray. Once processed, we will also save the resulting gap-filled images as Cloud-Optimized GeoTIFF (COG) files.
 
-Learn more about XEE:
-
-*   [XEE Python Tutorials](https://www.geopythontutorials.com/introduction.html): Our step-by-step tutorials on integrating XEE in your Python workflows.
-*   [Processing Time-Series](https://courses.spatialthoughts.com/python-remote-sensing.html#processing-time-series): An extended version of this notebook that shows how to download the processed time-series images as GeoTIFF files.
+For more examples of integrating XEE in your Python workflows, see the **XEE (XArray + Google Earth Engine)** section of our [Geospatial Python Tutorials](https://www.geopythontutorials.com/).
 
 #### Installation
 
@@ -16,13 +13,17 @@ Let's install the required packages in the Colab environment.
 %%capture
 if 'google.colab' in str(get_ipython()):
     !pip install --upgrade xee
+    !pip install rioxarray
 ```
 
 
 ```python
 import ee
-import xarray
+import xarray as xr
+import rioxarray as rxr
+import numpy as np
 import matplotlib.pyplot as plt
+import os
 ```
 
 #### Initialization
@@ -52,7 +53,15 @@ except:
 
 
 ```python
-geometry = ee.Geometry.Point([82.60759592318209, 27.163481733946846])
+latitude = 27.14240677750266
+longitude = 83.10171246528625
+point = ee.Geometry.Point([longitude, latitude])
+```
+
+
+```python
+# Define a 1km bounding box around the chosen point
+geometry = point.buffer(1000).bounds()
 ```
 
 #### Preprocess the data in GEE
@@ -63,8 +72,11 @@ We start with the Sentinel-2 L1C collection. We pre-process the data by applying
 ```python
 s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
 
+startDate = ee.Date.fromYMD(2019, 1, 1)
+endDate = ee.Date.fromYMD(2020, 1, 1)
+
 filtered = s2 \
-  .filter(ee.Filter.date('2017-01-01', '2018-01-01')) \
+  .filter(ee.Filter.date(startDate, endDate)) \
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
   .filter(ee.Filter.bounds(geometry))
 
@@ -80,7 +92,7 @@ filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands)
 # Function to mask pixels with low CS+ QA scores.
 def maskLowQA(image):
   qaBand = 'cs'
-  clearThreshold = 0.5
+  clearThreshold = 0.6
   mask = image.select(qaBand).gte(clearThreshold)
   return image.updateMask(mask)
 
@@ -101,15 +113,23 @@ withNdvi = filteredMasked.map(addNDVI)
 
 #### Load ImageCollection as XArray Dataset
 
-Now we have an ImageCollection that we want to get it as a XArray Dataset. We define the region of interest and extract the ImageCollection using the `ee` engine.
+Now we have an ImageCollection that we want to get it as a XArray Dataset. We define the crs, scale and region of interest to extract the ImageCollection using the `ee` engine.
 
 
 ```python
-ds = xarray.open_dataset(
+# XEE needs scale in the units of the CRS
+# so if you choose EPSG:4326, the scale needs to be in degrees
+crs = 'EPSG:3857'
+scale = 10
+```
+
+
+```python
+ds = xr.open_dataset(
     withNdvi,
     engine='ee',
-    crs='EPSG:3857',
-    scale=10,
+    crs=crs,
+    scale=scale,
     geometry=geometry,
     ee_mask_value=-9999,
 )
@@ -124,63 +144,53 @@ Select the `ndvi` band.
 ndvi_time_series = ds.ndvi
 ```
 
-Run `compute()` to fetch the pixels from Earth Engine. This may take some time depending on the size of the request. This is a time-series at a single pixel, so we also `squeeze()` to remove the X and Y dimensions and get an array of NDVI values.
+Run `compute()` to fetch the pixels from Earth Engine. This may take some time depending on the size of the request.
 
 
 ```python
-original_time_series = ndvi_time_series.compute()
-original_time_series = original_time_series.squeeze()
-original_time_series
+%%time
+ndvi_time_series = ndvi_time_series.compute()
 ```
 
-Plot the time-series.
+Plot the time-series at the chosen point.
+
+
+```python
+point_x, point_y = point.transform(crs).coordinates().getInfo()
+```
 
 
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10, 5)
-original_time_series.plot.line(
+ndvi_time_series\
+  .sel(X=point_x, Y=point_y, method='nearest').plot.line(
     ax=ax, x='time',
-    marker='o', color='#66c2a4', linestyle='--', linewidth=1, markersize=4)
+    marker='o', color='#66c2a4',
+    linestyle='--', linewidth=1, markersize=4)
+plt.ylim(0, 1)
 plt.show()
 ```
 
 #### Process Time-Series using XArray
 
-We use XArray's excellent time-series processing functionality to process the time-series. First, we create a regularly spaced time-series.
+We use XArray's excellent time-series processing functionality to process the time-series.
+
+* First, we create a regularly spaced time-series using `resample()`
+* Next we fill the cloud-masked pixels using `interpolate_na()` from temporal neighbors.
+* Finally, we apply a moving-window smoothing using `rolling()` to remove noise.
 
 
 ```python
-time_series_resampled = original_time_series\
-  .resample(time='5d').mean(dim='time')
-time_series_resampled
-```
-
-Next we fill the cloud-masked pixels with linearly interpolated values from temporal neighbors.
-
-
-```python
-time_series_interpolated = time_series_resampled\
+%%time
+# Group by date and take the mean to handle duplicate dates before resampling
+ndvi_time_series_resampled = ndvi_time_series \
+  .sortby('time') \
+  .resample(time='5D').mean(dim='time')
+ndvi_time_series_interpolated = ndvi_time_series_resampled \
   .interpolate_na('time', use_coordinate=False)
-time_series_interpolated
-```
-
-We also apply a moving-window smoothing to remove noise.
-
-
-```python
-time_series_smooth = time_series_interpolated\
+ndvi_time_series_smoothed = ndvi_time_series_interpolated \
   .rolling(time=3, center=True).mean()
-time_series_smooth
-```
-
-A moving-window smoothing removed the first and last values of the time-series. We anchor the smoothed time-series with the values from the original time-series.
-
-
-```python
-time_series_smooth[0] = original_time_series[0]
-time_series_smooth[-1] = original_time_series[-1]
-time_series_smooth
 ```
 
 Plot the original and smoothed time-series.
@@ -189,31 +199,78 @@ Plot the original and smoothed time-series.
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(10, 5)
-original_time_series.plot.line(
+ndvi_time_series \
+  .sel(X=point_x, Y=point_y, method='nearest').plot.line(
     ax=ax, x='time',
-    marker='^', color='#66c2a4', linestyle='--', linewidth=1, markersize=2)
-time_series_smooth.plot.line(
+    marker='^', color='#66c2a4',
+    linestyle='--', linewidth=1, markersize=2)
+ndvi_time_series_smoothed \
+  .sel(X=point_x, Y=point_y, method='nearest').plot.line(
     ax=ax, x='time',
-    marker='o', color='#238b45', linestyle='-', linewidth=1, markersize=4)
+    marker='o', color='#238b45',
+    linestyle='-', linewidth=1, markersize=4)
+
+plt.ylim(0, 1)
 plt.show()
 ```
 
-#### Download the Time-Series
+## Download Time-Series Images
 
-Convert the DataArray to a Pandas DataFrame and save it as a CSV file.
+Save the output GeoTIFF files to Google Drive if running the notebook from Colab. Otherwise to a local folder.
 
 
 ```python
-df = time_series_smooth.to_dataframe('ndvi').reset_index()
-df
+if 'google.colab' in str(get_ipython()):
+  from google.colab import drive
+  drive.mount('/content/drive')
+  output_folder = '/content/drive/MyDrive/earthengine/'
+else:
+  output_folder = 'output'
 ```
 
 
 ```python
-output_filename = 'smoothed_time_series.csv'
-df[['time', 'ndvi']].to_csv(output_filename, index=False)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
+
+Save the original time-series images using `rioxarray` as GeoTIFF files.
+
+
+```python
+for time in ndvi_time_series.time.values:
+  image = ndvi_time_series.sel(time=time)
+  # transform the image to suit rioxarray format
+  image = image \
+    .rename({'Y': 'y', 'X': 'x'}) \
+    .transpose('y', 'x') \
+    .rio.write_crs(crs)
+
+  date = np.datetime_as_string(time, unit='D')
+  output_file = f'ndvi_{date}.tif'
+  output_path = os.path.join(output_folder, output_file)
+  image.rio.to_raster(output_path, driver='COG')
+```
+
+Save the gap-filled and smoothed time-series images.
+
+
+```python
+for time in ndvi_time_series_smoothed.time.values:
+  image = ndvi_time_series_smoothed.sel(time=time)
+  # transform the image to suit rioxarray format
+  image = image \
+    .rename({'Y': 'y', 'X': 'x'}) \
+    .transpose('y', 'x') \
+    .rio.write_crs(crs)
+
+  date = np.datetime_as_string(time, unit='D')
+  output_file = f'ndvi_smoothed_{date}.tif'
+  output_path = os.path.join(output_folder, output_file)
+  image.rio.to_raster(output_path, driver='COG')
+
 ```
 
 ### Exercise
 
-Replace the `geometry` with the location of your choice. Extract and download the smoothed time-series as a CSV file.
+Replace the `point` with the location of your choice. Extract and download the smoothed time-series.
