@@ -14,8 +14,8 @@
 
 <title>Cloud-based Remote Sensing with Python (Full Course)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -51,6 +51,7 @@
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
     </style>
+
 
 
 <style type="text/css">
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -355,8 +363,8 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Cloud-based Remote Sensing with Python
 (Full Course)</h1>
-<h3 class="subtitle">A guide to working with Earth Observation and
-Climate datasets using XArray, Dask and STAC.</h3>
+<h3 class="subtitle">A guide to working with Earth Observation datasets
+using XArray, Dask and STAC.</h3>
 <h4 class="author">Ujaval Gandhi</h4>
 
 </div>
@@ -377,13 +385,12 @@ id="toc-extracting-time-series">Extracting Time Series</a></li>
 id="toc-processing-time-series">Processing Time-Series</a></li>
 </ul></li>
 <li><a href="#scaling-computation-with-dask"
-id="toc-scaling-computation-with-dask">Scaling Computation with Dask</a>
+id="toc-scaling-computation-with-dask">2. Scaling Computation with
+Dask</a>
 <ul>
 <li><a href="#calculating-zonal-statistics"
 id="toc-calculating-zonal-statistics">Calculating Zonal
 Statistics</a></li>
-<li><a href="#computing-climate-trends"
-id="toc-computing-climate-trends">Computing Climate Trends</a></li>
 </ul></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
@@ -828,29 +835,29 @@ or 1.</p>
 <p>Since we are interested in clouds, the first 5 bits are relevant</p>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>Bit</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td>0</td>
 <td>Fill</td>
 </tr>
-<tr>
+<tr class="even">
 <td>1</td>
 <td>Dilated Cloud</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>2</td>
 <td>Cirrus</td>
 </tr>
-<tr>
+<tr class="even">
 <td>3</td>
 <td>Cloud</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>4</td>
 <td>Cloud Shadow</td>
 </tr>
@@ -1039,34 +1046,34 @@ VI User Guide</a> MOD13Q1/A1 QA band contains pixel values representing
 overall pixel quality.</p>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>Value</th>
 <th>Summary QA</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td>-1</td>
 <td>Fill/No Data</td>
 <td>Not Processed</td>
 </tr>
-<tr>
+<tr class="even">
 <td>0</td>
 <td>Good Data</td>
 <td>Use with confidence</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>1</td>
 <td>Marginal data</td>
 <td>Useful, but look at other QA information</td>
 </tr>
-<tr>
+<tr class="even">
 <td>2</td>
 <td>Snow/Ice</td>
 <td>Target covered with snow/ice</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>3</td>
 <td>Cloudy</td>
 <td>Target not visible, covered with cloud</td>
@@ -1345,7 +1352,7 @@ parameter.</em></p>
 </div>
 </div>
 <div id="scaling-computation-with-dask" class="section level1">
-<h1>Scaling Computation with Dask</h1>
+<h1>2. Scaling Computation with Dask</h1>
 <p><a href="https://www.dask.org/"><code>Dask</code></a> is a python
 library to run your computation in parallel across many machines. Dask
 has built-in support for key geospatial packages like XArray and Pandas
@@ -1527,247 +1534,6 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a h
 <h3>Exercise</h3>
 <p>Change the code to calculate the Zonal Statistics for all admin1
 units in your chosen country.</p>
-</div>
-</div>
-<div id="computing-climate-trends" class="section level2">
-<h2>Computing Climate Trends</h2>
-<p><a
-href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/climate_trends.ipynb"><img
-src="https://colab.research.google.com/assets/colab-badge.svg"
-alt="Open In Colab" /></a></p>
-<div id="overview-5" class="section level3">
-<h3>Overview</h3>
-<p>We have many high-quality global climate datasets that has historic
-data on various climatic variables. Using cloud-hosted datasets and
-XArray, we can compute pixel-wise long-term trends. This analysis helps
-us identify hotspots experienceing extreme climate change.</p>
-<p>We will be using the <a
-href="https://www.climatologylab.org/terraclimate.html">TerraClimate</a>
-gridded dataset of monthly climate and climatic water balance at high
-spatial resolution (~4km grid size) with a long time-series.
-(1958-current). This is a large dataset that is hosted on a <a
-href="https://www.unidata.ucar.edu/software/tds/">THREDDS Data Server
-(TDS)</a> and served using the <a
-href="https://www.opendap.org/">OPeNDAP</a> (Open Data Access Protocol)
-protocol. XArray has built-in support to efficiently read and process
-OPeNDAP data where we can stream and process only the required pixels
-without downloading entire dataset.</p>
-<p>This notebook shows how to extract a time-series of monthly maximum
-temperatures and compute per-pixel linear trend. The results are
-processed in a distributed matter using Dask and the results are saved
-as a GeoTIFF file.</p>
-</div>
-<div id="setup-and-data-download-5" class="section level3">
-<h3>Setup and Data Download</h3>
-<div class="sourceCode" id="cb97"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb97-2"><a href="#cb97-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb97-3"><a href="#cb97-3" tabindex="-1"></a>    <span class="op">!</span>pip install geopandas rioxarray cartopy dask[distributed] netCDF4</span></code></pre></div>
-<div class="sourceCode" id="cb98"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" tabindex="-1"></a><span class="im">import</span> cartopy</span>
-<span id="cb98-2"><a href="#cb98-2" tabindex="-1"></a><span class="im">import</span> cartopy.crs <span class="im">as</span> ccrs</span>
-<span id="cb98-3"><a href="#cb98-3" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb98-4"><a href="#cb98-4" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb98-5"><a href="#cb98-5" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb98-6"><a href="#cb98-6" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb98-7"><a href="#cb98-7" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb98-8"><a href="#cb98-8" tabindex="-1"></a><span class="im">import</span> dask</span></code></pre></div>
-<div class="sourceCode" id="cb99"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb99-2"><a href="#cb99-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb99-3"><a href="#cb99-3" tabindex="-1"></a></span>
-<span id="cb99-4"><a href="#cb99-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb99-5"><a href="#cb99-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb99-6"><a href="#cb99-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb99-7"><a href="#cb99-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
-</div>
-<div id="selecting-a-region-of-interest" class="section level3">
-<h3>Selecting a Region of Interest</h3>
-<p><a href="https://www.geoboundaries.org/">GeoBondaries</a> is an open
-databse of political administrative boundaries at different
-administrative levels. We download the Admin1 Boundaries.</p>
-<div class="sourceCode" id="cb100"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a><span class="kw">def</span> download(url):</span>
-<span id="cb100-2"><a href="#cb100-2" tabindex="-1"></a>    filename <span class="op">=</span> os.path.join(data_folder, os.path.basename(url))</span>
-<span id="cb100-3"><a href="#cb100-3" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(filename):</span>
-<span id="cb100-4"><a href="#cb100-4" tabindex="-1"></a>        <span class="im">from</span> urllib.request <span class="im">import</span> urlretrieve</span>
-<span id="cb100-5"><a href="#cb100-5" tabindex="-1"></a>        local, _ <span class="op">=</span> urlretrieve(url, filename)</span>
-<span id="cb100-6"><a href="#cb100-6" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Downloaded </span><span class="sc">{</span>filename<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb100-7"><a href="#cb100-7" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb100-8"><a href="#cb100-8" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;File </span><span class="sc">{</span>filename<span class="sc">}</span><span class="ss"> exists.&#39;</span>)</span>
-<span id="cb100-9"><a href="#cb100-9" tabindex="-1"></a></span>
-<span id="cb100-10"><a href="#cb100-10" tabindex="-1"></a>admin_boundaries <span class="op">=</span> <span class="st">&#39;geoBoundariesCGAZ_ADM1.gpkg&#39;</span></span>
-<span id="cb100-11"><a href="#cb100-11" tabindex="-1"></a></span>
-<span id="cb100-12"><a href="#cb100-12" tabindex="-1"></a>geoboundaries_url <span class="op">=</span> <span class="st">&#39;https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/CGAZ/&#39;</span></span>
-<span id="cb100-13"><a href="#cb100-13" tabindex="-1"></a>download(geoboundaries_url <span class="op">+</span> admin_boundaries)</span></code></pre></div>
-<div class="sourceCode" id="cb101"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" tabindex="-1"></a>admin_boundaries_filepath <span class="op">=</span> os.path.join(data_folder, admin_boundaries)</span>
-<span id="cb101-2"><a href="#cb101-2" tabindex="-1"></a>admin_gdf <span class="op">=</span> gpd.read_file(admin_boundaries_filepath, encoding<span class="op">=</span><span class="st">&#39;utf-8&#39;</span>)</span></code></pre></div>
-<p>Select the country by its <a
-href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3">3-letter ISO
-code</a>. Here we use the code GHA for Ghana.</p>
-<div class="sourceCode" id="cb102"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" tabindex="-1"></a>country <span class="op">=</span> <span class="st">&#39;GHA&#39;</span></span>
-<span id="cb102-2"><a href="#cb102-2" tabindex="-1"></a>country_gdf <span class="op">=</span> admin_gdf[admin_gdf[<span class="st">&#39;shapeGroup&#39;</span>] <span class="op">==</span> country]</span>
-<span id="cb102-3"><a href="#cb102-3" tabindex="-1"></a>country_gdf</span></code></pre></div>
-<p>Select a region. We select the <em>Greater Accra Region</em>.</p>
-<div class="sourceCode" id="cb103"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a>region_gdf <span class="op">=</span> country_gdf[country_gdf[<span class="st">&#39;shapeName&#39;</span>] <span class="op">==</span> <span class="st">&#39;Greater Accra Region&#39;</span>]</span>
-<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a>region_gdf</span></code></pre></div>
-<div class="sourceCode" id="cb104"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb104-2"><a href="#cb104-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
-<span id="cb104-3"><a href="#cb104-3" tabindex="-1"></a>region_gdf.plot(</span>
-<span id="cb104-4"><a href="#cb104-4" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb104-5"><a href="#cb104-5" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>,</span>
-<span id="cb104-6"><a href="#cb104-6" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb104-7"><a href="#cb104-7" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb104-8"><a href="#cb104-8" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb104-9"><a href="#cb104-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/climate_trends_files/climate_trends_12_0.png" /></p>
-<p>Get the bounding box to filter the XArray dataset.</p>
-<div class="sourceCode" id="cb105"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" tabindex="-1"></a>bounds <span class="op">=</span> region_gdf.total_bounds</span>
-<span id="cb105-2"><a href="#cb105-2" tabindex="-1"></a>lon_min, lat_min, lon_max, lat_max <span class="op">=</span> bounds</span></code></pre></div>
-</div>
-<div id="local-compute-cluster" class="section level3">
-<h3>Local Compute Cluster</h3>
-<p>Setup a Local Dask Cluster.</p>
-<div class="sourceCode" id="cb106"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client, progress</span>
-<span id="cb106-2"><a href="#cb106-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
-<span id="cb106-3"><a href="#cb106-3" tabindex="-1"></a>client</span></code></pre></div>
-</div>
-<div id="calculate-yearly-time-series" class="section level3">
-<h3>Calculate Yearly Time-Series</h3>
-<p>We want to analyze the long-term yearly trend of monthly maximum
-temperatures. Since the input data comes as monthly values, we first
-aggregate the data to yearly time steps.</p>
-<div class="sourceCode" id="cb107"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" tabindex="-1"></a>terraclimate_url <span class="op">=</span> <span class="st">&#39;http://thredds.northwestknowledge.net:8080/thredds/dodsC/&#39;</span></span>
-<span id="cb107-2"><a href="#cb107-2" tabindex="-1"></a>variable <span class="op">=</span> <span class="st">&#39;tmax&#39;</span></span>
-<span id="cb107-3"><a href="#cb107-3" tabindex="-1"></a>filename <span class="op">=</span> <span class="ss">f&#39;agg_terraclimate_</span><span class="sc">{</span>variable<span class="sc">}</span><span class="ss">_1958_CurrentYear_GLOBE.nc&#39;</span></span>
-<span id="cb107-4"><a href="#cb107-4" tabindex="-1"></a></span>
-<span id="cb107-5"><a href="#cb107-5" tabindex="-1"></a>remote_file_path <span class="op">=</span> os.path.join(terraclimate_url, filename)</span>
-<span id="cb107-6"><a href="#cb107-6" tabindex="-1"></a>ds <span class="op">=</span> xr.open_dataset(</span>
-<span id="cb107-7"><a href="#cb107-7" tabindex="-1"></a>    remote_file_path,</span>
-<span id="cb107-8"><a href="#cb107-8" tabindex="-1"></a>    chunks<span class="op">=</span><span class="st">&#39;auto&#39;</span>,</span>
-<span id="cb107-9"><a href="#cb107-9" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;netcdf4&#39;</span>,</span>
-<span id="cb107-10"><a href="#cb107-10" tabindex="-1"></a>)</span>
-<span id="cb107-11"><a href="#cb107-11" tabindex="-1"></a>ds</span></code></pre></div>
-<div class="sourceCode" id="cb108"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" tabindex="-1"></a><span class="co"># Select the variable</span></span>
-<span id="cb108-2"><a href="#cb108-2" tabindex="-1"></a>da <span class="op">=</span> ds.tmax</span>
-<span id="cb108-3"><a href="#cb108-3" tabindex="-1"></a></span>
-<span id="cb108-4"><a href="#cb108-4" tabindex="-1"></a><span class="co"># Select data within the bounding box</span></span>
-<span id="cb108-5"><a href="#cb108-5" tabindex="-1"></a></span>
-<span id="cb108-6"><a href="#cb108-6" tabindex="-1"></a><span class="co"># Make sure the data is sorted for slice() to work correctly</span></span>
-<span id="cb108-7"><a href="#cb108-7" tabindex="-1"></a>da <span class="op">=</span> da.sortby([da.lon, da.lat])</span>
-<span id="cb108-8"><a href="#cb108-8" tabindex="-1"></a></span>
-<span id="cb108-9"><a href="#cb108-9" tabindex="-1"></a><span class="co"># Add 0.1 degree buffer</span></span>
-<span id="cb108-10"><a href="#cb108-10" tabindex="-1"></a>da_subset <span class="op">=</span> da.sel(</span>
-<span id="cb108-11"><a href="#cb108-11" tabindex="-1"></a>    lon<span class="op">=</span><span class="bu">slice</span>(lon_min <span class="op">-</span> <span class="fl">0.1</span>, lon_max <span class="op">+</span> <span class="fl">0.1</span>),</span>
-<span id="cb108-12"><a href="#cb108-12" tabindex="-1"></a>    lat<span class="op">=</span><span class="bu">slice</span>(lat_min <span class="op">-</span> <span class="fl">0.1</span>, lat_max <span class="op">+</span> <span class="fl">0.1</span>)</span>
-<span id="cb108-13"><a href="#cb108-13" tabindex="-1"></a>)</span>
-<span id="cb108-14"><a href="#cb108-14" tabindex="-1"></a>da_subset</span></code></pre></div>
-<p>Aggregate the data to yearly means.</p>
-<div class="sourceCode" id="cb109"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" tabindex="-1"></a>da_yearly <span class="op">=</span> da_subset.groupby(<span class="st">&#39;time.year&#39;</span>).mean(<span class="st">&#39;time&#39;</span>)</span>
-<span id="cb109-2"><a href="#cb109-2" tabindex="-1"></a>da_yearly</span></code></pre></div>
-<p>Process and load the data into memory. This may take a few minutes.
-Check the Dask dashboard to see the progress</p>
-<blockquote>
-<p>Note: The dask dashboard is not available on Colab.</p>
-</blockquote>
-<div class="sourceCode" id="cb110"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb110-1"><a href="#cb110-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb110-2"><a href="#cb110-2" tabindex="-1"></a>da_yearly <span class="op">=</span> da_yearly.compute()</span></code></pre></div>
-<p>Plot a time-series at a single location to see the trend.</p>
-<div class="sourceCode" id="cb111"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" tabindex="-1"></a><span class="co"># Choose a location within the region for plots</span></span>
-<span id="cb111-2"><a href="#cb111-2" tabindex="-1"></a>location <span class="op">=</span> (<span class="fl">5.65</span>, <span class="op">-</span><span class="fl">0.20</span>) <span class="co"># Accra</span></span>
-<span id="cb111-3"><a href="#cb111-3" tabindex="-1"></a></span>
-<span id="cb111-4"><a href="#cb111-4" tabindex="-1"></a>time_series <span class="op">=</span> da_yearly.interp(lat<span class="op">=</span>location[<span class="dv">0</span>], lon<span class="op">=</span>location[<span class="dv">1</span>])</span>
-<span id="cb111-5"><a href="#cb111-5" tabindex="-1"></a></span>
-<span id="cb111-6"><a href="#cb111-6" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb111-7"><a href="#cb111-7" tabindex="-1"></a></span>
-<span id="cb111-8"><a href="#cb111-8" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
-<span id="cb111-9"><a href="#cb111-9" tabindex="-1"></a>time_series.plot.line(ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;year&#39;</span>, marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb111-10"><a href="#cb111-10" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Annual Mean Monthly Maximum Temperature&#39;</span>)</span>
-<span id="cb111-11"><a href="#cb111-11" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/climate_trends_files/climate_trends_25_0.png" /></p>
-</div>
-<div id="compute-the-trend" class="section level3">
-<h3>Compute the Trend</h3>
-<p>We can fit a polynomial at each pixel of the DataArray using the <a
-href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.polyfit.html"><code>xarray.DataArray.polyfit</code></a>
-method. Here we fit a linear trendline. As out input dataset has yearly
-time steps, the slope of the fitted trendline will be degrees per year.
-To make the trend more interpretable, we multiply it by 100 to get the
-results in the unit degrees per century.</p>
-<div class="sourceCode" id="cb112"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb112-1"><a href="#cb112-1" tabindex="-1"></a>trend <span class="op">=</span> da_yearly.polyfit(<span class="st">&#39;year&#39;</span>, <span class="dv">1</span>) <span class="co"># fit polynomial of degree 1</span></span>
-<span id="cb112-2"><a href="#cb112-2" tabindex="-1"></a>slope <span class="op">=</span> trend.polyfit_coefficients[<span class="dv">0</span>,...] <span class="op">*</span> <span class="dv">100</span> <span class="co"># per year -&gt; per century</span></span></code></pre></div>
-<p>Visualize the slope of trendline.</p>
-<div class="sourceCode" id="cb113"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1" tabindex="-1"></a>projection <span class="op">=</span> ccrs.PlateCarree()</span>
-<span id="cb113-2"><a href="#cb113-2" tabindex="-1"></a></span>
-<span id="cb113-3"><a href="#cb113-3" tabindex="-1"></a>cbar_kwargs <span class="op">=</span> {</span>
-<span id="cb113-4"><a href="#cb113-4" tabindex="-1"></a>    <span class="st">&#39;orientation&#39;</span>:<span class="st">&#39;horizontal&#39;</span>,</span>
-<span id="cb113-5"><a href="#cb113-5" tabindex="-1"></a>    <span class="st">&#39;fraction&#39;</span>: <span class="fl">0.025</span>,</span>
-<span id="cb113-6"><a href="#cb113-6" tabindex="-1"></a>    <span class="st">&#39;pad&#39;</span>: <span class="fl">0.05</span>,</span>
-<span id="cb113-7"><a href="#cb113-7" tabindex="-1"></a>    <span class="st">&#39;extend&#39;</span>:<span class="st">&#39;neither&#39;</span>,</span>
-<span id="cb113-8"><a href="#cb113-8" tabindex="-1"></a>    <span class="st">&#39;label&#39;</span>: <span class="st">&#39;°C per century&#39;</span></span>
-<span id="cb113-9"><a href="#cb113-9" tabindex="-1"></a>}</span>
-<span id="cb113-10"><a href="#cb113-10" tabindex="-1"></a></span>
-<span id="cb113-11"><a href="#cb113-11" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>, subplot_kw<span class="op">=</span>{<span class="st">&#39;projection&#39;</span>: projection})</span>
-<span id="cb113-12"><a href="#cb113-12" tabindex="-1"></a>fig.set_size_inches(<span class="dv">8</span>, <span class="dv">8</span>)</span>
-<span id="cb113-13"><a href="#cb113-13" tabindex="-1"></a>slope.plot.imshow(</span>
-<span id="cb113-14"><a href="#cb113-14" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb113-15"><a href="#cb113-15" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;YlOrBr&#39;</span>,</span>
-<span id="cb113-16"><a href="#cb113-16" tabindex="-1"></a>    transform<span class="op">=</span>ccrs.PlateCarree(),</span>
-<span id="cb113-17"><a href="#cb113-17" tabindex="-1"></a>    add_labels<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb113-18"><a href="#cb113-18" tabindex="-1"></a>    cbar_kwargs<span class="op">=</span>cbar_kwargs)</span>
-<span id="cb113-19"><a href="#cb113-19" tabindex="-1"></a></span>
-<span id="cb113-20"><a href="#cb113-20" tabindex="-1"></a>region_gdf.plot(</span>
-<span id="cb113-21"><a href="#cb113-21" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb113-22"><a href="#cb113-22" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#000000&#39;</span>,</span>
-<span id="cb113-23"><a href="#cb113-23" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb113-24"><a href="#cb113-24" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb113-25"><a href="#cb113-25" tabindex="-1"></a></span>
-<span id="cb113-26"><a href="#cb113-26" tabindex="-1"></a>ax.set_extent((lon_min,lon_max,lat_min,lat_max), crs <span class="op">=</span> ccrs.PlateCarree())</span>
-<span id="cb113-27"><a href="#cb113-27" tabindex="-1"></a></span>
-<span id="cb113-28"><a href="#cb113-28" tabindex="-1"></a>plt.title(<span class="ss">f&#39;Slope of Monthly Maximum Temperature Trend&#39;</span>, fontsize <span class="op">=</span> <span class="dv">12</span>)</span>
-<span id="cb113-29"><a href="#cb113-29" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/climate_trends_files/climate_trends_30_0.png" /></p>
-<p>Save the resulting slope raster as a GeoTIFF.</p>
-<div class="sourceCode" id="cb114"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" tabindex="-1"></a><span class="co"># Assign a CRS to the DataArray</span></span>
-<span id="cb114-2"><a href="#cb114-2" tabindex="-1"></a>slope.rio.write_crs(<span class="st">&#39;EPSG:4326&#39;</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb114-3"><a href="#cb114-3" tabindex="-1"></a><span class="co"># Clip to the GeoDataFrame coundary</span></span>
-<span id="cb114-4"><a href="#cb114-4" tabindex="-1"></a>clipped <span class="op">=</span> slope.rio.clip(region_gdf.geometry.values)</span>
-<span id="cb114-5"><a href="#cb114-5" tabindex="-1"></a><span class="co"># Write the file</span></span>
-<span id="cb114-6"><a href="#cb114-6" tabindex="-1"></a>output_slope_file <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>variable<span class="sc">}</span><span class="ss">_slope.tif&#39;</span></span>
-<span id="cb114-7"><a href="#cb114-7" tabindex="-1"></a>output_slope_path <span class="op">=</span> os.path.join(output_folder, output_slope_file)</span>
-<span id="cb114-8"><a href="#cb114-8" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_slope_path):</span>
-<span id="cb114-9"><a href="#cb114-9" tabindex="-1"></a>    clipped.rio.to_raster(output_slope_path)</span>
-<span id="cb114-10"><a href="#cb114-10" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Saved the file at &#39;</span>, output_slope_path)</span></code></pre></div>
-<p>We can also save the yearly aggregated subset as a NetCDF for other
-downstream analysis.</p>
-<div class="sourceCode" id="cb115"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb115-1"><a href="#cb115-1" tabindex="-1"></a>local_subset_file <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>variable<span class="sc">}</span><span class="ss">_yearly_subset.nc&#39;</span></span>
-<span id="cb115-2"><a href="#cb115-2" tabindex="-1"></a>local_subset_filepath <span class="op">=</span> os.path.join(output_folder, local_subset_file)</span>
-<span id="cb115-3"><a href="#cb115-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(local_subset_filepath):</span>
-<span id="cb115-4"><a href="#cb115-4" tabindex="-1"></a>    da_yearly.to_netcdf(path<span class="op">=</span>local_subset_filepath)</span>
-<span id="cb115-5"><a href="#cb115-5" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&#39;Saved the file at &#39;</span>, local_subset_filepath)</span></code></pre></div>
-</div>
-<div id="exercise-4" class="section level3">
-<h3>Exercise</h3>
-<p>Carry out the trend analysis for your region of interest. Replace the
-country and region with a chosen Admin-2 region.</p>
 <hr />
 </div>
 </div>
