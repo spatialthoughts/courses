@@ -1,0 +1,95 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD"),
+    india = ee.FeatureCollection("users/ujavalgandhi/public/soi_india_boundary");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script for Standardized Precipitation Index (SPI) Calculation
+// Code adapted from original implementation by Gennadii Donchyts
+
+// Get a long-term monthly precipitation time-series
+var lpaYears = ee.List.sequence(1981, 2020);
+var months = ee.List.sequence(1, 12);
+
+// Map over the years and create a monthly totals collection
+var monthlyImages = lpaYears.map(function(year) {
+  return months.map(function(month) {
+    var filtered = chirps
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'));
+    var monthly = filtered.sum();
+    return monthly.set({
+      'month': month,
+      'year': year,
+      'system:index': ee.Date.fromYMD(year, month, 1).format('YYYY-MM'),
+      'system:time_start': ee.Date.fromYMD(year, month, 1).millis()
+    });
+  });
+}).flatten();
+
+// We now have 1 image per month for entire long-period duratioon
+var monthlyCol = ee.ImageCollection.fromImages(monthlyImages);
+
+
+// Function to compute the inverse of the normal cumulative
+// distribution function (CDF)
+// This will transform a probability (0-1) into a Z-score.
+function qnorm(x) {
+  return x.multiply(2).subtract(1).erfInv().multiply(ee.Number(2).sqrt());
+}
+
+// Function to compute the Cumulative Distribution Function (CDF)
+function computeCDF(images) {
+  var percentiles = ee.List.sequence(0, 100);
+  // Reduce the image collection using the percentile reducer.
+  // This will result in an image where each band represents a percentile.
+  // The toArray() converts the result into an array image.
+  var cdf = images.reduce(ee.Reducer.percentile(percentiles)).toArray();
+  return cdf;
+}
+
+var cdf = computeCDF(monthlyCol);
+
+var calculateSPI = function(image) {
+  // Compare the input 'image' (e.g., a monthly precipitation value)
+  // with the pre-computed 'cdf' (percentile values).
+  // cdf.gte(image) returns a boolean array where true indicates the cdf percentile
+  // is greater than or equal to the image pixel value.
+  // arrayArgmax() finds the index of the first true value, which corresponds to the
+  // percentile rank of the image pixel value within the historical distribution.
+  var p = cdf.gte(image).arrayArgmax().arrayFlatten([['SPI']]).int();
+  // Convert the percentile rank (p, from 0 to 100) into a probability (0 to 1).
+  // Clamp the probability to avoid extreme values that can cause issues with qnorm.
+  // Then, apply the qnorm function to transform this probability into an SPI value (Z-score).
+  var spi = qnorm(p.divide(100).clamp(0.00001, 0.99999));
+  return spi.copyProperties(image, 
+    ['system:time_start', 'system:index', 'month', 'year']);
+};
+
+var spiCol = monthlyCol.map(calculateSPI);
+
+// Display SPI for a given month
+var year = 2020;
+var month = 7;
+var spi = spiCol
+  .filter(ee.Filter.eq('year', year))
+  .filter(ee.Filter.eq('month', month))
+  .first();
+
+var spiVis = {
+  min: -3,
+  max: 3, 
+  palette: ['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6']
+};
+
+// Clip to the region of interest and visualize
+var geometry = india.geometry();
+Map.addLayer(spi.clip(geometry), spiVis, 'SPI');
+
+// Export the results as a GeoTIFF
+Export.image.toDrive({
+  image: spi.clip(geometry),
+  description: 'SPI_' + year + '_' + month,
+  folder: 'earthengine', 
+  fileNamePrefix: 'spi_' + year + '_' + month,
+  region: geometry,
+  scale: 5566, // CHIRPS resolution
+});
