@@ -1,0 +1,52 @@
+// Exercise
+
+// Improve your classification from Exercise 01c 
+
+// Use satellite embeddings as features
+// for your own classification
+
+// Copy the block of code at the end of your script
+
+// ******** Start Copy/Paste ************
+
+// Use Satellite Embeddings as Features
+
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+  
+var embeddingsImage = filteredEmbeddings.mosaic();
+print('Satellite Embedding Image', embeddingsImage);
+
+var gcps = urban.merge(bare).merge(water).merge(vegetation);
+
+// Overlay the point on the image to get training data.
+var training = embeddingsImage.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+print(training.first());
+
+// Train a classifier.
+var classifier = ee.Classifier.smileKNN().train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: embeddingsImage.bandNames()
+});
+
+// Classify the image.
+var classified = embeddingsImage.classify(classifier);
+Map.centerObject(geometry);
+// Choose a 4-color palette
+// Assign a color for each class in the following order
+// Urban, Bare, Water, Vegetation
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
+
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, '2019 (Embeddings)'); 
+
+// ******** End Copy/Paste ************

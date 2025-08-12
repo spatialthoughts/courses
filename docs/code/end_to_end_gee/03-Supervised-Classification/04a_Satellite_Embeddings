@@ -1,19 +1,22 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var bangalore = ee.FeatureCollection("users/ujavalgandhi/public/bangalore_boundary");
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
 var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-var geometry = bangalore.geometry();
+var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
+    
+var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
+var geometry = arkavathy.geometry();
+Map.centerObject(geometry);
 
 var rgbVis = {
   min: 0.0,
   max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
-
+ 
 var filtered = s2
 .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry));
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
 
 // Load the Cloud Score+ collection
 var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
@@ -39,5 +42,15 @@ var filteredMasked = filteredS2WithCs
 var composite = filteredMasked.median();
 
 // Display the input composite.
-Map.centerObject(geometry);
 Map.addLayer(composite.clip(geometry), rgbVis, 'image');
+
+// Use Satellite Embeddings as Features
+
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+  
+var embeddingsImage = filteredEmbeddings.mosaic();
+print('Satellite Embedding Image', embeddingsImage);
