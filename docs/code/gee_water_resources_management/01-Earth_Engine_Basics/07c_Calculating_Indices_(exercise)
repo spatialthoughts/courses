@@ -1,18 +1,21 @@
 var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
 
-var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
-var geometry = selected.geometry()
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
 
-var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+var geometry = filteredAdmin2.geometry();
+
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.bounds(geometry));
 
-var image = filtered.median(); 
+var image = filteredS2.median(); 
 
 // AWEI is also known as AWEInsh (no shadows)
 // AWEInsh works best where there are no shadows in the scene
-var awei = image.expression(
+var aweiNsh = image.expression(
     '4*(GREEN - SWIR1) - (0.25*NIR + 2.75*SWIR2)', {
       'GREEN': image.select('B3').multiply(0.0001),
       'NIR': image.select('B8').multiply(0.0001),
@@ -40,10 +43,10 @@ var aweiSh = image.expression(
 
 
 var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
-var ndviVis = {min:0, max:1, palette: ['white', 'green']}
-var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']}
+var ndviVis = {min:0, max:1, palette: ['white', 'green']};
+var ndwiVis = {min:0, max:0.5, palette: ['white', 'blue']};
 
-Map.centerObject(geometry, 10)
+Map.centerObject(geometry, 10);
 Map.addLayer(image.clip(geometry), rgbVis, 'Image');
 
 // Exercise

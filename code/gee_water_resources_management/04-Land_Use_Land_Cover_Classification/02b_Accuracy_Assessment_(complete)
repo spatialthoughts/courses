@@ -12,13 +12,37 @@ var rgbVis = {
   bands: ['B4', 'B3', 'B2'],
 };
  
+var year = 2019;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
 var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
   .select('B.*');
 
-var composite = filtered.median();
+var composite = filteredMasked.median();
 
 // Display the input composite.
 Map.addLayer(composite.clip(geometry), rgbVis, 'image');
@@ -67,7 +91,7 @@ var test = classified.sampleRegions({
   scale: 10,
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
 // Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy());
@@ -83,7 +107,7 @@ var validation = composite.sampleRegions({
 
 var test = validation.classify(classifier);
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
 // Printing of confusion matrix may time out. Alternatively, you can export it as CSV
 print('Confusion Matrix', testConfusionMatrix);
 print('Test Accuracy', testConfusionMatrix.accuracy());

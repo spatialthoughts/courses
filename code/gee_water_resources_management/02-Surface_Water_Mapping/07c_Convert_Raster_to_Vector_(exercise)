@@ -13,7 +13,7 @@ Map.addLayer(clipped, visParams, 'Surface Water', false)
 
 // Do unmask() to replace masked pixels with 0
 // This avoids extra pixels along the edges
-var clipped = clipped.unmask(0)
+var clipped = clipped.unmask(0);
 // Perform a morphological closing to fill holes in waterbodies
 var waterProcessed = clipped
   .focal_max({
@@ -26,19 +26,28 @@ var waterProcessed = clipped
     'kernelType': 'square'});
     
 
-var vector = waterProcessed.reduceToVectors({
+var vector = waterProcessed.selfMask().reduceToVectors({
   reducer: ee.Reducer.countEvery(),
   geometry: geometry,
   scale: 30,
   maxPixels: 1e10,
   eightConnected: false
-})
+});
+
+Map.addLayer(vector, {color: 'cyan'}, 'All Surface Water Polygons');
 
 // Exercise
-// The vector variable is a FeatureCollection
-// It contains polygons for both water and non-water areas
-// Apply a filter to select only water polygons
-// Display the results on the map
-// Hint: Use ee.Filter.eq() on the 'label' property
+// 'vector' is a FeatureCollection of water polygons
+// The following block adds a property 'area'
+// to each polygon with its area in sq.meters.
+var vectorArea = vector.map(function(x){
+  var a = ee.Feature(x).area({maxError: 1});
+  return x.set({'area':a});
+});
 
-var visParams = {color: 'blue'}
+// Apply a filter on the 'vectorArea' FeatureCollection
+// to select water polygons larger than 1 Acre
+// 1 Acre = 4046.86 sq. meters.
+
+// Display the results on the map
+

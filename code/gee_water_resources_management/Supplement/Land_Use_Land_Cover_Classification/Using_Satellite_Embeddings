@@ -1,0 +1,90 @@
+// Script demonstrating the use of Google Satellite Embedding dataset
+// as training features for classification
+
+var bangalore = ee.FeatureCollection('users/ujavalgandhi/public/bangalore_boundary');
+var geometry = bangalore.geometry();
+Map.centerObject(geometry);
+
+// Classification with Sentinel-2 bands
+// ************************************
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+// The following collections were created using the 
+// Drawing Tools in the code editor 
+var urban = ee.FeatureCollection('users/ujavalgandhi/e2e/urban_gcps');
+var bare = ee.FeatureCollection('users/ujavalgandhi/e2e/bare_gcps');
+var water = ee.FeatureCollection('users/ujavalgandhi/e2e/water_gcps');
+var vegetation = ee.FeatureCollection('users/ujavalgandhi/e2e/vegetation_gcps');
+
+var filtered = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry))
+  .select('B.*');
+
+var composite = filtered.median();
+
+// Display the input composite.
+var rgbVis = {
+  min: 0.0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+};
+Map.addLayer(composite.clip(geometry), rgbVis, 'image');
+
+var gcps = urban.merge(bare).merge(water).merge(vegetation);
+
+// Overlay the point on the image to get training data.
+var training = composite.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+// Train a classifier.
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: composite.bandNames()
+});
+// // Classify the image.
+var classified = composite.classify(classifier);
+// Choose a 4-color palette
+// Assign a color for each class in the following order
+// Urban, Bare, Water, Vegetation
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
+
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, 'Classification (S2)');
+
+// Classification with Satellite Embeddings
+// ****************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
+  .filter(ee.Filter.bounds(geometry));
+  
+var embeddingsImage = filteredEmbeddings.mosaic();
+print('Satellite Embedding Image', embeddingsImage);
+
+// Overlay the point on the image to get training data.
+var training = embeddingsImage.sampleRegions({
+  collection: gcps, 
+  properties: ['landcover'], 
+  scale: 10
+});
+
+
+print(training.first());
+
+// Train a classifier.
+var classifier = ee.Classifier.smileKNN().train({
+  features: training,  
+  classProperty: 'landcover', 
+  inputProperties: embeddingsImage.bandNames()
+});
+
+// Classify the image.
+var classified = embeddingsImage.classify(classifier);
+
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, 'Classification (Embeddings)'); 

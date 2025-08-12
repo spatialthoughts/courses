@@ -1,0 +1,62 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[73.16703279110195, 17.359176138872506],
+          [73.16703279110195, 17.15524282898792],
+          [73.48357637020351, 17.15524282898792],
+          [73.48357637020351, 17.359176138872506]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Example script showing how to compute
+// Normalized Difference Salinity Index (NDSI)
+// to detect brackish water
+// Reference: https://www.indexdatabase.de/db/i-single.php?id=57
+
+// This script is showing a simple thresholding based
+// approach. Water quality index values cannot be interpreted
+// in isolation. For a rigourous analysis - a regression model
+// needs to be built between spectral and index values using
+// in-situ measurement.
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+var startDate = ee.Date.fromYMD(2024, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var image = filtered.median(); 
+
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// Normalized Difference Salinity Index (NDSI)
+var ndsi = image.normalizedDifference(['B11', 'B12']).rename(['ndsi']);
+
+// Identify Brackish Water
+// All pixels with MNDWI > 0 and NDSI < threshold
+// Determination of threshold to be done based on in-situ
+// measurements
+var ndsiThreshold = 0.1;
+var brackish = mndwi.gt(0).and(ndsi.lt(ndsiThreshold));
+
+var rgbVis = {min: 0, max:3000, bands: ['B4', 'B3', 'B2']};
+var ndsiVis = {min:0, max:0.5, palette: ['white', 'blue']};
+var salinityVis = {min:0, max:1, palette: ['white', 'purple']};
+
+Map.centerObject(geometry, 12);
+Map.addLayer(image.clip(geometry), rgbVis, 'Image');
+Map.addLayer(ndsi.clip(geometry), ndsiVis, 'NDSI', false);
+Map.addLayer(brackish.clip(geometry), salinityVis, 'Brackish Water');
+
+ 

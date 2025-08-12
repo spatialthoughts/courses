@@ -1,14 +1,17 @@
 var admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
 
-var selected = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'))
-var geometry = selected.geometry()
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('ADM1_NAME', 'Karnataka'))
+  .filter(ee.Filter.eq('ADM2_NAME', 'Bangalore Urban'));
 
-var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+var geometry = filteredAdmin2.geometry();
+
+var filteredS2 = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(geometry))
+  .filter(ee.Filter.bounds(geometry));
 
-var image = filtered.median(); 
+var image = filteredS2.median(); 
 
 var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
 var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
@@ -21,17 +24,17 @@ var awei = image.expression(
 }).rename('awei');
 
 // Simple Thresholding
-var waterMndwi = mndwi.gt(0)
-var waterAwei = awei.gt(0)
+var waterMndwi = mndwi.gt(0);
+var waterAwei = awei.gt(0);
 
 // Combining Multiple Conditions
-var waterMultiple = ndvi.lt(0).and(mndwi.gt(0))
+var waterMultiple = ndvi.lt(0).and(mndwi.gt(0));
 
 var rgbVis = {min: 0, max: 3000, bands: ['B4', 'B3', 'B2']};
-var waterVis = {min:0, max:1, palette: ['white', 'blue']}
+var waterVis = {min:0, max:1, palette: ['white', 'blue']};
 
-Map.centerObject(geometry, 10)
+Map.centerObject(geometry, 10);
 Map.addLayer(image.clip(geometry), rgbVis, 'Image');
-Map.addLayer(waterMndwi.clip(geometry), waterVis, 'MNDWI - Simple threshold')
-Map.addLayer(waterAwei.clip(geometry), waterVis, 'AWEI - Simple threshold')
-Map.addLayer(waterMultiple.clip(geometry), waterVis, 'MNDWI and NDVI Threshold')
+Map.addLayer(waterMndwi.clip(geometry), waterVis, 'MNDWI - Simple threshold');
+Map.addLayer(waterAwei.clip(geometry), waterVis, 'AWEI - Simple threshold');
+Map.addLayer(waterMultiple.clip(geometry), waterVis, 'MNDWI and NDVI Threshold');
