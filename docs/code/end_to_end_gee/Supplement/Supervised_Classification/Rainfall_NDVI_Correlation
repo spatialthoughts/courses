@@ -11,9 +11,9 @@
 // precipitation and generally rainfed agriculture.
 
 var geometry = ee.Geometry.Point([75.71168046831512, 13.30751919691132]);
-Map.centerObject(geometry, 10)
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
+Map.centerObject(geometry, 10);
 
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
 
 var filtered = s2
   .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
@@ -48,35 +48,35 @@ var filteredMasked = filteredS2WithCs
   .select('B.*');
   
 var filteredWithNdvi = filteredMasked
-  .map(addNDVI)
+  .map(addNDVI);
   
 var composite = filteredWithNdvi.median();
 var rgbVis = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
-Map.addLayer(composite, rgbVis, 'Composite')  
+Map.addLayer(composite, rgbVis, 'Composite')  ;
 
 
 // Rainfall
 var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD");
 var chirpsFiltered = chirps
-  .filter(ee.Filter.date('2020-01-01', '2021-01-01'))
+  .filter(ee.Filter.date('2020-01-01', '2021-01-01'));
 
 
 // Create a collection of monthly images
-var months = ee.List.sequence(1, 11)
+var months = ee.List.sequence(1, 11);
 
 var byMonth = months.map(function(month) {
     // Total monthly rainfall
     var monthlyRain = chirpsFiltered
-      .filter(ee.Filter.calendarRange(month, month, 'month'))
-    var totalRain = monthlyRain.sum()
+      .filter(ee.Filter.calendarRange(month, month, 'month'));
+    var totalRain = monthlyRain.sum();
     // Next month's average NDVI
-    var nextMonth = ee.Number(month).add(1)
+    var nextMonth = ee.Number(month).add(1);
     var monthly = filteredWithNdvi
-      .filter(ee.Filter.calendarRange(nextMonth, nextMonth, 'month'))
-    var medianComposite = monthly.median().select('ndvi')
+      .filter(ee.Filter.calendarRange(nextMonth, nextMonth, 'month'));
+    var medianComposite = monthly.median().select('ndvi');
   
-    return totalRain.addBands(medianComposite).set({'month': month})
-})
+    return totalRain.addBands(medianComposite).set({'month': month});
+});
 
 var monthlyCol = ee.ImageCollection.fromImages(byMonth);
 
@@ -85,7 +85,7 @@ var correlationCol = monthlyCol.select(['precipitation', 'ndvi']);
 var correlation = correlationCol.reduce(ee.Reducer.pearsonsCorrelation());
 
 // Select all pixels with positive correlation
-var positive = correlation.select('correlation').gt(0.5)
+var positive = correlation.select('correlation').gt(0.5);
 
 Map.addLayer(correlation.select('correlation'), 
   {min:-1, max:1, palette: ['red', 'white', 'green']}, 'Correlation');

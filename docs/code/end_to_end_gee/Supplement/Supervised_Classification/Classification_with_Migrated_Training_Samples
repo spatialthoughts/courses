@@ -5,12 +5,10 @@
 // and are used to classify a 2020 Sentinel-2 composite
 // We use spectral distance measure to discard samples that show
 // large change between the target and reference years.
-var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-    
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
-var geometry = arkavathy.geometry();
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+var geometry = boundary.geometry();
 Map.centerObject(geometry);
 
 var rgbVis = {
@@ -22,6 +20,8 @@ var rgbVis = {
 var scaleValues = function(image) {
   return image.multiply(0.0001).copyProperties(image, ['system:time_start']);
 };
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
 
 // Prepare 2019 composite
 var filtered = s2
@@ -56,34 +56,34 @@ var distance = composite2019.spectralDistance(composite2020, 'sam');
 // Find out which GCPs are still unchanged in 2021
 
 // Get the distance at the training points
-var gcpWithDistance = distance.sampleRegions({
-  collection: gcp,
+var gcpsWithDistance = distance.sampleRegions({
+  collection: gcps,
   scale: 10,
   tileScale: 16,
   geometries: true
-})
-Map.addLayer(gcpWithDistance, {color: 'red'}, 'GCPs with Distance', false);
+});
+Map.addLayer(gcpsWithDistance, {color: 'red'}, 'GCPs with Distance', false);
 
 // Adjust the threshold to discard GCPs are changed locations
 // Threshold is determined manually
 var threshold = 0.2
-var newGcp = gcpWithDistance.filter(ee.Filter.lt('distance', threshold));
-Map.addLayer(newGcp, {color: 'blue'}, 'Filtered GCPs');
+var newGcps = gcpsWithDistance.filter(ee.Filter.lt('distance', threshold));
+Map.addLayer(newGcps, {color: 'blue'}, 'Filtered GCPs');
 
-print('Total GCPs', gcp.size());
-print('Migrated GCPs', newGcp.size());
+print('Total GCPs', gcps.size());
+print('Migrated GCPs', newGcps.size());
 // We wrap the classification workflow in a function
 // and call the function with the different composites and GCPs
-performClassification(composite2019, gcp, '2019');
-performClassification(composite2020, newGcp, '2020');
+performClassification(composite2019, gcps, '2019');
+performClassification(composite2020, newGcps, '2020');
 
 //************************************************************************** 
 // Classification and Accuracy Assessment
 //************************************************************************** 
-function performClassification(image, gcp, year) {
-  var gcp = gcp.randomColumn();
-  var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
-  var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+function performClassification(image, gcps, year) {
+  gcps = gcps.randomColumn();
+  var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+  var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
   
   // Overlay the point on the image to get training data.
   var training = image.sampleRegions({

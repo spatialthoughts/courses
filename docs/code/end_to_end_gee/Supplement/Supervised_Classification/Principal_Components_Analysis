@@ -1,42 +1,58 @@
 // Script showing how to do Principal Component Analysis on images
-var composite = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
-var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary");
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
 
-print('Input Composite', composite);
-Map.centerObject(composite)
-Map.addLayer(composite, {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2}, 'RGB');
+var geometry = boundary.geometry();
+Map.centerObject(geometry);
+
+// Display the original image
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite, rgbVis, 'Composite');
 
 // Define the geometry and scale parameters
 var geometry = boundary.geometry();
 var scale = 20;
 
 // Run the PCA function
-var pca = PCA(composite)
+var pca = PCA(composite);
 
 // Extract the properties of the pca image
-var variance = pca.toDictionary()
-print('Variance of Principal Components', variance)
+var variance = pca.toDictionary();
+print('Variance of Principal Components', variance);
 
 // As you see from the printed results, ~97% of the variance
 // from the original image is captured in the first 3 principal components
 // We select those and discard others
-var pca = PCA(composite).select(['pc1', 'pc2', 'pc3'])
+var pca = PCA(composite).select(['pc1', 'pc2', 'pc3']);
 print('First 3 PCA Bands', pca);
 
 // PCA computation is expensive and can time out when displaying on the map
 // Export the results and import them back
+
+// Replace this with your asset folder
+// The folder must exist before exporting
+var exportFolder = 'projects/spatialthoughts/assets/e2e/';
+
+// Export Composite
+var pcaExportImage = 'composite_pca';
+var pcaExportImagePath = exportFolder + compositeExportImage;
+
+
 Export.image.toAsset({
   image: pca,
-  description: 'Principal_Components_Image',
-  assetId: 'users/ujavalgandhi/e2e/arkavathy_pca',
+  description: 'Principal_Components_Export',
+  assetId: pcaExportImagePath,
   region: geometry,
   scale: scale,
-  maxPixels: 1e10})
+  maxPixels: 1e10
+});
+// Wait for the export to finish
 // Once the export finishes, import the asset and display
-var pcaImported = ee.Image('users/ujavalgandhi/e2e/arkavathy_pca')
+var pca = ee.Image(pcaExportImagePath);
 var pcaVisParams = {bands: ['pc1', 'pc2', 'pc3'], min: -2, max: 2};
 
-Map.addLayer(pcaImported, pcaVisParams, 'Principal Components');
+Map.addLayer(pca, pcaVisParams, 'Principal Components');
 
 
 //************************************************************************** 
@@ -44,7 +60,7 @@ Map.addLayer(pcaImported, pcaVisParams, 'Principal Components');
 // Code adapted from https://developers.google.com/earth-engine/guides/arrays_eigen_analysis
 //************************************************************************** 
 function PCA(maskedImage){
-  var image = maskedImage.unmask()
+  var image = maskedImage.unmask();
   var scale = scale;
   var region = geometry;
   var bandNames = image.bandNames();

@@ -31,7 +31,7 @@ var palette = [
   '74A901', '66A000', '529400', '3E8601', '207401', '056201',
   '004C00', '023B01', '012E01', '011D01', '011301'];
 
-var ndviVis = {min:0, max:0.5, palette: palette }
+var ndviVis = {min:0, max:0.5, palette: palette };
 
 // Write a function that computes NDVI for an image and adds it as a band
 function addNDVI(image) {
@@ -48,8 +48,8 @@ function getComposite(geometry) {
   // Map the function over the collection
   var withNdvi = filtered.map(addNDVI);
 
-  var composite = withNdvi.median()
-  return composite
+  var composite = withNdvi.median();
+  return composite;
 }
 
 
@@ -86,27 +86,26 @@ var resetEverything = function() {
   downloadPanel.clear();
   resetPanel.clear();
 
-  Map.clear()
+  Map.clear();
 
   Map.add(title);
-  Map.add(resultsPanel)
-  Map.onClick(displayChart)
+  Map.add(resultsPanel);
+  Map.onClick(displayChart);
   // Use the current viewport
-  var bounds = ee.Geometry.Rectangle(Map.getBounds())
-  var composite = getComposite(bounds)
-  Map.addLayer(composite, rgbVis, 'Sentinel-2 Composite')
-  var label = ui.Label('Click anywhere to see the chart')
-  resetPanel.add(label)
-
-}
+  var bounds = ee.Geometry.Rectangle(Map.getBounds());
+  var composite = getComposite(bounds);
+  Map.addLayer(composite, rgbVis, 'Sentinel-2 Composite');
+  var label = ui.Label('Click anywhere to see the chart');
+  resetPanel.add(label);
+};
 
 // Function to create and display NDVI time-series chart
 var displayChart = function(point) {
-  resetPanel.clear()
+  resetPanel.clear();
   var button = ui.Button({
     label: 'Reset',
-    onClick: resetEverything})
-  resetPanel.add(button)
+    onClick: resetEverything});
+  resetPanel.add(button);
   var geometry = ee.Geometry.Point(point['lon'], point['lat']);
   
   var filtered = s2WithCs
@@ -114,7 +113,7 @@ var displayChart = function(point) {
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
     .map(maskLowQA)
     .map(addNDVI)
-    .filter(ee.Filter.bounds(geometry))
+    .filter(ee.Filter.bounds(geometry));
   
   var chart = ui.Chart.image.series({
     imageCollection: filtered.select('ndvi'),
@@ -127,28 +126,28 @@ var displayChart = function(point) {
       interpolateNulls: true,
       pointSize: 2,
       lineWidth: 1
-    })
+    });
       
-  chartPanel.clear()
-  selectionPanel.clear()
-  downloadPanel.clear()
-  selectionPanel.add(ui.Label('Choose an image to display:'))
-  chartPanel.add(chart)
+  chartPanel.clear();
+  selectionPanel.clear();
+  downloadPanel.clear();
+  selectionPanel.add(ui.Label('Choose an image to display:'));
+  chartPanel.add(chart);
   
   // S2 collection has overlapping granules for same dates
   // Add a 'date' property so we can merge data for the same date
-  var filtered = filtered.map(function(image) {
-    var dateString = ee.Date(image.date()).format('YYYY-MM-dd')
+  filtered = filtered.map(function(image) {
+    var dateString = ee.Date(image.date()).format('YYYY-MM-dd');
     return image.set('date', dateString);
   });
   
   var addNdviLayer = function(dateString) {
-    var date = ee.Date.parse('YYYY-MM-dd', dateString)
+    var date = ee.Date.parse('YYYY-MM-dd', dateString);
     var image = filtered
       .filter(ee.Filter.date(date, date.advance(1, 'day')))
       .mosaic();
-    Map.addLayer(image.select('ndvi'), ndviVis, 'NDVI Image -' + dateString)
-  }
+    Map.addLayer(image.select('ndvi'), ndviVis, 'NDVI Image -' + dateString);
+  };
 
   var dates = filtered.aggregate_array('date').distinct();
   
@@ -158,12 +157,12 @@ var displayChart = function(point) {
       items: dateList,
       onChange: addNdviLayer,
       placeholder: 'Select a date'
-    }))
-    })
+    }));
+  });
     
   // Extract the NDVI values as a FeatureCollection
   var ndviFc = ee.FeatureCollection(dates.map(function(dateString) {
-    var date = ee.Date.parse('YYYY-MM-dd', dateString)
+    var date = ee.Date.parse('YYYY-MM-dd', dateString);
     var image = filtered
       .filter(ee.Filter.date(date, date.advance(1, 'day')))
       .mosaic();
@@ -179,7 +178,7 @@ var displayChart = function(point) {
       'date': dateString,
       'longitude': point['lon'],
       'latitude': point['lat']
-    })
+    });
     return ee.Feature(null, properties);
   }));
   
@@ -187,17 +186,16 @@ var displayChart = function(point) {
   var downloadReady = function(url) {
     var label = ui.Label({
       value: 'Download CSV',
-      targetUrl: url})
+      targetUrl: url
+    });
     downloadPanel.add(label);
-  }
+  };
   ndviFc.getDownloadURL({
     format: 'CSV',
     selectors: ['date', 'latitude', 'longitude', 'ndvi'],
     filename: 'ndvi_time_series', 
-    callback: downloadReady})
-
-//});
-
-}
+    callback: downloadReady
+  });
+};
 // Call the function to build the initial UI state.
 resetEverything();

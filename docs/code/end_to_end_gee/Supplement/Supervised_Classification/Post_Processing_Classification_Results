@@ -1,18 +1,16 @@
 // Sentinel-2 Median Composite
-var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_2019_composite');
-Map.addLayer(composite, {min: 0, max: 3000,   bands: ['B4', 'B3', 'B2']}, 'RGB Composite');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
+Map.addLayer(composite, rgbVis, 'Composite');
 
 // Raw Supervised Classification Results
-var classified = ee.Image('users/ujavalgandhi/e2e/arkavathy_final_classification');
+var classified = ee.Image('projects/spatialthoughts/assets/e2e/s2_classification');
 var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
-Map.addLayer(classified, {min: 0, max: 3, palette: palette}, 'Original');
+Map.addLayer(classified, {min: 0, max: 3, palette: palette}, 'Classification');
 
-var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
-var geometry = arkavathy.geometry();
-Map.centerObject(geometry);
-
-Map.centerObject(geometry, 10);
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+var geometry = boundary.geometry();
+Map.centerObject(geometry, 14);
 
 //************************************************************************** 
 // Post process by clustering
@@ -28,8 +26,8 @@ var snic = ee.Algorithms.Image.Segmentation.SNIC({
   neighborhoodSize: 10,
   size: 2,
   seeds: seeds
-})
-var clusters = snic.select('clusters')
+});
+var clusters = snic.select('clusters');
 
 // Assign class to each cluster based on 'majority' voting (using ee.Reducer.mode()
 var smoothed = classified.addBands(clusters);
@@ -75,7 +73,7 @@ Export.image.toDrive({
   region: geometry,
   scale: 10,
   maxPixels: 1e10
-})
+});
 
 Export.image.toDrive({
   image: connectedClassified,
@@ -85,4 +83,4 @@ Export.image.toDrive({
   region: geometry,
   scale: 10,
   maxPixels: 1e10
-})
+});

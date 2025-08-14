@@ -1,34 +1,17 @@
 // Script that shows how to apply filters to identify
 // validation points that were misclassified
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-
-Map.centerObject(gcp)
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var boundary = arkavathy.geometry()
-var rgbVis = {
-  min: 0.0,
-  max: 3000,
-  bands: ['B4', 'B3', 'B2'],
-};
- 
-var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2020-01-01'))
-  .filter(ee.Filter.bounds(boundary))
-  .select('B.*')
-
-var composite = filtered.median().clip(boundary) 
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
 
 // Display the input composite.
+var rgbVis = {min: 0.0, max: 3000, bands: ['B4', 'B3', 'B2']};
 Map.addLayer(composite, rgbVis, 'image');
 
 
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn()
-var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
-var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+gcps = gcps.randomColumn();
+var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
 
 // Overlay the point on the image to get training data.
 var training = composite.sampleRegions({
@@ -50,7 +33,7 @@ var classifier = ee.Classifier.smileRandomForest(50)
 var classified = composite.classify(classifier);
 
 var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
-Map.addLayer(classified, {min: 0, max: 3, palette: palette}, '2019');
+Map.addLayer(classified, {min: 0, max: 3, palette: palette}, 'Classified');
 
 var test = classified.sampleRegions({
   collection: validationGcp,
@@ -60,7 +43,7 @@ var test = classified.sampleRegions({
   geometries:true // This is requires to visualize the locations
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
 print('Confusion Matrix', testConfusionMatrix);
 
 // Let's apply filters to find misclassified points
@@ -69,31 +52,31 @@ print('Confusion Matrix', testConfusionMatrix);
 
 var urbanMisclassified = test
   .filter(ee.Filter.eq('landcover', 0))
-  .filter(ee.Filter.neq('classification', 0))
-print('Urban Misclassified Points', urbanMisclassified)
+  .filter(ee.Filter.neq('classification', 0));
+print('Urban Misclassified Points', urbanMisclassified);
 
 // We can also apply a filter to select all misclassified points
 // Since we are comparing 2 properties agaist each-other,
 // we need to use a binary filter
 var misClassified = test.filter(ee.Filter.notEquals({
-  leftField:'classification', rightField:'landcover'}))
+  leftField:'classification', rightField:'landcover'}));
   
-print('All Misclassified Points', misClassified)
+print('All Misclassified Points', misClassified);
 
 // Display the misclassified points by styling them
-var landcover = ee.List([0, 1, 2, 3])
-var palette = ee.List(['gray','brown','blue','green'])
+var landcover = ee.List([0, 1, 2, 3]);
+var palette = ee.List(['gray','brown','blue','green']);
 var misclassStyled = ee.FeatureCollection(
   landcover.map(function(lc){
-    var feature = misClassified.filter(ee.Filter.eq('landcover', lc))
+    var feature = misClassified.filter(ee.Filter.eq('landcover', lc));
     var color = palette.get(landcover.indexOf(lc));
-    var markerStyle = {color:color}
+    var markerStyle = {color:color};
     return feature.map(function(point){
-       return point.set('style', markerStyle)
-       })
+       return point.set('style', markerStyle);
+       });
     })).flatten();
       
-Map.addLayer(misclassStyled.style({styleProperty:"style"}), {}, 'Misclassified Points')
+Map.addLayer(misclassStyled.style({styleProperty:"style"}), {}, 'Misclassified Points');
 
 
 

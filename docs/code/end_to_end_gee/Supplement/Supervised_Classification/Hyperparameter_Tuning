@@ -1,62 +1,14 @@
-var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-var basin = ee.FeatureCollection('WWF/HydroSHEDS/v1/Basins/hybas_7');
-var gcp = ee.FeatureCollection('users/ujavalgandhi/e2e/arkavathy_gcps');
-var alos = ee.ImageCollection('JAXA/ALOS/AW3D30/V3_2');
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
 
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
-var geometry = arkavathy.geometry();
-Map.centerObject(geometry);
-
-// Load the Composite
-// This was Exported as an Asset previously
-var composite = ee.Image('users/ujavalgandhi/e2e/arkavathy_multiband_composite');
-var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
-Map.addLayer(composite.clip(geometry), visParams, 'RGB');
-
-// Normalize the image 
-
-// Machine learning algorithms work best on images when all features have
-// the same range
-
-// Function to Normalize Image
-// Pixel Values should be between 0 and 1
-// Formula is (x - xmin) / (xmax - xmin)
-//************************************************************************** 
-function normalize(image){
-  var bandNames = image.bandNames();
-  // Compute min and max of the image
-  var minDict = image.reduceRegion({
-    reducer: ee.Reducer.min(),
-    geometry: geometry,
-    scale: 10,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var maxDict = image.reduceRegion({
-    reducer: ee.Reducer.max(),
-    geometry: geometry,
-    scale: 10,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var mins = ee.Image.constant(minDict.values(bandNames));
-  var maxs = ee.Image.constant(maxDict.values(bandNames));
-
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins));
-  return normalized;
-}
-
-var composite = normalize(composite);
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn();
+gcps = gcps.randomColumn();
 
 // This being a simpler classification, we take 60% points
 // for validation. Normal recommended ratio is
 // 70% training, 30% validation
-var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
-var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
 
 // Overlay the point on the image to get training data.
 var training = composite.sampleRegions({
@@ -74,7 +26,6 @@ var classifier = ee.Classifier.smileRandomForest(50)
   classProperty: 'landcover',
   inputProperties: composite.bandNames()
 });
-
 
 //************************************************************************** 
 // Feature Importance

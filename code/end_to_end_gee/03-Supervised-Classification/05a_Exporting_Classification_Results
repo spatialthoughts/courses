@@ -1,149 +1,118 @@
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR");
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-var alos = ee.Image("JAXA/ALOS/AW3D30/V2_2");
+// Load training samples
+// This was created by exporting the merged 'gcps' collection
+// using Export.table.toAsset()
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
 
+// Load the region boundary of a basin
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+var geometry = boundary.geometry();
+Map.centerObject(geometry);
 
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640))
-var boundary = arkavathy.geometry()
 var rgbVis = {
   min: 0.0,
   max: 3000,
   bands: ['B4', 'B3', 'B2'],
 };
-// Function to remove cloud and snow pixels from Sentinel-2 SR image
+ 
+var year = 2019;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
 
-function maskCloudAndShadowsSR(image) {
-  var cloudProb = image.select('MSK_CLDPRB');
-  var snowProb = image.select('MSK_SNWPRB');
-  var cloud = cloudProb.lt(10);
-  var scl = image.select('SCL'); 
-  var shadow = scl.eq(3); // 3 = cloud shadow
-  var cirrus = scl.eq(10); // 10 = cirrus
-  // Cloud probability less than 10% or cloud shadow classification
-  var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
+var filtered = s2
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
   return image.updateMask(mask);
 }
 
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');
 
-var filtered = s2
-.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
-  .filter(ee.Filter.date('2019-01-01', '2019-12-31'))
-  .filter(ee.Filter.bounds(boundary))
-  .map(maskCloudAndShadowsSR)
-  .select('B.*')
+var composite = filteredMasked.median();
 
-var composite = filtered.median().clip(boundary) 
+// Use Satellite Embeddings as Features
 
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
 
-var addIndices = function(image) {
-  var ndvi = image.normalizedDifference(['B8', 'B4']).rename(['ndvi']);
-  var ndbi = image.normalizedDifference(['B11', 'B8']).rename(['ndbi']);
-  var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
-  var bsi = image.expression(
-      '(( X + Y ) - (A + B)) /(( X + Y ) + (A + B)) ', {
-        'X': image.select('B11'), //swir1
-        'Y': image.select('B4'),  //red
-        'A': image.select('B8'), // nir
-        'B': image.select('B2'), // blue
-  }).rename('bsi');
-  return image.addBands(ndvi).addBands(ndbi).addBands(mndwi).addBands(bsi)
-}
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+  
+var embeddingsImage = filteredEmbeddings.mosaic();
 
-var composite = addIndices(composite);
+// Train a classifier.
 
-
-// Calculate Slope and Elevation
-var elev = alos.select('AVE_DSM').rename('elev');
-var slope = ee.Terrain.slope(alos.select('AVE_DSM')).rename('slope');
-
-var composite = composite.addBands(elev).addBands(slope);
-
-var visParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2};
-Map.addLayer(composite, visParams, 'RGB');
-
-// Normalize the image 
-
-// Machine learning algorithms work best on images when all features have
-// the same range
-
-// Function to Normalize Image
-// Pixel Values should be between 0 and 1
-// Formula is (x - xmin) / (xmax - xmin)
-//************************************************************************** 
-function normalize(image){
-  var bandNames = image.bandNames();
-  // Compute min and max of the image
-  var minDict = image.reduceRegion({
-    reducer: ee.Reducer.min(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var maxDict = image.reduceRegion({
-    reducer: ee.Reducer.max(),
-    geometry: boundary,
-    scale: 20,
-    maxPixels: 1e9,
-    bestEffort: true,
-    tileScale: 16
-  });
-  var mins = ee.Image.constant(minDict.values(bandNames));
-  var maxs = ee.Image.constant(maxDict.values(bandNames));
-
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
-  return normalized
-}
-
-var composite = normalize(composite);
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn()
+var gcps = gcps.randomColumn();
 
 // This being a simpler classification, we take 60% points
 // for validation. Normal recommended ratio is
 // 70% training, 30% validation
-var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
-var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
-Map.addLayer(validationGcp)
+var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
+
 // Overlay the point on the image to get training data.
-var training = composite.sampleRegions({
+var training = embeddingsImage.sampleRegions({
   collection: trainingGcp,
   properties: ['landcover'],
   scale: 10,
   tileScale: 16
 });
-print(training)
-// Train a classifier.
-var classifier = ee.Classifier.smileRandomForest(50)
+
+
+var classifier = ee.Classifier.smileKNN()
 .train({
   features: training,  
   classProperty: 'landcover',
-  inputProperties: composite.bandNames()
+  inputProperties: embeddingsImage.bandNames()
 });
 
 // Classify the image.
-var classified = composite.classify(classifier);
+var classified = embeddingsImage.classify(classifier);
 
-Map.addLayer(classified, {min: 0, max: 3, palette: ['gray', 'brown', 'blue', 'green']}, '2019');
+var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, 'Classification');
 
-//************************************************************************** 
 // Accuracy Assessment
-//************************************************************************** 
 
 // Use classification map to assess accuracy using the validation fraction
 // of the overall training set created above.
 var test = classified.sampleRegions({
   collection: validationGcp,
   properties: ['landcover'],
+  tileScale: 16,
   scale: 10,
-  tileScale: 16
 });
 
-var testConfusionMatrix = test.errorMatrix('landcover', 'classification')
-print('Confusion Matrix', testConfusionMatrix);
-print('Test Accuracy', testConfusionMatrix.accuracy()); 
-// Printing of confusion matrix may time out. Alternatively, you can export it as CSV
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
 
+// If you are trying to classify a large region, you may get errors when trying
+// to print or display the results interactively.
 
+// For large computations requiring more than 5 minutes, it is recommended
+// to Export the results.
+
+// To avoid these errors, remove all print() statements and Map.addLayer()
+// calls and export the data first.
+
+// 1. Exporting Data
+
+// 2. Exporting Images
