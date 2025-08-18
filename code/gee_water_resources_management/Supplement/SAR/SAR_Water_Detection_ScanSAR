@@ -4,7 +4,7 @@
 var hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
 var basin = hydrobasins.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
 var geometry = basin.geometry();
-Map.addLayer(basin, {color: 'grey'}, 'Arkavathy Sub Basin')
+Map.addLayer(basin, {color: 'grey'}, 'Arkavathy Sub Basin');
 Map.centerObject(geometry, 12);
 
 // Preparing PALSAR-2 ScanSAR composite
@@ -17,6 +17,10 @@ var scarsarFiltered = scansar
 
 var scarsarProjection = ee.Image(scarsarFiltered.first()).select('HH')
   .projection();
+
+// The DN values for ScanSAR images
+// can be converted to gamma naught values in decibel unit (dB)
+// γ0 = 10*log10(DN2) - 83.0 dB
 var convertToDb = function(image) {
   var result = image.expression(
     '10*log10(DN**2) - 83', {
@@ -33,5 +37,6 @@ var scansarComposite = scansarDb.mean()
 Map.addLayer(scansarComposite, {min:-30, max:0}, 'ScanSAR Composite');
 var threshold = -27;
 var scanSarWater = scansarComposite.lt(threshold);
-Map.addLayer(scanSarWater.clip(geometry).selfMask(), {min:0, max:1, palette: ['blue']}, 'Water (ScanSAR)')
+Map.addLayer(scanSarWater.clip(geometry).selfMask(),
+  {min:0, max:1, palette: ['blue']}, 'Water (ScanSAR)');
 

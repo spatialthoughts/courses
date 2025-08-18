@@ -1,15 +1,15 @@
-var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2')
-var hydrosheds = ee.Image('WWF/HydroSHEDS/03VFDEM')
-var gsw = ee.Image('JRC/GSW1_3/GlobalSurfaceWater')
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2');
+var hydrosheds = ee.Image('WWF/HydroSHEDS/03VFDEM');
+var gsw = ee.Image('JRC/GSW1_3/GlobalSurfaceWater');
 
-var beforeStart = '2018-07-15'
-var beforeEnd = '2018-08-10'
-var afterStart = '2018-08-10'
-var afterEnd = '2018-08-23'
+var beforeStart = '2018-07-15';
+var beforeEnd = '2018-08-10';
+var afterStart = '2018-08-10';
+var afterEnd = '2018-08-23';
 
-var ernakulam = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Ernakulam'))
-var geometry = ernakulam.geometry()
-Map.addLayer(geometry, {color: 'grey'}, 'Ernakulam District')
+var ernakulam = admin2.filter(ee.Filter.eq('ADM2_NAME', 'Ernakulam'));
+var geometry = ernakulam.geometry();
+Map.addLayer(geometry, {color: 'grey'}, 'Ernakulam District');
 
 var collection= ee.ImageCollection('COPERNICUS/S1_GRD')
   .filter(ee.Filter.eq('instrumentMode','IW'))
@@ -20,16 +20,16 @@ var collection= ee.ImageCollection('COPERNICUS/S1_GRD')
   .select('VH');
 
 var beforeCollection = collection
-  .filter(ee.Filter.date(beforeStart, beforeEnd))
+  .filter(ee.Filter.date(beforeStart, beforeEnd));
 
 var afterCollection = collection
-  .filter(ee.Filter.date(afterStart, afterEnd))
+  .filter(ee.Filter.date(afterStart, afterEnd));
 
 var before = beforeCollection.mosaic().clip(geometry);
 var after = afterCollection.mosaic().clip(geometry);
 
-var beforeFiltered = ee.Image(toDB(RefinedLee(toNatural(before))))
-var afterFiltered = ee.Image(toDB(RefinedLee(toNatural(after))))
+var beforeFiltered = ee.Image(toDB(RefinedLee(toNatural(before))));
+var afterFiltered = ee.Image(toDB(RefinedLee(toNatural(after))));
 
 var difference = afterFiltered.divide(beforeFiltered);
 
@@ -47,33 +47,36 @@ Map.addLayer(flooded, {min:0, max:1, palette: ['orange']}, 'Initial Flood Area',
 
 
 // Mask out area with permanent/semi-permanent water
-var permanentWater = gsw.select('seasonality').gte(5).clip(geometry)
-Map.addLayer(permanentWater.selfMask(), {min:0, max:1, palette: ['blue']}, 'Permanent Water', false)
+var permanentWater = gsw.select('seasonality').gte(5).clip(geometry);
+Map.addLayer(permanentWater.selfMask(),
+  {min:0, max:1, palette: ['blue']}, 'Permanent Water', false);
 
 // GSW data is masked in non-water areas. Set it to 0 using unmask()
 // Invert the image to set all non-permanent regions to 1
-var permanentWaterMask = permanentWater.unmask(0).not()
+var permanentWaterMask = permanentWater.unmask(0).not();
 
-var flooded = flooded.updateMask(permanentWaterMask)
+var flooded = flooded.updateMask(permanentWaterMask);
 // Mask out areas with more than 5 percent slope using the HydroSHEDS DEM
 var slopeThreshold = 5;
 var terrain = ee.Algorithms.Terrain(hydrosheds);
 var slope = terrain.select('slope');
-var steepAreas = slope.gt(slopeThreshold)
-var slopeMask = steepAreas.not()
-Map.addLayer(steepAreas.selfMask(), {min:0, max:1, palette: ['cyan']}, 'Steep Areas', false)
+var steepAreas = slope.gt(slopeThreshold);
+var slopeMask = steepAreas.not();
+Map.addLayer(steepAreas.selfMask(), 
+  {min:0, max:1, palette: ['cyan']}, 'Steep Areas', false);
 
-var flooded = flooded.updateMask(slopeMask)
+var flooded = flooded.updateMask(slopeMask);
 
 // Remove isolated pixels
 // connectedPixelCount is Zoom dependent, so visual result will vary
 var connectedPixelThreshold = 8;
-var connections = flooded.connectedPixelCount(25)
-var disconnectedAreas = connections.lt(connectedPixelThreshold)
-var disconnectedAreasMask = disconnectedAreas.not()
-Map.addLayer(disconnectedAreas.selfMask(), {min:0, max:1, palette: ['yellow']}, 'Disconnected Areas', false)
+var connections = flooded.connectedPixelCount(25);
+var disconnectedAreas = connections.lt(connectedPixelThreshold);
+var disconnectedAreasMask = disconnectedAreas.not();
+Map.addLayer(disconnectedAreas.selfMask(), 
+  {min:0, max:1, palette: ['yellow']}, 'Disconnected Areas', false);
 
-var flooded = flooded.updateMask(disconnectedAreasMask)
+var flooded = flooded.updateMask(disconnectedAreasMask);
 
 Map.addLayer(flooded, {min:0, max:1, palette: ['red']}, 'Flooded Areas');
 
@@ -81,9 +84,10 @@ Map.addLayer(flooded, {min:0, max:1, palette: ['red']}, 'Flooded Areas');
 // Apply a Crop Mask to asses flood damage to crops
 // Use the ESA WorldCover data to extract cropland
 var dataset = ee.ImageCollection("ESA/WorldCover/v100").first();
-var classification = dataset.select('Map').clip(geometry)
-var cropland = classification.eq(40)
-Map.addLayer(cropland.selfMask(), {min:0, max:1, palette: ['white', 'green']}, 'Cropland')
+var classification = dataset.select('Map').clip(geometry);
+var cropland = classification.eq(40);
+Map.addLayer(cropland.selfMask(), 
+  {min:0, max:1, palette: ['white', 'green']}, 'Cropland');
 
 // Mask all non-cropland and display flooded regions
 // Display the result on the map.
