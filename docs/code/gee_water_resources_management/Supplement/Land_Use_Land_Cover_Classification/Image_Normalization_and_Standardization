@@ -1,6 +1,8 @@
-var image = ee.Image("users/ujavalgandhi/e2e/arkavathy_2019_composite");
-var boundary = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_boundary")
-var geometry = boundary.geometry()
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+
+var geometry = boundary.geometry();
+Map.centerObject(geometry);
 
 //************************************************************************** 
 // Function to Normalize Image
@@ -29,8 +31,8 @@ function normalize(image){
   var mins = ee.Image.constant(minDict.values(bandNames));
   var maxs = ee.Image.constant(maxDict.values(bandNames));
 
-  var normalized = image.subtract(mins).divide(maxs.subtract(mins))
-  return normalized
+  var normalized = image.subtract(mins).divide(maxs.subtract(mins));
+  return normalized;
 }
 
 //************************************************************************** 
@@ -51,7 +53,7 @@ function standardize(image){
     tileScale: 16
   });
   var means = ee.Image.constant(meanDict.values(bandNames));
-  var centered = image.subtract(means)
+  var centered = image.subtract(means);
   
   var stdDevDict = image.reduceRegion({
     reducer: ee.Reducer.stdDev(),
@@ -65,24 +67,24 @@ function standardize(image){
 
   var standardized = centered.divide(stddevs);
    
-  return standardized
+  return standardized;
 }
 
-var standardizedImage = standardize(image)
-var normalizedImage = normalize(image)
+var standardizedComposite = standardize(composite);
+var normalizedComposite = normalize(composite);
 
 
-Map.addLayer(image, 
-  {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3, gamma: 1.2}, 'Original Image');
-Map.addLayer(normalizedImage,
+Map.addLayer(composite, 
+  {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.2}, 'Original Image');
+Map.addLayer(normalizedComposite,
   {bands: ['B4', 'B3', 'B2'], min: 0, max: 1, gamma: 1.2}, 'Normalized Image');
-Map.addLayer(standardizedImage,
+Map.addLayer(standardizedComposite,
   {bands: ['B4', 'B3', 'B2'], min: -1, max: 2, gamma: 1.2}, 'Standarized Image');
-Map.centerObject(geometry)
+Map.centerObject(geometry);
 
 // Verify Normalization
 
-var beforeDict = image.reduceRegion({
+var beforeDict = composite.reduceRegion({
   reducer: ee.Reducer.minMax(),
   geometry: geometry,
   scale: 10,
@@ -91,7 +93,7 @@ var beforeDict = image.reduceRegion({
   tileScale: 16
 });
 
-var afterDict = normalizedImage.reduceRegion({
+var afterDict = normalizedComposite.reduceRegion({
   reducer: ee.Reducer.minMax(),
   geometry: geometry,
   scale: 10,
@@ -100,12 +102,12 @@ var afterDict = normalizedImage.reduceRegion({
   tileScale: 16
 });
 
-print('Original Image Min/Max', beforeDict)
-print('Normalized Image Min/Max', afterDict)
+print('Original Image Min/Max', beforeDict);
+print('Normalized Image Min/Max', afterDict);
 
 // Verify Standadization
 // Verify that the means are 0 and standard deviations are 1
-var beforeDict = image.reduceRegion({
+var beforeDict = composite.reduceRegion({
   reducer: ee.Reducer.mean().combine({
       reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
   geometry: geometry,
@@ -115,7 +117,7 @@ var beforeDict = image.reduceRegion({
   tileScale: 16
 });
 
-var resultDict = standardizedImage.reduceRegion({
+var resultDict = standardizedComposite.reduceRegion({
   reducer: ee.Reducer.mean().combine({
       reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
   geometry: geometry,
@@ -127,8 +129,8 @@ var resultDict = standardizedImage.reduceRegion({
 // Means are very small franctions close to 0
 // Round them off to 2 decimals
 var afterDict = resultDict.map(function(key, value) {
-  return ee.Number(value).format('%.2f')
-})
+  return ee.Number(value).format('%.2f');
+});
 
-print('Original Image Mean/StdDev', beforeDict)
-print('Standadized Image Mean/StdDev', afterDict)
+print('Original Image Mean/StdDev', beforeDict);
+print('Standadized Image Mean/StdDev', afterDict);

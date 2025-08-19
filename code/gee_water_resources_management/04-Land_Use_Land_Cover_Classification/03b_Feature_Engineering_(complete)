@@ -1,9 +1,11 @@
-var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-    
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
-var geometry = arkavathy.geometry();
+// Load training samples
+// This was created by exporting the merged 'gcps' collection
+// using Export.table.toAsset()
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+
+// Load the region boundary of a basin
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+var geometry = boundary.geometry();
 Map.centerObject(geometry);
 
 var rgbVis = {
@@ -15,6 +17,8 @@ var rgbVis = {
 var year = 2019;
 var startDate = ee.Date.fromYMD(year, 1, 1);
 var endDate = startDate.advance(1, 'year');
+
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
 
 var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
@@ -68,8 +72,8 @@ var composite = addIndices(composite);
 
 // 2. Add Slope and Elevation
 
-// Use ALOS World 3D v3
-var alos = ee.ImageCollection('JAXA/ALOS/AW3D30/V3_2');
+// Use ALOS World 3D
+var alos = ee.ImageCollection('JAXA/ALOS/AW3D30/V4_1');
 
 // This comes as a collection of images
 // We mosaic it to create a single image
@@ -92,13 +96,13 @@ print('Composite Bands', composite);
 // Train the model with new features
 
 // Add a random column and split the GCPs into training and validation set
-var gcp = gcp.randomColumn();
+var gcps = gcps.randomColumn();
 
 // This being a simpler classification, we take 60% points
 // for validation. Normal recommended ratio is
 // 70% training, 30% validation
-var trainingGcp = gcp.filter(ee.Filter.lt('random', 0.6));
-var validationGcp = gcp.filter(ee.Filter.gte('random', 0.6));
+var trainingGcp = gcps.filter(ee.Filter.lt('random', 0.6));
+var validationGcp = gcps.filter(ee.Filter.gte('random', 0.6));
 
 // Overlay the point on the image to get training data.
 var training = composite.sampleRegions({
@@ -122,7 +126,7 @@ var classifier = ee.Classifier.smileRandomForest(50)
 var classified = composite.classify(classifier);
 
 var palette = ['#cc6d8f', '#ffc107', '#1e88e5', '#004d40' ];
-Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, '2019');
+Map.addLayer(classified.clip(geometry), {min: 0, max: 3, palette: palette}, 'Classification');
 //************************************************************************** 
 // Accuracy Assessment
 //************************************************************************** 

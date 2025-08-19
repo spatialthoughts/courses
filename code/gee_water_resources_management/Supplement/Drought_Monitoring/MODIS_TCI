@@ -6,27 +6,28 @@
 // Use MODIS 8-Day Global 1km LST dataset
 var modisLST = ee.ImageCollection('MODIS/061/MOD11A2');
 
-var startYear = 2010
-var endYear = 2020
-var startDate = ee.Date.fromYMD(startYear, 1, 1)
-var endDate = ee.Date.fromYMD(endYear, 12, 31)
-var filtered = modisLST.filter(ee.Filter.date(startDate, endDate))
+var startYear = 2010;
+var endYear = 2020;
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
+var filtered = modisLST.filter(ee.Filter.date(startDate, endDate));
 
 // Apply QA Mask to select only the highest quality pixels
 
 var bitwiseExtract = function(input, fromBit, toBit) {
-  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
-  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
-  return input.rightShift(fromBit).bitwiseAnd(mask)
-}
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit);
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1);
+  return input.rightShift(fromBit).bitwiseAnd(mask);
+};
+
 var applyQaMask = function(image) {
-  var lstDay = image.select('LST_Day_1km')
-  var qcDay = image.select('QC_Day')
-  var qaMask = bitwiseExtract(qcDay, 0, 1).eq(0) // Highest quality
-  var dataQualityMask = bitwiseExtract(qcDay, 2, 3).eq(0)
-  var lstErrorMask = bitwiseExtract(qcDay, 6, 7).eq(0)
-  var mask = qaMask.and(dataQualityMask).and(lstErrorMask)
-  return lstDay.updateMask(mask)
+  var lstDay = image.select('LST_Day_1km');
+  var qcDay = image.select('QC_Day');
+  var qaMask = bitwiseExtract(qcDay, 0, 1).eq(0); // Highest quality
+  var dataQualityMask = bitwiseExtract(qcDay, 2, 3).eq(0);
+  var lstErrorMask = bitwiseExtract(qcDay, 6, 7).eq(0);
+  var mask = qaMask.and(dataQualityMask).and(lstErrorMask);
+  return lstDay.updateMask(mask);
 };
 var maskedCol = filtered.map(applyQaMask);
 
@@ -35,9 +36,9 @@ var lstCol = maskedCol.select('LST_Day_1km');
 // MODIS LST values come as LST x 200 that need to be scaled by 0.02
 var scaleLST = function(image) {
   var scaled = image.multiply(0.02)
-  .subtract(273.15)
+  .subtract(273.15);
   return scaled.copyProperties(image,
-    ['system:index', 'system:time_start'])
+    ['system:index', 'system:time_start']);
 };
 
 var lstScaled = lstCol.map(scaleLST);
@@ -51,59 +52,60 @@ var monthlyImages = years.map(function(year) {
   return months.map(function(month) {
     var filtered = lstScaled
       .filter(ee.Filter.calendarRange(year, year, 'year'))
-      .filter(ee.Filter.calendarRange(month, month, 'month'))
-    var monthly = filtered.mean()
-    return monthly.set({'month': month, 'year': year})
-  })
-}).flatten()
+      .filter(ee.Filter.calendarRange(month, month, 'month'));
+    var monthly = filtered.mean();
+    return monthly.set({'month': month, 'year': year});
+  });
+}).flatten();
 
 // We now have 1 image per month for entire duratioon
-var monthlyCol = ee.ImageCollection.fromImages(monthlyImages)
-
+var monthlyCol = ee.ImageCollection.fromImages(monthlyImages);
 
 // We can compute Minimum LST for each month across all years
 // i.e. Minimum LST for all May months in the collection
 var monthlyMinImages = months.map(function(month) {
-    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
-    var monthlyMin = filtered.min()
-    return monthlyMin.set('month', month)
-})
-var monthlyMin = ee.ImageCollection.fromImages(monthlyMinImages)
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month));
+    var monthlyMin = filtered.min();
+    return monthlyMin.set('month', month);
+});
+var monthlyMin = ee.ImageCollection.fromImages(monthlyMinImages);
 
 // We can compute Maximum LST for each month across all years
 // i.e. Maximum LST for all May months in the collection
 var monthlyMaxImages = months.map(function(month) {
-    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
-    var monthlyMax = filtered.max()
-    return monthlyMax.set('month', month)
-})
-var monthlyMax = ee.ImageCollection.fromImages(monthlyMaxImages)
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month));
+    var monthlyMax = filtered.max();
+    return monthlyMax.set('month', month);
+});
+var monthlyMax = ee.ImageCollection.fromImages(monthlyMaxImages);
 
 // Calculate TCI for 2020
 
 // We are interested in calculating TCI for a particular month
-var currentYear = 2020
-var currentMonth = 5
+var currentYear = 2020;
+var currentMonth = 5;
 
 var filtered = monthlyCol
   .filter(ee.Filter.eq('year', currentYear))
-  .filter(ee.Filter.eq('month', currentMonth))
-var currentMonthLST = ee.Image(filtered.first())
+  .filter(ee.Filter.eq('month', currentMonth));
+var currentMonthLST = ee.Image(filtered.first());
 
-var minLST = ee.Image(monthlyMin.filter(ee.Filter.eq('month', currentMonth)).first())
-var maxLST = ee.Image(monthlyMax.filter(ee.Filter.eq('month', currentMonth)).first())
+var minLST = ee.Image(monthlyMin.filter(ee.Filter.eq('month', currentMonth))
+  .first());
+var maxLST = ee.Image(monthlyMax.filter(ee.Filter.eq('month', currentMonth))
+  .first());
 
 // TCI = 100 * (LSTmax - LST) / (LSTmax – LSTmin)
 var image = ee.Image.cat([currentMonthLST, minLST, maxLST])
-  .rename(['lst', 'min', 'max'])
+  .rename(['lst', 'min', 'max']);
 var tci = image.expression('100* (max - lst) / (max - min)',
     {'lst': image.select('lst'),
       'min': image.select('min'),
       'max': image.select('max')
-    }).rename('tci')
+    }).rename('tci');
 
 
-var visParams = {min: -80, max: 60, palette: ['white', 'red']}
+var visParams = {min: -80, max: 60, palette: ['white', 'red']};
 var tciPalette = ['#4575b4','#74add1','#abd9e9','#e0f3f8',
   '#fee090','#fdae61','#f46d43','#d73027'];
 var tciVisParams = {min: 0, max: 100, palette: tciPalette};

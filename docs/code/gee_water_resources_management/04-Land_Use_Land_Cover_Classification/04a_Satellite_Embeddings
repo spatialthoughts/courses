@@ -1,9 +1,11 @@
-var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
-var basin = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
-var gcp = ee.FeatureCollection("users/ujavalgandhi/e2e/arkavathy_gcps");
-    
-var arkavathy = basin.filter(ee.Filter.eq('HYBAS_ID', 4071139640));
-var geometry = arkavathy.geometry();
+// Load training samples
+// This was created by exporting the merged 'gcps' collection
+// using Export.table.toAsset()
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+
+// Load the region boundary of a basin
+var boundary = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/basin_boundary');
+var geometry = boundary.geometry();
 Map.centerObject(geometry);
 
 var rgbVis = {
@@ -16,11 +18,13 @@ var year = 2019;
 var startDate = ee.Date.fromYMD(year, 1, 1);
 var endDate = startDate.advance(1, 'year');
 
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+
 var filtered = s2
   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
   .filter(ee.Filter.date(startDate, endDate))
   .filter(ee.Filter.bounds(geometry));
-  
+
 // Load the Cloud Score+ collection
 var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
 var csPlusBands = csPlus.first().bandNames();

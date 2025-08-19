@@ -1,5 +1,5 @@
-var gcps = ee.FeatureCollection("users/ujavalgandhi/e2e/bangalore_gcps");
-var composite = ee.Image('users/ujavalgandhi/e2e/bangalore_composite');
+var gcps = ee.FeatureCollection('projects/spatialthoughts/assets/e2e/exported_gcps');
+var composite = ee.Image('projects/spatialthoughts/assets/e2e/composite');
 
 // Overlay the point on the image to get bands data.
 var training = composite.sampleRegions({
@@ -7,7 +7,6 @@ var training = composite.sampleRegions({
   properties: ['landcover'], 
   scale: 10
 });
-
 
 // We will create a chart of spectral signature for all classes
 
@@ -19,40 +18,41 @@ var training = composite.sampleRegions({
 // We also need to group the results by class
 // So we find the index of the landcover property and use it
 // to group the results
-var bands = composite.bandNames()
-var numBands = bands.length()
-var bandsWithClass = bands.add('landcover')
-var classIndex = bandsWithClass.indexOf('landcover')
+var bands = composite.bandNames();
+var numBands = bands.length();
+var bandsWithClass = bands.add('landcover');
+var classIndex = bandsWithClass.indexOf('landcover');
 
 // Use .combine() to get a reducer capable of 
 // computing multiple stats on the input
 var combinedReducer = ee.Reducer.mean().combine({
   reducer2: ee.Reducer.stdDev(),
-  sharedInputs: true})
+  sharedInputs: true
+});
 
 // Use .repeat() to get a reducer for each band
 // We then use .group() to get stats by class
-var repeatedReducer = combinedReducer.repeat(numBands).group(classIndex)
+var repeatedReducer = combinedReducer.repeat(numBands).group(classIndex);
 
 var gcpStats = training.reduceColumns({
     selectors: bands.add('landcover'),
     reducer: repeatedReducer,
-})
+});
 
 // Result is a dictionary, we do some post-processing to
 // extract the results
-var groups = ee.List(gcpStats.get('groups'))
+var groups = ee.List(gcpStats.get('groups'));
 
-var classNames = ee.List(['urban', 'bare', 'water', 'vegetation'])
+var classNames = ee.List(['urban', 'bare', 'water', 'vegetation']);
 
 var fc = ee.FeatureCollection(groups.map(function(item) {
   // Extract the means
-  var values = ee.Dictionary(item).get('mean')
-  var groupNumber = ee.Dictionary(item).get('group')
-  var properties = ee.Dictionary.fromLists(bands, values)
-  var withClass = properties.set('class', classNames.get(groupNumber))
-  return ee.Feature(null, withClass)
-}))
+  var values = ee.Dictionary(item).get('mean');
+  var groupNumber = ee.Dictionary(item).get('group');
+  var properties = ee.Dictionary.fromLists(bands, values);
+  var withClass = properties.set('class', classNames.get(groupNumber));
+  return ee.Feature(null, withClass);
+}));
 
 // Chart spectral signatures of training data
 var options = {
@@ -78,7 +78,7 @@ var bandDescriptions = {
   'B8': 'B08/NIR',
   'B11': 'B11/SWIR-1',
   'B12': 'B12/SWIR-2'
-}
+};
 // Create the chart and set options.
 var chart = ui.Chart.feature.byProperty({
   features: fc,
@@ -88,7 +88,7 @@ var chart = ui.Chart.feature.byProperty({
 .setChartType('ScatterChart')
 .setOptions(options);
 
-print(chart)
+print(chart);
 
 var classChart = function(landcover, label, color) {
   var options = {
@@ -99,7 +99,7 @@ var classChart = function(landcover, label, color) {
   pointSize: 4,
   };
 
-  var fc = training.filter(ee.Filter.eq('landcover', landcover))
+  var fc = training.filter(ee.Filter.eq('landcover', landcover));
   var chart = ui.Chart.feature.byProperty({
   features: fc,
   xProperties: bandDescriptions,
@@ -107,9 +107,9 @@ var classChart = function(landcover, label, color) {
 .setChartType('ScatterChart')
 .setOptions(options);
 
-print(chart)
-}
-classChart(0, 'Urban')
-classChart(1, 'Bare')
-classChart(2, 'Water')
-classChart(3, 'Vegetation')
+print(chart);
+};
+classChart(0, 'Urban');
+classChart(1, 'Bare');
+classChart(2, 'Water');
+classChart(3, 'Vegetation');

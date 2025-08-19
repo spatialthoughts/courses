@@ -1,29 +1,29 @@
-var modis = ee.ImageCollection('MODIS/061/MOD13Q1');
+var modis = ee.ImageCollection("MODIS/061/MOD13Q1");
 
-var startYear = 2010
-var endYear = 2020
-var startDate = ee.Date.fromYMD(startYear, 1, 1)
-var endDate = ee.Date.fromYMD(endYear, 12, 31)
+var startYear = 2010;
+var endYear = 2020;
+var startDate = ee.Date.fromYMD(startYear, 1, 1);
+var endDate = ee.Date.fromYMD(endYear + 1, 1, 1);
 var filtered = modis
-  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.date(startDate, endDate));
 
 // Cloud Masking
 var bitwiseExtract = function(input, fromBit, toBit) {
-  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
-  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
-  return input.rightShift(fromBit).bitwiseAnd(mask)
-}
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit);
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1);
+  return input.rightShift(fromBit).bitwiseAnd(mask);
+};
 
 var maskSnowAndClouds = function(image) {
-  var summaryQa = image.select('SummaryQA')
+  var summaryQa = image.select('SummaryQA');
   // Select pixels which are less than or equals to 1 (0 or 1)
-  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
-  var maskedImage = image.updateMask(qaMask)
-  return maskedImage.copyProperties(image, ['system:index', 'system:time_start'])
-}
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1);
+  var maskedImage = image.updateMask(qaMask);
+  return maskedImage.copyProperties(image, ['system:index', 'system:time_start']);
+};
 
 // Apply the function to all images in the collection
-var maskedCol = filtered.map(maskSnowAndClouds)
+var maskedCol = filtered.map(maskSnowAndClouds);
 
-var ndviCol = maskedCol.select('NDVI')
+var ndviCol = maskedCol.select('NDVI');
 // MODIS NDVI values come as NDVI x 10000 that need to be scaled by 0.0001
