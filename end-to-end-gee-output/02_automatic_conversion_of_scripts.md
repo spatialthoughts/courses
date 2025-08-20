@@ -53,8 +53,8 @@ Run the cell below to load the map widget. Once the map widget loads, click the 
 
 
 ```python
-m = geemap.Map(width=800)
-m
+Map = geemap.Map(width=800)
+Map
 ```
 
 You will see the auto-converted code displayed. Copy and paste it into a new cell and run it. Your code will be run using the GEE Python API.
@@ -74,16 +74,16 @@ filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) \
 
 medianComposite = filtered.median()
 
-m.centerObject(geometry, 10)
-m.addLayer(medianComposite, rgbVis, 'Median Composite')
+Map.centerObject(geometry, 10)
+Map.addLayer(medianComposite, rgbVis, 'Median Composite')
 
 ```
 
-If your code loads any layers, they will be loaded on the map widget. To display it, open a new code cell and just type `m` to display the widget.
+If your code loads any layers, they will be loaded on the map widget. To display it, open a new code cell and just type `Map` to display the widget.
 
 
 ```python
-m
+Map
 ```
 
 #### Automatic Conversion using Code
@@ -157,6 +157,8 @@ for line in lines:
 ```
 
 The automatic conversion works great. Review it and paste it to the cell below.
+
+> Note: The automatic conversion uses the variable `m` for the map instead of `Map`.
 
 
 ```python
