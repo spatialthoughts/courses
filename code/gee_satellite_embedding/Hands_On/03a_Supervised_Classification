@@ -1,0 +1,64 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #98ff00 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[39.4926, -4.39833],
+          [39.4926, -4.47394],
+          [39.5491, -4.47394],
+          [39.5491, -4.39833]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Supervised Classification with Satellite Embeddings
+// Mapping Mangroves
+// ****************************************************
+
+// Select a region
+// ****************************************************
+
+// Draw a polygon to define the region
+// Save it as the variable 'geometry'
+Map.centerObject(geometry);
+
+// Collect Training Samples
+// ****************************************************
+
+// Pick a year for classification
+var year = 2020;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Create a Sentinel-2 Compsite for the selected year
+// for selecting training samples
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var filteredS2 = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Use the Cloud Score+ collection for cloud masking
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+var filteredS2WithCs = filteredS2.linkCollection(csPlus, csPlusBands);
+
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.6;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredS2Masked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');  
+  
+// Create a median composite of cloud-masked images
+var composite = filteredS2Masked.median();
+
+// Display the input composite in false color
+// that helps distinguish between
+// water, vegetation and built surfaces
+var swirVis = {min: 300, max: 4000, bands: ['B11', 'B8', 'B4']};
+
+Map.centerObject(geometry);
+Map.addLayer(composite.clip(geometry), swirVis, 'S2 Composite (False Color)');
+
+// Collect training samples

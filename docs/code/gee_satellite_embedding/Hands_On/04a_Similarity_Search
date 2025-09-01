@@ -1,0 +1,69 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var samples = /* color: #bf04c2 */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([72.57492570563792, 23.141105013380294]),
+            {
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([72.60209347873312, 23.160608676844905]),
+            {
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([72.61008969270353, 23.212196741036685]),
+            {
+              "system:index": "2"
+            })]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Similarity Search with Satellite Embeddings
+// Mapping Brick Kiln locations
+
+// Select the Search Region
+// ****************************************************
+
+// Use GAUL 2024 dataset from GEE Community Catalog
+var admin2 = ee.FeatureCollection('projects/sat-io/open-datasets/FAO/GAUL/GAUL_2024_L2');
+// Gandhinagar district, Gujarat, India
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('gaul2_name', 'Gandhinagar'))
+  .filter(ee.Filter.eq('gaul1_name', 'Gujarat'));
+
+var geometry = filteredAdmin2.geometry();
+
+Map.centerObject(geometry);
+Map.addLayer(geometry, {color: 'red'}, 'Search Area');
+
+// Select Reference Location(s)
+// ****************************************************
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Add a few reference locations of Brick Kilns
+// in the 'samples' FeatureCollection
+
+
+// Select a time-period
+// ****************************************************
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Filter and mosaic the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var mosaic = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .mosaic();
+
+// Choose the scale
+// You may choose a larger value for larger objects
+var scale = 20; 
+
+// Extract the embedding vector from the samples
+var sampleEmbeddings = mosaic.sampleRegions({
+  collection: samples,
+  scale: scale
+});
+print(sampleEmbeddings);

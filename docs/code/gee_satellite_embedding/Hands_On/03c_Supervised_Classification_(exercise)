@@ -1,0 +1,136 @@
+// Exercise: Mapping Mangroves
+// ****************************************************
+
+// Select the region
+// ****************************************************
+var geometry = ee.Geometry.Polygon([[
+  [39.4926, -4.39833],
+  [39.4926, -4.47394],
+  [39.5491, -4.47394],
+  [39.5491, -4.39833]
+]]);
+          
+Map.centerObject(geometry);
+
+// Pick a year for classification
+var year = 2020;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Create a Sentinel-2 Compsite for the selected year
+// for selecting training samples
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
+var filteredS2 = s2
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Use the Cloud Score+ collection for cloud masking
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+var filteredS2WithCs = filteredS2.linkCollection(csPlus, csPlusBands);
+
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.6;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredS2Masked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');  
+  
+// Create a median composite of cloud-masked images
+var composite = filteredS2Masked.median();
+
+// Display the input composite in false color
+// that helps distinguish between
+// water, vegetation and built surfaces
+var swirVis = {min: 300, max: 4000, bands: ['B11', 'B8', 'B4']};
+
+Map.centerObject(geometry);
+Map.addLayer(composite.clip(geometry), swirVis, 'S2 Composite (False Color)');
+
+//  Global Mangrove Watch reference layer
+var gmw = ee.ImageCollection('projects/earthengine-legacy/assets/projects/sat-io/open-datasets/GMW/extent/GMW_V3');
+var gmwFiltered = gmw
+  .filter(ee.Filter.date(startDate, endDate));
+var gmwImage = gmwFiltered.mosaic();
+
+Map.addLayer(gmwImage,
+  {min:0, max:1, palette: ['purple']}, 
+  'Reference Mangrove Layer', false); 
+  
+// Exercise
+// Delete the geometry and draw a polygon for your region of interest
+//   Tip: Turn on Reference Mangrove Layer to previously mapped
+//        locations of mangroves.
+// Add training samples for 3 classes
+// Create FeatureCollections and the 
+// 'landcover' property as follows
+
+// mangroves: 1
+// water: 2
+// other: 3
+
+// After adding samples, uncomments lines below
+
+// // ****************************************************
+
+// // Merge the collected training samples
+// var gcps = mangroves.merge(water).merge(other);
+
+// // Train a Classifier
+// // ****************************************************
+
+// // Sample Embedding Vectors
+// var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL'); 
+
+// var embeddingsFiltered = embeddings
+//   .filter(ee.Filter.date(startDate, endDate))
+//   .filter(ee.Filter.bounds(geometry));
+
+// var embeddingsImage = embeddingsFiltered.mosaic();
+
+// // Overlay the samples on the image to get training data.
+// var training = embeddingsImage.sampleRegions({
+//   collection: gcps, 
+//   properties: ['landcover'], 
+//   scale: 10
+// });
+
+
+// // Train a classifier.
+// var classifier = ee.Classifier.smileKNN().train({
+//   features: training,  
+//   classProperty: 'landcover', 
+//   inputProperties: embeddingsImage.bandNames()
+// });
+
+// // Classify the Satellite Embedding Mosaic
+// // ****************************************************
+
+// var classified = embeddingsImage.classify(classifier);
+
+// // Visualize the classification
+// // ****************************************************
+
+// // Choose a 3-color palette
+// // Assign a color for each class in the following order
+// // Mangrove, Water, Other
+// var palette = ['green', 'blue', 'gray'];
+
+// Map.addLayer(
+//   classified.clip(geometry),
+//   {min: 1, max: 3, palette: palette}, 
+//   'Classified Satellite Embeddings Image');
+
+// // Extract mangroves class
+// var mangrovesImage = classified.eq(1).selfMask();
+
+// var mangroveVis = {min:0, max:1, palette: ['green']};
+
+// Map.addLayer(mangrovesImage.clip(geometry),
+//   mangroveVis, 'Mangroves (Satellite Embedding Classification)');
+
+

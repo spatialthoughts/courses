@@ -1,0 +1,37 @@
+// Unsupervised Clustering with Satellite Embeddings
+// Crop Type Mapping
+// ****************************************************
+
+// Select the region
+// ****************************************************
+
+// Cerro Gordo County, Iowa
+var counties = ee.FeatureCollection('TIGER/2018/Counties');
+
+var selected = counties
+  .filter(ee.Filter.eq('GEOID', '19033'));
+var geometry = selected.geometry();
+Map.centerObject(geometry, 12);
+Map.setOptions('SATELLITE');
+
+Map.addLayer(geometry, {color: 'red'}, 'Selected Region', false);
+
+// Prepare the Satellite Embedding dataset
+// ****************************************************
+
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var year = 2022;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filteredembeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var embeddingsImage = filteredembeddings.mosaic();
+
+
+// Visualize three axes of the embedding space as an RGB.
+var visParams = {min: -0.3, max: 0.3, bands: ['A01', 'A16', 'A09']};
+Map.addLayer(embeddingsImage.clip(geometry), visParams, 'Embeddings Image');

@@ -1,0 +1,164 @@
+// Exercise: Crop Type Mapping
+// ****************************************************
+
+// Select the region
+// ****************************************************
+var geometry = ee.Geometry.Polygon([[
+  [83.6180, 21.43577],
+  [83.6180, 21.26181],
+  [83.8391, 21.26181],
+  [83.8391, 21.43577]
+]]);
+          
+Map.centerObject(geometry, 12);
+Map.setOptions('SATELLITE');
+
+Map.addLayer(geometry, {color: 'red'}, 'Selected Region', false);
+
+// Prepare the Satellite Embedding dataset
+// ****************************************************
+
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filteredembeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var embeddingsImage = filteredembeddings.mosaic();
+
+// Visualize three axes of the embedding space as an RGB.
+var visParams = {min: -0.3, max: 0.3, bands: ['A01', 'A16', 'A09']};
+Map.addLayer(embeddingsImage.clip(geometry), visParams, 'Embeddings Image', false);
+
+// Create a Cropland Mask
+// ****************************************************
+
+// Use ESA Worldcover cropland
+// This dataset is from 2021 so there maybe a mismatch
+// in cropland extent in recent years
+var worldcover = ee.ImageCollection('ESA/WorldCover/v200');
+var classification = worldcover.first();
+var cropLandcover = classification.eq(40);
+var croplandMask = cropLandcover.rename('cropmask');
+
+// Visualize the crop mask
+var croplandMaskVis = {min:0, max:1, palette: ['white', 'green']};
+Map.addLayer(croplandMask.clip(geometry), croplandMaskVis, 'Crop Mask', false);
+
+// Extract Training Samples
+// ****************************************************
+
+// Mask all non-cropland pixels
+var clusterImage = embeddingsImage.updateMask(croplandMask);
+Map.addLayer(clusterImage.clip(geometry), visParams,
+  'Embeddings Image (with Crop Mask)', false);
+
+// We need to extract well distributed training samples
+// for all target crops in the county
+
+// Stratified random sampling to ensure we get desired
+// number of samples exluding the masked pixels
+var training = clusterImage.addBands(croplandMask).stratifiedSample({
+  numPoints: 1000,
+  classBand: 'cropmask',
+  region: geometry,
+  scale: 10, 
+  tileScale: 16,
+  seed: 100,
+  dropNulls: true,
+  geometries: true
+});
+
+
+// Perform Unsupervised Clustering
+// ****************************************************
+
+var minClusters = 2;
+var maxClusters = 5;
+
+var clusterer = ee.Clusterer.wekaCascadeKMeans({
+  minClusters:minClusters, maxClusters: maxClusters}).train({
+  features: training,
+  inputProperties: clusterImage.bandNames()
+});
+
+var clustered = clusterImage.cluster(clusterer);
+Map.addLayer(clustered.randomVisualizer().clip(geometry), {}, 'Clusters');
+
+// Add Sentinel-2 NDVI Time-Series
+// ****************************************************
+var s2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED');
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var s2WithCs = s2.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('ndvi');
+  return image.addBands(ndvi);
+}
+// Function to create and display NDVI time-series chart
+// when a point is clicked
+function displayChart(point) {
+  chartPanel.clear();
+ 
+  var pointGeom = ee.Geometry.Point(point.lon, point.lat);
+  
+  var filtered = s2WithCs
+    .filter(ee.Filter.date(startDate, endDate))
+    .map(maskLowQA)
+    .map(addNDVI)
+    .filter(ee.Filter.bounds(pointGeom));
+  
+  var chart = ui.Chart.image.series({
+    imageCollection: filtered.select('ndvi'),
+    region: pointGeom,
+    reducer: ee.Reducer.mean(),
+    scale: 20}).setOptions({
+      title: 'NDVI Time Series',
+      vAxis: {title: 'NDVI', viewWindow: {min:0, max:1}},
+      hAxis: {title: 'Date', gridlines: {count: 12}},
+      interpolateNulls: true,
+      pointSize: 2,
+      lineWidth: 1
+    });
+      
+  chartPanel.add(chart);
+}
+var chartPanel = ui.Panel({
+  style: {width: '400px', position: 'bottom-right'}
+});
+Map.add(chartPanel);
+Map.onClick(displayChart);
+  
+// Exercise
+// Delete the geometry
+// Draw a geometry for your region of interest
+// Adjust the minClusters and maxClusters based on your knowledge
+// Click on any location to see the NDVI Time-Series
+// Use your local knowledge to identify the crop(s)
+
+// Note: Interactive visualization of clusters will only work for
+//      small regions. Export your training samples as Asset first
+//      if classifying large regions.
+
+// The region selected here is in the Bargarh distrct, Odisha, India
+// with the primary crop being Rice.
+// Data from https://upag.gov.in/

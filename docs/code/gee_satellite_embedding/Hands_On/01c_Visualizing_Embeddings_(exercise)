@@ -1,0 +1,77 @@
+// Exercise: Visualizing the Satellite Embedding Dataset
+// *****************************************************
+
+// Select a region
+// ****************************************************
+var geometry = ee.Geometry.Polygon([[
+  [76.39785, 12.5521],
+  [76.39785, 12.3550],
+  [76.65191, 12.3550],
+  [76.65191, 12.5521]
+]]);
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Draw a polygon to define the region
+// Save it as the variable 'geometry'
+Map.centerObject(geometry, 12);
+
+// Prepare the Satellite Embedding dataset
+// ****************************************************
+
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var embeddingsImage = filteredEmbeddings.mosaic();
+
+print('Satellite Embeddings Image', embeddingsImage);
+
+// Visualize the Satellite Embedding Dataset
+// *********************************************************
+
+// Visualize three axes of the embedding space as an RGB.
+var visParams = {min: -0.3, max: 0.3, bands: ['A01', 'A16', 'A09']};
+Map.addLayer(embeddingsImage.clip(geometry), visParams, 'Embeddings Image');
+
+// Make the training dataset for unsupervised clustering
+var nSamples = 1000;
+var training = embeddingsImage.sample({
+  region: geometry,
+  scale: 10,
+  numPixels: nSamples,
+  seed: 100
+});
+print(training.first());
+
+// Function to train a model for desired number of clusters
+var getClusters = function(nClusters) {
+  var clusterer = ee.Clusterer.wekaKMeans({nClusters: nClusters})
+    .train(training);
+  
+  // Cluster the image
+  var clustered = embeddingsImage.cluster(clusterer);
+  return clustered;
+};
+
+var cluster3 = getClusters(3);
+Map.addLayer(cluster3.randomVisualizer().clip(geometry), {}, ' 3 clusters');
+
+var cluster5 = getClusters(5);
+Map.addLayer(cluster5.randomVisualizer().clip(geometry), {}, ' 5 clusters');
+
+var cluster10 = getClusters(10);
+Map.addLayer(cluster10.randomVisualizer().clip(geometry), {}, ' 10 clusters');
+
+// Exercise
+
+// Delete the geometry
+// Draw a geometry for your region of interest
+// Try visualizing the embeddings with different bands (A01, A02, A03...)
+// Try changing the number of clusters to see different levels of detail

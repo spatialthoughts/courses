@@ -1,0 +1,131 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var samples = /* color: #bf04c2 */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([71.62064756880882, 23.417896432110815]),
+            {
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([71.5828687753274, 23.47579517396437]),
+            {
+              "system:index": "1"
+            })]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Exercise: Mapping Solar Farms
+// ****************************************************
+
+// Select the Search Region
+// ****************************************************
+var geometry = ee.Geometry.Polygon([[
+  [71.2208, 23.6897],
+  [71.2208, 23.1642],
+  [71.8614, 23.1642],
+  [71.8614, 23.6897]
+]]);
+Map.centerObject(geometry);
+Map.addLayer(geometry, {color: 'red'}, 'Search Area');
+
+// Select Reference Location(s)
+// ****************************************************
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Mark location(s) with solar farms in the 'samples' FeatureCollection
+
+// Select a time-period
+// ****************************************************
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Filter and mosaic the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var mosaic = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .mosaic();
+
+// Choose the scale
+// You may choose a larger value for larger objects
+var scale = 10; 
+
+// Extract the embedding vector from the samples
+var sampleEmbeddings = mosaic.sampleRegions({
+  collection: samples,
+  scale: scale
+});
+
+// Calculate Similarity
+// ****************************************************
+// We compute the dot product between two embedding vectors
+// Results are interepreted as distances in embedding space
+// Values closer to 0 are closer together (more similar)
+// Values closer to 1 are further apart (less similar)
+var bandNames = mosaic.bandNames();
+
+var sampleDistances = ee.ImageCollection(sampleEmbeddings.map(function (f) {
+  var arrayImage = ee.Image(f.toArray(bandNames)).arrayFlatten([bandNames]);
+  var dotProduct = arrayImage.multiply(mosaic)
+    .reduce('sum')
+    .rename('similarity');
+  return dotProduct;
+}));
+
+// Calculate mean distance from all reference locations
+var meanDistance = sampleDistances.mean();
+
+// Visualize the distance image
+var palette = [
+  '000004', '2C105C', '711F81', 'B63679',
+  'EE605E', 'FDAE78', 'FCFDBF', 'FFFFFF'
+];
+var similarityVis = {palette: palette, min: 0.5, max: 1};
+Map.addLayer(meanDistance.clip(geometry), similarityVis,
+  'Similarity (bright = close)', false);
+
+
+// Extract Location Matches
+// ****************************************************
+
+// Apply a threshold
+var threshold = 0.95;
+var similarPixels = meanDistance.gt(threshold);
+
+// Vectorize the results 
+// Mask 0 values using selfMask()
+// to get polygons only for the matched pixels
+var polygons = similarPixels.selfMask().reduceToVectors({
+  scale: scale,
+  eightConnected: false,
+  maxPixels: 1e10,
+  geometry: geometry
+});
+
+// Extract the centroids of vectorized polygons
+var predictedMatches = polygons.map(function(f) {
+  return f.centroid({maxError:1});
+});
+
+// Visualize the Matches
+// ****************************************************
+
+Map.addLayer(predictedMatches, {color: 'cyan'} , 'Predicted Matches'); 
+
+
+// Use the Global Photovoltaics Inventory dataset
+// https://gee-community-catalog.org/projects/global_pv/
+var solarFarms = ee.FeatureCollection('projects/sat-io/open-datasets/global_photovoltaic/predicted_set');
+Map.addLayer(solarFarms, {color:'yellow'}, 'Solar Farms Database', false);
+
+// Exercise
+// Delete the geometry
+// Draw a geometry for your region of interest
+//    Tip: Use a rural region without rooftop solar
+// Adjust the scale and threshold
+// Visualize the results
+
+
+// Note: Interactive visualization of results will only work for
+//      small regions. Export the predicted matches as Asset first
+//      if working in a large regions.
