@@ -1,0 +1,170 @@
+// Unsupervised Clustering with Satellite Embeddings
+
+// Adaptation of the 'waterdetect' algorithm using
+// Satellite Embedding dataset
+
+// Reference: https://github.com/cordmaur/WaterDetect
+// Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. 
+// Automatic Water Detection from Multidimensional Hierarchical Clustering for Sentinel-2 Images
+// and a Comparison with Level 2A Processors. 
+// Remote Sensing of Environment 2021, 253, 112209. https://doi.org/10.1016/j.rse.2020.112209.
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Draw a polygon to define the region
+var geometry = ee.Geometry.Polygon([[
+  [77.48932, 13.0311],
+  [77.48932, 12.8130],
+  [77.72828, 12.8130],
+  [77.72828, 13.0311]
+]]);
+          
+
+Map.centerObject(geometry, 12);
+
+
+// Prepare the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var embeddingsImage = filteredEmbeddings.mosaic();
+
+print('Satellite Embeddings Image', embeddingsImage);
+
+// Perform Unsupervised Clustering
+// ****************************************************
+
+// Make the training dataset for unsupervised clustering
+var training = embeddingsImage.sample({
+  region: geometry,
+  scale: 10,
+  numPixels: 1000
+});
+print(training.first());
+
+// Instantiate the clusterer and train it.
+var clusterer = ee.Clusterer.wekaCascadeKMeans({
+  minClusters: 10,
+  maxClusters: 12
+}).train(training);
+
+// Cluster the stacked image
+var clustered = embeddingsImage.cluster(clusterer);
+
+// Automatic Detection of Water Cluster
+// ****************************************************
+
+// We need to identify which of the clusters represent water
+// Use Sentinel-2 MNDWI to find the 'water' cluster automaticallly
+// Prepare a Sentinel-2 composite for the selected region
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
+
+var filtered = s2.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+// Load the Cloud Score+ collection
+var csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED');
+var csPlusBands = csPlus.first().bandNames();
+
+// We need to add Cloud Score + bands to each Sentinel-2
+// image in the collection
+// This is done using the linkCollection() function
+var filteredS2WithCs = filtered.linkCollection(csPlus, csPlusBands);
+
+// Function to mask pixels with low CS+ QA scores.
+function maskLowQA(image) {
+  var qaBand = 'cs';
+  var clearThreshold = 0.5;
+  var mask = image.select(qaBand).gte(clearThreshold);
+  return image.updateMask(mask);
+}
+
+var filteredMasked = filteredS2WithCs
+  .map(maskLowQA)
+  .select('B.*');
+
+var image = filteredMasked.median(); 
+ 
+// Calculate Modified Normalized Difference Water Index (MNDWI)
+// 'GREEN' (B3) and 'SWIR1' (B11)
+var mndwi = image.normalizedDifference(['B3', 'B11']).rename(['mndwi']); 
+
+// We use the MNDWI band and select the cluster with the 
+// highest average MNDWI values of all pixels within the cluster
+
+// Calculate the stats on MNDWI band, grouped by clusters
+// Copmpute at lower resolution as accuracy is not
+// important. We just need to find the cluster with 
+// highest MNDWI
+var stats = mndwi.addBands(clustered).reduceRegion({
+  reducer: ee.Reducer.mean().group({
+    groupField: 1,
+    groupName: 'cluster',
+  }),
+  geometry: geometry,
+  scale: 100,
+  maxPixels: 1e8
+});
+print(stats);
+
+// Extract the cluster-wise stats as a list of lists
+// We get a list in the following format
+// [[avg_mndwi, cluster_number], [avg_mndwi, cluster_number] ...]]
+var groupStats = ee.List(stats.get('groups'));
+
+var groupStatsLists = groupStats.map(function(item) {
+      var areaDict = ee.Dictionary(item);
+      var clusterNumber = ee.Number(
+        areaDict.get('cluster'));
+      var mndwi = ee.Number(
+        areaDict.get('mean'));
+      return ee.List([mndwi, clusterNumber]);
+    });
+    
+// Use the ee.Reducer.max() on the list of lists
+// It will pick the list with the highest MNDWI
+var waterClusterList = ee.Dictionary(ee.List(groupStatsLists)
+  .reduce(ee.Reducer.max(2)));
+
+// Extract the cluster number
+var waterCluster = ee.Number(waterClusterList.get('max1'));
+
+// Select all pixels from the water cluster and mask everything else
+var water = clustered.eq(waterCluster).selfMask();
+
+// The original waterdetect algorithm has an additional step
+// to train a supervised classifier using the water vs. non-water
+// samples detected from the procedure above.
+// In our testing, there was no significant improvement to the
+// output, so we have not added that step.
+
+// Visualize the results
+// ****************************************************
+var waterVis = {min:0, max:1, palette: ['white', 'blue']};
+
+Map.setCenter(77.61, 13.08, 14);
+
+Map.centerObject(geometry, 10);
+Map.addLayer(clustered.clip(geometry).randomVisualizer(), {}, 'clusters');
+Map.addLayer(water.clip(geometry), waterVis, 'water');
+
+// Interactive visualization may time-out for large images
+// Export the image to use the batch processing mode
+Export.image.toDrive({
+  image: water,
+  description: 'Water_Cluster',
+  folder: 'earthengine',
+  fileNamePrefix: 'water_cluster',
+  region: geometry,
+  scale: 10,
+  maxPixels: 1e10});
