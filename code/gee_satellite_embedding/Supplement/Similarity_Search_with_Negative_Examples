@@ -1,0 +1,204 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var positive = /* color: #35d63e */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([77.58638039662253, 12.91104840208418]),
+            {
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([77.59404528273362, 12.886553924004868]),
+            {
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([77.6274485466929, 12.921762781244322]),
+            {
+              "system:index": "2"
+            })]),
+    negative = /* color: #ff4032 */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([77.66569794965835, 12.95198316485278]),
+            {
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([77.7534685583214, 13.013279064490739]),
+            {
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([77.64613267589151, 12.956841148665637]),
+            {
+              "system:index": "2"
+            })]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Similarity Search with Satellite Embeddings
+// Mapping Open Spaces with Negative Examples
+
+// Positive Examples: Empty Plots
+// Negative Examples: Plots with Built Surfaces
+
+
+// Select the Search Region
+// ****************************************************
+
+// Use GAUL 2024 dataset from GEE Community Catalog
+var admin2 = ee.FeatureCollection('projects/sat-io/open-datasets/FAO/GAUL/GAUL_2024_L2');
+
+// Select Bengalore, India region
+var filteredAdmin2 = admin2
+  .filter(ee.Filter.eq('gaul2_name', 'Bengaluru Urban'))
+  .filter(ee.Filter.eq('gaul1_name', 'Karnataka'));
+
+var geometry = filteredAdmin2.geometry();
+
+Map.centerObject(geometry);
+Map.addLayer(geometry, {color: 'red'}, 'Search Area');
+
+// Select Reference Location(s)
+// ****************************************************
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Add a few reference locations of Brick Kilns
+// in the 'samples' FeatureCollection
+
+
+// Select a time-period
+// ****************************************************
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Filter and mosaic the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var mosaic = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .mosaic();
+
+// Choose the scale
+// You may choose a larger value for larger objects
+var scale = 10; 
+
+// Extract the embedding vector from the samples
+var positiveEmbeddings = mosaic.sampleRegions({
+  collection: positive,
+  scale: scale
+});
+
+var negativeEmbeddings = mosaic.sampleRegions({
+  collection: negative,
+  scale: scale
+});
+
+// Calculate Similarity
+// ****************************************************
+// We compute the dot product between two embedding vectors
+// Results are interepreted as distances in embedding space
+// Values closer to 0 are closer together (more similar)
+// Values closer to 1 are further apart (less similar)
+var bandNames = mosaic.bandNames();
+
+var positiveDistances = ee.ImageCollection(positiveEmbeddings.map(function (f) {
+  var arrayImage = ee.Image(f.toArray(bandNames)).arrayFlatten([bandNames]);
+  var dotProduct = arrayImage.multiply(mosaic)
+    .reduce('sum')
+    .rename('similarity');
+  return dotProduct;
+}));
+
+// Calculate mean distance from all reference locations
+var meanPositive = positiveDistances.mean();
+
+
+var negativeDistances = ee.ImageCollection(negativeEmbeddings.map(function (f) {
+  var arrayImage = ee.Image(f.toArray(bandNames)).arrayFlatten([bandNames]);
+  var dotProduct = arrayImage.multiply(mosaic)
+    .reduce('sum')
+    .rename('similarity');
+  return dotProduct;
+}));
+
+// Calculate mean distance from all reference locations
+var meanNegative = negativeDistances.mean();
+
+// Visualize the distance image
+var palette = [
+  '000004', '2C105C', '711F81', 'B63679',
+  'EE605E', 'FDAE78', 'FCFDBF', 'FFFFFF'
+];
+var similarityVis = {palette: palette, min: 0.5, max: 1};
+Map.addLayer(meanPositive.clip(geometry), similarityVis,
+  'Positive Similarity', false);
+Map.addLayer(meanNegative.clip(geometry), similarityVis,
+  'Negative Similarity', false);
+
+
+// Extract Location Matches
+// ****************************************************
+
+// Apply a threshold
+var positivethreshold = 0.85;
+var similarPositivePixels = meanPositive.gt(positivethreshold);
+
+var neativethreshold = 0.75;
+var similarNegativePixels = meanNegative.gt(neativethreshold);
+
+// Within the positive matches, find pixels 'dissimilar'
+// to negative example
+var similarity = similarPositivePixels
+  .updateMask(similarNegativePixels.not()).selfMask();
+
+Map.addLayer(similarity.clip(geometry), similarityVis,
+  'Result (Similar to Positive, Dissimilar to Negative)', false);
+  
+// Vectorize the results 
+// Mask 0 values using selfMask()
+// to get polygons only for the matched pixels
+var predictedMatches = similarity.selfMask().reduceToVectors({
+  scale: scale,
+  eightConnected: false,
+  maxPixels: 1e10,
+  geometry: geometry
+});
+
+// Extract the centroids of vectorized polygons
+// var predictedMatches = polygons.map(function(f) {
+//   return f.centroid({maxError:1});
+// });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Export matches to an asset (optional)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Vectorization operation is a memory and compute-intensive
+// operation. To prevent errors, Export the results as an Asset first.
+
+// Once the asset is exported, it can be imported and visualized
+
+// Replace this with your asset folder
+// The folder must exist before exporting
+var exportFolder = 'projects/spatialthoughts/assets/satellite_embedding/';
+var matchesExportFc = 'predicted_open_spaces_matches';
+var matchesExportFcPath = exportFolder + matchesExportFc;
+
+Export.table.toAsset({
+  collection: predictedMatches,
+  description: 'Predicted_Matches_Export',
+  assetId: matchesExportFcPath
+});
+
+// Wait for the export to complete and continue with
+// the exported asset from here onwards.
+//var predictedMatches = ee.FeatureCollection(matchesExportFcPath);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// End optional export section
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Visualize the Matches
+// ****************************************************
+
+Map.addLayer(predictedMatches, {color: 'cyan'} , 'Predicted Matches'); 

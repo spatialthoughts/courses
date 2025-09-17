@@ -1,0 +1,168 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[76.63252720514761, 15.960111424081388],
+          [76.63252720514761, 15.56097027630899],
+          [77.08022007624136, 15.56097027630899],
+          [77.08022007624136, 15.960111424081388]]], null, false),
+    samples = /* color: #0b4a8b */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([76.82884752232431, 15.72495960911532]),
+            {
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([76.83159002891713, 15.72212764505831]),
+            {
+              "system:index": "1"
+            })]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Similarity Search with Area Filtering
+
+// Mapping Agriculture Ponds
+// Constrain the search to match patches of certain size
+
+Map.addLayer(geometry, {color: 'red'}, 'Search Area');
+
+// Select Reference Location(s)
+// ****************************************************
+
+// Use the satellite basemap
+Map.setOptions('SATELLITE');
+
+// Add a few reference locations of Brick Kilns
+// in the 'samples' FeatureCollection
+
+
+// Select a time-period
+// ****************************************************
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+// Filter and mosaic the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var mosaic = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .mosaic();
+
+// Choose the scale
+// You may choose a larger value for larger objects
+var scale = 10; 
+
+// Extract the embedding vector from the samples
+var sampleEmbeddings = mosaic.sampleRegions({
+  collection: samples,
+  scale: scale
+});
+
+// Calculate Similarity
+// ****************************************************
+// We compute the dot product between two embedding vectors
+// Results are interepreted as distances in embedding space
+// Values closer to 0 are closer together (more similar)
+// Values closer to 1 are further apart (less similar)
+var bandNames = mosaic.bandNames();
+
+var sampleDistances = ee.ImageCollection(sampleEmbeddings.map(function (f) {
+  var arrayImage = ee.Image(f.toArray(bandNames)).arrayFlatten([bandNames]);
+  var dotProduct = arrayImage.multiply(mosaic)
+    .reduce('sum')
+    .rename('similarity');
+  return dotProduct;
+}));
+
+// Calculate mean distance from all reference locations
+var meanDistance = sampleDistances.mean();
+
+// Visualize the distance image
+var palette = [
+  '000004', '2C105C', '711F81', 'B63679',
+  'EE605E', 'FDAE78', 'FCFDBF', 'FFFFFF'
+];
+var similarityVis = {palette: palette, min: 0.5, max: 1};
+Map.addLayer(meanDistance.clip(geometry), similarityVis,
+  'Similarity (bright = close)', false);
+
+
+// Extract Location Matches
+// ****************************************************
+
+// Apply a threshold
+var threshold = 0.90;
+var similarPixels = meanDistance.gt(threshold);
+
+
+// Area in Sq. Meters
+var minArea = 1000;
+var maxArea = 10000;
+
+// Calculate size of pixel at chosen scale
+var pixelArea = ee.Number(scale).pow(2);
+
+var minPixels = ee.Number(minArea).divide(pixelArea).round();
+var maxPixels = ee.Number(maxArea).divide(pixelArea).round();
+print('Minimum Pixels', minPixels);
+print('Maximum Pixels', maxPixels);
+var connections = similarPixels.selfMask().connectedPixelCount(maxPixels);
+
+var similarPixelsFiltered = similarPixels.selfMask()
+  .updateMask(connections.gte(minPixels))
+  .updateMask(connections.lte(maxPixels));
+  
+// Vectorize the results 
+// Mask 0 values using selfMask()
+// to get polygons only for the matched pixels
+var polygons = similarPixels.selfMask().reduceToVectors({
+  scale: scale,
+  eightConnected: false,
+  maxPixels: 1e10,
+  geometry: geometry
+});
+
+// Extract the centroids of vectorized polygons
+var predictedMatches = polygons.map(function(f) {
+  return f.centroid({maxError:1});
+});
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Export matches to an asset (optional)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Vectorization operation is a memory and compute-intensive
+// operation. To prevent errors, Export the results as an Asset first.
+
+// Once the asset is exported, it can be imported and visualized
+
+// Replace this with your asset folder
+// The folder must exist before exporting
+var exportFolder = 'projects/spatialthoughts/assets/satellite_embedding/';
+var matchesExportFc = 'predicted_farm_ponds_matches';
+var matchesExportFcPath = exportFolder + matchesExportFc;
+
+Export.table.toAsset({
+  collection: predictedMatches,
+  description: 'Predicted_Matches_Export',
+  assetId: matchesExportFcPath
+});
+
+// Wait for the export to complete and continue with
+// the exported asset from here onwards.
+//var predictedMatches = ee.FeatureCollection(matchesExportFcPath);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// End optional export section
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Visualize the Matches
+// ****************************************************
+
+Map.addLayer(predictedMatches, {color: 'cyan'} , 'Predicted Matches'); 
