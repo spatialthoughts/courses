@@ -10,8 +10,9 @@ cp -R ~/projects/End-to-End-GEE/Assignments code/end_to_end_gee/
 
 # Python notebooks
 # Clear output from cells before packaging
-jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/end_to_end_gee/*.ipynb
+#jupyter-nbconvert --ClearOutputPreprocessor.enabled=True --inplace code/end_to_end_gee/*.ipynb
 jupyter-nbconvert --to markdown  code/end_to_end_gee/*.ipynb --output-dir end-to-end-gee-output/
 # image paths need to be set relative to the folder. Replace it with sed
 sed -i '' -E 's/\((.+_files)/\(end-to-end-gee-output\/\1/g' end-to-end-gee-output/*.md
-
+# matplotlib figures end up with a title 'png'. Remove it with sed
+sed -i '' 's/\[png\]/\[\]/g' end-to-end-gee-output/*.md
