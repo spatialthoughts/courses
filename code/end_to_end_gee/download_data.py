@@ -24,7 +24,7 @@ filename = 'ssm_{}.csv'.format(date_string.getInfo())
 # Saving to current directory. You can change the path to appropriate location
 output_path = os.path.join(filename)
 
-soilmoisture = ee.ImageCollection('NASA/SMAP/SPL4SMGP/007')
+soilmoisture = ee.ImageCollection('NASA/SMAP/SPL4SMGP/008')
 admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2')
 
 # Filter to a state
