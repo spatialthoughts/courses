@@ -1,6 +1,6 @@
 import os
-from PyQt5.QtWidgets import QAction
-from PyQt5.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon
 
 plugin_dir = os.path.dirname(__file__)
 

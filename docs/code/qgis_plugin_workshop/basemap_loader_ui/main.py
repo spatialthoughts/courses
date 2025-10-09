@@ -1,6 +1,6 @@
 import os
-from PyQt5.QtWidgets import QAction, QComboBox, QLabel, QPushButton
-from PyQt5.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QComboBox, QLabel, QPushButton
+from qgis.PyQt.QtGui import QIcon
 from qgis.core import QgsRasterLayer, QgsProject, QgsCoordinateReferenceSystem
 
 plugin_dir = os.path.dirname(__file__)
