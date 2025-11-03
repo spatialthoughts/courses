@@ -371,6 +371,9 @@ id="toc-notebooks-and-datasets">Notebooks and Datasets</a></li>
 Basics</a></li>
 <li><a href="#stac-and-dask-basics" id="toc-stac-and-dask-basics">STAC
 and Dask Basics</a></li>
+<li><a href="#calculating-spectral-indices"
+id="toc-calculating-spectral-indices">Calculating Spectral
+Indices</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
 </div>
@@ -506,7 +509,7 @@ and select <em>Download</em> to download the file locally.</p>
 <div id="xarray-basics" class="section level1">
 <h1>XArray Basics</h1>
 <p><a
-href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/xarray_basics.ipynb"><img
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/01_xarray_basics.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
 alt="Open In Colab" /></a></p>
 <div id="overview" class="section level2">
@@ -724,21 +727,18 @@ it.</p>
 <div id="stac-and-dask-basics" class="section level1">
 <h1>STAC and Dask Basics</h1>
 <p><a
-href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/stac_dask_basics.ipynb"><img
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/02_stac_dask_basics"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
 alt="Open In Colab" /></a></p>
 <div id="overview-1" class="section level2">
 <h2>Overview</h2>
-<p>Xarray is an evolution of rasterio and is inspired by libraries like
-pandas to work with raster datasets. It is particularly suited for
-working with multi-dimensional time-series raster datasets. It also
-integrates tightly with dask that allows one to scale raster data
-processing using parallel computing. XArray provides <a
-href="https://xarray.pydata.org/en/stable/user-guide/plotting.html">Plotting
-Functions</a> based on Matplotlib.</p>
-<p>In this section, we will learn about XArray basics and learn how to
-work with a time-series of Sentinel-2 satellite imagery to create and
-visualize a median composite image.</p>
+<p>In this section, we will learn the basics of querying cloud-hosted
+data via <a href="https://stacspec.org/en">STAC</a> and leverage
+parallel computing via <a
+href="https://tutorial.xarray.dev/intermediate/xarray_and_dask.html">Dask</a>.</p>
+<p>We will learn how to query a catalog of Sentinel-2 images to find the
+least-cloudy scene over a chosen area, visualize it and download it as a
+GeoTIFF file.</p>
 </div>
 <div id="setup-and-data-download-1" class="section level2">
 <h2>Setup and Data Download</h2>
@@ -870,7 +870,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb43-1"><a h
 <span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
 <span id="cb43-3"><a href="#cb43-3" tabindex="-1"></a>scene</span></code></pre></div>
 <div class="sourceCode" id="cb44"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Scene size: </span><span class="sc">{</span>ds<span class="sc">.</span>nbytes<span class="op">/</span><span class="fl">1e6</span><span class="sc">:.2f}</span><span class="ss"> MB.&#39;</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Scene size: </span><span class="sc">{</span>scene<span class="sc">.</span>nbytes<span class="op">/</span><span class="fl">1e6</span><span class="sc">:.2f}</span><span class="ss"> MB.&#39;</span>)</span></code></pre></div>
 <p>This scene is small enough to fit into RAM, so let’s call
 <code>compute()</code> to load this into memory. Dask will query the
 cloud-hosted dataset to fetch the required pixels. As we setup a Dask
@@ -887,6 +887,25 @@ correct NoData value before further processing.</p>
 <div class="sourceCode" id="cb47"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
 <span id="cb47-2"><a href="#cb47-2" tabindex="-1"></a>scene</span></code></pre></div>
+<p>Each band of the scene is saved with integer pixel values (data type
+<code>uint16</code>). This help save the storage cost as storing the
+reflectance values as floating point numbers (data type
+<code>float64</code>) requires more storage. We need to convert the raw
+pixel values to reflectances by applying the <em>scale</em> and
+<em>offset</em> values. The <a
+href="https://github.com/Element84/earth-search">Earth Search STAC
+API</a> does not apply the scale/offset automatically to Sentinel-2
+scene and they are supplied in the <code>raster:bands</code> metadata
+for each band. The scale and offset for sentinel-2 scenes captured after
+Jan 25, 2022 is <code>0.0001</code> and <code>-0.1</code>
+respectively.</p>
+<div class="sourceCode" id="cb48"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb48-2"><a href="#cb48-2" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb48-3"><a href="#cb48-3" tabindex="-1"></a>bands_to_scale<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>]</span>
+<span id="cb48-4"><a href="#cb48-4" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> bands_to_scale:</span>
+<span id="cb48-5"><a href="#cb48-5" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span>
+<span id="cb48-6"><a href="#cb48-6" tabindex="-1"></a>scene</span></code></pre></div>
 </div>
 <div id="visualize-the-scene" class="section level2">
 <h2>Visualize the Scene</h2>
@@ -894,51 +913,267 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb47-1"><a h
 the <code>to_array()</code> method. All the variables will be converted
 to a new dimension. Since our variables are image bands, we give the
 name of the new dimesion as band.</p>
-<div class="sourceCode" id="cb48"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" tabindex="-1"></a>scene_da <span class="op">=</span> scene.to_array(<span class="st">&#39;band&#39;</span>)</span>
-<span id="cb48-2"><a href="#cb48-2" tabindex="-1"></a>scene_da</span></code></pre></div>
+<div class="sourceCode" id="cb49"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" tabindex="-1"></a>scene_da <span class="op">=</span> scene.to_array(<span class="st">&#39;band&#39;</span>)</span>
+<span id="cb49-2"><a href="#cb49-2" tabindex="-1"></a>scene_da</span></code></pre></div>
 <p>We can create a low-resolution preview by resampling the DataArray
 from its native resolution. The raster metadata is stored in the <a
 href="https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors">rio
 accessor</a>. This is enabled by the <code>rioxarray</code> library
 which provides geospatial functions on top of xarray.</p>
-<div class="sourceCode" id="cb49"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;CRS:&#39;</span>, rds.rio.crs)</span>
-<span id="cb49-2"><a href="#cb49-2" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Resolution:&#39;</span>, rds.rio.resolution())</span></code></pre></div>
-<p>Reproject and plot the results.</p>
 <div class="sourceCode" id="cb50"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" tabindex="-1"></a>preview <span class="op">=</span> scene_da.rio.reproject(</span>
-<span id="cb50-2"><a href="#cb50-2" tabindex="-1"></a>    scene.rio.crs, resolution<span class="op">=</span><span class="dv">300</span></span>
-<span id="cb50-3"><a href="#cb50-3" tabindex="-1"></a>)</span>
-<span id="cb50-4"><a href="#cb50-4" tabindex="-1"></a></span>
-<span id="cb50-5"><a href="#cb50-5" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb50-6"><a href="#cb50-6" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
-<span id="cb50-7"><a href="#cb50-7" tabindex="-1"></a>preview.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>]).plot.imshow(</span>
-<span id="cb50-8"><a href="#cb50-8" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb50-9"><a href="#cb50-9" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb50-10"><a href="#cb50-10" tabindex="-1"></a>ax.set_title(<span class="st">&#39;RGB Visualization&#39;</span>)</span>
-<span id="cb50-11"><a href="#cb50-11" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb50-12"><a href="#cb50-12" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
-<span id="cb50-13"><a href="#cb50-13" tabindex="-1"></a>plt.show()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;CRS:&#39;</span>, scene_da.rio.crs)</span>
+<span id="cb50-2"><a href="#cb50-2" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Resolution:&#39;</span>, scene_da.rio.resolution())</span></code></pre></div>
+<p>Reproject and plot the results.</p>
+<div class="sourceCode" id="cb51"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" tabindex="-1"></a>preview <span class="op">=</span> scene_da.rio.reproject(</span>
+<span id="cb51-2"><a href="#cb51-2" tabindex="-1"></a>    scene_da.rio.crs, resolution<span class="op">=</span><span class="dv">300</span></span>
+<span id="cb51-3"><a href="#cb51-3" tabindex="-1"></a>)</span>
+<span id="cb51-4"><a href="#cb51-4" tabindex="-1"></a></span>
+<span id="cb51-5"><a href="#cb51-5" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb51-6"><a href="#cb51-6" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb51-7"><a href="#cb51-7" tabindex="-1"></a>preview.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>]).plot.imshow(</span>
+<span id="cb51-8"><a href="#cb51-8" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb51-9"><a href="#cb51-9" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb51-10"><a href="#cb51-10" tabindex="-1"></a>ax.set_title(<span class="st">&#39;RGB Visualization&#39;</span>)</span>
+<span id="cb51-11"><a href="#cb51-11" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb51-12"><a href="#cb51-12" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb51-13"><a href="#cb51-13" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="save-the-scene-to-disk" class="section level2">
 <h2>Save the Scene to Disk</h2>
-<div class="sourceCode" id="cb51"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" tabindex="-1"></a>scene_id <span class="op">=</span> items[<span class="dv">0</span>].<span class="bu">id</span></span>
-<span id="cb51-2"><a href="#cb51-2" tabindex="-1"></a>output_da <span class="op">=</span> scene_da.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>])</span>
-<span id="cb51-3"><a href="#cb51-3" tabindex="-1"></a>output_file <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>scene_id<span class="sc">}</span><span class="ss">.tif&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb52"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" tabindex="-1"></a>scene_id <span class="op">=</span> items[<span class="dv">0</span>].<span class="bu">id</span></span>
+<span id="cb52-2"><a href="#cb52-2" tabindex="-1"></a>output_da <span class="op">=</span> scene_da.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>])</span>
+<span id="cb52-3"><a href="#cb52-3" tabindex="-1"></a>output_file <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>scene_id<span class="sc">}</span><span class="ss">.tif&#39;</span></span></code></pre></div>
 <p>Rather than saving it to the temporary machine where Colab is
 running, we can save it to our own Google Drive. This will ensure the
 image will be available to us even after existing Google Colab.</p>
 <p>Run the following cell to authenticate and mount the Google
 Drive.</p>
-<div class="sourceCode" id="cb52"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" tabindex="-1"></a><span class="im">from</span> google.colab <span class="im">import</span> drive</span>
-<span id="cb52-2"><a href="#cb52-2" tabindex="-1"></a>drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb53"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" tabindex="-1"></a>drive_folder_root <span class="op">=</span> <span class="st">&#39;/content/drive/MyDrive&#39;</span></span>
-<span id="cb53-2"><a href="#cb53-2" tabindex="-1"></a>output_file_path <span class="op">=</span> os.path.join(drive_folder_root, output_file)</span>
-<span id="cb53-3"><a href="#cb53-3" tabindex="-1"></a>output_da.rio.to_raster(output_file_path, compress<span class="op">=</span><span class="st">&#39;LZW&#39;</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" tabindex="-1"></a><span class="im">from</span> google.colab <span class="im">import</span> drive</span>
+<span id="cb53-2"><a href="#cb53-2" tabindex="-1"></a>drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb54"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" tabindex="-1"></a>drive_folder_root <span class="op">=</span> <span class="st">&#39;/content/drive/MyDrive&#39;</span></span>
+<span id="cb54-2"><a href="#cb54-2" tabindex="-1"></a>output_file_path <span class="op">=</span> os.path.join(drive_folder_root, output_file)</span>
+<span id="cb54-3"><a href="#cb54-3" tabindex="-1"></a>output_da.rio.to_raster(output_file_path, compress<span class="op">=</span><span class="st">&#39;LZW&#39;</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="calculating-spectral-indices" class="section level1">
+<h1>Calculating Spectral Indices</h1>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing03_calculating_indices.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<div id="overview-2" class="section level2">
+<h2>Overview</h2>
+<p>Spectral indices are core to many remote sensing analysis. In this
+section, we will learn how can we perform calculations using XArray.</p>
+<p>We will take a single Sentinel-2 scene and calculate spectral indices
+like NDVI, MNDWI and SAVI.</p>
+</div>
+<div id="setup-and-data-download-2" class="section level2">
+<h2>Setup and Data Download</h2>
+<p>The following blocks of code will install the required packages and
+download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb55"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb55-2"><a href="#cb55-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb55-3"><a href="#cb55-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<div class="sourceCode" id="cb56"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb56-2"><a href="#cb56-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb56-3"><a href="#cb56-3" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb56-5"><a href="#cb56-5" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb56-6"><a href="#cb56-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb56-7"><a href="#cb56-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+<div class="sourceCode" id="cb57"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb57-2"><a href="#cb57-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb57-3"><a href="#cb57-3" tabindex="-1"></a>client</span></code></pre></div>
+<p>f you are running this notebook in Colab, you will need to create and
+use a proxy URL to see the dashboard running on the local server.</p>
+<div class="sourceCode" id="cb58"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb58-2"><a href="#cb58-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb58-3"><a href="#cb58-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb58-4"><a href="#cb58-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+</div>
+<div id="get-a-sentinel-2-scene" class="section level2">
+<h2>Get a Sentinel-2 Scene</h2>
+<p>We define a location and time of interest to get some satellite
+imagery.</p>
+<div class="sourceCode" id="cb59"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb59-2"><a href="#cb59-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
+<span id="cb59-3"><a href="#cb59-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<div class="sourceCode" id="cb60"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" tabindex="-1"></a><span class="co"># Define a small bounding box around the chosen point</span></span>
+<span id="cb60-2"><a href="#cb60-2" tabindex="-1"></a>km2deg <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="dv">111</span></span>
+<span id="cb60-3"><a href="#cb60-3" tabindex="-1"></a>x, y <span class="op">=</span> (longitude, latitude)</span>
+<span id="cb60-4"><a href="#cb60-4" tabindex="-1"></a>r <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> km2deg  <span class="co"># radius in degrees</span></span>
+<span id="cb60-5"><a href="#cb60-5" tabindex="-1"></a>bbox <span class="op">=</span> (x <span class="op">-</span> r, y <span class="op">-</span> r, x <span class="op">+</span> r, y <span class="op">+</span> r)</span></code></pre></div>
+<p>Search the catalog for matching items.</p>
+<div class="sourceCode" id="cb61"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" tabindex="-1"></a><span class="co"># Query the STAC Catalog</span></span>
+<span id="cb61-2"><a href="#cb61-2" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb61-3"><a href="#cb61-3" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
+<span id="cb61-4"><a href="#cb61-4" tabindex="-1"></a></span>
+<span id="cb61-5"><a href="#cb61-5" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb61-6"><a href="#cb61-6" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
+<span id="cb61-7"><a href="#cb61-7" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb61-8"><a href="#cb61-8" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb61-9"><a href="#cb61-9" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}, <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}},</span>
+<span id="cb61-10"><a href="#cb61-10" tabindex="-1"></a>    sortby<span class="op">=</span>[{<span class="st">&#39;field&#39;</span>: <span class="st">&#39;properties.eo:cloud_cover&#39;</span>, <span class="st">&#39;direction&#39;</span>: <span class="st">&#39;asc&#39;</span>}]</span>
+<span id="cb61-11"><a href="#cb61-11" tabindex="-1"></a></span>
+<span id="cb61-12"><a href="#cb61-12" tabindex="-1"></a>)</span>
+<span id="cb61-13"><a href="#cb61-13" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb61-14"><a href="#cb61-14" tabindex="-1"></a></span>
+<span id="cb61-15"><a href="#cb61-15" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
+<span id="cb61-16"><a href="#cb61-16" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb61-17"><a href="#cb61-17" tabindex="-1"></a>    items,</span>
+<span id="cb61-18"><a href="#cb61-18" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;swir16&#39;</span>],</span>
+<span id="cb61-19"><a href="#cb61-19" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb61-20"><a href="#cb61-20" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb61-21"><a href="#cb61-21" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb61-22"><a href="#cb61-22" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb61-23"><a href="#cb61-23" tabindex="-1"></a>)</span>
+<span id="cb61-24"><a href="#cb61-24" tabindex="-1"></a></span>
+<span id="cb61-25"><a href="#cb61-25" tabindex="-1"></a><span class="co"># Select the first scene</span></span>
+<span id="cb61-26"><a href="#cb61-26" tabindex="-1"></a>timestamp <span class="op">=</span> pd.to_datetime(items[<span class="dv">0</span>].properties[<span class="st">&#39;datetime&#39;</span>]).tz_convert(<span class="va">None</span>)</span>
+<span id="cb61-27"><a href="#cb61-27" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
+<span id="cb61-28"><a href="#cb61-28" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb61-29"><a href="#cb61-29" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
+<span id="cb61-30"><a href="#cb61-30" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb61-31"><a href="#cb61-31" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb61-32"><a href="#cb61-32" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb61-33"><a href="#cb61-33" tabindex="-1"></a>bands_to_scale<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;swir16&#39;</span>]</span>
+<span id="cb61-34"><a href="#cb61-34" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> bands_to_scale:</span>
+<span id="cb61-35"><a href="#cb61-35" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
+<div class="sourceCode" id="cb62"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb62-2"><a href="#cb62-2" tabindex="-1"></a>scene <span class="op">=</span> scene.compute()</span>
+<span id="cb62-3"><a href="#cb62-3" tabindex="-1"></a>scene</span></code></pre></div>
+</div>
+<div id="visualize-the-scene-1" class="section level2">
+<h2>Visualize the Scene</h2>
+<p>To visualize our Dataset, we first convert it to a DataArray using
+the <code>to_array()</code> method. All the variables will be converted
+to a new dimension. Since our variables are image bands, we give the
+name of the new dimesion as band.</p>
+<div class="sourceCode" id="cb63"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" tabindex="-1"></a>scene_da <span class="op">=</span> scene.to_array(<span class="st">&#39;band&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb64"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" tabindex="-1"></a>preview <span class="op">=</span> scene_da.rio.reproject(</span>
+<span id="cb64-2"><a href="#cb64-2" tabindex="-1"></a>    scene.rio.crs, resolution<span class="op">=</span><span class="dv">300</span></span>
+<span id="cb64-3"><a href="#cb64-3" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb65"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb65-2"><a href="#cb65-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb65-3"><a href="#cb65-3" tabindex="-1"></a>preview.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>]).plot.imshow(</span>
+<span id="cb65-4"><a href="#cb65-4" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb65-5"><a href="#cb65-5" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb65-6"><a href="#cb65-6" tabindex="-1"></a>ax.set_title(<span class="st">&#39;RGB Visualization&#39;</span>)</span>
+<span id="cb65-7"><a href="#cb65-7" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb65-8"><a href="#cb65-8" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb65-9"><a href="#cb65-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb66"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb66-2"><a href="#cb66-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb66-3"><a href="#cb66-3" tabindex="-1"></a>preview.sel(band<span class="op">=</span>[<span class="st">&#39;nir&#39;</span>, <span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>]).plot.imshow(</span>
+<span id="cb66-4"><a href="#cb66-4" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb66-5"><a href="#cb66-5" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb66-6"><a href="#cb66-6" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NRG Visualization&#39;</span>)</span>
+<span id="cb66-7"><a href="#cb66-7" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb66-8"><a href="#cb66-8" tabindex="-1"></a>plt.show()</span></code></pre></div>
+</div>
+<div id="calculate-spectral-indices" class="section level2">
+<h2>Calculate Spectral Indices</h2>
+<p>The Normalized Difference Vegetation Index (NDVI) is calculated using
+the following formula:</p>
+<p>$ NDVI = $</p>
+<p>Where: * NIR = Near-Infrared band reflectance * Red = Red band
+reflectance</p>
+<div class="sourceCode" id="cb67"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" tabindex="-1"></a>red <span class="op">=</span> scene_da.sel(band<span class="op">=</span><span class="st">&#39;red&#39;</span>)</span>
+<span id="cb67-2"><a href="#cb67-2" tabindex="-1"></a>nir <span class="op">=</span> scene_da.sel(band<span class="op">=</span><span class="st">&#39;nir&#39;</span>)</span>
+<span id="cb67-3"><a href="#cb67-3" tabindex="-1"></a></span>
+<span id="cb67-4"><a href="#cb67-4" tabindex="-1"></a>ndvi <span class="op">=</span> (nir <span class="op">-</span> red)<span class="op">/</span>(nir <span class="op">+</span> red)</span>
+<span id="cb67-5"><a href="#cb67-5" tabindex="-1"></a>ndvi</span></code></pre></div>
+<p>Let’s visualize the results.</p>
+<div class="sourceCode" id="cb68"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" tabindex="-1"></a>ndvi_preview <span class="op">=</span> ndvi.rio.reproject(</span>
+<span id="cb68-2"><a href="#cb68-2" tabindex="-1"></a>    ndvi.rio.crs, resolution<span class="op">=</span><span class="dv">300</span></span>
+<span id="cb68-3"><a href="#cb68-3" tabindex="-1"></a>)</span>
+<span id="cb68-4"><a href="#cb68-4" tabindex="-1"></a>cbar_kwargs <span class="op">=</span> {</span>
+<span id="cb68-5"><a href="#cb68-5" tabindex="-1"></a>    <span class="st">&#39;orientation&#39;</span>:<span class="st">&#39;horizontal&#39;</span>,</span>
+<span id="cb68-6"><a href="#cb68-6" tabindex="-1"></a>    <span class="st">&#39;fraction&#39;</span>: <span class="fl">0.025</span>,</span>
+<span id="cb68-7"><a href="#cb68-7" tabindex="-1"></a>    <span class="st">&#39;pad&#39;</span>: <span class="fl">0.05</span>,</span>
+<span id="cb68-8"><a href="#cb68-8" tabindex="-1"></a>    <span class="st">&#39;extend&#39;</span>:<span class="st">&#39;neither&#39;</span></span>
+<span id="cb68-9"><a href="#cb68-9" tabindex="-1"></a>}</span>
+<span id="cb68-10"><a href="#cb68-10" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb68-11"><a href="#cb68-11" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb68-12"><a href="#cb68-12" tabindex="-1"></a>ndvi_preview.plot.imshow(</span>
+<span id="cb68-13"><a href="#cb68-13" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb68-14"><a href="#cb68-14" tabindex="-1"></a>    cmap<span class="op">=</span><span class="st">&#39;Greens&#39;</span>,</span>
+<span id="cb68-15"><a href="#cb68-15" tabindex="-1"></a>    robust<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb68-16"><a href="#cb68-16" tabindex="-1"></a>    cbar_kwargs<span class="op">=</span>cbar_kwargs)</span>
+<span id="cb68-17"><a href="#cb68-17" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI&#39;</span>)</span>
+<span id="cb68-18"><a href="#cb68-18" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb68-19"><a href="#cb68-19" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p>The Modified Normalized Difference Water Index (MNDWI) is calculated
+using the following formula:</p>
+<p>$ MNDWI = $</p>
+<p>Where: * Green = Green band reflectance * SWIR1 = Short-wave infrared
+band 1 reflectance</p>
+<div class="sourceCode" id="cb69"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" tabindex="-1"></a>green <span class="op">=</span> scene_da.sel(band<span class="op">=</span><span class="st">&#39;green&#39;</span>)</span>
+<span id="cb69-2"><a href="#cb69-2" tabindex="-1"></a>swir16 <span class="op">=</span> scene_da.sel(band<span class="op">=</span><span class="st">&#39;swir16&#39;</span>)</span>
+<span id="cb69-3"><a href="#cb69-3" tabindex="-1"></a>mndwi <span class="op">=</span> (green <span class="op">-</span> swir16)<span class="op">/</span>(green <span class="op">+</span> swir16)</span></code></pre></div>
+<p>The Soil Adjusted Vegetation Index (SAVI) is calculated using the
+following formula:</p>
+<p>$ SAVI = (1 + L) * ( ) $</p>
+<p>Where: * NIR = Near-Infrared band reflectance * Red = Red band
+reflectance * L = Soil brightness correction factor (typically 0.5 for
+moderate vegetation)</p>
+<div class="sourceCode" id="cb70"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" tabindex="-1"></a>savi <span class="op">=</span> <span class="fl">1.5</span> <span class="op">*</span> ((nir <span class="op">-</span> red) <span class="op">/</span> (nir <span class="op">+</span> red <span class="op">+</span> <span class="fl">0.5</span>))</span></code></pre></div>
+</div>
+<div id="save-the-computed-indices" class="section level2">
+<h2>Save the Computed Indices</h2>
+<p>Rather than saving it to the temporary machine where Colab is
+running, we can save it to our own Google Drive. This will ensure the
+image will be available to us even after existing Google Colab.</p>
+<p>Run the following cell to authenticate and mount the Google
+Drive.</p>
+<div class="sourceCode" id="cb71"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" tabindex="-1"></a><span class="im">from</span> google.colab <span class="im">import</span> drive</span>
+<span id="cb71-2"><a href="#cb71-2" tabindex="-1"></a>drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb72"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" tabindex="-1"></a>drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
+<span id="cb72-2"><a href="#cb72-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb72-3"><a href="#cb72-3" tabindex="-1"></a>output_folder_path <span class="op">=</span> os.path.join(</span>
+<span id="cb72-4"><a href="#cb72-4" tabindex="-1"></a>    <span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, output_folder)</span>
+<span id="cb72-5"><a href="#cb72-5" tabindex="-1"></a></span>
+<span id="cb72-6"><a href="#cb72-6" tabindex="-1"></a><span class="co"># Check if Google Drive is mounted</span></span>
+<span id="cb72-7"><a href="#cb72-7" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(<span class="st">&#39;/content/drive&#39;</span>):</span>
+<span id="cb72-8"><a href="#cb72-8" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Google Drive is not mounted. Please run the cell above to mount your drive.&quot;</span>)</span>
+<span id="cb72-9"><a href="#cb72-9" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb72-10"><a href="#cb72-10" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder_path):</span>
+<span id="cb72-11"><a href="#cb72-11" tabindex="-1"></a>        os.makedirs(output_folder_path)</span></code></pre></div>
+<div class="sourceCode" id="cb73"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" tabindex="-1"></a>files <span class="op">=</span> {</span>
+<span id="cb73-2"><a href="#cb73-2" tabindex="-1"></a>    <span class="st">&#39;ndvi.tif&#39;</span>: ndvi,</span>
+<span id="cb73-3"><a href="#cb73-3" tabindex="-1"></a>    <span class="st">&#39;mndwi.tif&#39;</span>: mndwi,</span>
+<span id="cb73-4"><a href="#cb73-4" tabindex="-1"></a>    <span class="st">&#39;savi.tif&#39;</span>: savi</span>
+<span id="cb73-5"><a href="#cb73-5" tabindex="-1"></a>}</span>
+<span id="cb73-6"><a href="#cb73-6" tabindex="-1"></a></span>
+<span id="cb73-7"><a href="#cb73-7" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files:</span>
+<span id="cb73-8"><a href="#cb73-8" tabindex="-1"></a>  output_path <span class="op">=</span> os.path.join(output_folder_path, <span class="bu">file</span>)</span>
+<span id="cb73-9"><a href="#cb73-9" tabindex="-1"></a>  files[<span class="bu">file</span>].rio.to_raster(output_path, driver<span class="op">=</span><span class="st">&#39;COG&#39;</span>)</span>
+<span id="cb73-10"><a href="#cb73-10" tabindex="-1"></a>  <span class="bu">print</span>(<span class="ss">f&#39;Saved </span><span class="sc">{</span><span class="bu">file</span><span class="sc">}</span><span class="ss"> to </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 <hr />
 </div>
 </div>

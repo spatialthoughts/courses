@@ -1,8 +1,8 @@
 ## Overview
 
-Xarray is an evolution of rasterio and is inspired by libraries like pandas to work with raster datasets. It is particularly suited for working with multi-dimensional time-series raster datasets. It also integrates tightly with dask that allows one to scale raster data processing using parallel computing. XArray provides [Plotting Functions](https://xarray.pydata.org/en/stable/user-guide/plotting.html) based on Matplotlib.
+In this section, we will learn the basics of querying cloud-hosted data via [STAC](https://stacspec.org/en) and leverage parallel computing via [Dask](https://tutorial.xarray.dev/intermediate/xarray_and_dask.html).
 
-In this section, we will learn about XArray basics and learn how to work with a time-series of Sentinel-2 satellite imagery to create and visualize a median composite image.
+We will learn how to query a catalog of Sentinel-2 images to find the least-cloudy scene over a chosen area, visualize it and download it as a GeoTIFF file.
 
 ## Setup and Data Download
 
@@ -163,7 +163,7 @@ scene
 
 
 ```python
-print(f'Scene size: {ds.nbytes/1e6:.2f} MB.')
+print(f'Scene size: {scene.nbytes/1e6:.2f} MB.')
 ```
 
 This scene is small enough to fit into RAM, so let's call `compute()` to load this into memory. Dask will query the cloud-hosted dataset to fetch the required pixels. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
@@ -187,6 +187,18 @@ scene = scene.where(scene != 0)
 scene
 ```
 
+Each band of the scene is saved with integer pixel values (data type `uint16`). This help save the storage cost as storing the reflectance values as floating point numbers (data type `float64`) requires more storage. We need to convert the raw pixel values to reflectances by applying the *scale* and *offset* values. The [Earth Search STAC API](https://github.com/Element84/earth-search) does not apply the scale/offset automatically to Sentinel-2 scene and they are supplied in the `raster:bands` metadata for each band. The scale and offset for sentinel-2 scenes captured after Jan 25, 2022 is `0.0001` and `-0.1` respectively.
+
+
+```python
+scale = 0.0001
+offset = -0.1
+bands_to_scale=['red', 'green', 'blue', 'nir']
+for band in bands_to_scale:
+  scene[band] = scene[band] * scale + offset
+scene
+```
+
 ## Visualize the Scene
 
 To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
@@ -202,8 +214,8 @@ We can create a low-resolution preview by resampling the DataArray from its nati
 
 
 ```python
-print('CRS:', rds.rio.crs)
-print('Resolution:', rds.rio.resolution())
+print('CRS:', scene_da.rio.crs)
+print('Resolution:', scene_da.rio.resolution())
 ```
 
 Reproject and plot the results.
@@ -211,7 +223,7 @@ Reproject and plot the results.
 
 ```python
 preview = scene_da.rio.reproject(
-    scene.rio.crs, resolution=300
+    scene_da.rio.crs, resolution=300
 )
 
 fig, ax = plt.subplots(1, 1)
