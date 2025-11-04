@@ -100,16 +100,7 @@ scene = scene.where(scene != 0)
 # Apply scale/offset
 scale = 0.0001
 offset = -0.1
-bands_to_scale=['red', 'green', 'blue', 'nir', 'swir16']
-for band in bands_to_scale:
-  scene[band] = scene[band] * scale + offset
-```
-
-
-```python
-%%time
-scene = scene.compute()
-scene
+scene = scene*scale + offset
 ```
 
 ## Visualize the Scene
@@ -122,15 +113,14 @@ To visualize our Dataset, we first convert it to a DataArray using the `to_array
 scene_da = scene.to_array('band')
 ```
 
+Rather than loading the entire scene into memory, we resample it to a lower resolution preview and render it.
+
 
 ```python
 preview = scene_da.rio.reproject(
     scene.rio.crs, resolution=300
 )
-```
 
-
-```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
 preview.sel(band=['red', 'green', 'blue']).plot.imshow(
@@ -141,6 +131,8 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
+
+We can also view a False Color Composite (FCC) with a different combination of spectral bands.
 
 
 ```python
@@ -158,9 +150,7 @@ plt.show()
 
 The Normalized Difference Vegetation Index (NDVI) is calculated using the following formula:
 
-$
-NDVI = \frac{(NIR - Red)}{(NIR + Red)}
-$
+`NDVI = (NIR - Red)/(NIR + Red)`
 
 Where:
 *   NIR = Near-Infrared band reflectance
@@ -202,9 +192,7 @@ plt.show()
 
 The Modified Normalized Difference Water Index (MNDWI) is calculated using the following formula:
 
-$
-MNDWI = \frac{(Green - SWIR1)}{(Green + SWIR1)}
-$
+`MNDWI = (Green - SWIR1)/(Green + SWIR1)`
 
 Where:
 *   Green = Green band reflectance
@@ -217,13 +205,10 @@ swir16 = scene_da.sel(band='swir16')
 mndwi = (green - swir16)/(green + swir16)
 ```
 
-
-
 The Soil Adjusted Vegetation Index (SAVI) is calculated using the following formula:
 
-$
-SAVI = (1 + L) * (\frac{(NIR - Red)}{(NIR + Red + L)} )
-$
+
+`SAVI = (1 + L) * ((NIR - Red)/(NIR + Red + L))`
 
 Where:
 *   NIR = Near-Infrared band reflectance

@@ -134,7 +134,7 @@ Load the matching images as a XArray Dataset.
 ```python
 ds = stac.load(
     items,
-    bands=['red', 'green', 'blue', 'nir', 'scl'],
+    bands=['red', 'green', 'blue', 'nir'],
     resolution=10,
     chunks={},  # <-- use Dask
     groupby='solar_day',
@@ -193,10 +193,7 @@ Each band of the scene is saved with integer pixel values (data type `uint16`). 
 ```python
 scale = 0.0001
 offset = -0.1
-bands_to_scale=['red', 'green', 'blue', 'nir']
-for band in bands_to_scale:
-  scene[band] = scene[band] * scale + offset
-scene
+scene = scene*scale + offset
 ```
 
 ## Visualize the Scene
@@ -218,7 +215,7 @@ print('CRS:', scene_da.rio.crs)
 print('Resolution:', scene_da.rio.resolution())
 ```
 
-Reproject and plot the results.
+This is a fairly large scene with a lot of pixels. For visualizing, we resample it to a lower resolution preview. When plotting the image, the `robust=True` option applies a *98-percentile* stretch to find the optimal min/max values for visualization.
 
 
 ```python
