@@ -367,15 +367,17 @@ with use-cases focused on cloud-based remote sensing applications.</h3>
 <li><a href="#notebooks-and-datasets"
 id="toc-notebooks-and-datasets">Notebooks and Datasets</a></li>
 <li><a href="#hello-colab" id="toc-hello-colab">Hello Colab</a></li>
-<li><a href="#xarray-basics" id="toc-xarray-basics">XArray
+<li><a href="#xarray-basics" id="toc-xarray-basics">1. XArray
 Basics</a></li>
-<li><a href="#stac-and-dask-basics" id="toc-stac-and-dask-basics">STAC
-and Dask Basics</a></li>
+<li><a href="#stac-and-dask-basics" id="toc-stac-and-dask-basics">2.
+STAC and Dask Basics</a></li>
 <li><a href="#calculating-spectral-indices"
-id="toc-calculating-spectral-indices">Calculating Spectral
+id="toc-calculating-spectral-indices">3. Calculating Spectral
 Indices</a></li>
-<li><a href="#masking-clouds" id="toc-masking-clouds">Masking
+<li><a href="#masking-clouds" id="toc-masking-clouds">4. Masking
 Clouds</a></li>
+<li><a href="#extracting-time-series" id="toc-extracting-time-series">5.
+Extracting Time-Series</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
 </ul>
 </div>
@@ -509,7 +511,7 @@ and select <em>Download</em> to download the file locally.</p>
 </div>
 </div>
 <div id="xarray-basics" class="section level1">
-<h1>XArray Basics</h1>
+<h1>1. XArray Basics</h1>
 <p><a
 href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/01_xarray_basics.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
@@ -727,7 +729,7 @@ it.</p>
 </div>
 </div>
 <div id="stac-and-dask-basics" class="section level1">
-<h1>STAC and Dask Basics</h1>
+<h1>2. STAC and Dask Basics</h1>
 <p><a
 href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/02_stac_dask_basics"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
@@ -963,7 +965,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb54-1"><a h
 </div>
 </div>
 <div id="calculating-spectral-indices" class="section level1">
-<h1>Calculating Spectral Indices</h1>
+<h1>3. Calculating Spectral Indices</h1>
 <p><a
 href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/03_calculating_indices.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
@@ -1177,7 +1179,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a h
 </div>
 </div>
 <div id="masking-clouds" class="section level1">
-<h1>Masking Clouds</h1>
+<h1>4. Masking Clouds</h1>
 <p><a
 href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/04_masking_clouds.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
@@ -1444,6 +1446,247 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb85-1"><a h
 <span id="cb85-6"><a href="#cb85-6" tabindex="-1"></a>output_file_path <span class="op">=</span> os.path.join(output_folder_path, output_file_masked)</span>
 <span id="cb85-7"><a href="#cb85-7" tabindex="-1"></a></span>
 <span id="cb85-8"><a href="#cb85-8" tabindex="-1"></a>output_masked_da.rio.to_raster(output_file_path, compress<span class="op">=</span><span class="st">&#39;LZW&#39;</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="extracting-time-series" class="section level1">
+<h1>5. Extracting Time-Series</h1>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/05_extracting_time_series.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<div id="overview-4" class="section level2">
+<h2>Overview</h2>
+<p>We are now ready to scale our analysis. Having learned how to
+calculate spectral indices and do cloud masking for a single scene - we
+can easily apply these operations to the entire data-cube and extract
+the results at at one or more locations. Cloud-optimized data formats
+and Dask ensure that we fetch and process only a small amount of data
+that is required to compute the results at the pixels of interest.</p>
+<p>In this section, we will get all Sentinel-2 scenes collected over our
+region of interest, apply a cloud-mask, calculate NDVI and extract a
+time-series of NDVI at a single location. We will also use XArray’s
+built-in time-series processing functions to interpolat and smooth the
+results.</p>
+</div>
+<div id="setup-and-data-download-4" class="section level2">
+<h2>Setup and Data Download</h2>
+<p>The following blocks of code will install the required packages and
+download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb86"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb86-2"><a href="#cb86-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb86-3"><a href="#cb86-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb87-2"><a href="#cb87-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb87-3"><a href="#cb87-3" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb87-4"><a href="#cb87-4" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb87-5"><a href="#cb87-5" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb87-6"><a href="#cb87-6" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb87-7"><a href="#cb87-7" tabindex="-1"></a><span class="im">import</span> pyproj</span></code></pre></div>
+<div class="sourceCode" id="cb88"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb88-2"><a href="#cb88-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb88-3"><a href="#cb88-3" tabindex="-1"></a>client</span></code></pre></div>
+<p>f you are running this notebook in Colab, you will need to create and
+use a proxy URL to see the dashboard running on the local server.</p>
+<div class="sourceCode" id="cb89"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb89-2"><a href="#cb89-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb89-3"><a href="#cb89-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb89-4"><a href="#cb89-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb90"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb90-2"><a href="#cb90-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb90-3"><a href="#cb90-3" tabindex="-1"></a></span>
+<span id="cb90-4"><a href="#cb90-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb90-5"><a href="#cb90-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb90-6"><a href="#cb90-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb90-7"><a href="#cb90-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+</div>
+<div id="get-satellite-imagery-using-stac-api" class="section level2">
+<h2>Get Satellite Imagery using STAC API</h2>
+<p>We define a location and time of interest to get some satellite
+imagery.</p>
+<div class="sourceCode" id="cb91"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb91-2"><a href="#cb91-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
+<span id="cb91-3"><a href="#cb91-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<div class="sourceCode" id="cb92"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a><span class="co"># Define a small bounding box around the chosen point</span></span>
+<span id="cb92-2"><a href="#cb92-2" tabindex="-1"></a>km2deg <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="dv">111</span></span>
+<span id="cb92-3"><a href="#cb92-3" tabindex="-1"></a>x, y <span class="op">=</span> (longitude, latitude)</span>
+<span id="cb92-4"><a href="#cb92-4" tabindex="-1"></a>r <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> km2deg  <span class="co"># radius in degrees</span></span>
+<span id="cb92-5"><a href="#cb92-5" tabindex="-1"></a>bbox <span class="op">=</span> (x <span class="op">-</span> r, y <span class="op">-</span> r, x <span class="op">+</span> r, y <span class="op">+</span> r)</span></code></pre></div>
+<p>Let’s use Element84 search endpoint to look for items from the
+sentinel-2-l2a collection on AWS.</p>
+<div class="sourceCode" id="cb93"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb93-2"><a href="#cb93-2" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
+<span id="cb93-3"><a href="#cb93-3" tabindex="-1"></a></span>
+<span id="cb93-4"><a href="#cb93-4" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb93-5"><a href="#cb93-5" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
+<span id="cb93-6"><a href="#cb93-6" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb93-7"><a href="#cb93-7" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb93-8"><a href="#cb93-8" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}},</span>
+<span id="cb93-9"><a href="#cb93-9" tabindex="-1"></a>)</span>
+<span id="cb93-10"><a href="#cb93-10" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span></code></pre></div>
+<p>Load the matching images as a XArray Dataset.</p>
+<div class="sourceCode" id="cb94"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1" tabindex="-1"></a><span class="co"># Query the STAC Catalog</span></span>
+<span id="cb94-2"><a href="#cb94-2" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb94-3"><a href="#cb94-3" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
+<span id="cb94-4"><a href="#cb94-4" tabindex="-1"></a></span>
+<span id="cb94-5"><a href="#cb94-5" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb94-6"><a href="#cb94-6" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
+<span id="cb94-7"><a href="#cb94-7" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb94-8"><a href="#cb94-8" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb94-9"><a href="#cb94-9" tabindex="-1"></a>    query<span class="op">=</span>{</span>
+<span id="cb94-10"><a href="#cb94-10" tabindex="-1"></a>        <span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>},</span>
+<span id="cb94-11"><a href="#cb94-11" tabindex="-1"></a>    }</span>
+<span id="cb94-12"><a href="#cb94-12" tabindex="-1"></a>)</span>
+<span id="cb94-13"><a href="#cb94-13" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb94-14"><a href="#cb94-14" tabindex="-1"></a></span>
+<span id="cb94-15"><a href="#cb94-15" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
+<span id="cb94-16"><a href="#cb94-16" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb94-17"><a href="#cb94-17" tabindex="-1"></a>    items,</span>
+<span id="cb94-18"><a href="#cb94-18" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
+<span id="cb94-19"><a href="#cb94-19" tabindex="-1"></a>    bbox<span class="op">=</span>bbox, <span class="co"># &lt;-- load data only for the bbox</span></span>
+<span id="cb94-20"><a href="#cb94-20" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb94-21"><a href="#cb94-21" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb94-22"><a href="#cb94-22" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb94-23"><a href="#cb94-23" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb94-24"><a href="#cb94-24" tabindex="-1"></a>)</span>
+<span id="cb94-25"><a href="#cb94-25" tabindex="-1"></a>ds</span></code></pre></div>
+</div>
+<div id="processing-data" class="section level2">
+<h2>Processing Data</h2>
+<p>We have a data cube of multiple scenes collected through the year. As
+XArray supports vectorized operations, we can work with the entire
+DataSet the same way we would process a single scene.</p>
+<p>The Sentinel-2 scenes come with NoData value of 0. So we set the
+correct NoData value before further processing.</p>
+<div class="sourceCode" id="cb95"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a>ds <span class="op">=</span> ds.where(ds <span class="op">!=</span> <span class="dv">0</span>)</span></code></pre></div>
+<p>Apply scale and offset to all spectral bands</p>
+<div class="sourceCode" id="cb96"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb96-2"><a href="#cb96-2" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb96-4"><a href="#cb96-4" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
+<span id="cb96-5"><a href="#cb96-5" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> ds.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
+<span id="cb96-6"><a href="#cb96-6" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
+<span id="cb96-7"><a href="#cb96-7" tabindex="-1"></a>  ds[band] <span class="op">=</span> ds[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
+<p>Apply the cloud mask</p>
+<div class="sourceCode" id="cb97"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a>ds <span class="op">=</span> ds[data_bands].where(<span class="op">~</span>ds.scl.isin([<span class="dv">3</span>,<span class="dv">8</span>,<span class="dv">9</span>,<span class="dv">10</span>]))</span>
+<span id="cb97-2"><a href="#cb97-2" tabindex="-1"></a>ds</span></code></pre></div>
+<p>Calculate NDVI and add it as a data variable.</p>
+<div class="sourceCode" id="cb98"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" tabindex="-1"></a>red <span class="op">=</span> ds[<span class="st">&#39;red&#39;</span>]</span>
+<span id="cb98-2"><a href="#cb98-2" tabindex="-1"></a>nir <span class="op">=</span> ds[<span class="st">&#39;nir&#39;</span>]</span>
+<span id="cb98-3"><a href="#cb98-3" tabindex="-1"></a></span>
+<span id="cb98-4"><a href="#cb98-4" tabindex="-1"></a>ndvi <span class="op">=</span> (nir <span class="op">-</span> red)<span class="op">/</span>(nir <span class="op">+</span> red)</span>
+<span id="cb98-5"><a href="#cb98-5" tabindex="-1"></a>ds[<span class="st">&#39;ndvi&#39;</span>] <span class="op">=</span> ndvi</span>
+<span id="cb98-6"><a href="#cb98-6" tabindex="-1"></a>ds</span></code></pre></div>
+</div>
+<div id="extracting-time-series-1" class="section level2">
+<h2>Extracting Time-Series</h2>
+<p>We have a dataset with cloud-masked NDVI values at each pixel of each
+scene. Remember that none of these values are computed yet. Dask has a
+graph of all the operations that would be required to calculate the
+results.</p>
+<p>We can now query this results for values at our chosen location. Once
+we run <code>compute()</code> - Dask will fetch the required tiles from
+the source data and run the operations to give us the results.</p>
+<p>Our location coordinates are in EPSG:4326 Lat/Lon. Convert it to the
+CRS of the dataset so we can query it.</p>
+<div class="sourceCode" id="cb99"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" tabindex="-1"></a>crs <span class="op">=</span> ds.rio.crs</span>
+<span id="cb99-2"><a href="#cb99-2" tabindex="-1"></a>transformer <span class="op">=</span> pyproj.Transformer.from_crs(<span class="st">&#39;EPSG:4326&#39;</span>, crs, always_xy<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb99-3"><a href="#cb99-3" tabindex="-1"></a>x, y <span class="op">=</span> transformer.transform(longitude, latitude)</span>
+<span id="cb99-4"><a href="#cb99-4" tabindex="-1"></a>x,y</span></code></pre></div>
+<p>Query NDVI values at the coordinates.</p>
+<div class="sourceCode" id="cb100"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" tabindex="-1"></a>time_series <span class="op">=</span> ds.ndvi <span class="op">\</span></span>
+<span id="cb100-2"><a href="#cb100-2" tabindex="-1"></a>  .interp(y<span class="op">=</span>y, x<span class="op">=</span>x, method<span class="op">=</span><span class="st">&#39;nearest&#39;</span>)</span></code></pre></div>
+<p>Run the calculation and load the results into memory.</p>
+<div class="sourceCode" id="cb101"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb101-2"><a href="#cb101-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
+<p>Plot the time-series.</p>
+<div class="sourceCode" id="cb102"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb102-2"><a href="#cb102-2" tabindex="-1"></a></span>
+<span id="cb102-3"><a href="#cb102-3" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb102-4"><a href="#cb102-4" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb102-5"><a href="#cb102-5" tabindex="-1"></a></span>
+<span id="cb102-6"><a href="#cb102-6" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb102-7"><a href="#cb102-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb102-8"><a href="#cb102-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb102-9"><a href="#cb102-9" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb102-10"><a href="#cb102-10" tabindex="-1"></a></span>
+<span id="cb102-11"><a href="#cb102-11" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb102-12"><a href="#cb102-12" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb102-13"><a href="#cb102-13" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb102-14"><a href="#cb102-14" tabindex="-1"></a></span>
+<span id="cb102-15"><a href="#cb102-15" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
+<span id="cb102-16"><a href="#cb102-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_34_0.png" /></p>
+</div>
+<div id="interpolate-and-smooth-the-time-series" class="section level2">
+<h2>Interpolate and Smooth the time-series</h2>
+<p>We use XArray’s excellent time-series processing functionality to
+smooth the time-series and remove noise.</p>
+<div class="sourceCode" id="cb103"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" tabindex="-1"></a><span class="co"># As we are proceesing the time-series,</span></span>
+<span id="cb103-2"><a href="#cb103-2" tabindex="-1"></a><span class="co"># it needs to be in a single chunk along the time dimension</span></span>
+<span id="cb103-3"><a href="#cb103-3" tabindex="-1"></a>time_series <span class="op">=</span> time_series.chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span></code></pre></div>
+<p>First, we resample the time-series to have a value every 5-days and
+fill the missing values with linear interpolation. Then we apply a
+moving-window smoothing to remove noise.</p>
+<div class="sourceCode" id="cb104"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb104-1"><a href="#cb104-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> time_series<span class="op">\</span></span>
+<span id="cb104-2"><a href="#cb104-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>).chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span>
+<span id="cb104-3"><a href="#cb104-3" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled <span class="op">\</span></span>
+<span id="cb104-4"><a href="#cb104-4" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb104-5"><a href="#cb104-5" tabindex="-1"></a>time_series_smoothed <span class="op">=</span> time_series_interpolated <span class="op">\</span></span>
+<span id="cb104-6"><a href="#cb104-6" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, min_periods<span class="op">=</span><span class="dv">1</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span></code></pre></div>
+<div class="sourceCode" id="cb105"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb105-2"><a href="#cb105-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb105-3"><a href="#cb105-3" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb105-4"><a href="#cb105-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb105-5"><a href="#cb105-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>,</span>
+<span id="cb105-6"><a href="#cb105-6" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb105-7"><a href="#cb105-7" tabindex="-1"></a>time_series_smoothed.plot.line(</span>
+<span id="cb105-8"><a href="#cb105-8" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb105-9"><a href="#cb105-9" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb105-10"><a href="#cb105-10" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb105-11"><a href="#cb105-11" tabindex="-1"></a></span>
+<span id="cb105-12"><a href="#cb105-12" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb105-13"><a href="#cb105-13" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb105-14"><a href="#cb105-14" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb105-15"><a href="#cb105-15" tabindex="-1"></a></span>
+<span id="cb105-16"><a href="#cb105-16" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Original vs. Smoothed NDVI Time-Series&#39;</span>)</span>
+<span id="cb105-17"><a href="#cb105-17" tabindex="-1"></a></span>
+<span id="cb105-18"><a href="#cb105-18" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_39_0.png" /></p>
+</div>
+<div id="save-the-time-series." class="section level2">
+<h2>Save the Time-Series.</h2>
+<p>Convert the extracted time-series to a Pandas DataFrame.</p>
+<div class="sourceCode" id="cb106"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smoothed.to_pandas().reset_index()</span>
+<span id="cb106-2"><a href="#cb106-2" tabindex="-1"></a>df.head()</span></code></pre></div>
+<p>Save the DataFrame as a CSV file.</p>
+<div class="sourceCode" id="cb107"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;ndvi_time_series.csv&#39;</span></span>
+<span id="cb107-2"><a href="#cb107-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
+<span id="cb107-3"><a href="#cb107-3" tabindex="-1"></a>df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
 <hr />
 </div>
 </div>

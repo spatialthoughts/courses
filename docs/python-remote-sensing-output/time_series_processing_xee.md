@@ -169,7 +169,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/time_series_processing_xee_files/time_series_processing_xee_21_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/time_series_processing_xee_files/time_series_processing_xee_21_0.png)
     
 
 
