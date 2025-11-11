@@ -81,6 +81,7 @@ We have created a data package containing checkpoint projects that will allow yo
 
 The Google Earth Engine plugin comes with a handy **Export Image to GeoTIFF** algorithm that allows you to download images from GEE directly to your computer as GeoTIFF files. In this tutorial, we will use the plugin to create a Sentinel-2 median composite for a region and download it as a GeoTIFF file.
 
+### Procedure
 
 1. Open QGIS. To help us select a region of interest, it will be helpful to have a basemap. From the QGIS Browser Panel, locate the *XYZ Tiles → OpenStreetMap* layer and drag it to the canvas.
 
@@ -181,10 +182,179 @@ knitr::include_graphics('images/qgis_gee_workshop/download_image15.png')
 knitr::include_graphics('images/qgis_gee_workshop/download_image16.png')
 ```
 
+## 2. Building Workflows with Model Designer
+
+The processing algorithms provided by the Google Earth Engine plugin can be used in the QGIS Model Designer to automate workflows that combine data from the Earth Engine Data Catalog with processing algorithms from QGIS.
+
+In this section, we will build a model that will run the following steps in a single workflow:
+
+- Load landcover data from the Earth Engine Data Catalog
+- Download the data as a GeoTIFF file for the chosen region
+- Calculate area of each landcover class
+- Convert the computed area to square kilometers
+- Add input validation to the model
+
+```{r echo=FALSE, fig.align='center', out.width='75%', fig.cap='QGIS Model for Calculating Landcover Statistics'}
+knitr::include_graphics('images/qgis_gee_workshop/model_output.png')
+```
+
+### Dataset
+
+There are many landcover datasets available in the [Earth Engine Data Catalog](https://developers.google.com/earth-engine/datasets) as well as [GEE Community Catalog](https://gee-community-catalog.org/). A similar process can be used to load any of the available datasets.
+
+We will use the [ESA WorldCover 10m v200](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200?hl=en) global land cover map for 2021 at 10 m resolution. Visit the [dataset description page](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200?hl=en#description) and note the ImageCollection ID.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/catalog1.png')
+```
+
+This dataset contains a data band named **Map** and 11-class classification with each class assigned a value between 10-100.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/catalog2.png')
+```
+
+### Procedure
+
+1. Open QGIS. From the QGIS Browser Panel, locate the supplied `bangalore.geojson` file and double-click to open it. This will load a vector layer containing a single feature representing the municipal boundary for the city of Bengaluru, India. Next, open the Processing Toolbox from *Processing &rarr; Toolbox*. From the toolbar, select *Models &rarr; Create New Model..*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model1.png')
+```
+
+2. In the Model Designer dialog, enter the model Name as `Calculate Landcover Statistics` and click the *Save model* button. When prompted to enter the file name, enter `calculate_landcover_statistics.model3`.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model2.png')
+```
+
+3. We will now start building the model. The first input to the model will be the layer with region boundary. From the *Inputs* tab, scroll down to find the *+ Vector Layer* input. Drag it to the canvas. In the *Vector Layer Parameter Definition* dialog, enter `Input Vector Layer` as the *Description* and select `Polygon` as the *Geometry type*. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model3.png')
+```
+
+4. Next we will add an input for the user to specify the CRS to be used for the analysis. Locate the *+ CRS* input and drag it to the canvas. In the *CRS Parameter Definition* dialog, enter `Projection for Area Calculation` as the *Description*. As the layer we are using falls in the UTM Zone 43N, we can enter the *Default value* of the CRS as `EPSG:32643 - WGS84 / UTM Zone 43N`. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model4.png')
+```
+
+5. Once the inputs are configured, let’s start building the workflow. First step is to reproject the input layer to the specified CRS. Switch to the *Algorithms* tab, search and locate the *Vector general &rarr; Reproject layer* algorithm  and drag it to the canvas. In the *Vector general - Reproject layer* dialog, switch to *Using model input* for *Input layer* and select the `Input Vector Layer` parameter. Similarly for *Target CRS* select the `Projection for Area Calculation` parameter. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model5.png')
+```
+
+6.  Next step is to load the dataset from Earth Engine. Scroll down to the *Google Earth Engine provider* and locate the *Add Image Collection* algorithm. Drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model6.png')
+```
+
+7. Enter the Earth Engine Image Collection ID `ESA/WorldCover/v200` for the ESA WorldCover dataset. For the *Extent*, switch to *Using algorithm output* and select `"Reprojected" from algorithm "Reproject layer"`. For the *Extent CRS*, select *Using model input* and select `Projection for Area Calculation`.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model7.png')
+```
+
+8. Scroll down in the dialog and delete the defaul help text for both *Filter Image Properties* and *Visualization Parameters (JSON)*. Select `Mosaic` for the *Compositing Method* and click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model8.png')
+```
+
+9. The next step is to connect the *Export Image to GeoTIFF* algorithm. Locate it and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model9.png')
+```
+
+10. In the *Export Image to GeoTIFF* dialog box, for the *EE Image Name*, switch to *Using algorithm output* and select `"Layer Name"from algorithm "Add Image Collection"`. For *Extent*, switch to *Using algorithm output* and select `"Reprojected" from algorithm "Reproject layer"`. The spatial resolution of the dataset is 10m, so enter `10` as the *Scale (meters)*. Enter `Map` as the *Bads to export*. Click OK.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model10.png')
+```
+
+11. The previous step will download the data for the given extent as a GeoTIFF file. Let's clip this to the area of interest. Search and locate the *GDAL &rarr; Raster extraction &rarr; Clip raster by mask layer* algorithm  and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model11.png')
+```
+
+12. In the *Raster extraction - Clip raster by mask layer* dialog, configure the *Input layer* by switching to *Using algorithm output* and selecting `"Output File" from algorithm "Export Image to GeoTIFF"`. Specify the *Mask layer* by switching to *Using algorithm output* and selecting `"Reprojected" from algorithm "Reproject layer"`. Click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model12.png')
+```
+
+13. Now we will add a step to calculate the area for each class. This is done using the *Raster analysis &rarr; Raster layer unique values report* algorithm. Locate it and drag it to the canvas.
+
+> Note: The *Raster layer unique values report* algorithm gives you the areas for the entire raster layer. If you want to calculate areas for different regions over the raster, you can use the **Zonal histogram** tool to get pixel counts for each class and then multiply it with the area of each pixel.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model13.png')
+```
+
+14. In the *Raster analysis - Raster layer unique values report*, configure the *Input layer* by switching to *Using algorithm output* and selecting `"Clipped (mask)" from algorithm "Clip raster by mask layer"`. Keep other parameter values to their default and click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model14.png')
+```
+
+15. The results from the previous step will be a table with columns **value** and **m2** containing the class value and total area in square meters. Let's convert the area to square kilometers. Locate the *Vector table &rarr; Field calculator* algorithm and drag it to the canvas.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model15.png')
+```
+
+16. In the *Vector table - Field Calculator* dialog, configure the *Input layer* by switching to *Using algorithm output* and selecting `"Unique values table" from algorithm "Raster layer unique values report"`. Enter the *Field name* as `area_sqkm` and *Result field type* as `Decimal (double)`. For the *Formula*, we will divide the area in square meters by 1000 x 1000 (i.e. 1e6) to convert it to square kilometers. Enter the expression as `"m2"/1e6`.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model16.png')
+```
+
+17. As this table will be our final output, enter the *Calculate* layer name as `class_areas` and click *OK*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model17.png')
+```
+
+18. The model is now complete. Click the *Run model* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model18.png')
+```
+
+19. In the *Calculate Landcover Statistics*, select `bangalore` as the *Input Vector Layer*. Keep the other values to their default and click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model19.png')
+```
+
+20. Once the model run completes, a new layer `class_areas` will be added to the *Layers* panel. Open the attribute table and you will see new column with class area statistics computed from the ESA WorldCover dataset..
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model20.png')
+```
+
+21. It is a good practice to save the model along with the QGIS project so it is always available to whoever is using the project file. Click the *ave model in project* button to embed the model in your QGIS project file. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/qgis_gee_workshop/model21.png')
+```
+
+22. From the main QGIS interface, you will now see a new folder *Project models* in the Processing Toolbox containing the model we created. 
+
+
+If you'd like to catch up to this point, you can load the `Model_Designer_Checkpoint1.qgz` file in the `solutions` folder of the data package.
+
+
 
 # Data Credits
 
 * Sentinel-2 Level-2A: Contains Copernicus Sentinel data.
+* Zanaga, D., Van De Kerchove, R., Daems, D., De Keersmaecker, W., Brockmann, C., Kirches, G., Wevers, J., Cartus, O., Santoro, M., Fritz, S., Lesiv, M., Herold, M., Tsendbazar, N.E., Xu, P., Ramoino, F., Arino, O., 2022. ESA WorldCover 10 m 2021 v200. (doi:10.5281/zenodo.7254221)
 
 
 # License

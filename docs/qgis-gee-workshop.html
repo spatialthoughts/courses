@@ -351,7 +351,17 @@ Engine Plugin</a>
 <ul>
 <li><a href="#downloading-images-from-earth-engine"
 id="toc-downloading-images-from-earth-engine">1. Downloading Images from
-Earth Engine</a></li>
+Earth Engine</a>
+<ul>
+<li><a href="#procedure" id="toc-procedure">Procedure</a></li>
+</ul></li>
+<li><a href="#building-workflows-with-model-designer"
+id="toc-building-workflows-with-model-designer">2. Building Workflows
+with Model Designer</a>
+<ul>
+<li><a href="#dataset" id="toc-dataset">Dataset</a></li>
+<li><a href="#procedure-1" id="toc-procedure-1">Procedure</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
@@ -433,6 +443,8 @@ Image to GeoTIFF</strong> algorithm that allows you to download images
 from GEE directly to your computer as GeoTIFF files. In this tutorial,
 we will use the plugin to create a Sentinel-2 median composite for a
 region and download it as a GeoTIFF file.</p>
+<div id="procedure" class="section level3">
+<h3>Procedure</h3>
 <ol style="list-style-type: decimal">
 <li>Open QGIS. To help us select a region of interest, it will be
 helpful to have a basemap. From the QGIS Browser Panel, locate the
@@ -583,10 +595,243 @@ downloaded image.</li>
 <p><img src="images/qgis_gee_workshop/download_image16.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
+<div id="building-workflows-with-model-designer" class="section level2">
+<h2>2. Building Workflows with Model Designer</h2>
+<p>The processing algorithms provided by the Google Earth Engine plugin
+can be used in the QGIS Model Designer to automate workflows that
+combine data from the Earth Engine Data Catalog with processing
+algorithms from QGIS.</p>
+<p>In this section, we will build a model that will run the following
+steps in a single workflow:</p>
+<ul>
+<li>Load landcover data from the Earth Engine Data Catalog</li>
+<li>Download the data as a GeoTIFF file for the chosen region</li>
+<li>Calculate area of each landcover class</li>
+<li>Convert the computed area to square kilometers</li>
+<li>Add input validation to the model</li>
+</ul>
+<div class="figure" style="text-align: center">
+<img src="images/qgis_gee_workshop/model_output.png" alt="QGIS Model for Calculating Landcover Statistics" width="75%" />
+<p class="caption">
+QGIS Model for Calculating Landcover Statistics
+</p>
+</div>
+<div id="dataset" class="section level3">
+<h3>Dataset</h3>
+<p>There are many landcover datasets available in the <a
+href="https://developers.google.com/earth-engine/datasets">Earth Engine
+Data Catalog</a> as well as <a
+href="https://gee-community-catalog.org/">GEE Community Catalog</a>. A
+similar process can be used to load any of the available datasets.</p>
+<p>We will use the <a
+href="https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200?hl=en">ESA
+WorldCover 10m v200</a> global land cover map for 2021 at 10 m
+resolution. Visit the <a
+href="https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200?hl=en#description">dataset
+description page</a> and note the ImageCollection ID.</p>
+<p><img src="images/qgis_gee_workshop/catalog1.png" width="75%" style="display: block; margin: auto;" /></p>
+<p>This dataset contains a data band named <strong>Map</strong> and
+11-class classification with each class assigned a value between
+10-100.</p>
+<p><img src="images/qgis_gee_workshop/catalog2.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="procedure-1" class="section level3">
+<h3>Procedure</h3>
+<ol style="list-style-type: decimal">
+<li>Open QGIS. From the QGIS Browser Panel, locate the supplied
+<code>bangalore.geojson</code> file and double-click to open it. This
+will load a vector layer containing a single feature representing the
+municipal boundary for the city of Bengaluru, India. Next, open the
+Processing Toolbox from <em>Processing → Toolbox</em>. From the toolbar,
+select <em>Models → Create New Model..</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model1.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>In the Model Designer dialog, enter the model Name as
+<code>Calculate Landcover Statistics</code> and click the <em>Save
+model</em> button. When prompted to enter the file name, enter
+<code>calculate_landcover_statistics.model3</code>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model2.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>We will now start building the model. The first input to the model
+will be the layer with region boundary. From the <em>Inputs</em> tab,
+scroll down to find the <em>+ Vector Layer</em> input. Drag it to the
+canvas. In the <em>Vector Layer Parameter Definition</em> dialog, enter
+<code>Input Vector Layer</code> as the <em>Description</em> and select
+<code>Polygon</code> as the <em>Geometry type</em>. Click
+<em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="4" style="list-style-type: decimal">
+<li>Next we will add an input for the user to specify the CRS to be used
+for the analysis. Locate the <em>+ CRS</em> input and drag it to the
+canvas. In the <em>CRS Parameter Definition</em> dialog, enter
+<code>Projection for Area Calculation</code> as the
+<em>Description</em>. As the layer we are using falls in the UTM Zone
+43N, we can enter the <em>Default value</em> of the CRS as
+<code>EPSG:32643 - WGS84 / UTM Zone 43N</code>. Click <em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model4.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="5" style="list-style-type: decimal">
+<li>Once the inputs are configured, let’s start building the workflow.
+First step is to reproject the input layer to the specified CRS. Switch
+to the <em>Algorithms</em> tab, search and locate the <em>Vector general
+→ Reproject layer</em> algorithm and drag it to the canvas. In the
+<em>Vector general - Reproject layer</em> dialog, switch to <em>Using
+model input</em> for <em>Input layer</em> and select the
+<code>Input Vector Layer</code> parameter. Similarly for <em>Target
+CRS</em> select the <code>Projection for Area Calculation</code>
+parameter. Click <em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model5.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="6" style="list-style-type: decimal">
+<li>Next step is to load the dataset from Earth Engine. Scroll down to
+the <em>Google Earth Engine provider</em> and locate the <em>Add Image
+Collection</em> algorithm. Drag it to the canvas.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model6.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="7" style="list-style-type: decimal">
+<li>Enter the Earth Engine Image Collection ID
+<code>ESA/WorldCover/v200</code> for the ESA WorldCover dataset. For the
+<em>Extent</em>, switch to <em>Using algorithm output</em> and select
+<code>"Reprojected" from algorithm "Reproject layer"</code>. For the
+<em>Extent CRS</em>, select <em>Using model input</em> and select
+<code>Projection for Area Calculation</code>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model7.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="8" style="list-style-type: decimal">
+<li>Scroll down in the dialog and delete the defaul help text for both
+<em>Filter Image Properties</em> and <em>Visualization Parameters
+(JSON)</em>. Select <code>Mosaic</code> for the <em>Compositing
+Method</em> and click <em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model8.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="9" style="list-style-type: decimal">
+<li>The next step is to connect the <em>Export Image to GeoTIFF</em>
+algorithm. Locate it and drag it to the canvas.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model9.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="10" style="list-style-type: decimal">
+<li>In the <em>Export Image to GeoTIFF</em> dialog box, for the <em>EE
+Image Name</em>, switch to <em>Using algorithm output</em> and select
+<code>"Layer Name"from algorithm "Add Image Collection"</code>. For
+<em>Extent</em>, switch to <em>Using algorithm output</em> and select
+<code>"Reprojected" from algorithm "Reproject layer"</code>. The spatial
+resolution of the dataset is 10m, so enter <code>10</code> as the
+<em>Scale (meters)</em>. Enter <code>Map</code> as the <em>Bads to
+export</em>. Click OK.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model10.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="11" style="list-style-type: decimal">
+<li>The previous step will download the data for the given extent as a
+GeoTIFF file. Let’s clip this to the area of interest. Search and locate
+the <em>GDAL → Raster extraction → Clip raster by mask layer</em>
+algorithm and drag it to the canvas.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model11.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="12" style="list-style-type: decimal">
+<li>In the <em>Raster extraction - Clip raster by mask layer</em>
+dialog, configure the <em>Input layer</em> by switching to <em>Using
+algorithm output</em> and selecting
+<code>"Output File" from algorithm "Export Image to GeoTIFF"</code>.
+Specify the <em>Mask layer</em> by switching to <em>Using algorithm
+output</em> and selecting
+<code>"Reprojected" from algorithm "Reproject layer"</code>. Click
+<em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model12.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="13" style="list-style-type: decimal">
+<li>Now we will add a step to calculate the area for each class. This is
+done using the <em>Raster analysis → Raster layer unique values
+report</em> algorithm. Locate it and drag it to the canvas.</li>
+</ol>
+<blockquote>
+<p>Note: The <em>Raster layer unique values report</em> algorithm gives
+you the areas for the entire raster layer. If you want to calculate
+areas for different regions over the raster, you can use the
+<strong>Zonal histogram</strong> tool to get pixel counts for each class
+and then multiply it with the area of each pixel.</p>
+</blockquote>
+<p><img src="images/qgis_gee_workshop/model13.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="14" style="list-style-type: decimal">
+<li>In the <em>Raster analysis - Raster layer unique values report</em>,
+configure the <em>Input layer</em> by switching to <em>Using algorithm
+output</em> and selecting
+<code>"Clipped (mask)" from algorithm "Clip raster by mask layer"</code>.
+Keep other parameter values to their default and click <em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model14.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="15" style="list-style-type: decimal">
+<li>The results from the previous step will be a table with columns
+<strong>value</strong> and <strong>m2</strong> containing the class
+value and total area in square meters. Let’s convert the area to square
+kilometers. Locate the <em>Vector table → Field calculator</em>
+algorithm and drag it to the canvas.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model15.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="16" style="list-style-type: decimal">
+<li>In the <em>Vector table - Field Calculator</em> dialog, configure
+the <em>Input layer</em> by switching to <em>Using algorithm output</em>
+and selecting
+<code>"Unique values table" from algorithm "Raster layer unique values report"</code>.
+Enter the <em>Field name</em> as <code>area_sqkm</code> and <em>Result
+field type</em> as <code>Decimal (double)</code>. For the
+<em>Formula</em>, we will divide the area in square meters by 1000 x
+1000 (i.e. 1e6) to convert it to square kilometers. Enter the expression
+as <code>"m2"/1e6</code>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model16.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="17" style="list-style-type: decimal">
+<li>As this table will be our final output, enter the <em>Calculate</em>
+layer name as <code>class_areas</code> and click <em>OK</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model17.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="18" style="list-style-type: decimal">
+<li>The model is now complete. Click the <em>Run model</em> button.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model18.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="19" style="list-style-type: decimal">
+<li>In the <em>Calculate Landcover Statistics</em>, select
+<code>bangalore</code> as the <em>Input Vector Layer</em>. Keep the
+other values to their default and click <em>Run</em>.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model19.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="20" style="list-style-type: decimal">
+<li>Once the model run completes, a new layer <code>class_areas</code>
+will be added to the <em>Layers</em> panel. Open the attribute table and
+you will see new column with class area statistics computed from the ESA
+WorldCover dataset..</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model20.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="21" style="list-style-type: decimal">
+<li>It is a good practice to save the model along with the QGIS project
+so it is always available to whoever is using the project file. Click
+the <em>ave model in project</em> button to embed the model in your QGIS
+project file.</li>
+</ol>
+<p><img src="images/qgis_gee_workshop/model21.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="22" style="list-style-type: decimal">
+<li>From the main QGIS interface, you will now see a new folder
+<em>Project models</em> in the Processing Toolbox containing the model
+we created.</li>
+</ol>
+<p>If you’d like to catch up to this point, you can load the
+<code>Model_Designer_Checkpoint1.qgz</code> file in the
+<code>solutions</code> folder of the data package.</p>
+</div>
+</div>
+</div>
 <div id="data-credits" class="section level1">
 <h1>Data Credits</h1>
 <ul>
 <li>Sentinel-2 Level-2A: Contains Copernicus Sentinel data.</li>
+<li>Zanaga, D., Van De Kerchove, R., Daems, D., De Keersmaecker, W.,
+Brockmann, C., Kirches, G., Wevers, J., Cartus, O., Santoro, M., Fritz,
+S., Lesiv, M., Herold, M., Tsendbazar, N.E., Xu, P., Ramoino, F., Arino,
+O., 2022. ESA WorldCover 10 m 2021 v200. (<a
+href="doi:10.5281/zenodo.7254221"
+class="uri">doi:10.5281/zenodo.7254221</a>)</li>
 </ul>
 </div>
 <div id="license" class="section level1">
