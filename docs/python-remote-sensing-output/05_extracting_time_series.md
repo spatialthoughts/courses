@@ -33,7 +33,7 @@ client = Client()  # set up local cluster on the machine
 client
 ```
 
-f you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
+If you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
 
 
 ```python
@@ -75,23 +75,7 @@ r = 1 * km2deg  # radius in degrees
 bbox = (x - r, y - r, x + r, y + r)
 ```
 
-Let's use Element84 search endpoint to look for items from the sentinel-2-l2a collection on AWS.
-
-
-```python
-catalog = pystac_client.Client.open(
-    'https://earth-search.aws.element84.com/v1')
-
-search = catalog.search(
-    collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
-    datetime=f'{year}',
-    query={'eo:cloud_cover': {'lt': 30}},
-)
-items = search.item_collection()
-```
-
-Load the matching images as a XArray Dataset.
+Let's use Element84 search endpoint to look for items from the sentinel-2-l2a collection on AWS and load the matching images as a XArray Dataset.
 
 
 ```python
@@ -223,7 +207,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_34_0.png)
+![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_32_0.png)
     
 
 
@@ -275,7 +259,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_39_0.png)
+![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_37_0.png)
     
 
 

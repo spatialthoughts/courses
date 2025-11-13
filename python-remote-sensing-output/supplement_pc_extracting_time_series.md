@@ -1,10 +1,6 @@
-## Overview
+This notebook shows how to access Sentinel-2 Level-2A data by querying Microsoft's Planetary Computer STAC API and load the data storaed on Azure Blob Storage. As we are using open-standards for data-access, the process is largely similar to accessing the data from other STAC API endpoints, with a few minor differences based on how different providers have chosen to pre-process the data.
 
-We are now ready to scale our analysis. Having learned how to calculate spectral indices and do cloud masking for a single scene - we can easily apply these operations to the entire data-cube and extract the results at at one or more locations. Cloud-optimized data formats and Dask ensure that we fetch and process only a small amount of data that is required to compute the results at the pixels of interest.
-
-In this section, we will get all Sentinel-2 scenes collected over our region of interest, apply a cloud-mask, calculate NDVI and extract a time-series of NDVI at a single location. We will also use XArray's built-in time-series processing functions to interpolat and smooth the results.
-
-## Setup and Data Download
+### Setup and Data Download
 
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
@@ -12,7 +8,8 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy \
+      planetary_computer
 ```
 
 
@@ -21,6 +18,7 @@ import os
 import matplotlib.pyplot as plt
 import pystac_client
 from odc import stac
+import planetary_computer as pc
 import xarray as xr
 import rioxarray as rxr
 import pyproj
@@ -55,7 +53,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-## Get Satellite Imagery using STAC API
+### Get Satellite Imagery using STAC API
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -75,38 +73,42 @@ r = 1 * km2deg  # radius in degrees
 bbox = (x - r, y - r, x + r, y + r)
 ```
 
-Let's use Element84 search endpoint to look for items from the sentinel-2-l2a collection on AWS and load the matching images as a XArray Dataset.
+Let's use [Planetary Computer STAC API](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) search endpoint to look for items from the sentinel-2-l2a collection on Azure Blob Storage.
 
 
 ```python
-# Query the STAC Catalog
 catalog = pystac_client.Client.open(
-    'https://earth-search.aws.element84.com/v1')
+    'https://planetarycomputer.microsoft.com/api/stac/v1')
 
 search = catalog.search(
-    collections=['sentinel-2-c1-l2a'],
+    collections=['sentinel-2-l2a'],
     bbox=bbox,
     datetime=f'{year}',
-    query={
-        'eo:cloud_cover': {'lt': 30},
-    }
+    query={'eo:cloud_cover': {'lt': 30}},
 )
 items = search.item_collection()
+items
+```
 
+Load the matching images as a XArray Dataset. Accessing data from Planetary Computer is free but requires getting a Shared Access Signature (SAS) token and sign the URLs. The `planetary_computer` Python package provides a simple mechanism for signing the URLs using `sign()` function.
+
+
+```python
 # Load to XArray
 ds = stac.load(
     items,
-    bands=['red', 'green', 'blue', 'nir', 'scl'],
+    bands=['red', 'green', 'blue', 'nir', 'SCL'],
     bbox=bbox, # <-- load data only for the bbox
     resolution=10,
     chunks={},  # <-- use Dask
+    patch_url=pc.sign,
     groupby='solar_day',
     preserve_original_order=True
 )
 ds
 ```
 
-## Processing Data
+### Processing Data
 
 We have a data cube of multiple scenes collected through the year. As XArray supports vectorized operations, we can work with the entire DataSet the same way we would process a single scene.
 
@@ -126,7 +128,7 @@ Apply scale and offset to all spectral bands
 scale = 0.0001
 offset = -0.1
 # Select spectral bands (all except 'scl')
-data_bands = [band for band in ds.data_vars if band != 'scl']
+data_bands = [band for band in ds.data_vars if band != 'SCL']
 for band in data_bands:
   ds[band] = ds[band] * scale + offset
 ```
@@ -135,7 +137,7 @@ Apply the cloud mask
 
 
 ```python
-ds = ds[data_bands].where(~ds.scl.isin([3,8,9,10]))
+ds = ds[data_bands].where(~ds.SCL.isin([3,8,9,10]))
 ds
 ```
 
@@ -151,7 +153,7 @@ ds['ndvi'] = ndvi
 ds
 ```
 
-## Extracting Time-Series
+### Extracting Time-Series
 
 We have a dataset with cloud-masked NDVI values at each pixel of each scene. Remember that none of these values are computed yet. Dask has a graph of all the operations that would be required to calculate the results.
 
@@ -207,11 +209,11 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_32_0.png)
+![](python-remote-sensing-output/supplement_pc_extracting_time_series_files/supplement_pc_extracting_time_series_34_0.png)
     
 
 
-## Interpolate and Smooth the time-series
+### Interpolate and Smooth the time-series
 
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.
 
@@ -259,11 +261,11 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/05_extracting_time_series_files/05_extracting_time_series_37_0.png)
+![](python-remote-sensing-output/supplement_pc_extracting_time_series_files/supplement_pc_extracting_time_series_39_0.png)
     
 
 
-## Save the Time-Series.
+### Save the Time-Series.
 
 Convert the extracted time-series to a Pandas DataFrame.
 

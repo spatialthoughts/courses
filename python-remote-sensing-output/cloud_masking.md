@@ -94,7 +94,7 @@ for band_name, band_path in band_files.items():
   bands.append(ds)
 
 scene = xr.concat(bands, dim='band').assign_coords(
-    band=list(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files.keys()))
+    band=list(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files.keys()))
 scene
 ```
 
@@ -125,7 +125,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/cloud_masking_files/cloud_masking_16_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/cloud_masking_files/cloud_masking_16_0.png)
     
 
 
@@ -194,7 +194,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/cloud_masking_files/cloud_masking_24_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/cloud_masking_files/cloud_masking_24_0.png)
     
 
 

@@ -33,7 +33,7 @@ client = Client()  # set up local cluster on the machine
 client
 ```
 
-f you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
+If you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
 
 
 ```python

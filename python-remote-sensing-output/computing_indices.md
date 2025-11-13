@@ -121,10 +121,10 @@ Different Sentinel-2 bands have different spatial resolutions. To put them in th
 
 
 ```python
-b4 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B04'], chunks=True)
-b3 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B03'], chunks=True)
-b2 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B02'], chunks=True)
-b8 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B08'], chunks=True)
+b4 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B04'], chunks=True)
+b3 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B03'], chunks=True)
+b2 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B02'], chunks=True)
+b8 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B08'], chunks=True)
 
 stack1 = xr.concat([b4, b3, b2, b8], dim='band').assign_coords(
     band=['B04', 'B03', 'B02', 'B08'])
@@ -132,12 +132,12 @@ stack1 = xr.concat([b4, b3, b2, b8], dim='band').assign_coords(
 
 
 ```python
-b5 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B05'], chunks=True)
-b6 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B07'], chunks=True)
-b7= rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B07'], chunks=True)
-b8a = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B8A'], chunks=True)
-b11 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B11'], chunks=True)
-b12 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B12'], chunks=True)
+b5 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B05'], chunks=True)
+b6 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B07'], chunks=True)
+b7= rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B07'], chunks=True)
+b8a = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B8A'], chunks=True)
+b11 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B11'], chunks=True)
+b12 = rxr.open_rasterio(python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/band_files['B12'], chunks=True)
 
 stack2 = xr.concat([b5, b6, b7, b8a, b11, b12], dim='band').assign_coords(
     band=['B05', 'B06', 'B07', 'B8A', 'B11', 'B12'])
@@ -201,7 +201,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_24_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_24_0.png)
     
 
 
@@ -219,7 +219,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_25_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_25_0.png)
     
 
 
@@ -261,7 +261,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_30_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_30_0.png)
     
 
 
@@ -295,7 +295,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_32_1.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_32_1.png)
     
 
 
@@ -323,7 +323,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_34_0.png)
+![](python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/python-remote-sensing-output/computing_indices_files/computing_indices_34_0.png)
     
 
 
