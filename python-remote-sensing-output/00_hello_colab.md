@@ -101,3 +101,36 @@ capitals.to_file(driver='GPKG', filename=output_path)
 ```
 
 You can open the **Files** tab from the left-hand panel in Colab and browse to the `output` folder. Locate the `capitals.gpkg` file and click the **⋮** button and select *Download* to download the file locally.
+
+Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
+
+Run the following cell to authenticate and mount the Google Drive.
+
+
+```python
+if 'google.colab' in str(get_ipython()):
+  from google.colab import drive
+  drive.mount('/content/drive')
+```
+
+
+```python
+drive_folder_root = 'MyDrive'
+output_folder = 'data'
+drive_folder_path = os.path.join(
+    '/content/drive', drive_folder_root, output_folder)
+
+# Check if Google Drive is mounted
+if not os.path.exists('/content/drive'):
+    print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+else:
+    if not os.path.exists(drive_folder_path):
+        os.makedirs(drive_folder_path)
+```
+
+
+```python
+output_file_path = os.path.join(drive_folder_path, output_file)
+output_path = os.path.join(drive_folder_path, output_file)
+capitals.to_file(driver='GPKG', filename=output_path)
+```

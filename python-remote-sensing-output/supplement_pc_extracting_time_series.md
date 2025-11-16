@@ -1,4 +1,4 @@
-This notebook shows how to access Sentinel-2 Level-2A data by querying Microsoft's Planetary Computer STAC API and load the data storaed on Azure Blob Storage. As we are using open-standards for data-access, the process is largely similar to accessing the data from other STAC API endpoints, with a few minor differences based on how different providers have chosen to pre-process the data.
+This notebook shows how to access Sentinel-2 Level-2A data by querying Microsoft's [Planetary Computer Data Catalog](https://planetarycomputer.microsoft.com/catalog). This catalog is served via STAC API and with the datasets hosted on Azure Blob Storage. As we are using open-standards for data-access, the process is largely similar to accessing the data from other STAC API endpoints, with a few minor differences based on how different providers have chosen to pre-process the data.
 
 ### Setup and Data Download
 

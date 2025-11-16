@@ -214,15 +214,6 @@ plt.show()
     
 
 
-We can save the resulting median compositeas a multi-band GeoTIFF file.
-
-
-```python
-output_file = 'median_composite.tif'
-output_file_path = os.path.join(output_folder, output_file)
-median_da.rio.to_raster(output_file_path, compress='LZW')
-```
-
 ## Exercise
 
 Display the median composite for the month of May.

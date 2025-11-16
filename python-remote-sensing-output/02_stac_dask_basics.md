@@ -234,46 +234,11 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
-## Save the Scene to Disk
 
+    
+![](python-remote-sensing-output/02_stac_dask_basics_files/02_stac_dask_basics_43_0.png)
+    
 
-```python
-scene_id = items[0].id
-output_da = scene_da.sel(band=['red', 'green', 'blue'])
-output_file = f'{scene_id}.tif'
-```
-
-Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
-
-Run the following cell to authenticate and mount the Google Drive.
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
-```
-
-
-```python
-drive_folder_root = 'MyDrive'
-output_folder = 'data'
-output_folder_path = os.path.join(
-    '/content/drive', drive_folder_root, output_folder)
-
-# Check if Google Drive is mounted
-if not os.path.exists('/content/drive'):
-    print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-else:
-    if not os.path.exists(output_folder_path):
-        os.makedirs(output_folder_path)
-```
-
-
-```python
-output_file_path = os.path.join(output_folder_path, output_file)
-output_da.rio.to_raster(output_file_path, compress='LZW')
-```
 
 ## Exercise
 
