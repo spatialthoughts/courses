@@ -135,6 +135,12 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/04_masking_clouds_files/04_masking_clouds_15_0.png)
+    
+
+
 ## Create a Cloud Mask
 
 The Scene Classification (SCL) band has each pixel classified into one of the following classes.
@@ -176,10 +182,6 @@ preview.sel(band=['red', 'green', 'blue']).plot.imshow(
     vmin=0, vmax=0.3)
 ax0.set_title('RGB Visualization')
 
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
-    ax=ax1,
-    vmin=0, vmax=0.3)
-
 # RGBA: Transparent, Red
 mask_colormap = ListedColormap(['#00000000', '#FF0000FF'])
 mask_preview.plot.imshow(
@@ -194,20 +196,26 @@ for ax in (ax0, ax1):
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/04_masking_clouds_files/04_masking_clouds_21_0.png)
+    
+
+
 Once we are satisfied that the mask looks good, we go ahead and apply the mask on the scene.
 
 
 ```python
 # Apply the mask to all the data bands
 scene_masked = scene[data_bands].where(~mask)
-
+scene_masked
 ```
 
-## Save the Results
+## Exercise
 
-Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
+Save the masked scene to disk. The code snippet below mounts your Google Drive and creates a `data` folder. Save the `scene_masked` to the data folder.
 
-Run the following cell to authenticate and mount the Google Drive.
+Hint: You will need to convert the `scene_masked` to a DataArray before saving it.
 
 
 ```python
@@ -228,16 +236,4 @@ if not os.path.exists('/content/drive'):
 else:
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)
-```
-
-
-```python
-scene_id = items[0].id
-
-# Convert to DataArray for saving
-output_masked_da = scene_masked.to_array('band').sel(band=['red', 'green', 'blue'])
-output_file_masked = f'{scene_id}_masked.tif'
-output_file_path = os.path.join(output_folder_path, output_file_masked)
-
-output_masked_da.rio.to_raster(output_file_path, compress='LZW')
 ```
