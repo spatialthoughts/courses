@@ -249,13 +249,38 @@ Run the following cell to authenticate and mount the Google Drive.
 
 
 ```python
-from google.colab import drive
-drive.mount('/content/drive')
+if 'google.colab' in str(get_ipython()):
+  from google.colab import drive
+  drive.mount('/content/drive')
 ```
 
 
 ```python
-drive_folder_root = '/content/drive/MyDrive'
-output_file_path = os.path.join(drive_folder_root, output_file)
+drive_folder_root = 'MyDrive'
+output_folder = 'data'
+output_folder_path = os.path.join(
+    '/content/drive', drive_folder_root, output_folder)
+
+# Check if Google Drive is mounted
+if not os.path.exists('/content/drive'):
+    print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+else:
+    if not os.path.exists(output_folder_path):
+        os.makedirs(output_folder_path)
+```
+
+
+```python
+output_file_path = os.path.join(output_folder_path, output_file)
 output_da.rio.to_raster(output_file_path, compress='LZW')
+```
+
+## Exercise
+
+The `items` variable contains a list of STAC Items returned by the query. The code below iterates through each item and print its metadata stored in the `properties`. Extract the Sentinel-2 Product ID stored in `s2:product_uri` peroperty and print a list of all image ids returned by the query.
+
+
+```python
+for item in items:
+  print(item.properties)
 ```

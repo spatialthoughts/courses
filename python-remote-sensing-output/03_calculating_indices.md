@@ -17,6 +17,7 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
+
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -146,6 +147,12 @@ ax.set_axis_off()
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/03_calculating_indices_files/03_calculating_indices_19_0.png)
+    
+
+
 ## Calculate Spectral Indices
 
 The Normalized Difference Vegetation Index (NDVI) is calculated using the following formula:
@@ -189,6 +196,12 @@ ax.set_title('NDVI')
 ax.set_axis_off()
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/03_calculating_indices_files/03_calculating_indices_24_0.png)
+    
+
 
 The Modified Normalized Difference Water Index (MNDWI) is calculated using the following formula:
 
@@ -259,4 +272,18 @@ for file in files:
   output_path = os.path.join(output_folder_path, file)
   files[file].rio.to_raster(output_path, driver='COG')
   print(f'Saved {file} to {output_path}')
+```
+
+## Exercise
+
+Apply a threshold to the NDVI values to create a binary raster.
+
+Hint: Use the [`xarray.where`](https://docs.xarray.dev/en/stable/generated/xarray.where.html) function that allows you to set both matching and non-matching values.
+
+
+
+```python
+threshold = 0.5
+# Create a new array 'vegetation' where all NDVI values
+#  greater than the threshold is 1 and others are 0
 ```

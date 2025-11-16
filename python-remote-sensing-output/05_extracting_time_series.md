@@ -12,18 +12,21 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray \
+      dask jupyter-server-proxy xrscipy
 ```
 
 
 ```python
-import os
 import matplotlib.pyplot as plt
-import pystac_client
-from odc import stac
-import xarray as xr
-import rioxarray as rxr
+import numpy as np
+import os
 import pyproj
+import pystac_client
+import rioxarray as rxr
+import xarray as xr
+import xrscipy.signal as xrs
+from odc import stac
 ```
 
 
@@ -282,4 +285,38 @@ Save the DataFrame as a CSV file.
 output_filename = 'ndvi_time_series.csv'
 output_filepath = os.path.join(output_folder, output_filename)
 df.to_csv(output_filepath, index=False)
+```
+
+## Exercise
+
+[Scipy for Xarray (`xrscipy`)](https://xr-scipy.readthedocs.io/en/stable/index.html) package wraps the popular scipy package for Xarray and provides many useful time-series processing functions. The code snippet below uses [`xrscipy.signal.savgol_filter`](https://xr-scipy.readthedocs.io/en/1.0.0/generated/xrscipy.other.signal.savgol_filter.html) function to apply a Savitzky-Golay filter on our gap-filled NDVI time-series.
+
+Try SG-Filter with different values of window_length and polyorder and plot the results on a chart.
+
+
+```python
+# Use the equally spaced interpolated time-series
+time_series_interpolated = time_series_interpolated.compute()
+
+# savgol_filter() requires integers as time index
+# We save the original time index values and
+# overwrite it with sequential integers
+timestamps = time_series_interpolated.time
+time_series_interpolated.coords['time'] = np.arange(len(timestamps))
+
+# Apply the SG filter
+window_length = 5 # Size of filter window
+polyorder = 2 # Order of the polynomial used in the filtering
+
+time_series_sg = xrs.savgol_filter(
+    time_series_interpolated,
+    window_length = window_length,
+    polyorder = polyorder,
+    mode='nearest',
+    dim = 'time'
+)
+
+# Write back the original timestamps
+time_series_sg.coords['time'] = timestamps
+time_series_interpolated.coords['time'] = timestamps
 ```

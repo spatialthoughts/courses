@@ -1,25 +1,11 @@
 ## Overview
 
-This notebook is an example of a fairly large computation involving hundreds of Sentinel-2 scenes over a large city. Using STAC, XArray and Dask - we can now achieve this seamlessly. To make this computation more efficient - we can also run it in a large cloud machine to process the data in parallel.
+This notebook is an example of a fairly large computation involving hundrescenes over a large city. Using STAC, XArray and Dask - we can now achieve this  by running the computation via a notebook on a cloud-machine. We use [Coiled](https://coiled.io/) to seamlessly configure a machine and process the data.
 
 ## Overview of the Task
 
 We will query a STAC catalog for Sentinel-2 imagery over the city of Bengaluru, India, apply a cloud-mask and create a median composite image using distributed processing.
 
-**Data Credit**:
-* Bangalore Ward Maps Provided by Spatial Data of Municipalities (Maps) Project by Data{Meet}.
-* Sentinel-2 Level 2A Scenes: Contains modified Copernicus Sentinel data (2025-02)
-
-## Setup and Data Download
-
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
-
-
-```python
-%%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
-```
 
 
 ```python
@@ -198,7 +184,7 @@ We apply the `.median()` aggregation across the time dimension.
 
 
 ```python
-rgb_composite = da_masked \
+rgb_composite = da \
   .sel(band=['red', 'green', 'blue']) \
   .median(dim='time')
 rgb_composite
@@ -228,7 +214,7 @@ Plot the results.
 
 ```python
 preview = rgb_composite_clipped.rio.reproject(
-    rgb_composite_clipped.rio.crs, resolution=300
+    rgb_composite_clipped.rio.crs, resolution=100
 )
 
 fig, ax = plt.subplots(1, 1)
@@ -236,7 +222,7 @@ fig.set_size_inches(5,5)
 preview.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
     robust=True)
-ax.set_titlef('Sentinel-2 Composite {year}')
+ax.set_title(f'Sentinel-2 Composite {year}')
 ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()

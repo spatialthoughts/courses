@@ -113,7 +113,7 @@ da
 
 XArray provides a very powerful way to select subsets of data, using similar framework as Pandas. Similar to Panda's `loc` and `iloc` methods, XArray provides `sel` and `isel` methods. Since DataArray dimensions have names, these methods allow you to specify which dimension to query.
 
-Let's select the temperature anomany values for the last time step. Since we know the index (-1) of the datam we can use `isel` method.
+Let's select the image for the last time step. Since we know the index (-1) of the data we can use `isel` method.
 
 
 ```python
