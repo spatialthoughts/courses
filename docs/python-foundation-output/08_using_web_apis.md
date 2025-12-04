@@ -122,6 +122,7 @@ if response.status_code == 200:
     data = response.json()
 else:
     print('Request failed.')
+    print('Reason', response.text) 
 
 ```
 
@@ -177,6 +178,7 @@ if response.status_code == 200:
     data = response.json()
 else:
     print('Request failed.')
+    print('Reason', response.text) 
 
 data = response.json()
 
@@ -232,6 +234,7 @@ def get_driving_distance(source_coordinates, dest_coordinates):
         return distance/1000
     else:
         print('Request failed.')
+        print('Reason', response.text) 
         return -9999
 
 san_francisco = (37.7749, -122.4194)
