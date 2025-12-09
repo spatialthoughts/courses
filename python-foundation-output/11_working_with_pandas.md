@@ -53,6 +53,45 @@ There is also a `info()` method that shows basic information about the dataframe
 df.info()
 ```
 
+## Selecting Data
+
+To locate a particular row or column from a dataframe, Pandas provide `loc[]` and `iloc[]` methods - that allows you to *locate* particular slices of data. Learn about [different indexing methods](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#different-choices-for-indexing) in Pandas.
+
+Let's select the first 5 rows of the dataframe using `.iloc[]`.
+
+
+```python
+df.iloc[0:5]
+```
+
+We can also select specific columns by index.
+
+
+```python
+df.iloc[0:5, 0:3]
+```
+
+We can use `.loc[]` to select columns by their names.
+
+
+```python
+df.loc[:, ['city', 'lat', 'lng']]
+```
+
+We can also use the shorthand column selection syntax for selecting one or more columns.
+
+
+```python
+df[['city', 'lat', 'lng']]
+```
+
+This shorthand syntax can be used to select a single column as well.
+
+
+```python
+df['city']
+```
+
 ## Filtering Data
 
 Pandas have many ways of selecting and filtered data from a dataframe. We will now see how to use the [Boolean Filtering](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#boolean-indexing) to filter the dataframe to rows that match a condition.
@@ -86,7 +125,7 @@ filtered = country_df[country_df['city_ascii'] == home_city]
 filtered
 ```
 
-To locate a particular row or column from a dataframe, Pandas providea `loc[]` and `iloc[]` methods - that allows you to *locate* particular slices of data. Learn about [different indexing methods](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#different-choices-for-indexing) in Pandas. Here we can use `iloc[]` to find the row matching the `home_city` name. Since `iloc[]` uses index, the *0* here refers to the first row.
+Here we can use `iloc[]` to find the row matching the `home_city` name. Since `iloc[]` uses index, the *0* here refers to the first row.
 
 
 ```python
