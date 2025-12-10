@@ -1,0 +1,109 @@
+// Define the region of interest
+// ****************************************************
+var geometry = ee.Geometry.Polygon([[
+  [-122.52522060075472, 37.809268346871846],
+  [-122.52522060075472, 37.6947146252536],
+  [-122.3590523878641, 37.6947146252536],
+  [-122.3590523878641, 37.809268346871846]
+]]);
+          
+// Prepare the Census Blocks dataset
+// ****************************************************
+var blocks = ee.FeatureCollection("TIGER/2010/Blocks");
+Map.centerObject(geometry);
+
+// Filter blocks that are contained within the selected AOI
+var filteredBlocks = blocks.filter(ee.Filter.isContained('.geo', geometry));
+
+// Prepare the Satellite Embedding dataset
+// ****************************************************
+var embeddings = ee.ImageCollection('GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL');
+var year = 2024;
+var startDate = ee.Date.fromYMD(year, 1, 1);
+var endDate = startDate.advance(1, 'year');
+
+var filteredEmbeddings = embeddings
+  .filter(ee.Filter.date(startDate, endDate))
+  .filter(ee.Filter.bounds(geometry));
+
+var embeddingsImage = filteredEmbeddings.mosaic();
+
+print('Satellite Embeddings Image', embeddingsImage);
+
+// Calculate mean embeddings for each block
+// ****************************************************
+var blocksWithEmbedding = embeddingsImage.reduceRegions({
+  collection: filteredBlocks,
+  reducer: ee.Reducer.mean(),
+  scale: 10,
+  tileScale: 16,
+});
+
+print('Block with mean embedding', blocksWithEmbedding.first());
+
+// printing will only work for a small region
+// Export the results as Asset first and visualize the results
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Export samples to an asset (optional)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Replace this with your asset folder
+// The folder must exist before exporting
+var exportFolder = 'projects/spatialthoughts/assets/satellite_embedding/';
+
+var embeddingExportFc = 'sf_blocks_embeddings';
+var embeddingExportFcPath = exportFolder + embeddingExportFc;
+
+Export.table.toAsset({
+  collection: blocksWithEmbedding, 
+  description: 'Mean_Embedding_Census_Blocks',
+  assetId: embeddingExportFcPath
+});
+
+
+// Wait for the export to complete and continue with
+// the exported asset from here onwards.
+
+// Use the exported asset
+var blocksWithEmbedding = ee.FeatureCollection(embeddingExportFcPath);
+
+// Train a clusterer using ee.Cluster algorithms
+// Optionally, export the data as a CSV and use clustering algorithms
+// from R or Python packages
+var numClusters = 5;
+
+var clusterer = ee.Clusterer.wekaKMeans({
+  nClusters: numClusters}).train({
+  features: blocksWithEmbedding,
+  inputProperties: embeddingsImage.bandNames()
+});
+
+var blocksWithClusters = blocksWithEmbedding.cluster(clusterer);
+print('Blocks with cluster', blocksWithClusters.first());
+
+
+// Create an empty image into which to paint the features.
+var empty = ee.Image().byte();
+
+// use paint() to color image with the values from the
+// 'cluster' column
+var sfBlocksClusters = empty.paint({
+  featureCollection: blocksWithClusters,
+  color: 'cluster',
+});
+
+// If you change number of clusters, update the palette
+// and min/max values accordingly
+var palette = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00'];
+
+var visParams = {min:1, max:5, palette: palette};
+Map.addLayer(sfBlocksClusters.clip(geometry), visParams, 'Clusters from Embeddings'); 
+
+// Render the block boundaries for reference
+var sfBlocksOutline = empty.paint({
+  featureCollection: blocksWithClusters,
+  color: 1,
+  width: 0.5
+});
+Map.addLayer(sfBlocksOutline.clip(geometry), {max:1, palette: ['gray']}, 'Block boundaries', false); 

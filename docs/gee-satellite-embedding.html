@@ -407,14 +407,10 @@ Surface Water with Unsupervised Classification</a></li>
 <li><a href="#mapping-urban-tree-cover-with-supervised-classification"
 id="toc-mapping-urban-tree-cover-with-supervised-classification">Mapping
 Urban Tree Cover with Supervised Classification</a></li>
+<li><a href="#clustering-polygons-with-embeddings"
+id="toc-clustering-polygons-with-embeddings">Clustering Polygons with
+Embeddings</a></li>
 </ul></li>
-<li><a href="#learning-resources" id="toc-learning-resources">Learning
-Resources</a></li>
-<li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
-<li><a href="#references" id="toc-references">References</a></li>
-<li><a href="#license" id="toc-license">License</a></li>
-<li><a href="#citing-and-referencing"
-id="toc-citing-and-referencing">Citing and Referencing</a></li>
 </ul>
 </div>
 
@@ -2312,100 +2308,134 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb12-1"><a h
 <span id="cb12-150"><a href="#cb12-150" tabindex="-1"></a>legend<span class="op">.</span><span class="fu">add</span>(<span class="fu">makeRow</span>(<span class="st">&#39;#faff08&#39;</span><span class="op">,</span><span class="st">&#39;Open Area&#39;</span>))<span class="op">;</span></span>
 <span id="cb12-151"><a href="#cb12-151" tabindex="-1"></a></span>
 <span id="cb12-152"><a href="#cb12-152" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">add</span>(legend)<span class="op">;</span></span></code></pre></div>
-<hr />
 </div>
+<div id="clustering-polygons-with-embeddings" class="section level2">
+<h2>Clustering Polygons with Embeddings</h2>
+<p>We can calculate mean value of satellite embeddings within each
+polygon of a layer and cluster them based on similarity. This approach
+is useful to group regions by similarity. In the example below, we use
+the US Census Blocks dataset and cluster the blocks within a city based
+on satellite embeddings.</p>
+<div class="figure" style="text-align: center">
+<img src="images/gee_satellite_embedding/census_clusters.png" alt="Clustered Census Blocks by Mean Satellite Embeddings" width="75%" />
+<p class="caption">
+Clustered Census Blocks by Mean Satellite Embeddings
+</p>
 </div>
-<div id="learning-resources" class="section level1">
-<h1>Learning Resources</h1>
-<ul>
-<li>Official Tutorials in Google Earth Engine User Guide
-<ul>
-<li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-01-introduction">Introduction
-to the Satellite Embedding Dataset</a></li>
-<li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-02-unsupervised-classification">Unsupervised
-Classification with Satellite Embedding Dataset</a></li>
-<li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-03-supervised-classification">Supervised
-Classification with Satellite Embedding Dataset</a></li>
-<li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-04-regression">Regression
-with Satellite Embedding Dataset</a></li>
-<li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-05-similarity-search">Similarity
-Search with Satellite Embedding Dataset</a></li>
-</ul></li>
-</ul>
+<p><a
+href="https://code.earthengine.google.co.in/?scriptPath=users%2Fujavalgandhi%2FGEE-Satellite-Embedding%3ASupplement%2FClustering_Census_Blocks"
+target="_blank">Open in Code Editor ↗</a></p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode js"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co">// Define the region of interest</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co">// ****************************************************</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="kw">var</span> geometry <span class="op">=</span> ee<span class="op">.</span><span class="at">Geometry</span><span class="op">.</span><span class="fu">Polygon</span>([[</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">122.52522060075472</span><span class="op">,</span> <span class="fl">37.809268346871846</span>]<span class="op">,</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">122.52522060075472</span><span class="op">,</span> <span class="fl">37.6947146252536</span>]<span class="op">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">122.3590523878641</span><span class="op">,</span> <span class="fl">37.6947146252536</span>]<span class="op">,</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  [<span class="op">-</span><span class="fl">122.3590523878641</span><span class="op">,</span> <span class="fl">37.809268346871846</span>]</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>]])<span class="op">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>          </span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">// Prepare the Census Blocks dataset</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">// ****************************************************</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="kw">var</span> blocks <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(<span class="st">&quot;TIGER/2010/Blocks&quot;</span>)<span class="op">;</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">centerObject</span>(geometry)<span class="op">;</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">// Filter blocks that are contained within the selected AOI</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="kw">var</span> filteredBlocks <span class="op">=</span> blocks<span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">isContained</span>(<span class="st">&#39;.geo&#39;</span><span class="op">,</span> geometry))<span class="op">;</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">// Prepare the Satellite Embedding dataset</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">// ****************************************************</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="kw">var</span> embeddings <span class="op">=</span> ee<span class="op">.</span><span class="fu">ImageCollection</span>(<span class="st">&#39;GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL&#39;</span>)<span class="op">;</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="kw">var</span> year <span class="op">=</span> <span class="dv">2024</span><span class="op">;</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="kw">var</span> startDate <span class="op">=</span> ee<span class="op">.</span><span class="at">Date</span><span class="op">.</span><span class="fu">fromYMD</span>(year<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="kw">var</span> endDate <span class="op">=</span> startDate<span class="op">.</span><span class="fu">advance</span>(<span class="dv">1</span><span class="op">,</span> <span class="st">&#39;year&#39;</span>)<span class="op">;</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="kw">var</span> filteredEmbeddings <span class="op">=</span> embeddings</span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">date</span>(startDate<span class="op">,</span> endDate))</span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(ee<span class="op">.</span><span class="at">Filter</span><span class="op">.</span><span class="fu">bounds</span>(geometry))<span class="op">;</span></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a></span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a><span class="kw">var</span> embeddingsImage <span class="op">=</span> filteredEmbeddings<span class="op">.</span><span class="fu">mosaic</span>()<span class="op">;</span></span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Satellite Embeddings Image&#39;</span><span class="op">,</span> embeddingsImage)<span class="op">;</span></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a></span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a><span class="co">// Calculate mean embeddings for each block</span></span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a><span class="co">// ****************************************************</span></span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a><span class="kw">var</span> blocksWithEmbedding <span class="op">=</span> embeddingsImage<span class="op">.</span><span class="fu">reduceRegions</span>({</span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> filteredBlocks<span class="op">,</span></span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a>  <span class="dt">reducer</span><span class="op">:</span> ee<span class="op">.</span><span class="at">Reducer</span><span class="op">.</span><span class="fu">mean</span>()<span class="op">,</span></span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a>  <span class="dt">scale</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a>  <span class="dt">tileScale</span><span class="op">:</span> <span class="dv">16</span><span class="op">,</span></span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a></span>
+<span id="cb13-42"><a href="#cb13-42" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Block with mean embedding&#39;</span><span class="op">,</span> blocksWithEmbedding<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb13-43"><a href="#cb13-43" tabindex="-1"></a></span>
+<span id="cb13-44"><a href="#cb13-44" tabindex="-1"></a><span class="co">// printing will only work for a small region</span></span>
+<span id="cb13-45"><a href="#cb13-45" tabindex="-1"></a><span class="co">// Export the results as Asset first and visualize the results</span></span>
+<span id="cb13-46"><a href="#cb13-46" tabindex="-1"></a></span>
+<span id="cb13-47"><a href="#cb13-47" tabindex="-1"></a><span class="co">// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span></span>
+<span id="cb13-48"><a href="#cb13-48" tabindex="-1"></a><span class="co">// Export samples to an asset (optional)</span></span>
+<span id="cb13-49"><a href="#cb13-49" tabindex="-1"></a><span class="co">// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span></span>
+<span id="cb13-50"><a href="#cb13-50" tabindex="-1"></a></span>
+<span id="cb13-51"><a href="#cb13-51" tabindex="-1"></a><span class="co">// Replace this with your asset folder</span></span>
+<span id="cb13-52"><a href="#cb13-52" tabindex="-1"></a><span class="co">// The folder must exist before exporting</span></span>
+<span id="cb13-53"><a href="#cb13-53" tabindex="-1"></a><span class="kw">var</span> exportFolder <span class="op">=</span> <span class="st">&#39;projects/spatialthoughts/assets/satellite_embedding/&#39;</span><span class="op">;</span></span>
+<span id="cb13-54"><a href="#cb13-54" tabindex="-1"></a></span>
+<span id="cb13-55"><a href="#cb13-55" tabindex="-1"></a><span class="kw">var</span> embeddingExportFc <span class="op">=</span> <span class="st">&#39;sf_blocks_embeddings&#39;</span><span class="op">;</span></span>
+<span id="cb13-56"><a href="#cb13-56" tabindex="-1"></a><span class="kw">var</span> embeddingExportFcPath <span class="op">=</span> exportFolder <span class="op">+</span> embeddingExportFc<span class="op">;</span></span>
+<span id="cb13-57"><a href="#cb13-57" tabindex="-1"></a></span>
+<span id="cb13-58"><a href="#cb13-58" tabindex="-1"></a>Export<span class="op">.</span><span class="at">table</span><span class="op">.</span><span class="fu">toAsset</span>({</span>
+<span id="cb13-59"><a href="#cb13-59" tabindex="-1"></a>  <span class="dt">collection</span><span class="op">:</span> blocksWithEmbedding<span class="op">,</span> </span>
+<span id="cb13-60"><a href="#cb13-60" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Mean_Embedding_Census_Blocks&#39;</span><span class="op">,</span></span>
+<span id="cb13-61"><a href="#cb13-61" tabindex="-1"></a>  <span class="dt">assetId</span><span class="op">:</span> embeddingExportFcPath</span>
+<span id="cb13-62"><a href="#cb13-62" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb13-63"><a href="#cb13-63" tabindex="-1"></a></span>
+<span id="cb13-64"><a href="#cb13-64" tabindex="-1"></a></span>
+<span id="cb13-65"><a href="#cb13-65" tabindex="-1"></a><span class="co">// Wait for the export to complete and continue with</span></span>
+<span id="cb13-66"><a href="#cb13-66" tabindex="-1"></a><span class="co">// the exported asset from here onwards.</span></span>
+<span id="cb13-67"><a href="#cb13-67" tabindex="-1"></a></span>
+<span id="cb13-68"><a href="#cb13-68" tabindex="-1"></a><span class="co">// Use the exported asset</span></span>
+<span id="cb13-69"><a href="#cb13-69" tabindex="-1"></a><span class="kw">var</span> blocksWithEmbedding <span class="op">=</span> ee<span class="op">.</span><span class="fu">FeatureCollection</span>(embeddingExportFcPath)<span class="op">;</span></span>
+<span id="cb13-70"><a href="#cb13-70" tabindex="-1"></a></span>
+<span id="cb13-71"><a href="#cb13-71" tabindex="-1"></a><span class="co">// Train a clusterer using ee.Cluster algorithms</span></span>
+<span id="cb13-72"><a href="#cb13-72" tabindex="-1"></a><span class="co">// Optionally, export the data as a CSV and use clustering algorithms</span></span>
+<span id="cb13-73"><a href="#cb13-73" tabindex="-1"></a><span class="co">// from R or Python packages</span></span>
+<span id="cb13-74"><a href="#cb13-74" tabindex="-1"></a><span class="kw">var</span> numClusters <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb13-75"><a href="#cb13-75" tabindex="-1"></a></span>
+<span id="cb13-76"><a href="#cb13-76" tabindex="-1"></a><span class="kw">var</span> clusterer <span class="op">=</span> ee<span class="op">.</span><span class="at">Clusterer</span><span class="op">.</span><span class="fu">wekaKMeans</span>({</span>
+<span id="cb13-77"><a href="#cb13-77" tabindex="-1"></a>  <span class="dt">nClusters</span><span class="op">:</span> numClusters})<span class="op">.</span><span class="fu">train</span>({</span>
+<span id="cb13-78"><a href="#cb13-78" tabindex="-1"></a>  <span class="dt">features</span><span class="op">:</span> blocksWithEmbedding<span class="op">,</span></span>
+<span id="cb13-79"><a href="#cb13-79" tabindex="-1"></a>  <span class="dt">inputProperties</span><span class="op">:</span> embeddingsImage<span class="op">.</span><span class="fu">bandNames</span>()</span>
+<span id="cb13-80"><a href="#cb13-80" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb13-81"><a href="#cb13-81" tabindex="-1"></a></span>
+<span id="cb13-82"><a href="#cb13-82" tabindex="-1"></a><span class="kw">var</span> blocksWithClusters <span class="op">=</span> blocksWithEmbedding<span class="op">.</span><span class="fu">cluster</span>(clusterer)<span class="op">;</span></span>
+<span id="cb13-83"><a href="#cb13-83" tabindex="-1"></a><span class="fu">print</span>(<span class="st">&#39;Blocks with cluster&#39;</span><span class="op">,</span> blocksWithClusters<span class="op">.</span><span class="fu">first</span>())<span class="op">;</span></span>
+<span id="cb13-84"><a href="#cb13-84" tabindex="-1"></a></span>
+<span id="cb13-85"><a href="#cb13-85" tabindex="-1"></a></span>
+<span id="cb13-86"><a href="#cb13-86" tabindex="-1"></a><span class="co">// Create an empty image into which to paint the features.</span></span>
+<span id="cb13-87"><a href="#cb13-87" tabindex="-1"></a><span class="kw">var</span> empty <span class="op">=</span> ee<span class="op">.</span><span class="fu">Image</span>()<span class="op">.</span><span class="fu">byte</span>()<span class="op">;</span></span>
+<span id="cb13-88"><a href="#cb13-88" tabindex="-1"></a></span>
+<span id="cb13-89"><a href="#cb13-89" tabindex="-1"></a><span class="co">// use paint() to color image with the values from the</span></span>
+<span id="cb13-90"><a href="#cb13-90" tabindex="-1"></a><span class="co">// &#39;cluster&#39; column</span></span>
+<span id="cb13-91"><a href="#cb13-91" tabindex="-1"></a><span class="kw">var</span> sfBlocksClusters <span class="op">=</span> empty<span class="op">.</span><span class="fu">paint</span>({</span>
+<span id="cb13-92"><a href="#cb13-92" tabindex="-1"></a>  <span class="dt">featureCollection</span><span class="op">:</span> blocksWithClusters<span class="op">,</span></span>
+<span id="cb13-93"><a href="#cb13-93" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="st">&#39;cluster&#39;</span><span class="op">,</span></span>
+<span id="cb13-94"><a href="#cb13-94" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb13-95"><a href="#cb13-95" tabindex="-1"></a></span>
+<span id="cb13-96"><a href="#cb13-96" tabindex="-1"></a><span class="co">// If you change number of clusters, update the palette</span></span>
+<span id="cb13-97"><a href="#cb13-97" tabindex="-1"></a><span class="co">// and min/max values accordingly</span></span>
+<span id="cb13-98"><a href="#cb13-98" tabindex="-1"></a><span class="kw">var</span> palette <span class="op">=</span> [<span class="st">&#39;#e41a1c&#39;</span><span class="op">,</span><span class="st">&#39;#377eb8&#39;</span><span class="op">,</span><span class="st">&#39;#4daf4a&#39;</span><span class="op">,</span><span class="st">&#39;#984ea3&#39;</span><span class="op">,</span><span class="st">&#39;#ff7f00&#39;</span>]<span class="op">;</span></span>
+<span id="cb13-99"><a href="#cb13-99" tabindex="-1"></a></span>
+<span id="cb13-100"><a href="#cb13-100" tabindex="-1"></a><span class="kw">var</span> visParams <span class="op">=</span> {<span class="dt">min</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">max</span><span class="op">:</span><span class="dv">5</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> palette}<span class="op">;</span></span>
+<span id="cb13-101"><a href="#cb13-101" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(sfBlocksClusters<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> visParams<span class="op">,</span> <span class="st">&#39;Clusters from Embeddings&#39;</span>)<span class="op">;</span> </span>
+<span id="cb13-102"><a href="#cb13-102" tabindex="-1"></a></span>
+<span id="cb13-103"><a href="#cb13-103" tabindex="-1"></a><span class="co">// Render the block boundaries for reference</span></span>
+<span id="cb13-104"><a href="#cb13-104" tabindex="-1"></a><span class="kw">var</span> sfBlocksOutline <span class="op">=</span> empty<span class="op">.</span><span class="fu">paint</span>({</span>
+<span id="cb13-105"><a href="#cb13-105" tabindex="-1"></a>  <span class="dt">featureCollection</span><span class="op">:</span> blocksWithClusters<span class="op">,</span></span>
+<span id="cb13-106"><a href="#cb13-106" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb13-107"><a href="#cb13-107" tabindex="-1"></a>  <span class="dt">width</span><span class="op">:</span> <span class="fl">0.5</span></span>
+<span id="cb13-108"><a href="#cb13-108" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb13-109"><a href="#cb13-109" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(sfBlocksOutline<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Block boundaries&#39;</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span> </span></code></pre></div>
 </div>
-<div id="data-credits" class="section level1">
-<h1>Data Credits</h1>
-<ul>
-<li><strong>Satellite Embedding V1</strong>: The AlphaEarth Foundations
-Satellite Embedding dataset is produced by Google and Google
-DeepMind.</li>
-<li><strong>Sentinel-2 Level-1C, Level-2A</strong>: Contains Copernicus
-Sentinel data.</li>
-<li><strong>FAO GAUL 500m: Global Administrative Unit Layers 2015,
-Second-Level Administrative Units</strong>: Source of Administrative
-boundaries: The Global Administrative Unit Layers (GAUL) dataset,
-implemented by FAO within the CountrySTAT and Agricultural Market
-Information System (AMIS) projects.</li>
-</ul>
-</div>
-<div id="references" class="section level1">
-<h1>References</h1>
-<ul>
-<li>Brown, C. F., Kazmierski, M. R., Pasquarella, V J., Rucklidge, W.
-J., Samsikova, M., Zhang, C., Shelhamer, E., Lahera, E., Wiles, O.,
-Ilyushchenko, S., Gorelick, N., Zhang, L. L., Alj, S., Schechter, E.,
-Askay, S., Guinan, O., Moore, R., Boukouvalas, A., &amp; Kohli,
-P.(2025). AlphaEarth Foundations: An embedding field model for accurate
-and efficient global mapping from sparse label data. arXiv preprint
-arXiv.2507.22291. <a href="https://arxiv.org/abs/2507.22291"
-class="uri">https://arxiv.org/abs/2507.22291</a></li>
-<li>Sherrie Wang, George Azzari, David B. Lobell, Crop type mapping
-without field-level labels: Random forest transfer and unsupervised
-clustering techniques, Remote Sensing of Environment, Volume 222, 2019,
-Pages 303-317, ISSN 0034-4257, <a
-href="https://doi.org/10.1016/j.rse.2018.12.026"
-class="uri">https://doi.org/10.1016/j.rse.2018.12.026</a>.</li>
-<li>Houriez, L., Pilarski, S., Vahedi, B., Ahmadalipour, A., Scully, T.
-H., Aflitto, N., Andre, D., Jaffe, C., Wedner, M., Mazzola, R., Jeffery,
-J., Messinger, B., McGinley-Smith, S., &amp; Russell, S. (2025, August).
-Scalable geospatial data generation using AlphaEarth foundations model
-(arXiv:2508.11739). arXiv. <a href="https://arxiv.org/abs/2508.11739"
-class="uri">https://arxiv.org/abs/2508.11739</a></li>
-<li>Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. Automatic Water
-Detection from Multidimensional Hierarchical Clustering for Sentinel-2
-Images and a Comparison with Level 2A Processors.Remote Sensing of
-Environment 2021, 253, 112209. <a
-href="https://doi.org/10.1016/j.rse.2020.112209"
-class="uri">https://doi.org/10.1016/j.rse.2020.112209</a>.</li>
-</ul>
-</div>
-<div id="license" class="section level1">
-<h1>License</h1>
-<p>The course material (text, images, presentation, videos) is licensed
-under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative
-Commons Attribution 4.0 International License</a>.</p>
-<p>The code (scripts, Jupyter notebooks etc.) is licensed under the MIT
-License. For a copy, see <a href="https://opensource.org/licenses/MIT"
-class="uri">https://opensource.org/licenses/MIT</a></p>
-<p>Kindly give appropriate credit to the original author as below:</p>
-<p>Copyright © 2025 Ujaval Gandhi <a
-href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
-</div>
-<div id="citing-and-referencing" class="section level1">
-<h1>Citing and Referencing</h1>
-<p>You can cite the course materials as follows</p>
-<ul>
-<li>Gandhi, Ujaval, 2025. <em>Satellite Embedding Deep Dive</em>
-workshop. Spatial Thoughts. <a
-href="https://courses.spatialthoughts.com/gee-satellite-embedding.html"
-class="uri">https://courses.spatialthoughts.com/gee-satellite-embedding.html</a></li>
-</ul>
-<hr />
 </div>
 
 <!-- Comment Section Powered by utterances -->
