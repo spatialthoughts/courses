@@ -12,7 +12,7 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask
+    !pip install pystac-client odc-stac rioxarray dask botocore
 ```
 
 
@@ -20,7 +20,7 @@ if 'google.colab' in str(get_ipython()):
 import os
 import matplotlib.pyplot as plt
 import pystac_client
-from odc.stac import stac_load
+from odc.stac import stac_load, configure_s3_access
 import xarray as xr
 import rioxarray as rxr
 ```
@@ -53,6 +53,11 @@ Let's use Element84 search endpoint to look for items from the sentinel-2-l2a co
 ```python
 catalog = pystac_client.Client.open(
     'https://earth-search.aws.element84.com/v1')
+
+# Configure settings for reading from Earth Search STAC
+configure_s3_access(
+    aws_unsigned=True,
+)
 
 # Define a small bounding box around the chosen point
 km2deg = 1.0 / 111
