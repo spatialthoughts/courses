@@ -14,8 +14,8 @@
 
 <title>Satellite Embedding Deep Dive (Full Workshop)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -51,6 +51,7 @@
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
     </style>
+
 
 
 <style type="text/css">
@@ -134,13 +135,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +183,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +243,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +280,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +289,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +335,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -411,6 +419,13 @@ Urban Tree Cover with Supervised Classification</a></li>
 id="toc-clustering-polygons-with-embeddings">Clustering Polygons with
 Embeddings</a></li>
 </ul></li>
+<li><a href="#learning-resources" id="toc-learning-resources">Learning
+Resources</a></li>
+<li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+<li><a href="#license" id="toc-license">License</a></li>
+<li><a href="#citing-and-referencing"
+id="toc-citing-and-referencing">Citing and Referencing</a></li>
 </ul>
 </div>
 
@@ -2435,7 +2450,100 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb13-1"><a h
 <span id="cb13-107"><a href="#cb13-107" tabindex="-1"></a>  <span class="dt">width</span><span class="op">:</span> <span class="fl">0.5</span></span>
 <span id="cb13-108"><a href="#cb13-108" tabindex="-1"></a>})<span class="op">;</span></span>
 <span id="cb13-109"><a href="#cb13-109" tabindex="-1"></a><span class="bu">Map</span><span class="op">.</span><span class="fu">addLayer</span>(sfBlocksOutline<span class="op">.</span><span class="fu">clip</span>(geometry)<span class="op">,</span> {<span class="dt">max</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">palette</span><span class="op">:</span> [<span class="st">&#39;gray&#39;</span>]}<span class="op">,</span> <span class="st">&#39;Block boundaries&#39;</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span> </span></code></pre></div>
+<hr />
 </div>
+</div>
+<div id="learning-resources" class="section level1">
+<h1>Learning Resources</h1>
+<ul>
+<li>Official Tutorials in Google Earth Engine User Guide
+<ul>
+<li><a
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-01-introduction">Introduction
+to the Satellite Embedding Dataset</a></li>
+<li><a
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-02-unsupervised-classification">Unsupervised
+Classification with Satellite Embedding Dataset</a></li>
+<li><a
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-03-supervised-classification">Supervised
+Classification with Satellite Embedding Dataset</a></li>
+<li><a
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-04-regression">Regression
+with Satellite Embedding Dataset</a></li>
+<li><a
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-05-similarity-search">Similarity
+Search with Satellite Embedding Dataset</a></li>
+</ul></li>
+</ul>
+</div>
+<div id="data-credits" class="section level1">
+<h1>Data Credits</h1>
+<ul>
+<li><strong>Satellite Embedding V1</strong>: The AlphaEarth Foundations
+Satellite Embedding dataset is produced by Google and Google
+DeepMind.</li>
+<li><strong>Sentinel-2 Level-1C, Level-2A</strong>: Contains Copernicus
+Sentinel data.</li>
+<li><strong>FAO GAUL 500m: Global Administrative Unit Layers 2015,
+Second-Level Administrative Units</strong>: Source of Administrative
+boundaries: The Global Administrative Unit Layers (GAUL) dataset,
+implemented by FAO within the CountrySTAT and Agricultural Market
+Information System (AMIS) projects.</li>
+</ul>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+<ul>
+<li>Brown, C. F., Kazmierski, M. R., Pasquarella, V J., Rucklidge, W.
+J., Samsikova, M., Zhang, C., Shelhamer, E., Lahera, E., Wiles, O.,
+Ilyushchenko, S., Gorelick, N., Zhang, L. L., Alj, S., Schechter, E.,
+Askay, S., Guinan, O., Moore, R., Boukouvalas, A., &amp; Kohli,
+P.(2025). AlphaEarth Foundations: An embedding field model for accurate
+and efficient global mapping from sparse label data. arXiv preprint
+arXiv.2507.22291. <a href="https://arxiv.org/abs/2507.22291"
+class="uri">https://arxiv.org/abs/2507.22291</a></li>
+<li>Sherrie Wang, George Azzari, David B. Lobell, Crop type mapping
+without field-level labels: Random forest transfer and unsupervised
+clustering techniques, Remote Sensing of Environment, Volume 222, 2019,
+Pages 303-317, ISSN 0034-4257, <a
+href="https://doi.org/10.1016/j.rse.2018.12.026"
+class="uri">https://doi.org/10.1016/j.rse.2018.12.026</a>.</li>
+<li>Houriez, L., Pilarski, S., Vahedi, B., Ahmadalipour, A., Scully, T.
+H., Aflitto, N., Andre, D., Jaffe, C., Wedner, M., Mazzola, R., Jeffery,
+J., Messinger, B., McGinley-Smith, S., &amp; Russell, S. (2025, August).
+Scalable geospatial data generation using AlphaEarth foundations model
+(arXiv:2508.11739). arXiv. <a href="https://arxiv.org/abs/2508.11739"
+class="uri">https://arxiv.org/abs/2508.11739</a></li>
+<li>Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. Automatic Water
+Detection from Multidimensional Hierarchical Clustering for Sentinel-2
+Images and a Comparison with Level 2A Processors.Remote Sensing of
+Environment 2021, 253, 112209. <a
+href="https://doi.org/10.1016/j.rse.2020.112209"
+class="uri">https://doi.org/10.1016/j.rse.2020.112209</a>.</li>
+</ul>
+</div>
+<div id="license" class="section level1">
+<h1>License</h1>
+<p>The course material (text, images, presentation, videos) is licensed
+under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative
+Commons Attribution 4.0 International License</a>.</p>
+<p>The code (scripts, Jupyter notebooks etc.) is licensed under the MIT
+License. For a copy, see <a href="https://opensource.org/licenses/MIT"
+class="uri">https://opensource.org/licenses/MIT</a></p>
+<p>Kindly give appropriate credit to the original author as below:</p>
+<p>Copyright © 2025 Ujaval Gandhi <a
+href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
+</div>
+<div id="citing-and-referencing" class="section level1">
+<h1>Citing and Referencing</h1>
+<p>You can cite the course materials as follows</p>
+<ul>
+<li>Gandhi, Ujaval, 2025. <em>Satellite Embedding Deep Dive</em>
+workshop. Spatial Thoughts. <a
+href="https://courses.spatialthoughts.com/gee-satellite-embedding.html"
+class="uri">https://courses.spatialthoughts.com/gee-satellite-embedding.html</a></li>
+</ul>
+<hr />
 </div>
 
 <!-- Comment Section Powered by utterances -->
