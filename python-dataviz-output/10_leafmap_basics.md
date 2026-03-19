@@ -109,7 +109,7 @@ m.zoom_to_gdf(roads_gdf)
 m
 ```
 
-A very useful feature of LeafMap is the ability to load a Cloud-Optimized GeoTIFF (COG) file directly from a URL without the need of a server. The file is streamed directly and high-resolution tiles are automatically fetched as you zoom in. We load a 8-bit RGB image hosted on GitHub using the `add_cog_layer()` function.
+A very useful feature of LeafMap is the ability to load a Cloud-Optimized GeoTIFF (COG) file directly from a URL. The file is streamed directly and high-resolution tiles are automatically fetched as you zoom in. We load a 8-bit RGB image hosted on GitHub using the `add_cog_layer()` function. We need to specify a [Titiler Endpoint](https://developmentseed.org/titiler/). We use the default one used by Leafmap.
 
 Reference: [`leafmap.Map.add_cog_layer`](https://leafmap.org/leafmap/#leafmap.leafmap.Map.add_cog_layer)
 
@@ -125,7 +125,11 @@ m = leafmap.Map(width=800, height=500)
 
 bounds = leafmap.cog_bounds(cog_url)
 
-m.add_cog_layer(cog_url, name='Land Use Land Cover')
+m.add_cog_layer(
+    cog_url,
+    name='Land Use Land Cover',
+    titiler_endpoint='https://giswqs-titiler-endpoint.hf.space'
+)
 m.zoom_to_bounds(bounds)
 m
 ```
@@ -140,7 +144,11 @@ m = leafmap.Map(width=800, height=500)
 
 bounds = leafmap.cog_bounds(cog_url)
 
-m.add_cog_layer(cog_url, name='Land Use Land Cover')
+m.add_cog_layer(
+    cog_url,
+    name='Land Use Land Cover',
+    titiler_endpoint='https://giswqs-titiler-endpoint.hf.space'
+)
 m.zoom_to_bounds(bounds)
 
 # Add a Legend
@@ -161,7 +169,11 @@ m = leafmap.Map(width=800, height=500)
 
 bounds = leafmap.cog_bounds(cog_url)
 
-m.add_cog_layer(cog_url, name='Land Use Land Cover')
+m.add_cog_layer(
+    cog_url,
+    name='Land Use Land Cover',
+    titiler_endpoint='https://giswqs-titiler-endpoint.hf.space'
+)
 m.zoom_to_bounds(bounds)
 
 # Add a Legend

@@ -99,7 +99,7 @@ We now have a `xarray.Dataset` object. Let's understand what is contained in a D
 * *Coordinates*: These are the labels for values in each dimension.
 * *Attributes*: This is the metadata associated with the dataset.
 
-<img src='https://courses.spatialthoughts.com/images/python_dataviz/xarray_terminology.png' width=800/>
+<img src='https://courses.spatialthoughts.com/images/common/xarray_terminology.png' width=800/>
 
 A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset.variable_name` syntax.
 
