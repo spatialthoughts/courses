@@ -64,7 +64,8 @@ Prompt your favorite LLM to add the following features to your existing solution
 Hint: You can use prompts such as the one given below.
 
 ```
-I have a list of locations as `(name, latitude, longitude)` tuples in the variable 'locations'. Write Python code to plot these on an interactive map using Folium.
+I have a list of locations as `(name, latitude, longitude)` tuples in the variable 'locations'. 
+Write Python code to plot these on an interactive map.
 Show a marker for each location with the name as a tooltip.
 Format the code as a single cell I can paste into a Jupyter notebook.
 ```

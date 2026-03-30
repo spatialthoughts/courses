@@ -18,15 +18,11 @@ The provide of such APIs have many ways to implement an API. There are standards
 
 ## Understanding JSON and GeoJSON
 
-JSON stands for **J**ava**S**cript **O**bject **N**otation. It is a format for storing and transporting data, and is the de-facto standard for data exchanged by APIs. GeoJSON is an extension of the JSON format that is commonly used to represent spatial data.
-
-Python has a built-in `json` module that has methods for reading json data and converting it to Python objects, and vice-versa. In this example, we are using the `requests` module for querying the API which conveniently does the conversion for us. But it is useful to learn the basics of working with JSON in Python.
+JSON stands for **J**ava**S**cript **O**bject **N**otation. It is a format for storing and transporting data, and is the de-facto standard for data exchanged by APIs. GeoJSON is an extension of the JSON format that is commonly used to represent spatial data. Below is an example of a GeoJSON for representing a point location.
 
 The GeoJSON data contains *features*, where each feature has some *properties* and a *geometry*.
 
-
-```python
-geojson_string = '''
+```
 {
   "type": "FeatureCollection",
   "features": [
@@ -36,37 +32,9 @@ geojson_string = '''
     }
   ]
 }
-'''
-print(geojson_string)
 ```
 
-To convert a JSON string to a Python object (i.e. parsing JSON), we can use the `json.loads()` method.
-
-
-```python
-import json
-
-data = json.loads(geojson_string)
-print(type(data))
-print(data)
-```
-
-Now that we have *parsed* the GeoJSON string and have a Python object, we can extract infromation from it. The data is stored in a *FeatureCollection* - which is a list of *features*. In our example, we have just 1 feature inside the feature collection, so we can access it by using index **0**.
-
-
-```python
-city_data = data['features'][0]
-print(city_data)
-```
-
-The feature representation is a dictionary, and individual items can be accesses using the *keys*
-
-
-```python
-city_name = city_data['properties']['name']
-city_coordinates = city_data['geometry']['coordinates']
-print(city_name, city_coordinates)
-```
+This data stucture can be easily converted to a Python object (a Dictionary) and used to extract the information.
 
 ## The `requests` module
 
