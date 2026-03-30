@@ -53,8 +53,25 @@ Gala Gymkhana Road, Bopal, Ahmedabad, India
 ```
 
 
-## Part 3
+## Part 3 (AI-Assisted Coding)
 
-Bonus Assignment (This part is optional)
+Now that you know how to do basic geocoding, you can leverage AI Assistants to visualize the results.
 
-Use an alternative geocoding service such as HERE/Bing/Google or a country-specific service such as DataBC. Note that most commercial geocoding services will require signing-up for an API key and may also require setting up a billing account.
+Prompt your favorite LLM to add the following features to your existing solution.
+
+- Create an interactive map of the geocoded location from Part-2 and show the map in your notebook. 
+
+Hint: You can use prompts such as the one given below.
+
+```
+I have a list of locations as `(name, latitude, longitude)` tuples in the variable 'locations'. 
+Write Python code to plot these on an interactive map.
+Show a marker for each location with the name as a tooltip.
+Format the code as a single cell I can paste into a Jupyter notebook.
+```
+
+## Bonus Points [Optional]
+
+Use AI-assisted Coding to do route optimization. Use the OpenRouteService Optimization API to find the optimal path to visit all the location, starting from the first address. Display the results on the map.
+
+You may use an alternative geocoding service such as HERE/Bing/Google or a country-specific service such as DataBC instead of nominatim. Note that most commercial geocoding services will require signing-up for an API key and may also require setting up a billing account.
