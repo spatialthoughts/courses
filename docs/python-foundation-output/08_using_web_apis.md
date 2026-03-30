@@ -18,9 +18,9 @@ The provide of such APIs have many ways to implement an API. There are standards
 
 ## Understanding JSON and GeoJSON
 
-JSON stands for **J**ava**S**cript **O**bject **N**otation. It is a format for storing and transporting data, and is the de-facto standard for data exchanged by APIs. GeoJSON is an extension of the JSON format that is commonly used to represent spatial data. Below is an example of a GeoJSON for representing a point location.
+JSON stands for **J**ava**S**cript **O**bject **N**otation. It is a format for storing and transporting data, and is the de-facto standard for data exchanged by APIs.
 
-The GeoJSON data contains *features*, where each feature has some *properties* and a *geometry*.
+GeoJSON is an extension of the JSON format that is commonly used to represent spatial data. The GeoJSON data contains *features*, where each feature has some *properties* and a *geometry*. Below is an example of a GeoJSON for representing a point location.
 
 ```
 {
