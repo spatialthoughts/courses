@@ -363,7 +363,7 @@ knitr::include_graphics('images/advanced_qgis/batch10.png')
 knitr::include_graphics('images/advanced_qgis/batch11.png')
 ```
 
-12. In the *Package Layers*  dialog box, in *Input layers* choose all the clipped layers and in *Destination GeoPackage* click *...* and select **Save to File...**. Then save the file as ``clipped.gpkg``. Click **Run**
+12. In the *Package Layers*  dialog box, in *Input layers* choose all the clipped layers and in *Destination GeoPackage* click *...* and select **Save to File...**. Then save the file as ``clipped.gpkg``. Click **Run**.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/batch12.png')
@@ -723,6 +723,16 @@ knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows03.png')
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/reproducibleWorkflows04.png')
 ```
+
+## 3.4 Learn more
+
+See the resources and tutorials below to learn more about advanced use cases and workflows using the Model Designer.
+
+* [Workflow Automation with QGIS: Case Studies and Tips](https://www.youtube.com/watch?v=82RmkotU1gU): FOSS4G 2025 talk The talk featuring real-world case studies that showcase how the QGIS Model Designer was used to automate complex workflows across a variety of use cases.
+* Step-by-step Tutorials
+  * [Creating QGIS Models with Optional Inputs and Conditional Processing](https://spatialthoughts.com/2024/11/29/qgis-coditional-input-model/)
+  * [Rendering Print Layouts from QGIS Models](https://spatialthoughts.com/2024/04/08/rendering-print-layouts/)
+  * [Running QGIS Processing Tools on the Command Line with qgis_process](https://spatialthoughts.com/2022/07/30/qgis_process_command_line/)
 
 # Assignment
 
@@ -1538,9 +1548,144 @@ knitr::include_graphics('images/advanced_qgis/inplace1.png')
 
 ![[View Animated GIF &#8599;](images/advanced_qgis/inplace2.gif){target="_blank"}](images/advanced_qgis/inplace2.png)
 
+## Animating GPS Tracks with Distance and Speed Labels
+
+We can build on the animation created in the previous section [Animating GPS Tracks](#animating-gps-tracks) by displaying additional information, such as total distance covered and the current speed. Since this information does not exist in the GPS track, we will use QGIS expressions to calculate them and update the label to display during the animation. We will produce an animation that looks like shown below.
+
+![[View Animated GIF &#8599;](images/advanced_qgis/gps_animation_distance_speed.gif){target="_blank"}](images/advanced_qgis/gps_animation_distance_speed.png)
+
+We start from the `GPS_Animation_Checkpoint2.qgz` file in the `solutions` folder. 
+
+1. The `track_points` layer has the timestamp and positions. We need to find the cumulative distance at each of the points. This can be achieved by measuring the distance along the line in `tracks` layer from the first point to the current point. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance1.png')
+```
+
+2. Select the `track_points` layer and open the *Field Calculator* from the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance2.png')
+```
+
+3. Select `track_points` as the *Input layer*. Enter `distance_from_start` as the *Field Name*. Enter the following expression. Since we are calculating distance, we need to convert the geometries into a projected CRS. Here we are using **EPSG:3857** (Web Mercator) which is a decent choice for most places, but you may replace this with your preferred projected CRS for your region. The expression uses `line_locate_point()` function that find the distance on a given line geometry from the start point to the specified point. Click *Run*.
+
+```
+line_locate_point(
+  transform(geometry(get_feature_by_id('tracks', 0)), 'EPSG:4326', 'EPSG:3857'),
+  transform(@geometry, 'EPSG:4326', 'EPSG:3857')
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance3.png')
+```
+
+4. Once the new layer loads, you will see that a new field has been added with the cumulative distance at each point. Let's add another field with the speed. Open the *Field Calculator* from the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance4.png')
+```
+
+5. Select `Calculated` as the *Input layer*. Enter `speed` as the *Field Name*. Enter the following expression. This expression calculates speed by getting the consecutive pairs of points and using the distance and time fields. The `track_seg_point_id` field in our layer contains sequential ids that are used to get the *previous* feature. As the chosen CRS has the units of meters, we divide the distance by 1000 and convert the time to hours to get the speed in the units of kilometers per hour. Click *Run*.
+
+```
+round(
+("distance_from_start" - attribute(
+  get_feature(@layer,  'track_seg_point_id',  "track_seg_point_id" - 1),
+    'distance')
+    ) / 1000
+/
+hour("time" - attribute
+  (get_feature(@layer,  'track_seg_point_id',  "track_seg_point_id" - 1),
+    'time')
+  )
+)
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance5.png')
+```
+
+6. A new field named *speed* will be added to the resulting layer. Due to noise in the GPS positions, we have some errenous speed values. Let's fix them. Open the *Field Calculator* from the Processing Toolbox. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance6.png')
+```
+
+7. Select `Calculated` as the *Input layer*. Enter `speed_fixed` as the *Field Name*. Enter the following expression. This expression replaces negative, null and small speed values with 0. It also sets abnormally high values to 0. This track is from a bike ride, so we have used `40` as the maximum speed. You will have to adjust this depending on your mode of travel.
+
+```
+CASE
+WHEN "speed" is NULL THEN 0
+WHEN "speed" < 2 THEN 0
+WHEN "speed" > 40 THEN 0
+ELSE "speed"
+END
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance7.png')
+```
+
+8. A new field named *speed_fixed* will be added to the resulting layer. This is the final layer that we want, so let's remove unwanted fields and save it. Open the *Refactor fields* algorithm from the Processing Toolbox.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance8.png')
+```
+
+9. Select the `Calculated` layer as the *Input layer*. In the *Field mapping* section, delete unwanted fields. We want to rename the `speed_fixed` field to `speed`. Once done, click *...* next to *Refactored* and select **Save to File...**. Then save the file as ``track_points_distance_speed.gpkg``. Click **Run**.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance9.png')
+```
+
+10. Once the processing finishes, a new layer `track_points_distance_speed` will be added. We do not need this layer to be shown on the map, so turn off the visibility. Remove all the temporary layers from the *Layers* panel. We will now update the label to extract the display the distance and speed from this layer. Select the `label` layer and click the *Open the Layer Styling Panel* button. Switch to the *Labels* tab and click the *Exression* button.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance10.png')
+```
+
+11. Enter the following expression. This expression uses the `aggregate()` function to extract the distance and speed from the `track_points_distance_speed` layer for the points in the current temporal range. We also apply some string formatting using the `lpad()` function to ensure the distance and speed labels are of a fixed length. Click *OK*.
+
+```
+format_date( @map_start_time + to_interval('5 hours 30 mins'),
+  'dd MMM, yyyy| hh:mm:ss')
+
+||
+
+' | Distance: ' ||
+lpad(round(aggregate(
+layer:='track_points_distance_speed',
+aggregate:='min',
+expression:="distance_from_start",
+filter:="time" >= @map_start_time and "time" <= @map_end_time)), 4, 0) || 'm'
+
+||
+
+' | Speed: ' ||
+lpad(round(aggregate(
+layer:='track_points_distance_speed',
+aggregate:='min',
+expression:="speed",
+filter:="time" >= @map_start_time and "time" <= @map_end_time)), 2,0) || ' km/h'
+```
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance11.png')
+```
+
+12. The updated label will now display cumulative distance covered along with the current speed.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/distance12.png')
+```
+
+Your output should match the contents of the `GPS_Animation_Checkpoint3.qgz` file in the `solutions` folder.
 
 
 # Data Credits
+
 * OpenStreetMap (osm) data layers: Data/Maps Copyright 2019 Geofabrik GmbH and OpenStreetMap Contributors. [OSM India free extract](https://download.geofabrik.de/asia/india.html) downloaded from Geofabrik.
 * India State boundary: Downloaded from [Datameet Spatial Data repository](https://github.com/datameet/maps/tree/master/States).
 * Anti-shipping Activity Messages: [Maritime Safety Information portal](https://msi.nga.mil/NGAPortal/MSI.porta) , National Geospatial-Intelligence Agency. Data downloaded from [ASAM Geospatial Files](https://msi.nga.mil/Piracy).
@@ -1555,12 +1700,6 @@ This course material is licensed under a [Creative Commons Attribution 4.0 Inter
 
 *Advanced QGIS Course* by Ujaval Gandhi [www.spatialthoughts.com](https://spatialthoughts.com)
 
-<!--
-If you would like to white-label these materials as part of a commercial offering, you can purchase a *Trainer License* for a small fee. Please [contact us](https://spatialthoughts.com/contact/) for pricing and terms.
-
-
-This material is part of the *Trainer's Package* and the buyer gets a non-exclusive, non-transferable, perpetual license to the material. You can fully customize and brand the materials to your requirements.
--->
 
 ***
 
