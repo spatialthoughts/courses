@@ -453,9 +453,29 @@ the time-series</a></li>
 the Time-Series.</a></li>
 <li><a href="#exercise-4" id="toc-exercise-4">Exercise</a></li>
 </ul></li>
+<li><a href="#calculating-area" id="toc-calculating-area">6. Calculating
+Area</a>
+<ul>
+<li><a href="#overview-5" id="toc-overview-5">Overview</a></li>
+<li><a href="#setup-and-data-download-5"
+id="toc-setup-and-data-download-5">Setup and Data Download</a></li>
+<li><a href="#define-a-region-of-interest"
+id="toc-define-a-region-of-interest">Define a Region of
+Interest</a></li>
+<li><a href="#get-esa-worldcover-data"
+id="toc-get-esa-worldcover-data">Get ESA WorldCover Data</a></li>
+<li><a href="#visualize-the-landcover"
+id="toc-visualize-the-landcover">Visualize the Landcover</a></li>
+<li><a href="#exercise-5" id="toc-exercise-5">Exercise</a></li>
+<li><a href="#calculate-area" id="toc-calculate-area">Calculate
+Area</a></li>
+<li><a href="#calculating-area-for-large-regions"
+id="toc-calculating-area-for-large-regions">Calculating Area for Large
+Regions</a></li>
+<li><a href="#exercise-6" id="toc-exercise-6">Exercise</a></li>
+</ul></li>
 <li><a href="#scaling-analysis-with-coiled"
-id="toc-scaling-analysis-with-coiled">6. Scaling Analysis with
-Coiled</a>
+id="toc-scaling-analysis-with-coiled">Scaling Analysis with Coiled</a>
 <ul>
 <li><a href="#installation-and-setting-up-the-environment"
 id="toc-installation-and-setting-up-the-environment">Installation and
@@ -1845,8 +1865,358 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb107-1"><a 
 <span id="cb107-24"><a href="#cb107-24" tabindex="-1"></a>time_series_interpolated.coords[<span class="st">&#39;time&#39;</span>] <span class="op">=</span> timestamps</span></code></pre></div>
 </div>
 </div>
+<div id="calculating-area" class="section level1">
+<h1>6. Calculating Area</h1>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/06_calculating_area.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<div id="overview-5" class="section level2">
+<h2>Overview</h2>
+<p>We will learn how to work with landcover data and calculate area of
+different landcover classes in a region. This section also shows how you
+can scale your analysis to large regions without running into memory
+limits using <code>dask</code>.</p>
+</div>
+<div id="setup-and-data-download-5" class="section level2">
+<h2>Setup and Data Download</h2>
+<p>The following blocks of code will install the required packages and
+download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb108"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb108-2"><a href="#cb108-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb108-3"><a href="#cb108-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[distributed] <span class="op">\</span></span>
+<span id="cb108-4"><a href="#cb108-4" tabindex="-1"></a>      jupyter<span class="op">-</span>server<span class="op">-</span>proxy planetary_computer</span></code></pre></div>
+<div class="sourceCode" id="cb109"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb109-2"><a href="#cb109-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb109-3"><a href="#cb109-3" tabindex="-1"></a><span class="im">import</span> matplotlib.colors</span>
+<span id="cb109-4"><a href="#cb109-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb109-5"><a href="#cb109-5" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb109-6"><a href="#cb109-6" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
+<span id="cb109-7"><a href="#cb109-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb109-8"><a href="#cb109-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb109-9"><a href="#cb109-9" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb109-10"><a href="#cb109-10" tabindex="-1"></a><span class="im">from</span> shapely.geometry <span class="im">import</span> Point</span>
+<span id="cb109-11"><a href="#cb109-11" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb109-12"><a href="#cb109-12" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb109-13"><a href="#cb109-13" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb109-14"><a href="#cb109-14" tabindex="-1"></a><span class="im">import</span> dask.array <span class="im">as</span> da</span></code></pre></div>
+<div class="sourceCode" id="cb110"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb110-1"><a href="#cb110-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb110-2"><a href="#cb110-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb110-3"><a href="#cb110-3" tabindex="-1"></a>client</span></code></pre></div>
+<p>If you are running this notebook in Colab, you will need to create
+and use a proxy URL to see the dashboard running on the local
+server.</p>
+<div class="sourceCode" id="cb111"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb111-2"><a href="#cb111-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb111-3"><a href="#cb111-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb111-4"><a href="#cb111-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb112"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb112-1"><a href="#cb112-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb112-2"><a href="#cb112-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb112-3"><a href="#cb112-3" tabindex="-1"></a></span>
+<span id="cb112-4"><a href="#cb112-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb112-5"><a href="#cb112-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb112-6"><a href="#cb112-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb112-7"><a href="#cb112-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+</div>
+<div id="define-a-region-of-interest" class="section level2">
+<h2>Define a Region of Interest</h2>
+<p>We define a location and choose a circular buffer area as our region
+of interest.</p>
+<div class="sourceCode" id="cb113"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb113-2"><a href="#cb113-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span></code></pre></div>
+<p>Create a GeoDataFrame. This helps us easily convert between CRSs,
+extract bounds etc.</p>
+<div class="sourceCode" id="cb114"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" tabindex="-1"></a>point_gdf <span class="op">=</span> gpd.GeoDataFrame(</span>
+<span id="cb114-2"><a href="#cb114-2" tabindex="-1"></a>    data <span class="op">=</span> {<span class="st">&#39;name&#39;</span>: [<span class="st">&#39;aoi&#39;</span>]},</span>
+<span id="cb114-3"><a href="#cb114-3" tabindex="-1"></a>    geometry<span class="op">=</span>gpd.points_from_xy([longitude], [latitude]),</span>
+<span id="cb114-4"><a href="#cb114-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span>)</span>
+<span id="cb114-5"><a href="#cb114-5" tabindex="-1"></a>point_gdf</span></code></pre></div>
+<p>To create an accurate buffer, we must first convert the coordinates
+into a projected CRS. UTM is a good choice for a projected CRS that
+offers high accuracy with minimal distortions. We can automatically find
+the appropropriate UTM Zone for the chosen location using
+<code>pyproj</code>.</p>
+<div class="sourceCode" id="cb115"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb115-1"><a href="#cb115-1" tabindex="-1"></a><span class="co"># Small bounding box around the chosen coordinates</span></span>
+<span id="cb115-2"><a href="#cb115-2" tabindex="-1"></a>bbox <span class="op">=</span> (longitude <span class="op">-</span> <span class="fl">0.001</span>, latitude <span class="op">-</span> <span class="fl">0.0001</span>,</span>
+<span id="cb115-3"><a href="#cb115-3" tabindex="-1"></a>        longitude <span class="op">+</span> <span class="fl">0.001</span>, latitude <span class="op">+</span> <span class="fl">0.0001</span>)</span>
+<span id="cb115-4"><a href="#cb115-4" tabindex="-1"></a>aoi <span class="op">=</span> pyproj.aoi.AreaOfInterest(<span class="op">*</span>bbox)</span>
+<span id="cb115-5"><a href="#cb115-5" tabindex="-1"></a></span>
+<span id="cb115-6"><a href="#cb115-6" tabindex="-1"></a><span class="co"># Query for matching UTM CRS</span></span>
+<span id="cb115-7"><a href="#cb115-7" tabindex="-1"></a>utm_crs_list <span class="op">=</span> pyproj.database.query_utm_crs_info(</span>
+<span id="cb115-8"><a href="#cb115-8" tabindex="-1"></a>    datum_name<span class="op">=</span><span class="st">&#39;WGS 84&#39;</span>,</span>
+<span id="cb115-9"><a href="#cb115-9" tabindex="-1"></a>    area_of_interest<span class="op">=</span>aoi,</span>
+<span id="cb115-10"><a href="#cb115-10" tabindex="-1"></a>)</span>
+<span id="cb115-11"><a href="#cb115-11" tabindex="-1"></a>utm_crs <span class="op">=</span> pyproj.CRS.from_epsg(utm_crs_list[<span class="dv">0</span>].code)</span>
+<span id="cb115-12"><a href="#cb115-12" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Selected CRS </span><span class="sc">{</span>utm_crs<span class="sc">.</span>name<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<p>Buffer the point.</p>
+<div class="sourceCode" id="cb116"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb116-1"><a href="#cb116-1" tabindex="-1"></a>buffer_distance_meters <span class="op">=</span> <span class="dv">500</span></span></code></pre></div>
+<div class="sourceCode" id="cb117"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb117-1"><a href="#cb117-1" tabindex="-1"></a>buffered <span class="op">=</span> point_gdf.to_crs(utm_crs).<span class="bu">buffer</span>(buffer_distance_meters)</span>
+<span id="cb117-2"><a href="#cb117-2" tabindex="-1"></a>buffered</span></code></pre></div>
+</div>
+<div id="get-esa-worldcover-data" class="section level2">
+<h2>Get ESA WorldCover Data</h2>
+<p>Let’s use <a
+href="https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/">Planetary
+Computer STAC API</a> search endpoint to look for items from the ESA
+WorldCover collection on Azure Blob Storage.</p>
+<p>ESA WorldCover has data for year 2020 and 2021. We will use the 2021
+data.</p>
+<div class="sourceCode" id="cb118"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb118-1"><a href="#cb118-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb118-2"><a href="#cb118-2" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
+<span id="cb118-3"><a href="#cb118-3" tabindex="-1"></a></span>
+<span id="cb118-4"><a href="#cb118-4" tabindex="-1"></a><span class="co"># STAC search requires bounding box in EPSG:4326</span></span>
+<span id="cb118-5"><a href="#cb118-5" tabindex="-1"></a>bounds <span class="op">=</span> buffered.to_crs(<span class="st">&#39;EPSG:4326&#39;</span>).total_bounds</span>
+<span id="cb118-6"><a href="#cb118-6" tabindex="-1"></a></span>
+<span id="cb118-7"><a href="#cb118-7" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb118-8"><a href="#cb118-8" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;esa-worldcover&#39;</span>],</span>
+<span id="cb118-9"><a href="#cb118-9" tabindex="-1"></a>    bbox<span class="op">=</span>bounds,</span>
+<span id="cb118-10"><a href="#cb118-10" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;2021&#39;</span>,</span>
+<span id="cb118-11"><a href="#cb118-11" tabindex="-1"></a>)</span>
+<span id="cb118-12"><a href="#cb118-12" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb118-13"><a href="#cb118-13" tabindex="-1"></a>items</span></code></pre></div>
+<p>Each STAC item has metadata containing information about the class
+names, legend colors and pixel values. Let’s extract it so we can use it
+later to contruct a meaningful legend.</p>
+<div class="sourceCode" id="cb119"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb119-1"><a href="#cb119-1" tabindex="-1"></a>class_list <span class="op">=</span> items[<span class="dv">0</span>].assets[<span class="st">&#39;map&#39;</span>].extra_fields[<span class="st">&#39;classification:classes&#39;</span>]</span>
+<span id="cb119-2"><a href="#cb119-2" tabindex="-1"></a>class_dict <span class="op">=</span> {</span>
+<span id="cb119-3"><a href="#cb119-3" tabindex="-1"></a>    c[<span class="st">&#39;value&#39;</span>]: {<span class="st">&#39;description&#39;</span>: c[<span class="st">&#39;description&#39;</span>], <span class="st">&#39;hex&#39;</span>: c[<span class="st">&#39;color_hint&#39;</span>]}</span>
+<span id="cb119-4"><a href="#cb119-4" tabindex="-1"></a>    <span class="cf">for</span> c <span class="kw">in</span> class_list</span>
+<span id="cb119-5"><a href="#cb119-5" tabindex="-1"></a>}</span>
+<span id="cb119-6"><a href="#cb119-6" tabindex="-1"></a>class_dict</span></code></pre></div>
+<p>Load the matching images as a XArray Dataset. Accessing data from
+Planetary Computer is free but requires getting a Shared Access
+Signature (SAS) token and sign the URLs. The
+<code>planetary_computer</code> Python package provides a simple
+mechanism for signing the URLs using <code>sign()</code> function.</p>
+<div class="sourceCode" id="cb120"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb120-1"><a href="#cb120-1" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
+<span id="cb120-2"><a href="#cb120-2" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb120-3"><a href="#cb120-3" tabindex="-1"></a>    items,</span>
+<span id="cb120-4"><a href="#cb120-4" tabindex="-1"></a>    bbox<span class="op">=</span>bounds, <span class="co"># &lt;-- load data only for the bbox</span></span>
+<span id="cb120-5"><a href="#cb120-5" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb120-6"><a href="#cb120-6" tabindex="-1"></a>    crs<span class="op">=</span>utm_crs,</span>
+<span id="cb120-7"><a href="#cb120-7" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb120-8"><a href="#cb120-8" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
+<span id="cb120-9"><a href="#cb120-9" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb120-10"><a href="#cb120-10" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb120-11"><a href="#cb120-11" tabindex="-1"></a>)</span>
+<span id="cb120-12"><a href="#cb120-12" tabindex="-1"></a>ds</span></code></pre></div>
+<p>The landcover classification data is in the <code>map</code>
+variable. Select it and remove the empty <code>time</code>
+dimension.</p>
+<div class="sourceCode" id="cb121"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb121-1"><a href="#cb121-1" tabindex="-1"></a>map_data <span class="op">=</span> ds[<span class="st">&#39;map&#39;</span>].squeeze()</span>
+<span id="cb121-2"><a href="#cb121-2" tabindex="-1"></a>map_data</span></code></pre></div>
+<p>Clip the data to the buffered region.</p>
+<div class="sourceCode" id="cb122"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb122-1"><a href="#cb122-1" tabindex="-1"></a>map_data_clipped <span class="op">=</span> map_data.rio.clip(buffered)</span></code></pre></div>
+</div>
+<div id="visualize-the-landcover" class="section level2">
+<h2>Visualize the Landcover</h2>
+<p>To create a meaningful legend, we use the class names and colors from
+the <code>class_dict</code> created earlier.</p>
+<div class="sourceCode" id="cb123"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">&#39;#000000&#39;</span> <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">256</span>)]</span>
+<span id="cb123-2"><a href="#cb123-2" tabindex="-1"></a><span class="cf">for</span> key, value <span class="kw">in</span> class_dict.items():</span>
+<span id="cb123-3"><a href="#cb123-3" tabindex="-1"></a>    colors[<span class="bu">int</span>(key)] <span class="op">=</span> <span class="ss">f&#39;#</span><span class="sc">{</span>value[<span class="st">&#39;hex&#39;</span>]<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb123-4"><a href="#cb123-4" tabindex="-1"></a></span>
+<span id="cb123-5"><a href="#cb123-5" tabindex="-1"></a><span class="co"># Set color for value 0 to transparent</span></span>
+<span id="cb123-6"><a href="#cb123-6" tabindex="-1"></a>colors[<span class="dv">0</span>] <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb123-7"><a href="#cb123-7" tabindex="-1"></a>cmap <span class="op">=</span> matplotlib.colors.ListedColormap(colors)</span>
+<span id="cb123-8"><a href="#cb123-8" tabindex="-1"></a></span>
+<span id="cb123-9"><a href="#cb123-9" tabindex="-1"></a><span class="co"># Data range is 8-bit (0-255)</span></span>
+<span id="cb123-10"><a href="#cb123-10" tabindex="-1"></a>normalizer <span class="op">=</span> matplotlib.colors.Normalize(vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">255</span>)</span>
+<span id="cb123-11"><a href="#cb123-11" tabindex="-1"></a></span>
+<span id="cb123-12"><a href="#cb123-12" tabindex="-1"></a><span class="co"># Set tick labels</span></span>
+<span id="cb123-13"><a href="#cb123-13" tabindex="-1"></a>values <span class="op">=</span> [key <span class="cf">for</span> key <span class="kw">in</span> class_dict]</span>
+<span id="cb123-14"><a href="#cb123-14" tabindex="-1"></a>boundaries <span class="op">=</span> [(values[i <span class="op">+</span> <span class="dv">1</span>] <span class="op">+</span> values[i]) <span class="op">/</span> <span class="dv">2</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(values) <span class="op">-</span> <span class="dv">1</span>)]</span>
+<span id="cb123-15"><a href="#cb123-15" tabindex="-1"></a>boundaries <span class="op">=</span> [<span class="dv">0</span>] <span class="op">+</span> boundaries <span class="op">+</span> [<span class="dv">255</span>]</span>
+<span id="cb123-16"><a href="#cb123-16" tabindex="-1"></a>ticks <span class="op">=</span> [</span>
+<span id="cb123-17"><a href="#cb123-17" tabindex="-1"></a>    (boundaries[i <span class="op">+</span> <span class="dv">1</span>] <span class="op">+</span> boundaries[i]) <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb123-18"><a href="#cb123-18" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(boundaries) <span class="op">-</span> <span class="dv">1</span>)</span>
+<span id="cb123-19"><a href="#cb123-19" tabindex="-1"></a>]</span>
+<span id="cb123-20"><a href="#cb123-20" tabindex="-1"></a>tick_labels <span class="op">=</span> [</span>
+<span id="cb123-21"><a href="#cb123-21" tabindex="-1"></a>    <span class="ss">f&#39;</span><span class="sc">{</span>value[<span class="st">&#39;description&#39;</span>]<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>key<span class="sc">}</span><span class="ss">)&#39;</span></span>
+<span id="cb123-22"><a href="#cb123-22" tabindex="-1"></a>     <span class="cf">for</span> key, value <span class="kw">in</span> class_dict.items()</span>
+<span id="cb123-23"><a href="#cb123-23" tabindex="-1"></a>]</span>
+<span id="cb123-24"><a href="#cb123-24" tabindex="-1"></a>tick_labels</span></code></pre></div>
+<div class="sourceCode" id="cb124"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb124-1"><a href="#cb124-1" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
+<span id="cb124-2"><a href="#cb124-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb124-3"><a href="#cb124-3" tabindex="-1"></a></span>
+<span id="cb124-4"><a href="#cb124-4" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb124-5"><a href="#cb124-5" tabindex="-1"></a>fig.set_size_inches(<span class="dv">12</span>, <span class="dv">10</span>)</span>
+<span id="cb124-6"><a href="#cb124-6" tabindex="-1"></a></span>
+<span id="cb124-7"><a href="#cb124-7" tabindex="-1"></a>map_data_clipped.plot(</span>
+<span id="cb124-8"><a href="#cb124-8" tabindex="-1"></a>    ax<span class="op">=</span>ax, cmap<span class="op">=</span>cmap, norm<span class="op">=</span>normalizer</span>
+<span id="cb124-9"><a href="#cb124-9" tabindex="-1"></a>)</span>
+<span id="cb124-10"><a href="#cb124-10" tabindex="-1"></a></span>
+<span id="cb124-11"><a href="#cb124-11" tabindex="-1"></a>colorbar <span class="op">=</span> fig.colorbar(</span>
+<span id="cb124-12"><a href="#cb124-12" tabindex="-1"></a>    cm.ScalarMappable(norm<span class="op">=</span>normalizer, cmap<span class="op">=</span>cmap),</span>
+<span id="cb124-13"><a href="#cb124-13" tabindex="-1"></a>    boundaries<span class="op">=</span>boundaries,</span>
+<span id="cb124-14"><a href="#cb124-14" tabindex="-1"></a>    values<span class="op">=</span>values,</span>
+<span id="cb124-15"><a href="#cb124-15" tabindex="-1"></a>    cax<span class="op">=</span>fig.axes[<span class="dv">1</span>].axes,</span>
+<span id="cb124-16"><a href="#cb124-16" tabindex="-1"></a>)</span>
+<span id="cb124-17"><a href="#cb124-17" tabindex="-1"></a>colorbar.set_ticks(ticks, labels<span class="op">=</span>tick_labels)</span>
+<span id="cb124-18"><a href="#cb124-18" tabindex="-1"></a></span>
+<span id="cb124-19"><a href="#cb124-19" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb124-20"><a href="#cb124-20" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Landcover Classes from ESA WorldCover&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/06_calculating_area_files/06_calculating_area_31_0.png" /></p>
+</div>
+<div id="exercise-5" class="section level2">
+<h2>Exercise</h2>
+<p>Select a single landcover class and plot it.</p>
+<p>Hint: Use the <a
+href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html"><code>where()</code></a>
+function.</p>
+</div>
+<div id="calculate-area" class="section level2">
+<h2>Calculate Area</h2>
+<p>We can now calculate are of each class in our region of interest. As
+our data is in a projected CRS, each pixel’s area is fixed. We can count
+the total number of pixels for each class and multiply it by the area of
+a single pixel to get the area.</p>
+<p>Let’s get the underlying array of pixel values.</p>
+<div class="sourceCode" id="cb125"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb125-1"><a href="#cb125-1" tabindex="-1"></a>data <span class="op">=</span> map_data_clipped.values</span></code></pre></div>
+<p>To efficiently get the pixel counts of all unique pixel values in the
+data, we can use <code>histogram()</code> function provided by NumPy.
+The function takes an array of values and returns counts of each pixel
+value. We need to specify the bins to be used. Since we need counts for
+each class, we can use the class values as bins.</p>
+<div class="sourceCode" id="cb126"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb126-1"><a href="#cb126-1" tabindex="-1"></a><span class="co"># Get unique class values to define histogram bins</span></span>
+<span id="cb126-2"><a href="#cb126-2" tabindex="-1"></a>unique_classes <span class="op">=</span> <span class="bu">sorted</span>(class_dict.keys())</span>
+<span id="cb126-3"><a href="#cb126-3" tabindex="-1"></a><span class="co"># right edge for last bin</span></span>
+<span id="cb126-4"><a href="#cb126-4" tabindex="-1"></a>bins <span class="op">=</span> unique_classes <span class="op">+</span> [unique_classes[<span class="op">-</span><span class="dv">1</span>] <span class="op">+</span> <span class="dv">1</span>]</span>
+<span id="cb126-5"><a href="#cb126-5" tabindex="-1"></a></span>
+<span id="cb126-6"><a href="#cb126-6" tabindex="-1"></a>counts, _ <span class="op">=</span> np.histogram(data, bins<span class="op">=</span>bins)</span>
+<span id="cb126-7"><a href="#cb126-7" tabindex="-1"></a>counts</span></code></pre></div>
+<p>We now have pixel counts of each class. We multiply it by the area of
+each pixel to get the area. We can also filter out pixels with value 0
+(nodata pixels) and counts 0 (not present in the region) to get a clean
+table.</p>
+<div class="sourceCode" id="cb127"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" tabindex="-1"></a>pixel_area_m2 <span class="op">=</span> <span class="fl">100.0</span></span>
+<span id="cb127-2"><a href="#cb127-2" tabindex="-1"></a></span>
+<span id="cb127-3"><a href="#cb127-3" tabindex="-1"></a>area_df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb127-4"><a href="#cb127-4" tabindex="-1"></a>    <span class="st">&#39;class_value&#39;</span>: unique_classes,</span>
+<span id="cb127-5"><a href="#cb127-5" tabindex="-1"></a>    <span class="st">&#39;area_m2&#39;</span>: counts <span class="op">*</span> pixel_area_m2,</span>
+<span id="cb127-6"><a href="#cb127-6" tabindex="-1"></a>})</span>
+<span id="cb127-7"><a href="#cb127-7" tabindex="-1"></a></span>
+<span id="cb127-8"><a href="#cb127-8" tabindex="-1"></a>area_df[<span class="st">&#39;class_name&#39;</span>] <span class="op">=</span> area_df[<span class="st">&#39;class_value&#39;</span>].<span class="bu">map</span>(</span>
+<span id="cb127-9"><a href="#cb127-9" tabindex="-1"></a>    <span class="kw">lambda</span> x: class_dict[x][<span class="st">&#39;description&#39;</span>])</span>
+<span id="cb127-10"><a href="#cb127-10" tabindex="-1"></a></span>
+<span id="cb127-11"><a href="#cb127-11" tabindex="-1"></a><span class="co"># Drop nodata class (0) and classes with no pixels</span></span>
+<span id="cb127-12"><a href="#cb127-12" tabindex="-1"></a>area_df <span class="op">=</span> area_df[</span>
+<span id="cb127-13"><a href="#cb127-13" tabindex="-1"></a>    (area_df[<span class="st">&#39;class_value&#39;</span>] <span class="op">!=</span> <span class="dv">0</span>) <span class="op">&amp;</span> (area_df[<span class="st">&#39;area_m2&#39;</span>] <span class="op">&gt;</span> <span class="dv">0</span>)]</span>
+<span id="cb127-14"><a href="#cb127-14" tabindex="-1"></a></span>
+<span id="cb127-15"><a href="#cb127-15" tabindex="-1"></a>area_df</span></code></pre></div>
+<p>Save the results as a CSV file.</p>
+<div class="sourceCode" id="cb128"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb128-1"><a href="#cb128-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="ss">f&#39;area_</span><span class="sc">{</span>buffer_distance_meters<span class="sc">}</span><span class="ss">.csv&#39;</span></span>
+<span id="cb128-2"><a href="#cb128-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
+<span id="cb128-3"><a href="#cb128-3" tabindex="-1"></a>area_df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+</div>
+<div id="calculating-area-for-large-regions" class="section level2">
+<h2>Calculating Area for Large Regions</h2>
+<p>Our previous approach required loading the entire array of landcover
+classes in the memory using <code>.values</code>. If our dataset is very
+large, this will cause us to run out of memory and result in a crash. We
+can instead use <code>dask</code> to chunk the data which lazily loads
+each chunk into memory only when processing it.</p>
+<p>We update the code from earlier to now specify a large buffer
+distance for the region of interest and explicitely specify a chunk size
+of <code>5000 x 5000</code> - which is small enough to fit into
+memory.</p>
+<div class="sourceCode" id="cb129"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb129-1"><a href="#cb129-1" tabindex="-1"></a>buffer_distance_meters <span class="op">=</span> <span class="dv">100000</span> <span class="co"># 100 km</span></span>
+<span id="cb129-2"><a href="#cb129-2" tabindex="-1"></a>buffered <span class="op">=</span> point_gdf.to_crs(utm_crs).<span class="bu">buffer</span>(buffer_distance_meters)</span>
+<span id="cb129-3"><a href="#cb129-3" tabindex="-1"></a></span>
+<span id="cb129-4"><a href="#cb129-4" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb129-5"><a href="#cb129-5" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
+<span id="cb129-6"><a href="#cb129-6" tabindex="-1"></a></span>
+<span id="cb129-7"><a href="#cb129-7" tabindex="-1"></a><span class="co"># STAC search requires bounding box in EPSG:4326</span></span>
+<span id="cb129-8"><a href="#cb129-8" tabindex="-1"></a>bounds <span class="op">=</span> buffered.to_crs(<span class="st">&#39;EPSG:4326&#39;</span>).total_bounds</span>
+<span id="cb129-9"><a href="#cb129-9" tabindex="-1"></a></span>
+<span id="cb129-10"><a href="#cb129-10" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb129-11"><a href="#cb129-11" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;esa-worldcover&#39;</span>],</span>
+<span id="cb129-12"><a href="#cb129-12" tabindex="-1"></a>    bbox<span class="op">=</span>bounds,</span>
+<span id="cb129-13"><a href="#cb129-13" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;2021&#39;</span>,</span>
+<span id="cb129-14"><a href="#cb129-14" tabindex="-1"></a>)</span>
+<span id="cb129-15"><a href="#cb129-15" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb129-16"><a href="#cb129-16" tabindex="-1"></a></span>
+<span id="cb129-17"><a href="#cb129-17" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb129-18"><a href="#cb129-18" tabindex="-1"></a>    items,</span>
+<span id="cb129-19"><a href="#cb129-19" tabindex="-1"></a>    bbox<span class="op">=</span>bounds, <span class="co"># &lt;-- load data only for the bbox</span></span>
+<span id="cb129-20"><a href="#cb129-20" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb129-21"><a href="#cb129-21" tabindex="-1"></a>    crs<span class="op">=</span>utm_crs,</span>
+<span id="cb129-22"><a href="#cb129-22" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>:<span class="dv">5000</span>, <span class="st">&#39;y&#39;</span>:<span class="dv">5000</span>},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb129-23"><a href="#cb129-23" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
+<span id="cb129-24"><a href="#cb129-24" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb129-25"><a href="#cb129-25" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb129-26"><a href="#cb129-26" tabindex="-1"></a>)</span>
+<span id="cb129-27"><a href="#cb129-27" tabindex="-1"></a>map_data <span class="op">=</span> ds[<span class="st">&#39;map&#39;</span>].squeeze()</span>
+<span id="cb129-28"><a href="#cb129-28" tabindex="-1"></a>map_data</span></code></pre></div>
+<p>We get the data as a Dask Array using <code>.data</code>. This does
+not trigger any computation.</p>
+<div class="sourceCode" id="cb130"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb130-1"><a href="#cb130-1" tabindex="-1"></a>dask_array <span class="op">=</span> map_data.data</span>
+<span id="cb130-2"><a href="#cb130-2" tabindex="-1"></a>large_area_counts, _ <span class="op">=</span> da.histogram(dask_array, bins<span class="op">=</span>bins)</span>
+<span id="cb130-3"><a href="#cb130-3" tabindex="-1"></a>large_area_counts</span></code></pre></div>
+<p>Now we call <code>.compute()</code> to start the computation which
+uses distributed computing to process each chunk in parallel using all
+available resources.</p>
+<div class="sourceCode" id="cb131"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb131-1"><a href="#cb131-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb131-2"><a href="#cb131-2" tabindex="-1"></a>large_area_counts <span class="op">=</span> large_area_counts.compute()</span></code></pre></div>
+<p>We can now process the results into a nice table. Here we divide the
+area by <code>1e6</code> to get the results in <code>sq. km.</code>.</p>
+<div class="sourceCode" id="cb132"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb132-1"><a href="#cb132-1" tabindex="-1"></a>pixel_area_m2 <span class="op">=</span> <span class="fl">100.0</span></span>
+<span id="cb132-2"><a href="#cb132-2" tabindex="-1"></a></span>
+<span id="cb132-3"><a href="#cb132-3" tabindex="-1"></a>large_area_df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb132-4"><a href="#cb132-4" tabindex="-1"></a>    <span class="st">&#39;class_value&#39;</span>: unique_classes,</span>
+<span id="cb132-5"><a href="#cb132-5" tabindex="-1"></a>    <span class="st">&#39;area_km2&#39;</span>: large_area_counts <span class="op">*</span> pixel_area_m2 <span class="op">/</span> <span class="fl">1e6</span>,</span>
+<span id="cb132-6"><a href="#cb132-6" tabindex="-1"></a>})</span>
+<span id="cb132-7"><a href="#cb132-7" tabindex="-1"></a></span>
+<span id="cb132-8"><a href="#cb132-8" tabindex="-1"></a>large_area_df[<span class="st">&#39;class_name&#39;</span>] <span class="op">=</span> large_area_df[<span class="st">&#39;class_value&#39;</span>].<span class="bu">map</span>(</span>
+<span id="cb132-9"><a href="#cb132-9" tabindex="-1"></a>    <span class="kw">lambda</span> x: class_dict[x][<span class="st">&#39;description&#39;</span>])</span>
+<span id="cb132-10"><a href="#cb132-10" tabindex="-1"></a></span>
+<span id="cb132-11"><a href="#cb132-11" tabindex="-1"></a><span class="co"># Drop nodata class (0) and classes with no pixels</span></span>
+<span id="cb132-12"><a href="#cb132-12" tabindex="-1"></a>large_area_df <span class="op">=</span> large_area_df[</span>
+<span id="cb132-13"><a href="#cb132-13" tabindex="-1"></a>    (area_df[<span class="st">&#39;class_value&#39;</span>] <span class="op">!=</span> <span class="dv">0</span>) <span class="op">&amp;</span> (large_area_df[<span class="st">&#39;area_km2&#39;</span>] <span class="op">&gt;</span> <span class="dv">0</span>)]</span>
+<span id="cb132-14"><a href="#cb132-14" tabindex="-1"></a></span>
+<span id="cb132-15"><a href="#cb132-15" tabindex="-1"></a>large_area_df</span></code></pre></div>
+<p>Save the results as a CSV file.</p>
+<div class="sourceCode" id="cb133"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb133-1"><a href="#cb133-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="ss">f&#39;area_</span><span class="sc">{</span>buffer_distance_meters<span class="sc">}</span><span class="ss">.csv&#39;</span></span>
+<span id="cb133-2"><a href="#cb133-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
+<span id="cb133-3"><a href="#cb133-3" tabindex="-1"></a>large_area_df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+</div>
+<div id="exercise-6" class="section level2">
+<h2>Exercise</h2>
+<ul>
+<li>Run the large area calculation for your region of interest.</li>
+<li>Create a Pie-chart of class areas and save it as a PNG image.</li>
+</ul>
+</div>
+</div>
 <div id="scaling-analysis-with-coiled" class="section level1">
-<h1>6. Scaling Analysis with Coiled</h1>
+<h1>Scaling Analysis with Coiled</h1>
 <p><a href="https://coiled.io/">Coiled</a> is a platform that allows you
 to easily setup cloud infrastructure for distributed processing. It
 provides a Python-package and a Notebook service that makes it very easy
@@ -1990,93 +2360,93 @@ open-standards for data-access, the process is largely similar to
 accessing the data from other STAC API endpoints, with a few minor
 differences based on how different providers have chosen to pre-process
 the data.</p>
-<div id="setup-and-data-download-5" class="section level3">
+<div id="setup-and-data-download-6" class="section level3">
 <h3>Setup and Data Download</h3>
 <p>The following blocks of code will install the required packages and
 download the datasets to your Colab environment.</p>
-<div class="sourceCode" id="cb115"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb115-1"><a href="#cb115-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb115-2"><a href="#cb115-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb115-3"><a href="#cb115-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy <span class="op">\</span></span>
-<span id="cb115-4"><a href="#cb115-4" tabindex="-1"></a>      planetary_computer</span></code></pre></div>
-<div class="sourceCode" id="cb116"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb116-1"><a href="#cb116-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb116-2"><a href="#cb116-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb116-3"><a href="#cb116-3" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb116-4"><a href="#cb116-4" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb116-5"><a href="#cb116-5" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
-<span id="cb116-6"><a href="#cb116-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb116-7"><a href="#cb116-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb116-8"><a href="#cb116-8" tabindex="-1"></a><span class="im">import</span> pyproj</span></code></pre></div>
-<div class="sourceCode" id="cb117"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb117-1"><a href="#cb117-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
-<span id="cb117-2"><a href="#cb117-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
-<span id="cb117-3"><a href="#cb117-3" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb141"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb141-1"><a href="#cb141-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb141-2"><a href="#cb141-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb141-3"><a href="#cb141-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy <span class="op">\</span></span>
+<span id="cb141-4"><a href="#cb141-4" tabindex="-1"></a>      planetary_computer</span></code></pre></div>
+<div class="sourceCode" id="cb142"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb142-1"><a href="#cb142-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb142-2"><a href="#cb142-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb142-3"><a href="#cb142-3" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb142-4"><a href="#cb142-4" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb142-5"><a href="#cb142-5" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
+<span id="cb142-6"><a href="#cb142-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb142-7"><a href="#cb142-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb142-8"><a href="#cb142-8" tabindex="-1"></a><span class="im">import</span> pyproj</span></code></pre></div>
+<div class="sourceCode" id="cb143"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb143-1"><a href="#cb143-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb143-2"><a href="#cb143-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb143-3"><a href="#cb143-3" tabindex="-1"></a>client</span></code></pre></div>
 <p>If you are running this notebook in Colab, you will need to create
 and use a proxy URL to see the dashboard running on the local
 server.</p>
-<div class="sourceCode" id="cb118"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb118-1"><a href="#cb118-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb118-2"><a href="#cb118-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
-<span id="cb118-3"><a href="#cb118-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
-<span id="cb118-4"><a href="#cb118-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
-<div class="sourceCode" id="cb119"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb119-1"><a href="#cb119-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb119-2"><a href="#cb119-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb119-3"><a href="#cb119-3" tabindex="-1"></a></span>
-<span id="cb119-4"><a href="#cb119-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb119-5"><a href="#cb119-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb119-6"><a href="#cb119-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb119-7"><a href="#cb119-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<div class="sourceCode" id="cb144"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb144-1"><a href="#cb144-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb144-2"><a href="#cb144-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb144-3"><a href="#cb144-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb144-4"><a href="#cb144-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb145"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb145-1"><a href="#cb145-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb145-2"><a href="#cb145-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb145-3"><a href="#cb145-3" tabindex="-1"></a></span>
+<span id="cb145-4"><a href="#cb145-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb145-5"><a href="#cb145-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb145-6"><a href="#cb145-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb145-7"><a href="#cb145-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
 </div>
 <div id="get-satellite-imagery-using-stac-api-1" class="section level3">
 <h3>Get Satellite Imagery using STAC API</h3>
 <p>We define a location and time of interest to get some satellite
 imagery.</p>
-<div class="sourceCode" id="cb120"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb120-1"><a href="#cb120-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
-<span id="cb120-2"><a href="#cb120-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
-<span id="cb120-3"><a href="#cb120-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
-<div class="sourceCode" id="cb121"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb121-1"><a href="#cb121-1" tabindex="-1"></a><span class="co"># Define a small bounding box around the chosen point</span></span>
-<span id="cb121-2"><a href="#cb121-2" tabindex="-1"></a>km2deg <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="dv">111</span></span>
-<span id="cb121-3"><a href="#cb121-3" tabindex="-1"></a>x, y <span class="op">=</span> (longitude, latitude)</span>
-<span id="cb121-4"><a href="#cb121-4" tabindex="-1"></a>r <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> km2deg  <span class="co"># radius in degrees</span></span>
-<span id="cb121-5"><a href="#cb121-5" tabindex="-1"></a>bbox <span class="op">=</span> (x <span class="op">-</span> r, y <span class="op">-</span> r, x <span class="op">+</span> r, y <span class="op">+</span> r)</span></code></pre></div>
+<div class="sourceCode" id="cb146"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb146-1"><a href="#cb146-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb146-2"><a href="#cb146-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
+<span id="cb146-3"><a href="#cb146-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<div class="sourceCode" id="cb147"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb147-1"><a href="#cb147-1" tabindex="-1"></a><span class="co"># Define a small bounding box around the chosen point</span></span>
+<span id="cb147-2"><a href="#cb147-2" tabindex="-1"></a>km2deg <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="dv">111</span></span>
+<span id="cb147-3"><a href="#cb147-3" tabindex="-1"></a>x, y <span class="op">=</span> (longitude, latitude)</span>
+<span id="cb147-4"><a href="#cb147-4" tabindex="-1"></a>r <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> km2deg  <span class="co"># radius in degrees</span></span>
+<span id="cb147-5"><a href="#cb147-5" tabindex="-1"></a>bbox <span class="op">=</span> (x <span class="op">-</span> r, y <span class="op">-</span> r, x <span class="op">+</span> r, y <span class="op">+</span> r)</span></code></pre></div>
 <p>Let’s use <a
 href="https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/">Planetary
 Computer STAC API</a> search endpoint to look for items from the
 sentinel-2-l2a collection on Azure Blob Storage.</p>
-<div class="sourceCode" id="cb122"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb122-1"><a href="#cb122-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
-<span id="cb122-2"><a href="#cb122-2" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
-<span id="cb122-3"><a href="#cb122-3" tabindex="-1"></a></span>
-<span id="cb122-4"><a href="#cb122-4" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
-<span id="cb122-5"><a href="#cb122-5" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-l2a&#39;</span>],</span>
-<span id="cb122-6"><a href="#cb122-6" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb122-7"><a href="#cb122-7" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
-<span id="cb122-8"><a href="#cb122-8" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}},</span>
-<span id="cb122-9"><a href="#cb122-9" tabindex="-1"></a>)</span>
-<span id="cb122-10"><a href="#cb122-10" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
-<span id="cb122-11"><a href="#cb122-11" tabindex="-1"></a>items</span></code></pre></div>
+<div class="sourceCode" id="cb148"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb148-1"><a href="#cb148-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb148-2"><a href="#cb148-2" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
+<span id="cb148-3"><a href="#cb148-3" tabindex="-1"></a></span>
+<span id="cb148-4"><a href="#cb148-4" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb148-5"><a href="#cb148-5" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-l2a&#39;</span>],</span>
+<span id="cb148-6"><a href="#cb148-6" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb148-7"><a href="#cb148-7" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb148-8"><a href="#cb148-8" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}},</span>
+<span id="cb148-9"><a href="#cb148-9" tabindex="-1"></a>)</span>
+<span id="cb148-10"><a href="#cb148-10" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb148-11"><a href="#cb148-11" tabindex="-1"></a>items</span></code></pre></div>
 <p>Load the matching images as a XArray Dataset. Accessing data from
 Planetary Computer is free but requires getting a Shared Access
 Signature (SAS) token and sign the URLs. The
 <code>planetary_computer</code> Python package provides a simple
 mechanism for signing the URLs using <code>sign()</code> function.</p>
-<div class="sourceCode" id="cb123"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
-<span id="cb123-2"><a href="#cb123-2" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
-<span id="cb123-3"><a href="#cb123-3" tabindex="-1"></a>    items,</span>
-<span id="cb123-4"><a href="#cb123-4" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;SCL&#39;</span>],</span>
-<span id="cb123-5"><a href="#cb123-5" tabindex="-1"></a>    bbox<span class="op">=</span>bbox, <span class="co"># &lt;-- load data only for the bbox</span></span>
-<span id="cb123-6"><a href="#cb123-6" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb123-7"><a href="#cb123-7" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb123-8"><a href="#cb123-8" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
-<span id="cb123-9"><a href="#cb123-9" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb123-10"><a href="#cb123-10" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb123-11"><a href="#cb123-11" tabindex="-1"></a>)</span>
-<span id="cb123-12"><a href="#cb123-12" tabindex="-1"></a>ds</span></code></pre></div>
+<div class="sourceCode" id="cb149"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb149-1"><a href="#cb149-1" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
+<span id="cb149-2"><a href="#cb149-2" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb149-3"><a href="#cb149-3" tabindex="-1"></a>    items,</span>
+<span id="cb149-4"><a href="#cb149-4" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;SCL&#39;</span>],</span>
+<span id="cb149-5"><a href="#cb149-5" tabindex="-1"></a>    bbox<span class="op">=</span>bbox, <span class="co"># &lt;-- load data only for the bbox</span></span>
+<span id="cb149-6"><a href="#cb149-6" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb149-7"><a href="#cb149-7" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb149-8"><a href="#cb149-8" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
+<span id="cb149-9"><a href="#cb149-9" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb149-10"><a href="#cb149-10" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb149-11"><a href="#cb149-11" tabindex="-1"></a>)</span>
+<span id="cb149-12"><a href="#cb149-12" tabindex="-1"></a>ds</span></code></pre></div>
 </div>
 <div id="processing-data-1" class="section level3">
 <h3>Processing Data</h3>
@@ -2085,30 +2455,30 @@ XArray supports vectorized operations, we can work with the entire
 DataSet the same way we would process a single scene.</p>
 <p>The Sentinel-2 scenes come with NoData value of 0. So we set the
 correct NoData value before further processing.</p>
-<div class="sourceCode" id="cb124"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb124-1"><a href="#cb124-1" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
-<span id="cb124-2"><a href="#cb124-2" tabindex="-1"></a>ds <span class="op">=</span> ds.where(ds <span class="op">!=</span> <span class="dv">0</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb150"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb150-1"><a href="#cb150-1" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb150-2"><a href="#cb150-2" tabindex="-1"></a>ds <span class="op">=</span> ds.where(ds <span class="op">!=</span> <span class="dv">0</span>)</span></code></pre></div>
 <p>Apply scale and offset to all spectral bands</p>
-<div class="sourceCode" id="cb125"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb125-1"><a href="#cb125-1" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
-<span id="cb125-2"><a href="#cb125-2" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
-<span id="cb125-3"><a href="#cb125-3" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
-<span id="cb125-4"><a href="#cb125-4" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
-<span id="cb125-5"><a href="#cb125-5" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> ds.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;SCL&#39;</span>]</span>
-<span id="cb125-6"><a href="#cb125-6" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
-<span id="cb125-7"><a href="#cb125-7" tabindex="-1"></a>  ds[band] <span class="op">=</span> ds[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
+<div class="sourceCode" id="cb151"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb151-1"><a href="#cb151-1" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb151-2"><a href="#cb151-2" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb151-3"><a href="#cb151-3" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb151-4"><a href="#cb151-4" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
+<span id="cb151-5"><a href="#cb151-5" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> ds.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;SCL&#39;</span>]</span>
+<span id="cb151-6"><a href="#cb151-6" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
+<span id="cb151-7"><a href="#cb151-7" tabindex="-1"></a>  ds[band] <span class="op">=</span> ds[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
 <p>Apply the cloud mask</p>
-<div class="sourceCode" id="cb126"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb126-1"><a href="#cb126-1" tabindex="-1"></a>ds <span class="op">=</span> ds[data_bands].where(<span class="op">~</span>ds.SCL.isin([<span class="dv">3</span>,<span class="dv">8</span>,<span class="dv">9</span>,<span class="dv">10</span>]))</span>
-<span id="cb126-2"><a href="#cb126-2" tabindex="-1"></a>ds</span></code></pre></div>
+<div class="sourceCode" id="cb152"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb152-1"><a href="#cb152-1" tabindex="-1"></a>ds <span class="op">=</span> ds[data_bands].where(<span class="op">~</span>ds.SCL.isin([<span class="dv">3</span>,<span class="dv">8</span>,<span class="dv">9</span>,<span class="dv">10</span>]))</span>
+<span id="cb152-2"><a href="#cb152-2" tabindex="-1"></a>ds</span></code></pre></div>
 <p>Calculate NDVI and add it as a data variable.</p>
-<div class="sourceCode" id="cb127"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" tabindex="-1"></a>red <span class="op">=</span> ds[<span class="st">&#39;red&#39;</span>]</span>
-<span id="cb127-2"><a href="#cb127-2" tabindex="-1"></a>nir <span class="op">=</span> ds[<span class="st">&#39;nir&#39;</span>]</span>
-<span id="cb127-3"><a href="#cb127-3" tabindex="-1"></a></span>
-<span id="cb127-4"><a href="#cb127-4" tabindex="-1"></a>ndvi <span class="op">=</span> (nir <span class="op">-</span> red)<span class="op">/</span>(nir <span class="op">+</span> red)</span>
-<span id="cb127-5"><a href="#cb127-5" tabindex="-1"></a>ds[<span class="st">&#39;ndvi&#39;</span>] <span class="op">=</span> ndvi</span>
-<span id="cb127-6"><a href="#cb127-6" tabindex="-1"></a>ds</span></code></pre></div>
+<div class="sourceCode" id="cb153"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb153-1"><a href="#cb153-1" tabindex="-1"></a>red <span class="op">=</span> ds[<span class="st">&#39;red&#39;</span>]</span>
+<span id="cb153-2"><a href="#cb153-2" tabindex="-1"></a>nir <span class="op">=</span> ds[<span class="st">&#39;nir&#39;</span>]</span>
+<span id="cb153-3"><a href="#cb153-3" tabindex="-1"></a></span>
+<span id="cb153-4"><a href="#cb153-4" tabindex="-1"></a>ndvi <span class="op">=</span> (nir <span class="op">-</span> red)<span class="op">/</span>(nir <span class="op">+</span> red)</span>
+<span id="cb153-5"><a href="#cb153-5" tabindex="-1"></a>ds[<span class="st">&#39;ndvi&#39;</span>] <span class="op">=</span> ndvi</span>
+<span id="cb153-6"><a href="#cb153-6" tabindex="-1"></a>ds</span></code></pre></div>
 </div>
 <div id="extracting-time-series-2" class="section level3">
 <h3>Extracting Time-Series</h3>
@@ -2121,37 +2491,37 @@ we run <code>compute()</code> - Dask will fetch the required tiles from
 the source data and run the operations to give us the results.</p>
 <p>Our location coordinates are in EPSG:4326 Lat/Lon. Convert it to the
 CRS of the dataset so we can query it.</p>
-<div class="sourceCode" id="cb128"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb128-1"><a href="#cb128-1" tabindex="-1"></a>crs <span class="op">=</span> ds.rio.crs</span>
-<span id="cb128-2"><a href="#cb128-2" tabindex="-1"></a>transformer <span class="op">=</span> pyproj.Transformer.from_crs(<span class="st">&#39;EPSG:4326&#39;</span>, crs, always_xy<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb128-3"><a href="#cb128-3" tabindex="-1"></a>x, y <span class="op">=</span> transformer.transform(longitude, latitude)</span>
-<span id="cb128-4"><a href="#cb128-4" tabindex="-1"></a>x,y</span></code></pre></div>
+<div class="sourceCode" id="cb154"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb154-1"><a href="#cb154-1" tabindex="-1"></a>crs <span class="op">=</span> ds.rio.crs</span>
+<span id="cb154-2"><a href="#cb154-2" tabindex="-1"></a>transformer <span class="op">=</span> pyproj.Transformer.from_crs(<span class="st">&#39;EPSG:4326&#39;</span>, crs, always_xy<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb154-3"><a href="#cb154-3" tabindex="-1"></a>x, y <span class="op">=</span> transformer.transform(longitude, latitude)</span>
+<span id="cb154-4"><a href="#cb154-4" tabindex="-1"></a>x,y</span></code></pre></div>
 <p>Query NDVI values at the coordinates.</p>
-<div class="sourceCode" id="cb129"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb129-1"><a href="#cb129-1" tabindex="-1"></a>time_series <span class="op">=</span> ds.ndvi <span class="op">\</span></span>
-<span id="cb129-2"><a href="#cb129-2" tabindex="-1"></a>  .interp(y<span class="op">=</span>y, x<span class="op">=</span>x, method<span class="op">=</span><span class="st">&#39;nearest&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb155"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb155-1"><a href="#cb155-1" tabindex="-1"></a>time_series <span class="op">=</span> ds.ndvi <span class="op">\</span></span>
+<span id="cb155-2"><a href="#cb155-2" tabindex="-1"></a>  .interp(y<span class="op">=</span>y, x<span class="op">=</span>x, method<span class="op">=</span><span class="st">&#39;nearest&#39;</span>)</span></code></pre></div>
 <p>Run the calculation and load the results into memory.</p>
-<div class="sourceCode" id="cb130"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb130-1"><a href="#cb130-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb130-2"><a href="#cb130-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
+<div class="sourceCode" id="cb156"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb156-1"><a href="#cb156-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb156-2"><a href="#cb156-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
 <p>Plot the time-series.</p>
-<div class="sourceCode" id="cb131"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb131-1"><a href="#cb131-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
-<span id="cb131-2"><a href="#cb131-2" tabindex="-1"></a></span>
-<span id="cb131-3"><a href="#cb131-3" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb131-4"><a href="#cb131-4" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
-<span id="cb131-5"><a href="#cb131-5" tabindex="-1"></a></span>
-<span id="cb131-6"><a href="#cb131-6" tabindex="-1"></a>time_series.plot.line(</span>
-<span id="cb131-7"><a href="#cb131-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb131-8"><a href="#cb131-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
-<span id="cb131-9"><a href="#cb131-9" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb131-10"><a href="#cb131-10" tabindex="-1"></a></span>
-<span id="cb131-11"><a href="#cb131-11" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
-<span id="cb131-12"><a href="#cb131-12" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
-<span id="cb131-13"><a href="#cb131-13" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
-<span id="cb131-14"><a href="#cb131-14" tabindex="-1"></a></span>
-<span id="cb131-15"><a href="#cb131-15" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
-<span id="cb131-16"><a href="#cb131-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb157"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb157-1"><a href="#cb157-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb157-2"><a href="#cb157-2" tabindex="-1"></a></span>
+<span id="cb157-3"><a href="#cb157-3" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb157-4"><a href="#cb157-4" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb157-5"><a href="#cb157-5" tabindex="-1"></a></span>
+<span id="cb157-6"><a href="#cb157-6" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb157-7"><a href="#cb157-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb157-8"><a href="#cb157-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb157-9"><a href="#cb157-9" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb157-10"><a href="#cb157-10" tabindex="-1"></a></span>
+<span id="cb157-11"><a href="#cb157-11" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb157-12"><a href="#cb157-12" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb157-13"><a href="#cb157-13" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb157-14"><a href="#cb157-14" tabindex="-1"></a></span>
+<span id="cb157-15"><a href="#cb157-15" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
+<span id="cb157-16"><a href="#cb157-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
 src="python-remote-sensing-output/supplement_pc_extracting_time_series_files/supplement_pc_extracting_time_series_34_0.png" /></p>
 </div>
@@ -2160,53 +2530,53 @@ class="section level3">
 <h3>Interpolate and Smooth the time-series</h3>
 <p>We use XArray’s excellent time-series processing functionality to
 smooth the time-series and remove noise.</p>
-<div class="sourceCode" id="cb132"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb132-1"><a href="#cb132-1" tabindex="-1"></a><span class="co"># As we are proceesing the time-series,</span></span>
-<span id="cb132-2"><a href="#cb132-2" tabindex="-1"></a><span class="co"># it needs to be in a single chunk along the time dimension</span></span>
-<span id="cb132-3"><a href="#cb132-3" tabindex="-1"></a>time_series <span class="op">=</span> time_series.chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb158"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb158-1"><a href="#cb158-1" tabindex="-1"></a><span class="co"># As we are proceesing the time-series,</span></span>
+<span id="cb158-2"><a href="#cb158-2" tabindex="-1"></a><span class="co"># it needs to be in a single chunk along the time dimension</span></span>
+<span id="cb158-3"><a href="#cb158-3" tabindex="-1"></a>time_series <span class="op">=</span> time_series.chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span></code></pre></div>
 <p>First, we resample the time-series to have a value every 5-days and
 fill the missing values with linear interpolation. Then we apply a
 moving-window smoothing to remove noise.</p>
-<div class="sourceCode" id="cb133"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb133-1"><a href="#cb133-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> time_series<span class="op">\</span></span>
-<span id="cb133-2"><a href="#cb133-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>).chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span>
-<span id="cb133-3"><a href="#cb133-3" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled <span class="op">\</span></span>
-<span id="cb133-4"><a href="#cb133-4" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb133-5"><a href="#cb133-5" tabindex="-1"></a>time_series_smoothed <span class="op">=</span> time_series_interpolated <span class="op">\</span></span>
-<span id="cb133-6"><a href="#cb133-6" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, min_periods<span class="op">=</span><span class="dv">1</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span></code></pre></div>
-<div class="sourceCode" id="cb134"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb134-1"><a href="#cb134-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb134-2"><a href="#cb134-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
-<span id="cb134-3"><a href="#cb134-3" tabindex="-1"></a>time_series.plot.line(</span>
-<span id="cb134-4"><a href="#cb134-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb134-5"><a href="#cb134-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>,</span>
-<span id="cb134-6"><a href="#cb134-6" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb134-7"><a href="#cb134-7" tabindex="-1"></a>time_series_smoothed.plot.line(</span>
-<span id="cb134-8"><a href="#cb134-8" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb134-9"><a href="#cb134-9" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
-<span id="cb134-10"><a href="#cb134-10" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb134-11"><a href="#cb134-11" tabindex="-1"></a></span>
-<span id="cb134-12"><a href="#cb134-12" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
-<span id="cb134-13"><a href="#cb134-13" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
-<span id="cb134-14"><a href="#cb134-14" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
-<span id="cb134-15"><a href="#cb134-15" tabindex="-1"></a></span>
-<span id="cb134-16"><a href="#cb134-16" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Original vs. Smoothed NDVI Time-Series&#39;</span>)</span>
-<span id="cb134-17"><a href="#cb134-17" tabindex="-1"></a></span>
-<span id="cb134-18"><a href="#cb134-18" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb159"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb159-1"><a href="#cb159-1" tabindex="-1"></a>time_series_resampled <span class="op">=</span> time_series<span class="op">\</span></span>
+<span id="cb159-2"><a href="#cb159-2" tabindex="-1"></a>  .resample(time<span class="op">=</span><span class="st">&#39;5d&#39;</span>).mean(dim<span class="op">=</span><span class="st">&#39;time&#39;</span>).chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span>
+<span id="cb159-3"><a href="#cb159-3" tabindex="-1"></a>time_series_interpolated <span class="op">=</span> time_series_resampled <span class="op">\</span></span>
+<span id="cb159-4"><a href="#cb159-4" tabindex="-1"></a>  .interpolate_na(<span class="st">&#39;time&#39;</span>, use_coordinate<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb159-5"><a href="#cb159-5" tabindex="-1"></a>time_series_smoothed <span class="op">=</span> time_series_interpolated <span class="op">\</span></span>
+<span id="cb159-6"><a href="#cb159-6" tabindex="-1"></a>  .rolling(time<span class="op">=</span><span class="dv">3</span>, min_periods<span class="op">=</span><span class="dv">1</span>, center<span class="op">=</span><span class="va">True</span>).mean()</span></code></pre></div>
+<div class="sourceCode" id="cb160"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb160-1"><a href="#cb160-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb160-2"><a href="#cb160-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb160-3"><a href="#cb160-3" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb160-4"><a href="#cb160-4" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb160-5"><a href="#cb160-5" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;^&#39;</span>, color<span class="op">=</span><span class="st">&#39;#66c2a4&#39;</span>,</span>
+<span id="cb160-6"><a href="#cb160-6" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb160-7"><a href="#cb160-7" tabindex="-1"></a>time_series_smoothed.plot.line(</span>
+<span id="cb160-8"><a href="#cb160-8" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb160-9"><a href="#cb160-9" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb160-10"><a href="#cb160-10" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb160-11"><a href="#cb160-11" tabindex="-1"></a></span>
+<span id="cb160-12"><a href="#cb160-12" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb160-13"><a href="#cb160-13" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb160-14"><a href="#cb160-14" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb160-15"><a href="#cb160-15" tabindex="-1"></a></span>
+<span id="cb160-16"><a href="#cb160-16" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Original vs. Smoothed NDVI Time-Series&#39;</span>)</span>
+<span id="cb160-17"><a href="#cb160-17" tabindex="-1"></a></span>
+<span id="cb160-18"><a href="#cb160-18" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
 src="python-remote-sensing-output/supplement_pc_extracting_time_series_files/supplement_pc_extracting_time_series_39_0.png" /></p>
 </div>
 <div id="save-the-time-series.-1" class="section level3">
 <h3>Save the Time-Series.</h3>
 <p>Convert the extracted time-series to a Pandas DataFrame.</p>
-<div class="sourceCode" id="cb135"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb135-1"><a href="#cb135-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smoothed.to_pandas().reset_index()</span>
-<span id="cb135-2"><a href="#cb135-2" tabindex="-1"></a>df.head()</span></code></pre></div>
+<div class="sourceCode" id="cb161"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb161-1"><a href="#cb161-1" tabindex="-1"></a>df <span class="op">=</span> time_series_smoothed.to_pandas().reset_index()</span>
+<span id="cb161-2"><a href="#cb161-2" tabindex="-1"></a>df.head()</span></code></pre></div>
 <p>Save the DataFrame as a CSV file.</p>
-<div class="sourceCode" id="cb136"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb136-1"><a href="#cb136-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;ndvi_time_series.csv&#39;</span></span>
-<span id="cb136-2"><a href="#cb136-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
-<span id="cb136-3"><a href="#cb136-3" tabindex="-1"></a>df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb162"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb162-1"><a href="#cb162-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;ndvi_time_series.csv&#39;</span></span>
+<span id="cb162-2"><a href="#cb162-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
+<span id="cb162-3"><a href="#cb162-3" tabindex="-1"></a>df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
 <hr />
 </div>
 </div>
