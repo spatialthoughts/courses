@@ -1,11 +1,9 @@
-## Overview
-
+### Overview
 Spectral indices are core to many remote sensing analysis. In this section, we will learn how can we perform calculations using XArray.
 
 We will take a single Sentinel-2 scene and calculate spectral indices like NDVI, MNDWI and SAVI.
 
-## Setup and Data Download
-
+### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -45,7 +43,7 @@ if 'google.colab' in str(get_ipython()):
 
 ```
 
-## Get a Sentinel-2 Scene
+### Get a Sentinel-2 Scene
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -104,7 +102,7 @@ offset = -0.1
 scene = scene*scale + offset
 ```
 
-## Visualize the Scene
+### Visualize the Scene
 
 To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
 
@@ -153,7 +151,7 @@ plt.show()
     
 
 
-## Calculate Spectral Indices
+### Calculate Spectral Indices
 
 The Normalized Difference Vegetation Index (NDVI) is calculated using the following formula:
 
@@ -233,7 +231,7 @@ Where:
 savi = 1.5 * ((nir - red) / (nir + red + 0.5))
 ```
 
-## Save the Computed Indices
+### Save the Computed Indices
 
 Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
 
@@ -274,8 +272,7 @@ for file in files:
   print(f'Saved {file} to {output_path}')
 ```
 
-## Exercise
-
+### Exercise
 Apply a threshold to the NDVI values to create a binary raster.
 
 Hint: Use the [`xarray.where`](https://docs.xarray.dev/en/stable/generated/xarray.where.html) function that allows you to set both matching and non-matching values.

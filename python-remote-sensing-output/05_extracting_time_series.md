@@ -1,11 +1,9 @@
-## Overview
-
+### Overview
 We are now ready to scale our analysis. Having learned how to calculate spectral indices and do cloud masking for a single scene - we can easily apply these operations to the entire data-cube and extract the results at at one or more locations. Cloud-optimized data formats and Dask ensure that we fetch and process only a small amount of data that is required to compute the results at the pixels of interest.
 
 In this section, we will get all Sentinel-2 scenes collected over our region of interest, apply a cloud-mask, calculate NDVI and extract a time-series of NDVI at a single location. We will also use XArray's built-in time-series processing functions to interpolat and smooth the results.
 
-## Setup and Data Download
-
+### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -58,7 +56,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-## Get Satellite Imagery using STAC API
+### Get Satellite Imagery using STAC API
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -109,7 +107,7 @@ ds = stac.load(
 ds
 ```
 
-## Processing Data
+### Processing Data
 
 We have a data cube of multiple scenes collected through the year. As XArray supports vectorized operations, we can work with the entire DataSet the same way we would process a single scene.
 
@@ -154,8 +152,7 @@ ds['ndvi'] = ndvi
 ds
 ```
 
-## Extracting Time-Series
-
+### Extracting Time-Series
 We have a dataset with cloud-masked NDVI values at each pixel of each scene. Remember that none of these values are computed yet. Dask has a graph of all the operations that would be required to calculate the results.
 
 We can now query this results for values at our chosen location. Once we run `compute()` - Dask will fetch the required tiles from the source data and run the operations to give us the results.
@@ -214,8 +211,7 @@ plt.show()
     
 
 
-## Interpolate and Smooth the time-series
-
+### Interpolate and Smooth the time-series
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.
 
 
@@ -266,7 +262,7 @@ plt.show()
     
 
 
-## Save the Time-Series.
+### Save the Time-Series.
 
 Convert the extracted time-series to a Pandas DataFrame.
 
@@ -287,8 +283,7 @@ output_filepath = os.path.join(output_folder, output_filename)
 df.to_csv(output_filepath, index=False)
 ```
 
-## Exercise
-
+### Exercise
 [Scipy for Xarray (`xrscipy`)](https://xr-scipy.readthedocs.io/en/stable/index.html) package wraps the popular scipy package for Xarray and provides many useful time-series processing functions. The code snippet below uses [`xrscipy.signal.savgol_filter`](https://xr-scipy.readthedocs.io/en/1.0.0/generated/xrscipy.other.signal.savgol_filter.html) function to apply a Savitzky-Golay filter on our gap-filled NDVI time-series.
 
 Try SG-Filter with different values of window_length and polyorder and plot the results on a chart.

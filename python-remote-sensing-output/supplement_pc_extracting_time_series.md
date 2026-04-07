@@ -1,7 +1,6 @@
 This notebook shows how to access Sentinel-2 Level-2A data by querying Microsoft's [Planetary Computer Data Catalog](https://planetarycomputer.microsoft.com/catalog). This catalog is served via STAC API and with the datasets hosted on Azure Blob Storage. As we are using open-standards for data-access, the process is largely similar to accessing the data from other STAC API endpoints, with a few minor differences based on how different providers have chosen to pre-process the data.
 
-### Setup and Data Download
-
+#### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -53,7 +52,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-### Get Satellite Imagery using STAC API
+#### Get Satellite Imagery using STAC API
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -108,7 +107,7 @@ ds = stac.load(
 ds
 ```
 
-### Processing Data
+#### Processing Data
 
 We have a data cube of multiple scenes collected through the year. As XArray supports vectorized operations, we can work with the entire DataSet the same way we would process a single scene.
 
@@ -153,8 +152,7 @@ ds['ndvi'] = ndvi
 ds
 ```
 
-### Extracting Time-Series
-
+#### Extracting Time-Series
 We have a dataset with cloud-masked NDVI values at each pixel of each scene. Remember that none of these values are computed yet. Dask has a graph of all the operations that would be required to calculate the results.
 
 We can now query this results for values at our chosen location. Once we run `compute()` - Dask will fetch the required tiles from the source data and run the operations to give us the results.
@@ -213,8 +211,7 @@ plt.show()
     
 
 
-### Interpolate and Smooth the time-series
-
+#### Interpolate and Smooth the time-series
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.
 
 
@@ -265,7 +262,7 @@ plt.show()
     
 
 
-### Save the Time-Series.
+#### Save the Time-Series.
 
 Convert the extracted time-series to a Pandas DataFrame.
 

@@ -1,9 +1,7 @@
-## Overview
-
+### Overview
 We will learn how to work with landcover data and calculate area of different landcover classes in a region. This section also shows how you can scale your analysis to large regions without running into memory limits using `dask`.
 
-## Setup and Data Download
-
+### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -30,7 +28,6 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 import dask.array as da
-
 ```
 
 
@@ -62,8 +59,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-## Define a Region of Interest
-
+### Define a Region of Interest
 We define a location and choose a circular buffer area as our region of interest.
 
 
@@ -116,7 +112,7 @@ buffered = point_gdf.to_crs(utm_crs).buffer(buffer_distance_meters)
 buffered
 ```
 
-## Get ESA WorldCover Data
+### Get ESA WorldCover Data
 
 Let's use [Planetary Computer STAC API](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) search endpoint to look for items from the ESA WorldCover collection on Azure Blob Storage.
 
@@ -184,7 +180,7 @@ Clip the data to the buffered region.
 map_data_clipped = map_data.rio.clip(buffered)
 ```
 
-## Visualize the Landcover
+### Visualize the Landcover
 
 To create a meaningful legend, we use the class names and colors from the `class_dict` created earlier.
 
@@ -246,13 +242,12 @@ ax.set_title('Landcover Classes from ESA WorldCover');
     
 
 
-## Exercise
-
+### Exercise
 Select a single landcover class and plot it.
 
 Hint: Use the [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function.
 
-## Calculate Area
+### Calculate Area
 
 We can now calculate are of each class in our region of interest. As our data is in a projected CRS, each pixel's area is fixed. We can count the total number of pixels for each class and multiply it by the area of a single pixel to get the area.
 
@@ -306,22 +301,44 @@ output_filepath = os.path.join(output_folder, output_filename)
 area_df.to_csv(output_filepath, index=False)
 ```
 
-## Calculating Area for Large Regions
-
+### Calculating Area for Large Regions
 Our previous approach required loading the entire array of landcover classes in the memory using `.values`. If our dataset is very large, this will cause us to run out of memory and result in a crash. We can instead use `dask` to chunk the data which lazily loads each chunk into memory only when processing it.
+
+Let's read a shapefile for the boundary of a larse state in India.
+
+
+```python
+state_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data/' +
+  'kgis/karnataka.zip')
+state = gpd.read_file(state_filepath)
+state
+```
+
+Automatically select a suitable UTM projection.
+
+
+```python
+bbox = state.geometry.total_bounds
+aoi = pyproj.aoi.AreaOfInterest(*bbox)
+
+# Query for matching UTM CRS
+utm_crs_list = pyproj.database.query_utm_crs_info(
+    datum_name='WGS 84',
+    area_of_interest=aoi,
+)
+utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
+print(f'Selected CRS {utm_crs.name}')
+```
 
 We update the code from earlier to now specify a large buffer distance for the region of interest and explicitely specify a chunk size of `5000 x 5000` - which is small enough to fit into memory.
 
 
 ```python
-buffer_distance_meters = 100000 # 100 km
-buffered = point_gdf.to_crs(utm_crs).buffer(buffer_distance_meters)
-
 catalog = pystac_client.Client.open(
     'https://planetarycomputer.microsoft.com/api/stac/v1')
 
 # STAC search requires bounding box in EPSG:4326
-bounds = buffered.to_crs('EPSG:4326').total_bounds
+bounds = state.geometry.total_bounds
 
 search = catalog.search(
     collections=['esa-worldcover'],
@@ -391,7 +408,8 @@ output_filepath = os.path.join(output_folder, output_filename)
 large_area_df.to_csv(output_filepath, index=False)
 ```
 
-## Exercise
+### Exercise
+- Upload a vector layer (shapefile, GeoPackage, GeoJSON etc.) of your area of interest.
+- Calculate area of all landcover classes.
 
-- Run the large area calculation for your region of interest.
-- Create a Pie-chart of class areas and save it as a PNG image.
+Tip: If you do not have a data layer handy, you may use [geojson.io](https://geojson.io/next/) to draw a shape and Export it as a GeoJSON.

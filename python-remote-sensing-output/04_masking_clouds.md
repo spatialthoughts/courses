@@ -1,11 +1,9 @@
-## Overview
-
+### Overview
 When working with optical satellite imagery, we need to ensure the cloudy-pixels are removed from analysis. Most providers supply QA bands detailing locations of cloudy pixels. There are also third-party cloud-masking packages that can be used to locate and mask cloudy pixels.
 
 In this section, we will use the Scene Classification (SCL) band supplied with Sentinel-2 Level-2A images to remove clouds and cloud-shadows from a scene.
 
-## Setup and Data Download
-
+### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -45,7 +43,7 @@ if 'google.colab' in str(get_ipython()):
 
 ```
 
-## Get a Sentinel-2 Scene
+### Get a Sentinel-2 Scene
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -112,7 +110,7 @@ for band in data_bands:
   scene[band] = scene[band] * scale + offset
 ```
 
-## Visualize the Scene
+### Visualize the Scene
 
 The clouds will have a much higher reflectance, so `robust=True` will not give us appropriate visualization. We supply hardcoded min/max values as 0 and 0.3 which is the normal range of reflectance values of earth targets.
 
@@ -141,7 +139,7 @@ plt.show()
     
 
 
-## Create a Cloud Mask
+### Create a Cloud Mask
 
 The Scene Classification (SCL) band has each pixel classified into one of the following classes.
 
@@ -211,7 +209,7 @@ scene_masked = scene[data_bands].where(~mask)
 scene_masked
 ```
 
-## Exercise
+### Exercise
 
 Save the masked scene to disk. The code snippet below mounts your Google Drive and creates a `data` folder. Save the `scene_masked` to the data folder.
 

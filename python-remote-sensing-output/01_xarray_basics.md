@@ -1,11 +1,9 @@
-## Overview
-
+### Overview
 [`XArray`](https://docs.xarray.dev/en/stable/) has emerged as one of the key Python libraries to work with gridded raster datasets. It can natively handle time-series data making it ideal for working with Remote Sensing datasets. It builds on NumPy/Pandas for fast arrays/indexing and is orders of magnitude faster than other Python libraries like `rasterio`. It has a growing ecosystem of extensions `rioxarray`, `xarray-spatial`, `XEE` and more allowing it to be used for geospatial analysis. XArray offers the flexibility to seamlessly work with local datasets along with cloud-hosted datasets in a variety of optimized data formats.
 
 In this section, we will learn about XArray basics and learn how to work with a time-series of Sentinel-2 satellite imagery to create and visualize a median composite image.
 
-## Setup and Data Download
-
+### Setup and Data Download
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -36,7 +34,7 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-## Get Satellite Imagery
+### Get Satellite Imagery
 
 We define a location and time of interest to get some satellite imagery.
 
@@ -95,7 +93,7 @@ ds
 ds = ds.compute()
 ```
 
-## XArray Terminology
+### XArray Terminology
 
 We now have a `xarray.Dataset` object. Let's understand what is contained in a Dataset.
 
@@ -114,7 +112,7 @@ da = ds.red
 da
 ```
 
-## Selecting Data
+### Selecting Data
 
 XArray provides a very powerful way to select subsets of data, using similar framework as Pandas. Similar to Panda's `loc` and `iloc` methods, XArray provides `sel` and `isel` methods. Since DataArray dimensions have names, these methods allow you to specify which dimension to query.
 
@@ -172,7 +170,7 @@ The `sel()` method also allows specifying range of values using Python's built-i
 da.sel(time=slice('2023-01-01', '2023-01-31'))
 ```
 
-## Aggregating Data
+### Aggregating Data
 
 A very-powerful feature of XArray is the ability to easily aggregate data across dimensions - making it ideal for many remote sensing analysis. Let's create a median composite from all the individual images.
 
@@ -184,7 +182,7 @@ median = ds.median(dim='time')
 median
 ```
 
-## Visualizing Data
+### Visualizing Data
 
 XArray provides a `plot.imshow()` method based on Matplotlib to plot DataArrays.
 
@@ -219,7 +217,7 @@ plt.show()
     
 
 
-## Exercise
+### Exercise
 
 Display the median composite for the month of May.
 

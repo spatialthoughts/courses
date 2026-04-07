@@ -7,7 +7,7 @@ You can click the `+Code` button to create a new cell and enter a block of code.
 print('Hello World')
 ```
 
-### Package Management
+#### Package Management
 
 Colab comes pre-installed with many Python packages. You can use a package by simply importing it.
 
@@ -31,7 +31,7 @@ Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If y
 import rioxarray
 ```
 
-### Data Management
+#### Data Management
 
 Colab provides 100GB of disk space along with your notebook. This can be used to store your data, intermediate outputs and results.
 

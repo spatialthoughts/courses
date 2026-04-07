@@ -1,9 +1,7 @@
-## Overview
-
+### Overview
 This notebook is an example of a fairly large computation involving hundrescenes over a large city. Using STAC, XArray and Dask - we can now achieve this  by running the computation via a notebook on a cloud-machine. We use [Coiled](https://coiled.io/) to seamlessly configure a machine and process the data.
 
-## Overview of the Task
-
+### Overview of the Task
 We will query a STAC catalog for Sentinel-2 imagery over the city of Bengaluru, India, apply a cloud-mask and create a median composite image using distributed processing.
 
 
@@ -53,7 +51,7 @@ client = Client()  # set up local cluster on the machine
 client
 ```
 
-## Search and Load Sentinel-2 Scenes
+### Search and Load Sentinel-2 Scenes
 
 Read the file containing the city boundary.
 
@@ -176,8 +174,7 @@ da = ds.to_array('band')
 da
 ```
 
-## Create a Median Composite
-
+### Create a Median Composite
 A very-powerful feature of XArray is the ability to easily aggregate data across dimensions - making it ideal for many remote sensing analysis. Let’s create a median composite from all the individual images.
 
 We apply the `.median()` aggregation across the time dimension.
@@ -198,7 +195,7 @@ So far all the operations that we have created a computation graph. To run this 
 rgb_composite = rgb_composite.compute()
 ```
 
-## Visualizing and Exporting the Results
+### Visualizing and Exporting the Results
 
 The composite is creating from all the pixels within the bounding box of the geometry. We can use `rioxarray` to clip the image to the city boundary to remove pixels outside the polygon.
 
