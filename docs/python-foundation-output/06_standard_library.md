@@ -90,4 +90,10 @@ def haversine_distance(origin, destination):
 # call the function and print the result
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+A more accurate calculation is to use an ellipsoid model for earth instead of a sphere. Implement a implement a `vincenty_distance()`function that uses the [Vincenty's formula](https://en.wikipedia.org/wiki/Vincenty%27s_formulae) for distance calculation and calculate the percentage error in distance calculation when assuming a spherical share.
+
+
+
 ----

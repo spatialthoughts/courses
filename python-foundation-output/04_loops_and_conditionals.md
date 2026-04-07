@@ -155,4 +155,8 @@ for x in range(1, 10):
         print('{} is not divisible by 2'.format(x))
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+Once you have your solution, can you print all the numbers in a single line separated by comma?
+
 ----
