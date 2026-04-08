@@ -56,4 +56,16 @@ from geopy import distance
 # call the geopy distance function and print the great circle and ellipsoid distance
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+Following are the top 5 longest non-stop flights in the world currently:
+
+1. Singapore (SIN) – New York (JFK)
+2. Singapore (SIN) – Newark (EWR)
+3. Doha (DOH) – Auckland (AKL)
+4. Perth (PER) – London Heathrow (LHR)
+5. Melbourne (MEL) – Dallas/Fort Worth (DFW)
+
+Calculate the travel distance for each of the flights.
+
 ----

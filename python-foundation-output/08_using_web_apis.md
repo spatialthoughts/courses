@@ -214,4 +214,8 @@ destination_cities = {
 }
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+We used a for-loop to call the distance API separately for each pair of cities. This method is inefficient when you have a large number of origin-destination pairs. A more suitable approach is to use the [Distance Matrix API](https://openrouteservice.org/dev/#/api-docs/v2/matrix/) which allows you to query many pairs of origin and desinations in a single API call. Solve the above problem with this API with the help of a codign assitant.
+
 ----
