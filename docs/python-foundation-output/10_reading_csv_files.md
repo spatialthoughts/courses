@@ -230,3 +230,12 @@ print('Successfully written output file at {}'.format(output_path))
 Replace the `home_city` and `home_country` variables with your own home city and home country and create a CSV file containing distance from your home city to every other city in your country.
 
 ----
+
+*AI-Assisted Coding Challenge*: 
+
+The above code snippet used geopy to get the straight-line distance from the home_city to all other cities in your country. Update the code to calculate the real-world driving distance using the OpenRouteService Distance Matrix API and write a new output file named `cities_distance_ors.csv`.
+
+Tips when designing your prompt:
+
+* The Distance Matrix API has a limit of 50 pairs per request. Include this restriction in the prompt.
+* It is helpful to include the whole code snippet of the current distance calculation to give context to the LLM. Copy/paste your code from the exercise where you computer the distance using geopy. 

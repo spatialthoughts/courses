@@ -62,3 +62,21 @@ path = os.path.join(data_pkg_path, filename)
 # Hint: You do not need to print the line, just increment the count 
 #       and print the value of the variable once the loop is finished.
 ```
+
+*AI-Assisted Coding Challenge*: 
+
+Often times you may need to create files programmatically. One common use-case is to create projection sidecar file (.prj) for ESRI Shapefiles. Shapefiles derive projection information from this text file so it can be helpful to fix shapefiles with missing or incorrect projections. 
+
+Write Python code to create a file named `data.prj` with the following content which defines the projection of a shapefile named `data.shp` to EPSG:4326.
+
+```
+GEOGCS["GCS_WGS_1984",
+    DATUM["D_WGS_1984",
+        SPHEROID["WGS_1984",6378137.0,298.257223563]],
+    PRIMEM["Greenwich",0.0],
+    UNIT["Degree",0.0174532925199433]]
+```
+
+> Note: The content of the .prj files is in a format known as *ESRI WKT*. You can find WKT formatted projection information for any projection from the website [epsg.io](https://epsg.io/).
+
+
