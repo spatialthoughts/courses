@@ -232,4 +232,13 @@ filtered = filtered.rename(columns = {'city_ascii': 'city'})
 filtered
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+We used [Open Meteo](https://open-meteo.com/) Weather Forecast API in the previous exercise. Open Meteo also provides an [Elevation API](https://open-meteo.com/en/docs/elevation-api) that allows you to query and get the elevation at a given lat/lon value. Use this API to add an `elevation` column for each city in your country using the `country_df` dataframe.
+
+Tips when designing your prompt:
+
+* You need to give context of the file path, structure etc. So include the relevant code in your prompt.
+
+
 ----

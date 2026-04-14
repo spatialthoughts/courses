@@ -216,6 +216,6 @@ destination_cities = {
 
 *AI-Assisted Coding Challenge*: 
 
-We used a for-loop to call the distance API separately for each pair of cities. This method is inefficient when you have a large number of origin-destination pairs. A more suitable approach is to use the [Distance Matrix API](https://openrouteservice.org/dev/#/api-docs/v2/matrix/) which allows you to query many pairs of origin and desinations in a single API call. Solve the above problem with this API with the help of a codign assitant.
+There are many useful Web APIs. Let's try using another API. [Open-Meteo](https://open-meteo.com/) is an open-source weather API that allows you to easily query and extract weather forecasts from multiple models. You can use it for non-commercial use without an API key. Use the Weather Forecast API is get the predicted Temperature in your city for the next 7 days.
 
 ----
