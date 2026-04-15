@@ -347,8 +347,8 @@ id="toc-extract-transform-and-load">1.1 Extract, Transform and Load</a>
 <ul>
 <li><a href="#challenge" id="toc-challenge">1.1.1 Challenge</a></li>
 </ul></li>
-<li><a href="#spatial-join-and-summary-statistics"
-id="toc-spatial-join-and-summary-statistics">1.2 Spatial Join and
+<li><a href="#spatial-overlay-and-summary-statistics"
+id="toc-spatial-overlay-and-summary-statistics">1.2 Spatial Overlay and
 Summary Statistics</a>
 <ul>
 <li><a href="#challenge-1" id="toc-challenge-1">1.2.1 Challenge</a></li>
@@ -694,14 +694,6 @@ containing the statistics. The <strong>Sum</strong> contains the total
 length of national highways in the state.</li>
 </ol>
 <p><img src="images/advanced_qgis/karnataka11.png" width="75%" style="display: block; margin: auto;" /></p>
-<blockquote>
-<p><em>What do you think of the results?</em> The resulting number may
-not be perfect because the OpenStreetMap database may have missing roads
-or are classified differently. But it is close to the number provided in
-the <a
-href="https://morth.nic.in/sites/default/files/PragatiKiNayiGati/pdf/karnataka.pdf">official
-statistics</a>.</p>
-</blockquote>
 <ol start="12" style="list-style-type: decimal">
 <li>The final layer is called <code>Calculated</code> and is a temporary
 memory layer. Let’s save it to the disk so we can use it later. The
@@ -753,67 +745,60 @@ written as <code>\\d+</code>.</li>
 <p><img src="images/advanced_qgis/1_1_1_bonus_challenge.png" width="50%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
-<div id="spatial-join-and-summary-statistics" class="section level2">
-<h2>1.2 Spatial Join and Summary Statistics</h2>
+<div id="spatial-overlay-and-summary-statistics" class="section level2">
+<h2>1.2 Spatial Overlay and Summary Statistics</h2>
 <p>We achieved the goal of the exercise, but we can explore the results
 a bit better if we can break down the results into a smaller
 administrative unit. Let’s try to calculate the length of national
 highways for each district in the state. This will require us to perform
-a spatial join and analyze the results using group statistics.</p>
+a spatial overlay.</p>
 <ol style="list-style-type: decimal">
 <li>Add the <code>karnataka_districts</code> layer from the
 <code>karnataka.gpkg</code> file. This layer contains the geometry of
 each district along with its name in the <strong>DISTRICT</strong>
 field.</li>
 </ol>
-<p><img src="images/advanced_qgis/join01.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><img src="images/advanced_qgis/overlay01.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="2" style="list-style-type: decimal">
-<li>To add the name of the district to the roads layer, we need to
-perform a spatial-join. This is done using the <strong>Join attributes
-by Location</strong> algorithm. Search and locate the tool in the
-toolbox. Double-click to open it. For <em>Join to features in</em>,
-select the <code>national_highways</code> layer and <em>By comparing
-to</em> as <code>karnataka_districts</code>. This will join each feature
-in the roads layer to the intersecting feature from the districts layer.
-Select only the <strong>DISTRICT</strong> field to be added to the
-output. For the <em>Join type</em>, you have 3 options. Here we want to
-do a one-to-one join where the for each road feature, we want to select
-one district feature. Select the <strong>Take attributes of the feature
-with largest overlap only</strong> option.</li>
+<li>We want to calculate the length of national highways in each polygon
+of the <code>karnataka_districts</code> layer. This can be done using
+the <strong>Sum line lengths</strong> algorithm. This algorithm
+calculates the ellipsoidal length of all segments within each polygon.
+Double-click to Open it. For <em>Polygons</em>, select the
+<code>karnatkaa_districts</code> layer. For <em>Lines</em>, select the
+<code>national_highways</code> layer. Keep other options to their
+default value and click <em>Run</em>.</li>
 </ol>
 <blockquote>
-<p>In our dataset, the are some road geometries that cross district
-boundaries - causing part of the length being counted as part of another
-district. You can instead use the <em>Sum line lengths</em> algorithm
-from the Processing Toolbox which gives you accurate line lenghts
-contained in each polygon.</p>
+<p>If you wish to calculate lengths in a specific projection, reproject
+both the layers to the desired CRS. Then use the <em>Intersection</em>
+algorithm on to overlay the polygon layer on the roads, calculate new
+lengths using <em>Add Geometry Attributes</em>, followed by
+<em>Statistics by Categories</em> to sum lengths by the district
+column.</p>
 </blockquote>
-<p><img src="images/advanced_qgis/join02.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><img src="images/advanced_qgis/overlay02.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="3" style="list-style-type: decimal">
-<li>The new layer <code>Joined layer</code> now has the intersecting
-district name in the <strong>DISTRICT</strong> field. We can now sum the
-road lengths and group them for each district. You may recall that in
-earlier versions of QGIS, you needed a plugin called Group Stats to do
-this. But now we can do this via the built-in <strong>Statistic by
-Categories</strong> algorithm. Select the <code>Joined layer</code> as
-the <em>Input vector layer</em>, <strong>length_km</strong> as the
-<em>Field to calculate statistics on</em>. Select the
-<strong>DISTRICT</strong> field as the <em>Field(s) with
-Categories</em>.</li>
+<li>The new layer <code>Line length</code> now has lengths in the
+<strong>LENGTH</strong> field. As the length was calculated were done
+using ellipsoidal calculations, the units are in meters. We can convert
+it to kilometers. Search and open the <em>Field Calculator</em>
+processing algorithm. Select <code>Line length</code> as the <em>Inpur
+layer</em> and enter <code>length_km</code>as the <em>Field name</em>.
+Enter the following expression.</li>
 </ol>
-<p><img src="images/advanced_qgis/join03.png" width="75%" style="display: block; margin: auto;" /></p>
+<pre><code>&quot;LENGTH&quot;/1000</code></pre>
+<p><img src="images/advanced_qgis/overlay03.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="4" style="list-style-type: decimal">
 <li>Save the layer to the <code>karnataka.gpkg</code> as a layer named
 <code>national_highways_by_districts</code>. Click <em>Run</em>.</li>
 </ol>
-<p><img src="images/advanced_qgis/join04.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><img src="images/advanced_qgis/overlay04.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="5" style="list-style-type: decimal">
-<li>The output of the algorithm is a table containing various statistics
-on the <code>length_km</code> column for each district. The values in
-the <strong>Sum</strong> column is the total length of national highways
-in the district.</li>
+<li>The output now has the the <code>length_km</code> column for each
+district.</li>
 </ol>
-<p><img src="images/advanced_qgis/join05.png" width="75%" style="display: block; margin: auto;" /></p>
+<p><img src="images/advanced_qgis/overlay05.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>Note that we did data processing, spatial analysis and statistical
 analysis - all using just processing algorithms in a fast, reproducible
 and intuitive workflow. We have now finish the first part of this
@@ -829,7 +814,7 @@ exercise. Your output should match the contents of the
 <ul>
 <li>Rename the <strong>DISTRICT</strong> field to
 <strong>district</strong>.</li>
-<li>Rename the <strong>sum</strong> field to
+<li>Rename the <strong>length_km</strong> field to
 <strong>total_length</strong>.</li>
 <li>Round the lengths in the <strong>total_length</strong> field to
 nearest integer using the <code>round()</code> function.</li>

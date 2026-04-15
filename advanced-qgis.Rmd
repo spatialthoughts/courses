@@ -195,8 +195,6 @@ knitr::include_graphics('images/advanced_qgis/karnataka10.png')
 knitr::include_graphics('images/advanced_qgis/karnataka11.png')
 ```
 
-> *What do you think of the results?* The resulting number may not be perfect because the OpenStreetMap database may have missing roads or are classified differently. But it is close to the number provided in the [official statistics](https://morth.nic.in/sites/default/files/PragatiKiNayiGati/pdf/karnataka.pdf).
-
 12. The final layer is called ``Calculated`` and is a temporary memory layer. Let's save it to the disk so we can use it later. The layer contains many fields which are not relevant to us, so let's delete some columns before saving them. The *classic* way to do this is to toggle editing and use the *Delete Column* button from the Attribute Table. If you wanted to rename/reorder certain fields, that needed a plugin. But now, we have a really easy processing algorithm called **Refactor Fields** that can add, delete, rename, re-order and change the field types all at once. Delete fields that are not required and save the result as the layer ``national_highways`` in the source ``karnataka.gpkg``.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
@@ -231,43 +229,48 @@ Can you extract roads with names like *1st Main Road*, *23rd Main Road*, *2nd Ma
 knitr::include_graphics('images/advanced_qgis/1_1_1_bonus_challenge.png')
 ```
 
-## 1.2 Spatial Join and Summary Statistics
+## 1.2 Spatial Overlay and Summary Statistics
 
-We achieved the goal of the exercise, but we can explore the results a bit better if we can break down the results into a smaller administrative unit. Let's try to calculate the length of national highways for each district in the state. This will require us to perform a spatial join and analyze the results using group statistics.
+We achieved the goal of the exercise, but we can explore the results a bit better if we can break down the results into a smaller administrative unit. Let's try to calculate the length of national highways for each district in the state. This will require us to perform a spatial overlay.
 
 
 1. Add the ``karnataka_districts`` layer from the ``karnataka.gpkg`` file. This layer contains the geometry of each district along with its name in the **DISTRICT** field.
 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/join01.png')
+knitr::include_graphics('images/advanced_qgis/overlay01.png')
 ```
 
-2. To add the name of the district to the roads layer, we need to perform a spatial-join. This is done using the **Join attributes by Location** algorithm. Search and locate the tool in the toolbox. Double-click to open it. For *Join to features in*, select the ``national_highways`` layer and *By comparing to* as ``karnataka_districts``. This will join each feature in the roads layer to the intersecting feature from the districts layer. Select only the **DISTRICT** field to be added to the output. For the *Join type*, you have 3 options. Here we want to do a one-to-one join where the for each road feature, we want to select one district feature. Select the **Take attributes of the feature with largest overlap only** option. 
+2. We want to calculate the length of national highways in each polygon of the ``karnataka_districts`` layer. This can be done using the **Sum line lengths** algorithm. This algorithm calculates the ellipsoidal length of all segments within each polygon. Double-click to Open it. For *Polygons*, select the ``karnatkaa_districts`` layer. For *Lines*, select the ``national_highways`` layer. Keep other options to their default value and click *Run*.
 
-> In our dataset, the are some road geometries that cross district boundaries - causing part of the length being counted as part of another district. You can instead use the *Sum line lengths* algorithm from the Processing Toolbox which gives you accurate line lenghts contained in each polygon.
+> If you wish to calculate lengths in a specific projection, reproject both the layers to the desired CRS. Then use the *Intersection* algorithm on to overlay the polygon layer on the roads, calculate new lengths using *Add Geometry Attributes*, followed by *Statistics by Categories* to sum lengths by the district column.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/join02.png')
+knitr::include_graphics('images/advanced_qgis/overlay02.png')
 ```
 
-3. The new layer ``Joined layer`` now has the intersecting district name in the **DISTRICT** field. We can now sum the road lengths and group them for each district. You may recall that in earlier versions of QGIS, you needed a plugin called Group Stats to do this. But now we can do this via the built-in **Statistic by Categories** algorithm. Select the ``Joined layer`` as the *Input vector layer*, **length_km** as the *Field to calculate statistics on*.  Select  the **DISTRICT** field as the *Field(s) with Categories*. 
+3. The new layer ``Line length`` now has lengths in the **LENGTH** field. As the length was calculated were done using ellipsoidal calculations, the units are in meters. We can convert it to kilometers. Search and open the *Field Calculator* processing algorithm. Select ``Line length`` as the *Inpur layer* and enter `length_km`as the *Field name*. Enter the following expression.
+
+
+```
+"LENGTH"/1000
+```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/join03.png')
+knitr::include_graphics('images/advanced_qgis/overlay03.png')
 ```
 
 4. Save the layer to the ``karnataka.gpkg`` as a layer named ``national_highways_by_districts``. Click *Run*. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/join04.png')
+knitr::include_graphics('images/advanced_qgis/overlay04.png')
 ```
 
 
-5. The output of the algorithm is a table containing various statistics on the ``length_km`` column for each district. The values in the **Sum** column is the total length of national highways in the district.
+5. The output now has the the ``length_km`` column for each district. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/join05.png')
+knitr::include_graphics('images/advanced_qgis/overlay05.png')
 ```
 
 Note that we did data processing, spatial analysis and statistical analysis - all using just processing algorithms in a fast, reproducible and intuitive workflow. We have now finish the first part of this exercise. Your output should match the contents of the `Processing_Tools_Checkpoint2.qgz` file in the `solutions` folder.
@@ -277,7 +280,7 @@ Note that we did data processing, spatial analysis and statistical analysis - al
 Apply the following formatting changes on the ``national_highways_by_districts`` layer and save it to ``karnataka.gpkg`` as a new layer ``national_highways_by_districts_formatted``.
 
 * Rename the **DISTRICT** field to **district**.
-* Rename the **sum** field to **total_length**.
+* Rename the **length_km** field to **total_length**.
 * Round the lengths in the **total_length** field to nearest integer using the `round()` function.
 * Delete all remaining fields.
 
