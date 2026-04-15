@@ -238,7 +238,7 @@ We used [Open Meteo](https://open-meteo.com/) Weather Forecast API in the previo
 
 Tips when designing your prompt:
 
-* You need to give context of the file path, structure etc. So include the relevant code in your prompt.
+* You need to give context of the code and variables, so include the existing code in your prompt.
 
 
 ----

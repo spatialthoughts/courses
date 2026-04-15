@@ -216,6 +216,6 @@ destination_cities = {
 
 *AI-Assisted Coding Challenge*: 
 
-There are many useful Web APIs. Let's try using another API. [Open-Meteo](https://open-meteo.com/) is an open-source weather API that allows you to easily query and extract weather forecasts from multiple models. You can use it for non-commercial use without an API key. Use the Weather Forecast API is get the predicted Temperature in your city for the next 7 days.
+There are many useful Web APIs. Let's try using another API. [Open-Meteo](https://open-meteo.com/) is an open-source weather API that allows you to easily query and extract weather forecasts from multiple models. You can use it for non-commercial use without an API key. Use the Weather Forecast API to get the predicted Temperature in your city for the next 7 days.
 
 ----
