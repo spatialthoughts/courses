@@ -130,4 +130,8 @@ output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
 ```
 
+*AI-Assisted Coding Challenge*: 
+
+You have the highest elevation in the merged raster. Locate the coordinates of this elevation - which will be at Mt. Everest. Read the `merged.tif` file, extract the coordinates at which this elevation occurs and construct a URL to open these coordinates on Google Maps.
+
 ----

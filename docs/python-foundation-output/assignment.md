@@ -75,3 +75,11 @@ Format the code as a single cell I can paste into a Jupyter notebook.
 Use AI-assisted Coding to do route optimization. Use the OpenRouteService Optimization API to find the optimal path to visit all the location, starting from the first address. Display the results on the map.
 
 You may use an alternative geocoding service such as HERE/Bing/Google or a country-specific service such as DataBC instead of nominatim. Note that most commercial geocoding services will require signing-up for an API key and may also require setting up a billing account.
+
+Notes: Best practices when using an API key from commercial providers:
+
+* Your API key is linked to your account. If anyone gets access to this key, you will be responsible for the usage and any cost associated with it. Never share your code in public that has your actual API key. Replace the key with a placeholder like 'YOUR_API_KEY'.
+* If you accidentely share your API key, you can go to the provider dashboard and *revoke* / *delete* it.
+* Many providers (like Google Maps) will ask you to setup a cloud billing account to get an API key. Make sure to setup budget and alerts to notify you when you exceed certain amount of usage.
+* Always delete the API key after you are done with the project to avoid misuse.
+
