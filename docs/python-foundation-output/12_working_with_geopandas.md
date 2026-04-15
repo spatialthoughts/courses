@@ -122,19 +122,22 @@ For our task, we can do a *left* join and add attributes of the district that *i
 
 ```python
 joined = gpd.sjoin(roads_reprojected, districts_reprojected, how='left', predicate='intersects')
+joined
 ```
 
-Note: In this example, some road segments cross polygon boundaries. A spatial join will duplicate these segments for each polygon they intersect, resulting in an overestimation of the total length. A more accurate method is to use a [Spatial Overlay]((https://geopandas.org/en/stable/docs/reference/api/geopandas.overlay.html)), which splits segments at polygon boundaries. The code example below demonstrates this approach.
-
-```
-joined = gpd.overlay(roads_reprojected, districts_reprojected, 
-                     how='intersection', keep_geom_type=True)
-# Update the length of each segment after the overlay
-joined['length'] = joined.geometry.length
-```
+In this example, some road segments cross polygon boundaries. A spatial join will duplicate these segments for each polygon they intersect, resulting in an overestimation of the total length. A more accurate method is to use a [Spatial Overlay](https://geopandas.org/en/stable/docs/reference/api/geopandas.overlay.html), which splits segments at polygon boundaries. We can implement the overlay as below.
 
 
 ```python
+joined = roads_reprojected.overlay(districts_reprojected, how='intersection', keep_geom_type=True)
+joined
+```
+
+Some road segments get split, so we update the length column.
+
+
+```python
+joined['length'] = joined.geometry.length
 joined
 ```
 
@@ -155,12 +158,23 @@ The result of the `group_by()` method is a Pandas *Series*. It can be saved to a
 output_filename = 'national_highways_by_districts.csv'
 output_dir = 'output'
 output_path = os.path.join(output_dir, output_filename)
-results.to_csv(output_path)
+results.to_csv(output_path, index=False)
 print('Successfully written output file at {}'.format(output_path))
 ```
 
 ## Exercise
 
 Before writing the output to the file, round the distance numbers to a whole number.
+
+*AI-Assisted Coding Challenge*: 
+
+Save the output as an Excel file. Pandas has a built-in method to save a DataFrame in the XLSX format. Use it to create a new file `national_highways_by_districts.xlsx`.
+
+Note: Excel format support requires the `openpyxl` package. If you do not have it installed, you may get an error. To fix, you can install it using conda.
+
+1. Open a new Anaconda Prompt / Terminal.
+2. Activate the environment. `conda activate python_foundation`.
+3. Install the package. `conda install -c conda-forge openpyxl -y`.
+4. Re-run the cell that gave you an error.
 
 ----
