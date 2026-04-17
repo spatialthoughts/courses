@@ -117,7 +117,7 @@ plt.show()
 
 
     
-![png](01_matplotlib_basics_files/01_matplotlib_basics_22_0.png)
+![](python-dataviz-output/01_matplotlib_basics_files/01_matplotlib_basics_22_0.png)
     
 
 

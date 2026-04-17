@@ -128,7 +128,7 @@ bounds = leafmap.cog_bounds(cog_url)
 m.add_cog_layer(
     cog_url,
     name='Land Use Land Cover',
-    titiler_endpoint='https://giswqs-titiler-endpoint.hf.space'
+    titiler_endpoint='https://titiler.opengeos.org'
 )
 m.zoom_to_bounds(bounds)
 m
@@ -147,7 +147,7 @@ bounds = leafmap.cog_bounds(cog_url)
 m.add_cog_layer(
     cog_url,
     name='Land Use Land Cover',
-    titiler_endpoint='https://giswqs-titiler-endpoint.hf.space'
+    titiler_endpoint='https://titiler.opengeos.org'
 )
 m.zoom_to_bounds(bounds)
 
