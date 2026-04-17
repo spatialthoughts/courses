@@ -9,16 +9,16 @@ WEB_DIR=~/projects/python-dataviz-web
 #mkdir -p $SOLUTIONS_DIR
 
 # Main Notebooks
-# for nb in code/python_remote_sensing/**/*.ipynb code/python_remote_sensing/*.ipynb; do
-#     rel=$(dirname "${nb#code/python_remote_sensing/}")
-#     if [ "$rel" = "." ]; then
-#         outdir="python-remote-sensing-output"
-#     else
-#         outdir="python-remote-sensing-output/${rel}"
-#     fi
-#     mkdir -p "$outdir"
-#     jupyter nbconvert --to markdown "$nb" --output-dir "$outdir"
-# done
+for nb in code/python_remote_sensing/**/*.ipynb code/python_remote_sensing/*.ipynb; do
+    rel=$(dirname "${nb#code/python_remote_sensing/}")
+    if [ "$rel" = "." ]; then
+        outdir="python-remote-sensing-output"
+    else
+        outdir="python-remote-sensing-output/${rel}"
+    fi
+    mkdir -p "$outdir"
+    jupyter nbconvert --to markdown "$nb" --output-dir "$outdir"
+done
 
 # matplotlib figures end up with a title 'png'. Remove it with sed
 # Fix root-level md files
