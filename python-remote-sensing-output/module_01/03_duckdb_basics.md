@@ -43,8 +43,8 @@ We initialize DuckDB and enable the spatial extension.
 
 ```python
 con = duckdb.connect()
-con.install_extension("spatial")
-con.load_extension("spatial")
+con.install_extension('spatial')
+con.load_extension('spatial')
 ```
 
 ### Query Remote Dataset
@@ -118,7 +118,7 @@ We turn the results into a GeoPandas GeoDataFrame by specifying the geometry col
 
 ```python
 admin2_gdf = gpd.GeoDataFrame(
-    admin2_df, geometry=gpd.GeoSeries.from_wkt(adm2_df.geometry), crs="EPSG:4326"
+    admin2_df, geometry=gpd.GeoSeries.from_wkt(admin2_df.geometry), crs='EPSG:4326'
 )
 admin2_gdf
 ```
@@ -166,10 +166,13 @@ if 'google.colab' in str(get_ipython()):
 
   # Check if Google Drive is mounted
   if not os.path.exists('/content/drive'):
-      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+      print('Google Drive is not mounted. Please run the cell above to mount your drive.')
   else:
       if not os.path.exists(output_folder_path):
           os.makedirs(output_folder_path)
+else:
+  # Use the local folder
+  output_folder_path = output_folder
 ```
 
 
@@ -177,4 +180,77 @@ if 'google.colab' in str(get_ipython()):
 output_filename = 'admin2.gpkg'
 output_path = os.path.join(output_folder_path, output_filename)
 admin2_gdf.to_file(output_path)
+```
+
+### Exercise
+
+[Overture Maps](https://overturemaps.org/) provides free and open map data curated from sources like OpenStreetMap. The entire dataset is available in cloud-native [GeoParquet format](https://docs.overturemaps.org/getting-data/cloud-sources/). We can use it to query and extract city municipal boundary for any city.
+
+Search for your city/region of interest using [Overture Explorer](https://explore.overturemaps.org/) and replace the name, country and region with your own area of interest.
+
+Tips:
+
+* Cities are not uniformly represented across the world. Some cities are tagged as *locality* while others with *county* or *localadmin*. The SQL query below tries to capture all the variations, but if you get no matches, you can relax the query by commenting out some lines by prefixing it with `--`.
+  * Comment the line with `region = '{region}'` to search other regions in the country.
+  * By default the boundary tagged as `locality` will be picked. To see other options comment the line starting with `LIMIT 1`.
+
+
+
+```python
+country_iso2 = 'US'
+city_name = 'New York'
+region = 'US-NY'
+```
+
+
+```python
+# Overture does monthly releases of their dataset
+# Find the latest release at https://stac.overturemaps.org/
+OVERTURE_RELEASE = '2026-04-15.0'
+
+s3_path = (
+        f's3://overturemaps-us-west-2/release/{OVERTURE_RELEASE}/'
+        'theme=divisions/type=division_area/*'
+    )
+
+query = f'''
+  SELECT
+      id,
+      names.primary AS name,
+      subtype,
+      country,
+      region,
+      ST_AsText(geometry) AS geometry
+  FROM read_parquet(
+      '{s3_path}',
+      filename=true,
+      hive_partitioning=1
+  )
+  WHERE subtype in ('locality', 'county', 'localadmin', 'region') AND
+  country = '{country_iso2}' AND
+  region = '{region}' AND
+  names.primary ILIKE '{city_name}'
+  AND is_land = true          -- exclude maritime extensions
+  ORDER BY
+    -- prefer 'locality' over other types
+    CASE subtype WHEN 'locality' THEN 0 ELSE 1 END
+  LIMIT 1
+'''
+
+results = con.sql(query).df()
+results
+```
+
+View the resulting boundary.
+
+
+```python
+city_gdf = gpd.GeoDataFrame(
+    results, geometry=gpd.GeoSeries.from_wkt(results.geometry), crs='EPSG:4326'
+)
+
+m = leafmap.Map(width=800, height=500)
+m.add_gdf(city_gdf, layer_name='City', style={'color':'blue', 'weight':0.5})
+m.zoom_to_gdf(city_gdf)
+m
 ```
