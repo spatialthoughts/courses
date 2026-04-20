@@ -1,26 +1,28 @@
 ### Overview
+
 [`XArray`](https://docs.xarray.dev/en/stable/) has emerged as one of the key Python libraries to work with gridded raster datasets. It can natively handle time-series data making it ideal for working with Remote Sensing datasets. It builds on NumPy/Pandas for fast arrays/indexing and is orders of magnitude faster than other Python libraries like `rasterio`. It has a growing ecosystem of extensions `rioxarray`, `xarray-spatial`, `XEE` and more allowing it to be used for geospatial analysis. XArray offers the flexibility to seamlessly work with local datasets along with cloud-hosted datasets in a variety of optimized data formats.
 
 In this section, we will learn about XArray basics and learn how to work with a time-series of Sentinel-2 satellite imagery to create and visualize a median composite image.
 
 ### Setup and Data Download
+
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask botocore
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore
 ```
 
 
 ```python
-import os
 import matplotlib.pyplot as plt
+import os
 import pystac_client
-from odc.stac import stac_load, configure_s3_access
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from odc.stac import configure_s3_access, stac_load
 ```
 
 
@@ -80,6 +82,7 @@ ds = stac_load(
     items,
     bands=['red', 'green', 'blue', 'nir'],
     resolution=10,
+    crs='utm',
     bbox=bbox,
     chunks={},  # <-- use Dask
     groupby='solar_day',

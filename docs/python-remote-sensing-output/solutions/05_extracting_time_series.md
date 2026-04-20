@@ -16,6 +16,7 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -187,8 +188,6 @@ Plot the time-series.
 
 
 ```python
-import matplotlib.dates as mdates
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15, 7)
 

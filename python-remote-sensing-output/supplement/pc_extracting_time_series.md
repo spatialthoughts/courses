@@ -13,14 +13,15 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-import os
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import pystac_client
-from odc import stac
+import os
 import planetary_computer as pc
-import xarray as xr
-import rioxarray as rxr
 import pyproj
+import pystac_client
+import rioxarray as rxr
+import xarray as xr
+from odc import stac
 ```
 
 
@@ -187,8 +188,6 @@ Plot the time-series.
 
 
 ```python
-import matplotlib.dates as mdates
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15, 7)
 
@@ -204,12 +203,6 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 ax.set_title('NDVI Time-Series')
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/supplement/pc_extracting_time_series_files/pc_extracting_time_series_34_0.png)
-    
-
 
 #### Interpolate and Smooth the time-series
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.

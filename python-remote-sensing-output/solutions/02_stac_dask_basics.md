@@ -15,13 +15,13 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-import os
 import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import pystac_client
-from odc import stac
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from odc import stac
 ```
 
 ### Dask

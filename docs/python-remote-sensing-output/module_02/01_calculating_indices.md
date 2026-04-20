@@ -1,28 +1,29 @@
 ### Overview
+
 Spectral indices are core to many remote sensing analysis. In this section, we will learn how can we perform calculations using XArray.
 
 We will take a single Sentinel-2 scene and calculate spectral indices like NDVI, MNDWI and SAVI.
 
 ### Setup and Data Download
+
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
 ```
 
 
 ```python
-
-import os
 import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import pystac_client
-from odc import stac
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from odc import stac
 ```
 
 
@@ -86,6 +87,7 @@ ds = stac.load(
     items,
     bands=['red', 'green', 'blue', 'nir', 'swir16'],
     resolution=10,
+    crs='utm',
     chunks={},  # <-- use Dask
     groupby='solar_day',
     preserve_original_order=True
@@ -273,6 +275,7 @@ for file in files:
 ```
 
 ### Exercise
+
 Apply a threshold to the NDVI values to create a binary raster.
 
 Hint: Use the [`xarray.where`](https://docs.xarray.dev/en/stable/generated/xarray.where.html) function that allows you to set both matching and non-matching values.

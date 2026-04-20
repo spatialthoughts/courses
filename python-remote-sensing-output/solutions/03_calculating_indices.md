@@ -15,13 +15,14 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-import os
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import pystac_client
-from odc import stac
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from odc import stac
 ```
 
 
@@ -1110,7 +1111,6 @@ vegetation_preview = vegetation.rio.reproject(
 )
 
 # Create a custom colormap: 0=white, 1=green
-import matplotlib.colors as mcolors
 colors = [(1, 1, 1), (0, 0.5, 0)]  # White to Green
 cmap = mcolors.ListedColormap(colors)
 
@@ -1125,12 +1125,6 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/solutions/03_calculating_indices_files/03_calculating_indices_39_0.png)
-    
-
 
 We can also apply multiple thresholds.
 

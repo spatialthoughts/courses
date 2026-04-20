@@ -7,13 +7,13 @@ We will query a STAC catalog for Sentinel-2 imagery over the city of Bengaluru, 
 
 
 ```python
-from odc.stac import stac_load
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
 import pystac_client
 import rioxarray as rxr
 import xarray as xr
+from odc.stac import stac_load
 ```
 
 

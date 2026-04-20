@@ -14,20 +14,20 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-import os
-import matplotlib.pyplot as plt
-import matplotlib.colors
-import pystac_client
-from odc import stac
-import planetary_computer as pc
-import xarray as xr
-import rioxarray as rxr
-import pyproj
-from shapely.geometry import Point
-import geopandas as gpd
-import pandas as pd
-import numpy as np
 import dask.array as da
+import geopandas as gpd
+import matplotlib.colors
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+import planetary_computer as pc
+import pyproj
+import pystac_client
+import rioxarray as rxr
+import xarray as xr
+from matplotlib import cm
+from odc import stac
 ```
 
 
@@ -214,9 +214,6 @@ tick_labels
 
 
 ```python
-from matplotlib import cm
-import matplotlib.pyplot as plt
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(12, 10)
 
@@ -235,12 +232,6 @@ colorbar.set_ticks(ticks, labels=tick_labels)
 ax.set_axis_off()
 ax.set_title('Landcover Classes from ESA WorldCover');
 ```
-
-
-    
-![](python-remote-sensing-output/module_03/01_calculating_area_files/01_calculating_area_31_0.png)
-    
-
 
 ### Exercise
 Select a single landcover class and plot it.

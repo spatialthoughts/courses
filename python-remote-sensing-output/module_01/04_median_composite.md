@@ -18,14 +18,14 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-from odc.stac import stac_load
+import duckdb
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
 import pystac_client
 import rioxarray as rxr
 import xarray as xr
-import duckdb
+from odc.stac import stac_load
 ```
 
 

@@ -15,10 +15,10 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-import os
 import duckdb
 import geopandas as gpd
 import leafmap.foliumap as leafmap
+import os
 ```
 
 

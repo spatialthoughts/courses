@@ -418,6 +418,9 @@ Coiled</a></li>
 <li><a href="#using-planetary-computer-data-catalog"
 id="toc-using-planetary-computer-data-catalog">Using Planetary Computer
 Data Catalog</a></li>
+<li><a href="#downloading-sentinel-2-cloud-free-mosaics"
+id="toc-downloading-sentinel-2-cloud-free-mosaics">Downloading
+Sentinel-2 Cloud Free Mosaics</a></li>
 </ul></li>
 <li><a href="#data-credits" id="toc-data-credits">Data Credits</a></li>
 <li><a href="#license" id="toc-license">License</a></li>
@@ -481,8 +484,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <p>Colab comes pre-installed with many Python packages. You can use a
 package by simply importing it.</p>
 <div class="sourceCode" id="cb2"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span></code></pre></div>
 <p>Each Colab notebook instance is run on a Ubuntu Linux machine in the
 cloud. If you want to install any packages, you can run a command by
 prefixing the command with a <code>!</code>. For example, you can
@@ -615,14 +618,14 @@ download the datasets to your Colab environment.</p>
 <div class="sourceCode" id="cb14"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask botocore</span></code></pre></div>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] botocore</span></code></pre></div>
 <div class="sourceCode" id="cb15"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> stac_load, configure_s3_access</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
 <span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> configure_s3_access, stac_load</span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
 <span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
@@ -670,11 +673,12 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb19-1"><a h
 <span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>    items,</span>
 <span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>],</span>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>)</span>
-<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>ds</span></code></pre></div>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>)</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>ds</span></code></pre></div>
 <div class="sourceCode" id="cb20"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="op">%%</span>time</span>
 <span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>ds <span class="op">=</span> ds.compute()</span></code></pre></div>
@@ -824,15 +828,15 @@ download the datasets to your Colab environment.</p>
 <div class="sourceCode" id="cb33"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
 <div class="sourceCode" id="cb34"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb34-4"><a href="#cb34-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb34-5"><a href="#cb34-5" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb34-5"><a href="#cb34-5" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
 <span id="cb34-6"><a href="#cb34-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb34-7"><a href="#cb34-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+<span id="cb34-7"><a href="#cb34-7" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 </div>
 <div id="dask" class="section level3">
 <h3>Dask</h3>
@@ -926,11 +930,12 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb43-1"><a h
 <span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a>    items,</span>
 <span id="cb43-3"><a href="#cb43-3" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>],</span>
 <span id="cb43-4"><a href="#cb43-4" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb43-5"><a href="#cb43-5" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb43-6"><a href="#cb43-6" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb43-7"><a href="#cb43-7" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb43-8"><a href="#cb43-8" tabindex="-1"></a>)</span>
-<span id="cb43-9"><a href="#cb43-9" tabindex="-1"></a>ds</span></code></pre></div>
+<span id="cb43-5"><a href="#cb43-5" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb43-6"><a href="#cb43-6" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb43-7"><a href="#cb43-7" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb43-8"><a href="#cb43-8" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb43-9"><a href="#cb43-9" tabindex="-1"></a>)</span>
+<span id="cb43-10"><a href="#cb43-10" tabindex="-1"></a>ds</span></code></pre></div>
 <p>Use<a
 href="https://docs.xarray.dev/en/latest/generated/xarray.Dataset.nbytes.html"><code>xarray.Dataset.nbytes</code></a>
 property to check the size of the loaded dataset.</p>
@@ -1054,10 +1059,10 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb55-1"><a h
 <span id="cb55-2"><a href="#cb55-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
 <span id="cb55-3"><a href="#cb55-3" tabindex="-1"></a>    <span class="op">!</span>pip install leafmap</span></code></pre></div>
 <div class="sourceCode" id="cb56"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb56-2"><a href="#cb56-2" tabindex="-1"></a><span class="im">import</span> duckdb</span>
-<span id="cb56-3"><a href="#cb56-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a><span class="im">import</span> duckdb</span>
+<span id="cb56-2"><a href="#cb56-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb56-3"><a href="#cb56-3" tabindex="-1"></a><span class="im">import</span> leafmap.foliumap <span class="im">as</span> leafmap</span>
+<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a><span class="im">import</span> os</span></code></pre></div>
 <div class="sourceCode" id="cb57"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
 <span id="cb57-2"><a href="#cb57-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
@@ -1300,14 +1305,14 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb73-1"><a h
 <span id="cb73-2"><a href="#cb73-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
 <span id="cb73-3"><a href="#cb73-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>]</span></code></pre></div>
 <div class="sourceCode" id="cb74"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> stac_load</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" tabindex="-1"></a><span class="im">import</span> duckdb</span>
 <span id="cb74-2"><a href="#cb74-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
 <span id="cb74-3"><a href="#cb74-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb74-4"><a href="#cb74-4" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb74-5"><a href="#cb74-5" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
 <span id="cb74-6"><a href="#cb74-6" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
 <span id="cb74-7"><a href="#cb74-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb74-8"><a href="#cb74-8" tabindex="-1"></a><span class="im">import</span> duckdb</span></code></pre></div>
+<span id="cb74-8"><a href="#cb74-8" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> stac_load</span></code></pre></div>
 <div class="sourceCode" id="cb75"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
 <span id="cb75-2"><a href="#cb75-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
@@ -1585,16 +1590,15 @@ download the datasets to your Colab environment.</p>
 <div class="sourceCode" id="cb95"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
 <div class="sourceCode" id="cb96"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a></span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb96-2"><a href="#cb96-2" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb96-4"><a href="#cb96-4" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb96-5"><a href="#cb96-5" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb96-6"><a href="#cb96-6" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb96-7"><a href="#cb96-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb96-8"><a href="#cb96-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+<span id="cb96-3"><a href="#cb96-3" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb96-4"><a href="#cb96-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb96-5"><a href="#cb96-5" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb96-6"><a href="#cb96-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb96-7"><a href="#cb96-7" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 <div class="sourceCode" id="cb97"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
 <span id="cb97-2"><a href="#cb97-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
@@ -1643,20 +1647,21 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb101-1"><a 
 <span id="cb101-17"><a href="#cb101-17" tabindex="-1"></a>    items,</span>
 <span id="cb101-18"><a href="#cb101-18" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;swir16&#39;</span>],</span>
 <span id="cb101-19"><a href="#cb101-19" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb101-20"><a href="#cb101-20" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb101-21"><a href="#cb101-21" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb101-22"><a href="#cb101-22" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb101-23"><a href="#cb101-23" tabindex="-1"></a>)</span>
-<span id="cb101-24"><a href="#cb101-24" tabindex="-1"></a></span>
-<span id="cb101-25"><a href="#cb101-25" tabindex="-1"></a><span class="co"># Select the first scene</span></span>
-<span id="cb101-26"><a href="#cb101-26" tabindex="-1"></a>timestamp <span class="op">=</span> pd.to_datetime(items[<span class="dv">0</span>].properties[<span class="st">&#39;datetime&#39;</span>]).tz_convert(<span class="va">None</span>)</span>
-<span id="cb101-27"><a href="#cb101-27" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
-<span id="cb101-28"><a href="#cb101-28" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
-<span id="cb101-29"><a href="#cb101-29" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
-<span id="cb101-30"><a href="#cb101-30" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
-<span id="cb101-31"><a href="#cb101-31" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
-<span id="cb101-32"><a href="#cb101-32" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
-<span id="cb101-33"><a href="#cb101-33" tabindex="-1"></a>scene <span class="op">=</span> scene<span class="op">*</span>scale <span class="op">+</span> offset</span></code></pre></div>
+<span id="cb101-20"><a href="#cb101-20" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb101-21"><a href="#cb101-21" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb101-22"><a href="#cb101-22" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb101-23"><a href="#cb101-23" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb101-24"><a href="#cb101-24" tabindex="-1"></a>)</span>
+<span id="cb101-25"><a href="#cb101-25" tabindex="-1"></a></span>
+<span id="cb101-26"><a href="#cb101-26" tabindex="-1"></a><span class="co"># Select the first scene</span></span>
+<span id="cb101-27"><a href="#cb101-27" tabindex="-1"></a>timestamp <span class="op">=</span> pd.to_datetime(items[<span class="dv">0</span>].properties[<span class="st">&#39;datetime&#39;</span>]).tz_convert(<span class="va">None</span>)</span>
+<span id="cb101-28"><a href="#cb101-28" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
+<span id="cb101-29"><a href="#cb101-29" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb101-30"><a href="#cb101-30" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
+<span id="cb101-31"><a href="#cb101-31" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb101-32"><a href="#cb101-32" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb101-33"><a href="#cb101-33" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb101-34"><a href="#cb101-34" tabindex="-1"></a>scene <span class="op">=</span> scene<span class="op">*</span>scale <span class="op">+</span> offset</span></code></pre></div>
 </div>
 <div id="visualize-the-scene-1" class="section level3">
 <h3>Visualize the Scene</h3>
@@ -1821,16 +1826,16 @@ download the datasets to your Colab environment.</p>
 <div class="sourceCode" id="cb113"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb113-2"><a href="#cb113-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
-<span id="cb113-3"><a href="#cb113-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<span id="cb113-3"><a href="#cb113-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
 <div class="sourceCode" id="cb114"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb114-2"><a href="#cb114-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb114-3"><a href="#cb114-3" tabindex="-1"></a><span class="im">from</span> matplotlib.colors <span class="im">import</span> ListedColormap</span>
-<span id="cb114-4"><a href="#cb114-4" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb114-5"><a href="#cb114-5" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb114-6"><a href="#cb114-6" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb114-7"><a href="#cb114-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb114-8"><a href="#cb114-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb114-2"><a href="#cb114-2" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb114-3"><a href="#cb114-3" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb114-4"><a href="#cb114-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb114-5"><a href="#cb114-5" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb114-6"><a href="#cb114-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb114-7"><a href="#cb114-7" tabindex="-1"></a><span class="im">from</span> matplotlib.colors <span class="im">import</span> ListedColormap</span>
+<span id="cb114-8"><a href="#cb114-8" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 <div class="sourceCode" id="cb115"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb115-1"><a href="#cb115-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
 <span id="cb115-2"><a href="#cb115-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
@@ -1886,23 +1891,24 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb119-1"><a 
 <span id="cb119-22"><a href="#cb119-22" tabindex="-1"></a>    items,</span>
 <span id="cb119-23"><a href="#cb119-23" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
 <span id="cb119-24"><a href="#cb119-24" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb119-25"><a href="#cb119-25" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb119-26"><a href="#cb119-26" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb119-27"><a href="#cb119-27" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb119-28"><a href="#cb119-28" tabindex="-1"></a>)</span>
-<span id="cb119-29"><a href="#cb119-29" tabindex="-1"></a></span>
-<span id="cb119-30"><a href="#cb119-30" tabindex="-1"></a><span class="co"># Select the first scene</span></span>
-<span id="cb119-31"><a href="#cb119-31" tabindex="-1"></a>timestamp <span class="op">=</span> pd.to_datetime(items[<span class="dv">0</span>].properties[<span class="st">&#39;datetime&#39;</span>]).tz_convert(<span class="va">None</span>)</span>
-<span id="cb119-32"><a href="#cb119-32" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
-<span id="cb119-33"><a href="#cb119-33" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
-<span id="cb119-34"><a href="#cb119-34" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
-<span id="cb119-35"><a href="#cb119-35" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
-<span id="cb119-36"><a href="#cb119-36" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
-<span id="cb119-37"><a href="#cb119-37" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
-<span id="cb119-38"><a href="#cb119-38" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
-<span id="cb119-39"><a href="#cb119-39" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> scene.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
-<span id="cb119-40"><a href="#cb119-40" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
-<span id="cb119-41"><a href="#cb119-41" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
+<span id="cb119-25"><a href="#cb119-25" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb119-26"><a href="#cb119-26" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb119-27"><a href="#cb119-27" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb119-28"><a href="#cb119-28" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb119-29"><a href="#cb119-29" tabindex="-1"></a>)</span>
+<span id="cb119-30"><a href="#cb119-30" tabindex="-1"></a></span>
+<span id="cb119-31"><a href="#cb119-31" tabindex="-1"></a><span class="co"># Select the first scene</span></span>
+<span id="cb119-32"><a href="#cb119-32" tabindex="-1"></a>timestamp <span class="op">=</span> pd.to_datetime(items[<span class="dv">0</span>].properties[<span class="st">&#39;datetime&#39;</span>]).tz_convert(<span class="va">None</span>)</span>
+<span id="cb119-33"><a href="#cb119-33" tabindex="-1"></a>scene <span class="op">=</span> ds.sel(time<span class="op">=</span>timestamp)</span>
+<span id="cb119-34"><a href="#cb119-34" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb119-35"><a href="#cb119-35" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
+<span id="cb119-36"><a href="#cb119-36" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb119-37"><a href="#cb119-37" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb119-38"><a href="#cb119-38" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb119-39"><a href="#cb119-39" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
+<span id="cb119-40"><a href="#cb119-40" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> scene.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
+<span id="cb119-41"><a href="#cb119-41" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
+<span id="cb119-42"><a href="#cb119-42" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span></code></pre></div>
 </div>
 <div id="visualize-the-scene-2" class="section level3">
 <h3>Visualize the Scene</h3>
@@ -2088,17 +2094,18 @@ download the datasets to your Colab environment.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb126-1"><a href="#cb126-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb126-2"><a href="#cb126-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
 <span id="cb126-3"><a href="#cb126-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray <span class="op">\</span></span>
-<span id="cb126-4"><a href="#cb126-4" tabindex="-1"></a>      dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy xrscipy</span></code></pre></div>
+<span id="cb126-4"><a href="#cb126-4" tabindex="-1"></a>      dask[<span class="st">&#39;distributed&#39;</span>] jupyter<span class="op">-</span>server<span class="op">-</span>proxy xrscipy</span></code></pre></div>
 <div class="sourceCode" id="cb127"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb127-2"><a href="#cb127-2" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb127-3"><a href="#cb127-3" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb127-4"><a href="#cb127-4" tabindex="-1"></a><span class="im">import</span> pyproj</span>
-<span id="cb127-5"><a href="#cb127-5" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb127-6"><a href="#cb127-6" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb127-7"><a href="#cb127-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb127-8"><a href="#cb127-8" tabindex="-1"></a><span class="im">import</span> xrscipy.signal <span class="im">as</span> xrs</span>
-<span id="cb127-9"><a href="#cb127-9" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb127-2"><a href="#cb127-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb127-3"><a href="#cb127-3" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb127-4"><a href="#cb127-4" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb127-5"><a href="#cb127-5" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb127-6"><a href="#cb127-6" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb127-7"><a href="#cb127-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb127-8"><a href="#cb127-8" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb127-9"><a href="#cb127-9" tabindex="-1"></a><span class="im">import</span> xrscipy.signal <span class="im">as</span> xrs</span>
+<span id="cb127-10"><a href="#cb127-10" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 <div class="sourceCode" id="cb128"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb128-1"><a href="#cb128-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
 <span id="cb128-2"><a href="#cb128-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
@@ -2158,11 +2165,12 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb133-1"><a 
 <span id="cb133-18"><a href="#cb133-18" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
 <span id="cb133-19"><a href="#cb133-19" tabindex="-1"></a>    bbox<span class="op">=</span>bbox, <span class="co"># &lt;-- load data only for the bbox</span></span>
 <span id="cb133-20"><a href="#cb133-20" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb133-21"><a href="#cb133-21" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
-<span id="cb133-22"><a href="#cb133-22" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb133-23"><a href="#cb133-23" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb133-24"><a href="#cb133-24" tabindex="-1"></a>)</span>
-<span id="cb133-25"><a href="#cb133-25" tabindex="-1"></a>ds</span></code></pre></div>
+<span id="cb133-21"><a href="#cb133-21" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb133-22"><a href="#cb133-22" tabindex="-1"></a>    chunks<span class="op">=</span>{},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb133-23"><a href="#cb133-23" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb133-24"><a href="#cb133-24" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb133-25"><a href="#cb133-25" tabindex="-1"></a>)</span>
+<span id="cb133-26"><a href="#cb133-26" tabindex="-1"></a>ds</span></code></pre></div>
 </div>
 <div id="processing-data" class="section level3">
 <h3>Processing Data</h3>
@@ -2222,24 +2230,20 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb140-1"><a 
 <span id="cb140-2"><a href="#cb140-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
 <p>Plot the time-series.</p>
 <div class="sourceCode" id="cb141"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb141-1"><a href="#cb141-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
-<span id="cb141-2"><a href="#cb141-2" tabindex="-1"></a></span>
-<span id="cb141-3"><a href="#cb141-3" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb141-4"><a href="#cb141-4" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
-<span id="cb141-5"><a href="#cb141-5" tabindex="-1"></a></span>
-<span id="cb141-6"><a href="#cb141-6" tabindex="-1"></a>time_series.plot.line(</span>
-<span id="cb141-7"><a href="#cb141-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb141-8"><a href="#cb141-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
-<span id="cb141-9"><a href="#cb141-9" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb141-10"><a href="#cb141-10" tabindex="-1"></a></span>
-<span id="cb141-11"><a href="#cb141-11" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
-<span id="cb141-12"><a href="#cb141-12" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
-<span id="cb141-13"><a href="#cb141-13" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
-<span id="cb141-14"><a href="#cb141-14" tabindex="-1"></a></span>
-<span id="cb141-15"><a href="#cb141-15" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
-<span id="cb141-16"><a href="#cb141-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_32_0.png" /></p>
+class="sourceCode python"><code class="sourceCode python"><span id="cb141-1"><a href="#cb141-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb141-2"><a href="#cb141-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb141-3"><a href="#cb141-3" tabindex="-1"></a></span>
+<span id="cb141-4"><a href="#cb141-4" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb141-5"><a href="#cb141-5" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb141-6"><a href="#cb141-6" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb141-7"><a href="#cb141-7" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb141-8"><a href="#cb141-8" tabindex="-1"></a></span>
+<span id="cb141-9"><a href="#cb141-9" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb141-10"><a href="#cb141-10" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb141-11"><a href="#cb141-11" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb141-12"><a href="#cb141-12" tabindex="-1"></a></span>
+<span id="cb141-13"><a href="#cb141-13" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
+<span id="cb141-14"><a href="#cb141-14" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="interpolate-and-smooth-the-time-series" class="section level3">
 <h3>Interpolate and Smooth the time-series</h3>
@@ -2358,20 +2362,20 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb148-1"><a 
 <span id="cb148-3"><a href="#cb148-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[distributed] <span class="op">\</span></span>
 <span id="cb148-4"><a href="#cb148-4" tabindex="-1"></a>      jupyter<span class="op">-</span>server<span class="op">-</span>proxy planetary_computer</span></code></pre></div>
 <div class="sourceCode" id="cb149"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb149-1"><a href="#cb149-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb149-2"><a href="#cb149-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb149-1"><a href="#cb149-1" tabindex="-1"></a><span class="im">import</span> dask.array <span class="im">as</span> da</span>
+<span id="cb149-2"><a href="#cb149-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
 <span id="cb149-3"><a href="#cb149-3" tabindex="-1"></a><span class="im">import</span> matplotlib.colors</span>
-<span id="cb149-4"><a href="#cb149-4" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb149-5"><a href="#cb149-5" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb149-6"><a href="#cb149-6" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
-<span id="cb149-7"><a href="#cb149-7" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb149-8"><a href="#cb149-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb149-4"><a href="#cb149-4" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb149-5"><a href="#cb149-5" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb149-6"><a href="#cb149-6" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb149-7"><a href="#cb149-7" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb149-8"><a href="#cb149-8" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
 <span id="cb149-9"><a href="#cb149-9" tabindex="-1"></a><span class="im">import</span> pyproj</span>
-<span id="cb149-10"><a href="#cb149-10" tabindex="-1"></a><span class="im">from</span> shapely.geometry <span class="im">import</span> Point</span>
-<span id="cb149-11"><a href="#cb149-11" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb149-12"><a href="#cb149-12" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb149-13"><a href="#cb149-13" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb149-14"><a href="#cb149-14" tabindex="-1"></a><span class="im">import</span> dask.array <span class="im">as</span> da</span></code></pre></div>
+<span id="cb149-10"><a href="#cb149-10" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb149-11"><a href="#cb149-11" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb149-12"><a href="#cb149-12" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb149-13"><a href="#cb149-13" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
+<span id="cb149-14"><a href="#cb149-14" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 <div class="sourceCode" id="cb150"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb150-1"><a href="#cb150-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
 <span id="cb150-2"><a href="#cb150-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
@@ -2523,28 +2527,23 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb163-1"><a 
 <span id="cb163-23"><a href="#cb163-23" tabindex="-1"></a>]</span>
 <span id="cb163-24"><a href="#cb163-24" tabindex="-1"></a>tick_labels</span></code></pre></div>
 <div class="sourceCode" id="cb164"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb164-1"><a href="#cb164-1" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
-<span id="cb164-2"><a href="#cb164-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb164-1"><a href="#cb164-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb164-2"><a href="#cb164-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">12</span>, <span class="dv">10</span>)</span>
 <span id="cb164-3"><a href="#cb164-3" tabindex="-1"></a></span>
-<span id="cb164-4"><a href="#cb164-4" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb164-5"><a href="#cb164-5" tabindex="-1"></a>fig.set_size_inches(<span class="dv">12</span>, <span class="dv">10</span>)</span>
-<span id="cb164-6"><a href="#cb164-6" tabindex="-1"></a></span>
-<span id="cb164-7"><a href="#cb164-7" tabindex="-1"></a>map_data_clipped.plot(</span>
-<span id="cb164-8"><a href="#cb164-8" tabindex="-1"></a>    ax<span class="op">=</span>ax, cmap<span class="op">=</span>cmap, norm<span class="op">=</span>normalizer</span>
-<span id="cb164-9"><a href="#cb164-9" tabindex="-1"></a>)</span>
-<span id="cb164-10"><a href="#cb164-10" tabindex="-1"></a></span>
-<span id="cb164-11"><a href="#cb164-11" tabindex="-1"></a>colorbar <span class="op">=</span> fig.colorbar(</span>
-<span id="cb164-12"><a href="#cb164-12" tabindex="-1"></a>    cm.ScalarMappable(norm<span class="op">=</span>normalizer, cmap<span class="op">=</span>cmap),</span>
-<span id="cb164-13"><a href="#cb164-13" tabindex="-1"></a>    boundaries<span class="op">=</span>boundaries,</span>
-<span id="cb164-14"><a href="#cb164-14" tabindex="-1"></a>    values<span class="op">=</span>values,</span>
-<span id="cb164-15"><a href="#cb164-15" tabindex="-1"></a>    cax<span class="op">=</span>fig.axes[<span class="dv">1</span>].axes,</span>
-<span id="cb164-16"><a href="#cb164-16" tabindex="-1"></a>)</span>
-<span id="cb164-17"><a href="#cb164-17" tabindex="-1"></a>colorbar.set_ticks(ticks, labels<span class="op">=</span>tick_labels)</span>
-<span id="cb164-18"><a href="#cb164-18" tabindex="-1"></a></span>
-<span id="cb164-19"><a href="#cb164-19" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb164-20"><a href="#cb164-20" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Landcover Classes from ESA WorldCover&#39;</span>)<span class="op">;</span></span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/module_03/01_calculating_area_files/01_calculating_area_31_0.png" /></p>
+<span id="cb164-4"><a href="#cb164-4" tabindex="-1"></a>map_data_clipped.plot(</span>
+<span id="cb164-5"><a href="#cb164-5" tabindex="-1"></a>    ax<span class="op">=</span>ax, cmap<span class="op">=</span>cmap, norm<span class="op">=</span>normalizer</span>
+<span id="cb164-6"><a href="#cb164-6" tabindex="-1"></a>)</span>
+<span id="cb164-7"><a href="#cb164-7" tabindex="-1"></a></span>
+<span id="cb164-8"><a href="#cb164-8" tabindex="-1"></a>colorbar <span class="op">=</span> fig.colorbar(</span>
+<span id="cb164-9"><a href="#cb164-9" tabindex="-1"></a>    cm.ScalarMappable(norm<span class="op">=</span>normalizer, cmap<span class="op">=</span>cmap),</span>
+<span id="cb164-10"><a href="#cb164-10" tabindex="-1"></a>    boundaries<span class="op">=</span>boundaries,</span>
+<span id="cb164-11"><a href="#cb164-11" tabindex="-1"></a>    values<span class="op">=</span>values,</span>
+<span id="cb164-12"><a href="#cb164-12" tabindex="-1"></a>    cax<span class="op">=</span>fig.axes[<span class="dv">1</span>].axes,</span>
+<span id="cb164-13"><a href="#cb164-13" tabindex="-1"></a>)</span>
+<span id="cb164-14"><a href="#cb164-14" tabindex="-1"></a>colorbar.set_ticks(ticks, labels<span class="op">=</span>tick_labels)</span>
+<span id="cb164-15"><a href="#cb164-15" tabindex="-1"></a></span>
+<span id="cb164-16"><a href="#cb164-16" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb164-17"><a href="#cb164-17" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Landcover Classes from ESA WorldCover&#39;</span>)<span class="op">;</span></span></code></pre></div>
 </div>
 <div id="exercise-6" class="section level3">
 <h3>Exercise</h3>
@@ -2867,14 +2866,15 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb183-1"><a 
 <span id="cb183-3"><a href="#cb183-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask jupyter<span class="op">-</span>server<span class="op">-</span>proxy <span class="op">\</span></span>
 <span id="cb183-4"><a href="#cb183-4" tabindex="-1"></a>      planetary_computer</span></code></pre></div>
 <div class="sourceCode" id="cb184"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" tabindex="-1"></a><span class="im">import</span> os</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb184-1"><a href="#cb184-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
 <span id="cb184-2"><a href="#cb184-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb184-3"><a href="#cb184-3" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb184-4"><a href="#cb184-4" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb184-5"><a href="#cb184-5" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
-<span id="cb184-6"><a href="#cb184-6" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb184-3"><a href="#cb184-3" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb184-4"><a href="#cb184-4" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
+<span id="cb184-5"><a href="#cb184-5" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb184-6"><a href="#cb184-6" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
 <span id="cb184-7"><a href="#cb184-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb184-8"><a href="#cb184-8" tabindex="-1"></a><span class="im">import</span> pyproj</span></code></pre></div>
+<span id="cb184-8"><a href="#cb184-8" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb184-9"><a href="#cb184-9" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
 <div class="sourceCode" id="cb185"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
 <span id="cb185-2"><a href="#cb185-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
@@ -3003,24 +3003,20 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb198-1"><a 
 <span id="cb198-2"><a href="#cb198-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
 <p>Plot the time-series.</p>
 <div class="sourceCode" id="cb199"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
-<span id="cb199-2"><a href="#cb199-2" tabindex="-1"></a></span>
-<span id="cb199-3"><a href="#cb199-3" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb199-4"><a href="#cb199-4" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
-<span id="cb199-5"><a href="#cb199-5" tabindex="-1"></a></span>
-<span id="cb199-6"><a href="#cb199-6" tabindex="-1"></a>time_series.plot.line(</span>
-<span id="cb199-7"><a href="#cb199-7" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
-<span id="cb199-8"><a href="#cb199-8" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
-<span id="cb199-9"><a href="#cb199-9" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
-<span id="cb199-10"><a href="#cb199-10" tabindex="-1"></a></span>
-<span id="cb199-11"><a href="#cb199-11" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
-<span id="cb199-12"><a href="#cb199-12" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
-<span id="cb199-13"><a href="#cb199-13" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
-<span id="cb199-14"><a href="#cb199-14" tabindex="-1"></a></span>
-<span id="cb199-15"><a href="#cb199-15" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
-<span id="cb199-16"><a href="#cb199-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<p><img
-src="python-remote-sensing-output/supplement/pc_extracting_time_series_files/pc_extracting_time_series_34_0.png" /></p>
+class="sourceCode python"><code class="sourceCode python"><span id="cb199-1"><a href="#cb199-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb199-2"><a href="#cb199-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb199-3"><a href="#cb199-3" tabindex="-1"></a></span>
+<span id="cb199-4"><a href="#cb199-4" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb199-5"><a href="#cb199-5" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb199-6"><a href="#cb199-6" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb199-7"><a href="#cb199-7" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb199-8"><a href="#cb199-8" tabindex="-1"></a></span>
+<span id="cb199-9"><a href="#cb199-9" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb199-10"><a href="#cb199-10" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb199-11"><a href="#cb199-11" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb199-12"><a href="#cb199-12" tabindex="-1"></a></span>
+<span id="cb199-13"><a href="#cb199-13" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series&#39;</span>)</span>
+<span id="cb199-14"><a href="#cb199-14" tabindex="-1"></a>plt.show()</span></code></pre></div>
 </div>
 <div id="interpolate-and-smooth-the-time-series-1"
 class="section level4">
@@ -3074,7 +3070,314 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb203-1"><a 
 class="sourceCode python"><code class="sourceCode python"><span id="cb204-1"><a href="#cb204-1" tabindex="-1"></a>output_filename <span class="op">=</span> <span class="st">&#39;ndvi_time_series.csv&#39;</span></span>
 <span id="cb204-2"><a href="#cb204-2" tabindex="-1"></a>output_filepath <span class="op">=</span> os.path.join(output_folder, output_filename)</span>
 <span id="cb204-3"><a href="#cb204-3" tabindex="-1"></a>df.to_csv(output_filepath, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="downloading-sentinel-2-cloud-free-mosaics"
+class="section level2">
+<h2>Downloading Sentinel-2 Cloud Free Mosaics</h2>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/supplement/s2_cloudfree_mosaics.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<p>This notebook shows how to access, process and save a large subset of
+the Sentinel 2 Cloud Free Temporal Mosaics provided by Earth Genome. The
+workflow involves accessing the annual cloud-free composites, stacking
+and scaling the required bands, tiling the region and saving each tile
+as a Cloud Optimized GeoTIFF (COG) in a remote Google Cloud Storage
+(GCS) bucket.</p>
+<p><img
+src="https://storage.googleapis.com/spatialthoughts-public-data/sentinel-2/cloud-free-mosaics/preview.png" /></p>
+<div id="setup-and-data-download-7" class="section level4">
+<h4>Setup and Data Download</h4>
+<p>The following blocks of code will install the required packages and
+download the datasets to your Colab environment.</p>
+<div class="sourceCode" id="cb205"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb205-1"><a href="#cb205-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb205-2"><a href="#cb205-2" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb205-3"><a href="#cb205-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] <span class="op">\</span></span>
+<span id="cb205-4"><a href="#cb205-4" tabindex="-1"></a>     jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<div class="sourceCode" id="cb206"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb206-1"><a href="#cb206-1" tabindex="-1"></a><span class="im">import</span> dask</span>
+<span id="cb206-2"><a href="#cb206-2" tabindex="-1"></a><span class="im">import</span> duckdb</span>
+<span id="cb206-3"><a href="#cb206-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb206-4"><a href="#cb206-4" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb206-5"><a href="#cb206-5" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb206-6"><a href="#cb206-6" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb206-7"><a href="#cb206-7" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb206-8"><a href="#cb206-8" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb206-9"><a href="#cb206-9" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb206-10"><a href="#cb206-10" tabindex="-1"></a><span class="im">import</span> tempfile</span>
+<span id="cb206-11"><a href="#cb206-11" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb206-12"><a href="#cb206-12" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime</span>
+<span id="cb206-13"><a href="#cb206-13" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb206-14"><a href="#cb206-14" tabindex="-1"></a><span class="im">from</span> osgeo <span class="im">import</span> gdal</span>
+<span id="cb206-15"><a href="#cb206-15" tabindex="-1"></a><span class="im">from</span> shapely.geometry <span class="im">import</span> box</span></code></pre></div>
+<div class="sourceCode" id="cb207"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb207-1"><a href="#cb207-1" tabindex="-1"></a>data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb207-2"><a href="#cb207-2" tabindex="-1"></a>output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb207-3"><a href="#cb207-3" tabindex="-1"></a></span>
+<span id="cb207-4"><a href="#cb207-4" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb207-5"><a href="#cb207-5" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb207-6"><a href="#cb207-6" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb207-7"><a href="#cb207-7" tabindex="-1"></a>    os.mkdir(output_folder)</span></code></pre></div>
+<p>Setup a local Dask cluster. This distributes the computation across
+multiple workers on your computer.</p>
+<div class="sourceCode" id="cb208"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb208-1"><a href="#cb208-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb208-2"><a href="#cb208-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb208-3"><a href="#cb208-3" tabindex="-1"></a>client</span></code></pre></div>
+<p>If you are running this notebook in Colab, you will need to create
+and use a proxy URL to see the dashboard running on the local
+server.</p>
+<div class="sourceCode" id="cb209"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb209-1"><a href="#cb209-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb209-2"><a href="#cb209-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb209-3"><a href="#cb209-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb209-4"><a href="#cb209-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+</div>
+<div id="select-a-region-of-interest" class="section level4">
+<h4>Select a Region of Interest</h4>
+<p>We use the <a href="https://fieldmaps.io/data/">FieldMaps</a>
+GeoParquet file to select a large state in India.</p>
+<div class="sourceCode" id="cb210"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb210-1"><a href="#cb210-1" tabindex="-1"></a>parquet_url <span class="op">=</span> <span class="st">&#39;https://data.fieldmaps.io/edge-matched/open/intl/adm1_polygons.parquet&#39;</span></span>
+<span id="cb210-2"><a href="#cb210-2" tabindex="-1"></a>con <span class="op">=</span> duckdb.<span class="ex">connect</span>()</span>
+<span id="cb210-3"><a href="#cb210-3" tabindex="-1"></a>con.install_extension(<span class="st">&#39;spatial&#39;</span>)</span>
+<span id="cb210-4"><a href="#cb210-4" tabindex="-1"></a>con.load_extension(<span class="st">&#39;spatial&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb211"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb211-1"><a href="#cb211-1" tabindex="-1"></a>country <span class="op">=</span> <span class="st">&#39;IND&#39;</span></span>
+<span id="cb211-2"><a href="#cb211-2" tabindex="-1"></a>adm1_name <span class="op">=</span> <span class="st">&#39;Karnātaka&#39;</span></span>
+<span id="cb211-3"><a href="#cb211-3" tabindex="-1"></a></span>
+<span id="cb211-4"><a href="#cb211-4" tabindex="-1"></a>query <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;</span></span>
+<span id="cb211-5"><a href="#cb211-5" tabindex="-1"></a><span class="ss">SELECT adm1_name, adm1_id, ST_AsText(geometry) AS geometry</span></span>
+<span id="cb211-6"><a href="#cb211-6" tabindex="-1"></a><span class="ss">FROM read_parquet(&#39;</span><span class="sc">{</span>parquet_url<span class="sc">}</span><span class="ss">&#39;)</span></span>
+<span id="cb211-7"><a href="#cb211-7" tabindex="-1"></a><span class="ss">WHERE</span></span>
+<span id="cb211-8"><a href="#cb211-8" tabindex="-1"></a><span class="ss">  adm0_src = &#39;</span><span class="sc">{</span>country<span class="sc">}</span><span class="ss">&#39; and</span></span>
+<span id="cb211-9"><a href="#cb211-9" tabindex="-1"></a><span class="ss">  adm1_name = &#39;</span><span class="sc">{</span>adm1_name<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb211-10"><a href="#cb211-10" tabindex="-1"></a><span class="ss">&#39;&#39;&#39;</span></span>
+<span id="cb211-11"><a href="#cb211-11" tabindex="-1"></a></span>
+<span id="cb211-12"><a href="#cb211-12" tabindex="-1"></a>admin1_df <span class="op">=</span> con.sql(query).df()</span>
+<span id="cb211-13"><a href="#cb211-13" tabindex="-1"></a>admin1_gdf <span class="op">=</span> gpd.GeoDataFrame(</span>
+<span id="cb211-14"><a href="#cb211-14" tabindex="-1"></a>    admin1_df, geometry<span class="op">=</span>gpd.GeoSeries.from_wkt(admin1_df.geometry), crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span></span>
+<span id="cb211-15"><a href="#cb211-15" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb212"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb212-1"><a href="#cb212-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb212-2"><a href="#cb212-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb212-3"><a href="#cb212-3" tabindex="-1"></a></span>
+<span id="cb212-4"><a href="#cb212-4" tabindex="-1"></a>admin1_gdf.plot(</span>
+<span id="cb212-5"><a href="#cb212-5" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb212-6"><a href="#cb212-6" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb212-7"><a href="#cb212-7" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>)</span>
+<span id="cb212-8"><a href="#cb212-8" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb212-9"><a href="#cb212-9" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb213"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb213-1"><a href="#cb213-1" tabindex="-1"></a>geometry <span class="op">=</span> admin1_gdf.geometry</span></code></pre></div>
+</div>
+<div id="earth-genome-stac" class="section level3">
+<h3>Earth Genome STAC</h3>
+<p>Earth Genome provides ready-to-use annual and semi-annual Sentinel-2
+mosaics created to L2A scenes. We can use the <a
+href="https://browser.stac.earthgenome.org/">Earth Genome STAC API
+Catalog</a> to query for the matching tiles for our year and region of
+interest.</p>
+<div class="sourceCode" id="cb214"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb214-1"><a href="#cb214-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb214-2"><a href="#cb214-2" tabindex="-1"></a>    <span class="st">&#39;https://stac.earthgenome.org/&#39;</span>)</span></code></pre></div>
+<p>We define a location and time of interest to get some satellite
+imagery.</p>
+<div class="sourceCode" id="cb215"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb215-1"><a href="#cb215-1" tabindex="-1"></a>bbox <span class="op">=</span> geometry.total_bounds</span>
+<span id="cb215-2"><a href="#cb215-2" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<p>Search the catalog for matching tiles for the selected year.</p>
+<div class="sourceCode" id="cb216"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb216-1"><a href="#cb216-1" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb216-2"><a href="#cb216-2" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel2-temporal-mosaics&#39;</span>],</span>
+<span id="cb216-3"><a href="#cb216-3" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb216-4"><a href="#cb216-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb216-5"><a href="#cb216-5" tabindex="-1"></a>)</span>
+<span id="cb216-6"><a href="#cb216-6" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb216-7"><a href="#cb216-7" tabindex="-1"></a></span>
+<span id="cb216-8"><a href="#cb216-8" tabindex="-1"></a><span class="co"># The annual mosaics have a date range that goes from</span></span>
+<span id="cb216-9"><a href="#cb216-9" tabindex="-1"></a><span class="co"># 1-Jan-{year} to 1-jan-{year+1}</span></span>
+<span id="cb216-10"><a href="#cb216-10" tabindex="-1"></a><span class="co"># This matches items for 2 years in the above query</span></span>
+<span id="cb216-11"><a href="#cb216-11" tabindex="-1"></a><span class="co"># We filter these using the start_datetime and end_datetime</span></span>
+<span id="cb216-12"><a href="#cb216-12" tabindex="-1"></a><span class="co"># properties in the item metadata</span></span>
+<span id="cb216-13"><a href="#cb216-13" tabindex="-1"></a></span>
+<span id="cb216-14"><a href="#cb216-14" tabindex="-1"></a><span class="co"># Create a start and end datetime strings</span></span>
+<span id="cb216-15"><a href="#cb216-15" tabindex="-1"></a>start_date <span class="op">=</span> datetime(year, <span class="dv">1</span>, <span class="dv">1</span>).strftime(<span class="st">&#39;%Y-%m-</span><span class="sc">%d</span><span class="st">T%H:%M:%SZ&#39;</span>)</span>
+<span id="cb216-16"><a href="#cb216-16" tabindex="-1"></a>end_date <span class="op">=</span> datetime(year <span class="op">+</span> <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>).strftime(<span class="st">&#39;%Y-%m-</span><span class="sc">%d</span><span class="st">T%H:%M:%SZ&#39;</span>)</span>
+<span id="cb216-17"><a href="#cb216-17" tabindex="-1"></a></span>
+<span id="cb216-18"><a href="#cb216-18" tabindex="-1"></a>items_filtered <span class="op">=</span> [</span>
+<span id="cb216-19"><a href="#cb216-19" tabindex="-1"></a>    item <span class="cf">for</span> item <span class="kw">in</span> items</span>
+<span id="cb216-20"><a href="#cb216-20" tabindex="-1"></a>    <span class="cf">if</span> item.properties[<span class="st">&#39;start_datetime&#39;</span>] <span class="op">==</span> start_date</span>
+<span id="cb216-21"><a href="#cb216-21" tabindex="-1"></a>    <span class="kw">and</span> item.properties[<span class="st">&#39;end_datetime&#39;</span>] <span class="op">==</span> end_date</span>
+<span id="cb216-22"><a href="#cb216-22" tabindex="-1"></a>]</span></code></pre></div>
+</div>
+<div id="load-stac-images-to-xarray-1" class="section level3">
+<h3>Load STAC Images to XArray</h3>
+<p>Load the matching images as a XArray Dataset.</p>
+<div class="sourceCode" id="cb217"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb217-1"><a href="#cb217-1" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb217-2"><a href="#cb217-2" tabindex="-1"></a>    items_filtered,</span>
+<span id="cb217-3"><a href="#cb217-3" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;B04&#39;</span>, <span class="st">&#39;B03&#39;</span>, <span class="st">&#39;B02&#39;</span>],</span>
+<span id="cb217-4"><a href="#cb217-4" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb217-5"><a href="#cb217-5" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb217-6"><a href="#cb217-6" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1000</span>, <span class="st">&#39;y&#39;</span>:<span class="dv">1000</span>},  <span class="co"># &lt;-- use Dask</span></span>
+<span id="cb217-7"><a href="#cb217-7" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb217-8"><a href="#cb217-8" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb217-9"><a href="#cb217-9" tabindex="-1"></a>)</span>
+<span id="cb217-10"><a href="#cb217-10" tabindex="-1"></a>ds</span></code></pre></div>
+<p>Since all the tiles are for the same year, we can remove the time
+dimension.</p>
+<div class="sourceCode" id="cb218"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb218-1"><a href="#cb218-1" tabindex="-1"></a>scene <span class="op">=</span> ds.isel(time<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb218-2"><a href="#cb218-2" tabindex="-1"></a>scene</span></code></pre></div>
+<p>Each band of the scene is saved with integer pixel values (data type
+<code>uint16</code>). This help save the storage cost as storing the
+reflectance values as floating point numbers (data type
+<code>float64</code>) requires more storage. We need to convert the raw
+pixel values to reflectances by applying the <em>scale</em> values. The
+scale <code>0.0001</code>.</p>
+<div class="sourceCode" id="cb219"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb219-1"><a href="#cb219-1" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb219-2"><a href="#cb219-2" tabindex="-1"></a>scene <span class="op">=</span> scene<span class="op">*</span>scale</span></code></pre></div>
+<p>Convert to a DataArray.</p>
+<div class="sourceCode" id="cb220"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb220-1"><a href="#cb220-1" tabindex="-1"></a>scene_da <span class="op">=</span> scene.to_array(<span class="st">&#39;band&#39;</span>)</span>
+<span id="cb220-2"><a href="#cb220-2" tabindex="-1"></a>scene_da</span></code></pre></div>
+<div id="create-a-grid" class="section level4">
+<h4>Create a Grid</h4>
+<p>Instead of writing a single large file, we can tile the outputs into
+smaller tiles for ease of access.</p>
+<p>We start by creating a grid and specifying the size of each tile in
+pixels.</p>
+<div class="sourceCode" id="cb221"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb221-1"><a href="#cb221-1" tabindex="-1"></a>TILE_SIZE <span class="op">=</span> <span class="dv">10000</span></span></code></pre></div>
+<p>Reproject the geometry to match the CRS of the DataArray.</p>
+<div class="sourceCode" id="cb222"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb222-1"><a href="#cb222-1" tabindex="-1"></a>gdf_proj <span class="op">=</span> admin1_gdf.to_crs(scene_da.rio.crs)</span>
+<span id="cb222-2"><a href="#cb222-2" tabindex="-1"></a>geometry_crs <span class="op">=</span> gdf_proj.geometry</span></code></pre></div>
+<div class="sourceCode" id="cb223"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb223-1"><a href="#cb223-1" tabindex="-1"></a>left, bottom, right, top <span class="op">=</span> scene_da.rio.bounds()</span>
+<span id="cb223-2"><a href="#cb223-2" tabindex="-1"></a>minx, miny, maxx, maxy <span class="op">=</span> gdf_proj.total_bounds</span>
+<span id="cb223-3"><a href="#cb223-3" tabindex="-1"></a>res_x <span class="op">=</span> (right <span class="op">-</span> left) <span class="op">/</span> scene_da.sizes[<span class="st">&#39;x&#39;</span>]</span>
+<span id="cb223-4"><a href="#cb223-4" tabindex="-1"></a>res_y <span class="op">=</span> (top <span class="op">-</span> bottom) <span class="op">/</span> scene_da.sizes[<span class="st">&#39;y&#39;</span>]</span>
+<span id="cb223-5"><a href="#cb223-5" tabindex="-1"></a>TILE_SIZE_M <span class="op">=</span> TILE_SIZE <span class="op">*</span> res_x  <span class="co"># e.g. 10000 * 10.0 = 100000m</span></span>
+<span id="cb223-6"><a href="#cb223-6" tabindex="-1"></a></span>
+<span id="cb223-7"><a href="#cb223-7" tabindex="-1"></a>xs <span class="op">=</span> np.arange(minx, maxx, TILE_SIZE_M)</span>
+<span id="cb223-8"><a href="#cb223-8" tabindex="-1"></a>ys <span class="op">=</span> np.arange(miny, maxy, TILE_SIZE_M)</span>
+<span id="cb223-9"><a href="#cb223-9" tabindex="-1"></a></span>
+<span id="cb223-10"><a href="#cb223-10" tabindex="-1"></a>tiles <span class="op">=</span> [</span>
+<span id="cb223-11"><a href="#cb223-11" tabindex="-1"></a>    box(x, y, x <span class="op">+</span> TILE_SIZE_M, y <span class="op">+</span> TILE_SIZE_M)</span>
+<span id="cb223-12"><a href="#cb223-12" tabindex="-1"></a>    <span class="cf">for</span> y <span class="kw">in</span> <span class="bu">sorted</span>(ys, reverse<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb223-13"><a href="#cb223-13" tabindex="-1"></a>    <span class="cf">for</span> x <span class="kw">in</span> xs</span>
+<span id="cb223-14"><a href="#cb223-14" tabindex="-1"></a>]</span>
+<span id="cb223-15"><a href="#cb223-15" tabindex="-1"></a></span>
+<span id="cb223-16"><a href="#cb223-16" tabindex="-1"></a>grid <span class="op">=</span> gpd.GeoDataFrame(geometry<span class="op">=</span>tiles, crs<span class="op">=</span>scene_da.rio.crs)</span>
+<span id="cb223-17"><a href="#cb223-17" tabindex="-1"></a>grid <span class="op">=</span> grid[grid.intersects(gdf_proj.union_all())].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb223-18"><a href="#cb223-18" tabindex="-1"></a>grid[<span class="st">&#39;tile_id&#39;</span>] <span class="op">=</span> [</span>
+<span id="cb223-19"><a href="#cb223-19" tabindex="-1"></a>    <span class="ss">f&#39;tile_</span><span class="sc">{</span>(i <span class="op">//</span> <span class="bu">len</span>(ys)) <span class="op">+</span> <span class="dv">1</span><span class="sc">:02d}</span><span class="ss">_</span><span class="sc">{</span>(i <span class="op">%</span> <span class="bu">len</span>(ys)) <span class="op">+</span> <span class="dv">1</span><span class="sc">:02d}</span><span class="ss">&#39;</span></span>
+<span id="cb223-20"><a href="#cb223-20" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> grid.index</span>
+<span id="cb223-21"><a href="#cb223-21" tabindex="-1"></a>]</span>
+<span id="cb223-22"><a href="#cb223-22" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;</span><span class="sc">{</span><span class="bu">len</span>(grid)<span class="sc">}</span><span class="ss"> tiles intersect geometry&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb224"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb224-1"><a href="#cb224-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb224-2"><a href="#cb224-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb224-3"><a href="#cb224-3" tabindex="-1"></a></span>
+<span id="cb224-4"><a href="#cb224-4" tabindex="-1"></a>gdf_proj.plot(</span>
+<span id="cb224-5"><a href="#cb224-5" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb224-6"><a href="#cb224-6" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb224-7"><a href="#cb224-7" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>)</span>
+<span id="cb224-8"><a href="#cb224-8" tabindex="-1"></a></span>
+<span id="cb224-9"><a href="#cb224-9" tabindex="-1"></a>grid.plot(</span>
+<span id="cb224-10"><a href="#cb224-10" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb224-11"><a href="#cb224-11" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb224-12"><a href="#cb224-12" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;blue&#39;</span>,</span>
+<span id="cb224-13"><a href="#cb224-13" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb224-14"><a href="#cb224-14" tabindex="-1"></a></span>
+<span id="cb224-15"><a href="#cb224-15" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb224-16"><a href="#cb224-16" tabindex="-1"></a>plt.show()</span></code></pre></div>
+</div>
+<div id="save-the-tiles" class="section level4">
+<h4>Save the Tiles</h4>
+<p>We can save the tiles to a Google Cloud Storage (GCS) bucket. You may
+also just save them locally if you wish.</p>
+<div class="sourceCode" id="cb225"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb225-1"><a href="#cb225-1" tabindex="-1"></a><span class="co"># Specify your project ID and Bucket name</span></span>
+<span id="cb225-2"><a href="#cb225-2" tabindex="-1"></a>project_id <span class="op">=</span> <span class="st">&#39;python-363014&#39;</span></span>
+<span id="cb225-3"><a href="#cb225-3" tabindex="-1"></a>bucket_name <span class="op">=</span> <span class="st">&#39;spatialthoughts-public-data&#39;</span></span>
+<span id="cb225-4"><a href="#cb225-4" tabindex="-1"></a>sub_folder <span class="op">=</span> <span class="st">&#39;sentinel-2/cloud-free-mosaics&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb226"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb226-1"><a href="#cb226-1" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;google.colab&#39;</span> <span class="kw">in</span> <span class="bu">str</span>(get_ipython()):</span>
+<span id="cb226-2"><a href="#cb226-2" tabindex="-1"></a>  <span class="im">from</span> google.colab <span class="im">import</span> auth</span>
+<span id="cb226-3"><a href="#cb226-3" tabindex="-1"></a>  <span class="im">from</span> google.cloud <span class="im">import</span> storage</span>
+<span id="cb226-4"><a href="#cb226-4" tabindex="-1"></a></span>
+<span id="cb226-5"><a href="#cb226-5" tabindex="-1"></a>  auth.authenticate_user()</span>
+<span id="cb226-6"><a href="#cb226-6" tabindex="-1"></a>  client <span class="op">=</span> storage.Client(project<span class="op">=</span>project_id)</span>
+<span id="cb226-7"><a href="#cb226-7" tabindex="-1"></a>  bucket <span class="op">=</span> client.get_bucket(bucket_name)</span>
+<span id="cb226-8"><a href="#cb226-8" tabindex="-1"></a></span>
+<span id="cb226-9"><a href="#cb226-9" tabindex="-1"></a>  <span class="bu">print</span>(<span class="ss">f&#39;Google Cloud Storage client initialized for project: </span><span class="sc">{</span>project_id<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb226-10"><a href="#cb226-10" tabindex="-1"></a>  <span class="bu">print</span>(<span class="ss">f&#39;Bucket </span><span class="sc">{</span>bucket_name<span class="sc">}</span><span class="ss"> selected.&#39;</span>)</span></code></pre></div>
+<p>We now fetch the data for each grid tile, clip it and save it as a
+COG.</p>
+<div class="sourceCode" id="cb227"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb227-1"><a href="#cb227-1" tabindex="-1"></a>geometry_crs <span class="op">=</span> gdf_proj.geometry</span>
+<span id="cb227-2"><a href="#cb227-2" tabindex="-1"></a></span>
+<span id="cb227-3"><a href="#cb227-3" tabindex="-1"></a>gcs_tile_paths <span class="op">=</span> []</span>
+<span id="cb227-4"><a href="#cb227-4" tabindex="-1"></a></span>
+<span id="cb227-5"><a href="#cb227-5" tabindex="-1"></a><span class="cf">for</span> _, row <span class="kw">in</span> grid.iterrows():</span>
+<span id="cb227-6"><a href="#cb227-6" tabindex="-1"></a>    tile_id <span class="op">=</span> row[<span class="st">&#39;tile_id&#39;</span>]</span>
+<span id="cb227-7"><a href="#cb227-7" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Processing </span><span class="sc">{</span>tile_id<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb227-8"><a href="#cb227-8" tabindex="-1"></a>    tile_bounds <span class="op">=</span> row.geometry.bounds  <span class="co"># (minx, miny, maxx, maxy)</span></span>
+<span id="cb227-9"><a href="#cb227-9" tabindex="-1"></a></span>
+<span id="cb227-10"><a href="#cb227-10" tabindex="-1"></a>    <span class="co"># Construct the GCS blob path relative to the bucket</span></span>
+<span id="cb227-11"><a href="#cb227-11" tabindex="-1"></a>    gcs_blob_path <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>sub_folder<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>tile_id<span class="sc">}</span><span class="ss">.tif&#39;</span></span>
+<span id="cb227-12"><a href="#cb227-12" tabindex="-1"></a>    gcs_tile_paths.append(<span class="ss">f&#39;/vsigs/</span><span class="sc">{</span>bucket<span class="sc">.</span>name<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>gcs_blob_path<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb227-13"><a href="#cb227-13" tabindex="-1"></a></span>
+<span id="cb227-14"><a href="#cb227-14" tabindex="-1"></a>    <span class="cf">if</span> bucket.blob(gcs_blob_path).exists():</span>
+<span id="cb227-15"><a href="#cb227-15" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Tile </span><span class="sc">{</span>tile_id<span class="sc">}</span><span class="ss"> already exists in GCS. Skipping.&#39;</span>)</span>
+<span id="cb227-16"><a href="#cb227-16" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb227-17"><a href="#cb227-17" tabindex="-1"></a></span>
+<span id="cb227-18"><a href="#cb227-18" tabindex="-1"></a>    <span class="co"># Pull only this tile into RAM</span></span>
+<span id="cb227-19"><a href="#cb227-19" tabindex="-1"></a>    tile <span class="op">=</span> scene_da.rio.clip_box(<span class="op">*</span>tile_bounds).compute()</span>
+<span id="cb227-20"><a href="#cb227-20" tabindex="-1"></a></span>
+<span id="cb227-21"><a href="#cb227-21" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb227-22"><a href="#cb227-22" tabindex="-1"></a>        tile_clipped <span class="op">=</span> tile.rio.clip(geometry_crs)</span>
+<span id="cb227-23"><a href="#cb227-23" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">Exception</span>:</span>
+<span id="cb227-24"><a href="#cb227-24" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb227-25"><a href="#cb227-25" tabindex="-1"></a></span>
+<span id="cb227-26"><a href="#cb227-26" tabindex="-1"></a>    <span class="co"># Save to a temporary local file first</span></span>
+<span id="cb227-27"><a href="#cb227-27" tabindex="-1"></a>    <span class="cf">with</span> tempfile.NamedTemporaryFile(suffix<span class="op">=</span><span class="st">&#39;.tif&#39;</span>, delete<span class="op">=</span><span class="va">False</span>) <span class="im">as</span> tmp_file:</span>
+<span id="cb227-28"><a href="#cb227-28" tabindex="-1"></a>        local_tile_path <span class="op">=</span> tmp_file.name</span>
+<span id="cb227-29"><a href="#cb227-29" tabindex="-1"></a></span>
+<span id="cb227-30"><a href="#cb227-30" tabindex="-1"></a>    tile_clipped.rio.to_raster(local_tile_path, driver<span class="op">=</span><span class="st">&#39;COG&#39;</span>)</span>
+<span id="cb227-31"><a href="#cb227-31" tabindex="-1"></a>    blob <span class="op">=</span> bucket.blob(gcs_blob_path)</span>
+<span id="cb227-32"><a href="#cb227-32" tabindex="-1"></a></span>
+<span id="cb227-33"><a href="#cb227-33" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Uploading </span><span class="sc">{</span>local_tile_path<span class="sc">}</span><span class="ss"> to gs://</span><span class="sc">{</span>bucket<span class="sc">.</span>name<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>gcs_blob_path<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb227-34"><a href="#cb227-34" tabindex="-1"></a>    blob.upload_from_filename(local_tile_path)</span>
+<span id="cb227-35"><a href="#cb227-35" tabindex="-1"></a></span>
+<span id="cb227-36"><a href="#cb227-36" tabindex="-1"></a>    os.remove(local_tile_path) <span class="co"># Clean up the local temporary file</span></span>
+<span id="cb227-37"><a href="#cb227-37" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Successfully uploaded </span><span class="sc">{</span>tile_id<span class="sc">}</span><span class="ss">.tif&#39;</span>)</span>
+<span id="cb227-38"><a href="#cb227-38" tabindex="-1"></a></span>
+<span id="cb227-39"><a href="#cb227-39" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;All tiles processed and uploaded to GCS.&#39;</span>)</span></code></pre></div>
+<p>To enable viewing and processing all the tiles as a single mosaic, we
+create a Virtual Dataset (VRT) file. This VRT references all the
+individual tiles and you can load this VRT file using QGIS or rioxarray
+which will load as the merged mosaic.</p>
+<div class="sourceCode" id="cb228"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb228-1"><a href="#cb228-1" tabindex="-1"></a><span class="cf">with</span> tempfile.NamedTemporaryFile(suffix<span class="op">=</span><span class="st">&#39;.vrt&#39;</span>, delete<span class="op">=</span><span class="va">False</span>) <span class="im">as</span> tmp_file:</span>
+<span id="cb228-2"><a href="#cb228-2" tabindex="-1"></a>    local_vrt_path <span class="op">=</span> tmp_file.name</span>
+<span id="cb228-3"><a href="#cb228-3" tabindex="-1"></a></span>
+<span id="cb228-4"><a href="#cb228-4" tabindex="-1"></a>vrt <span class="op">=</span> gdal.BuildVRT(local_vrt_path, gcs_tile_paths)</span>
+<span id="cb228-5"><a href="#cb228-5" tabindex="-1"></a>vrt.FlushCache()</span>
+<span id="cb228-6"><a href="#cb228-6" tabindex="-1"></a>vrt <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb228-7"><a href="#cb228-7" tabindex="-1"></a></span>
+<span id="cb228-8"><a href="#cb228-8" tabindex="-1"></a>vrt_blob_path <span class="op">=</span> <span class="ss">f&#39;</span><span class="sc">{</span>sub_folder<span class="sc">}</span><span class="ss">/mosaic.vrt&#39;</span></span>
+<span id="cb228-9"><a href="#cb228-9" tabindex="-1"></a>bucket.blob(vrt_blob_path).upload_from_filename(local_vrt_path)</span>
+<span id="cb228-10"><a href="#cb228-10" tabindex="-1"></a>os.remove(local_vrt_path)</span>
+<span id="cb228-11"><a href="#cb228-11" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;VRT uploaded to gs://</span><span class="sc">{</span>bucket<span class="sc">.</span>name<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>vrt_blob_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 <hr />
+</div>
 </div>
 </div>
 </div>

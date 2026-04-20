@@ -1,27 +1,29 @@
 ### Overview
+
 In this section, we will learn the basics of querying cloud-hosted data via [STAC](https://stacspec.org/en) and leverage parallel computing via [Dask](https://tutorial.xarray.dev/intermediate/xarray_and_dask.html).
 
 We will learn how to query a catalog of Sentinel-2 images to find the least-cloudy scene over a chosen area, visualize it and download it as a GeoTIFF file.
 
 ### Setup and Data Download
+
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
 ```
 
 
 ```python
-import os
 import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import pystac_client
-from odc import stac
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from odc import stac
 ```
 
 ### Dask
@@ -47,6 +49,7 @@ if 'google.colab' in str(get_ipython()):
 ```
 
 ### Spatio Temporal Asset Catalog (STAC)
+
 Spatio Temporal Asset Catalog (STAC) is an open standard for specifying and querying geospatial data. Data provider can share catalogs of satellite imagery ,climate datasets, LIDAR data, vector data etc. and specify asset metadata according to the STAC specifications. All STAC catalogs can be queried to find matching assets by time, location or metadata.
 
 
@@ -133,6 +136,7 @@ ds = stac.load(
     items,
     bands=['red', 'green', 'blue', 'nir'],
     resolution=10,
+    crs='utm',
     chunks={},  # <-- use Dask
     groupby='solar_day',
     preserve_original_order=True
@@ -238,6 +242,7 @@ plt.show()
 
 
 ### Exercise
+
 The `items` variable contains a list of STAC Items returned by the query. The code below iterates through each item and print its metadata stored in the `properties`. Extract the Sentinel-2 Product ID stored in `s2:product_uri` peroperty and print a list of all image ids returned by the query.
 
 

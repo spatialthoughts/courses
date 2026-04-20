@@ -13,8 +13,8 @@ Colab comes pre-installed with many Python packages. You can use a package by si
 
 
 ```python
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
 ```
 
 Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If you want to install any packages, you can run a command by prefixing the command with a `!`. For example, you can install third-party packages via `pip` using the command `!pip`.

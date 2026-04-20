@@ -13,11 +13,12 @@ The following blocks of code will install the required packages and download the
 %%capture
 if 'google.colab' in str(get_ipython()):
     !pip install pystac-client odc-stac rioxarray \
-      dask jupyter-server-proxy xrscipy
+      dask['distributed'] jupyter-server-proxy xrscipy
 ```
 
 
 ```python
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -102,6 +103,7 @@ ds = stac.load(
     bands=['red', 'green', 'blue', 'nir', 'scl'],
     bbox=bbox, # <-- load data only for the bbox
     resolution=10,
+    crs='utm',
     chunks={},  # <-- use Dask
     groupby='solar_day',
     preserve_original_order=True
@@ -190,8 +192,6 @@ Plot the time-series.
 
 
 ```python
-import matplotlib.dates as mdates
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(15, 7)
 
@@ -207,12 +207,6 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 ax.set_title('NDVI Time-Series')
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_32_0.png)
-    
-
 
 ### Interpolate and Smooth the time-series
 

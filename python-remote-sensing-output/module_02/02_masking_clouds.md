@@ -1,28 +1,30 @@
 ### Overview
+
 When working with optical satellite imagery, we need to ensure the cloudy-pixels are removed from analysis. Most providers supply QA bands detailing locations of cloudy pixels. There are also third-party cloud-masking packages that can be used to locate and mask cloudy pixels.
 
 In this section, we will use the Scene Classification (SCL) band supplied with Sentinel-2 Level-2A images to remove clouds and cloud-shadows from a scene.
 
 ### Setup and Data Download
+
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
 ```
 
 
 ```python
-import os
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+import os
 import pandas as pd
 import pystac_client
-from odc import stac
-import xarray as xr
 import rioxarray as rxr
+import xarray as xr
+from matplotlib.colors import ListedColormap
+from odc import stac
 ```
 
 
@@ -91,6 +93,7 @@ ds = stac.load(
     items,
     bands=['red', 'green', 'blue', 'scl'],
     resolution=10,
+    crs='utm',
     chunks={},  # <-- use Dask
     groupby='solar_day',
     preserve_original_order=True
