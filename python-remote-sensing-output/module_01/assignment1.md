@@ -1,3 +1,5 @@
+### Create a Landsat Composite
+
 Microsoft's [Planetary Computer Data Catalog]((https://planetarycomputer.microsoft.com/catalog)) hosts a large collection of remote sensing datasets and is served via STAC API.
 
 Your task is to access the [Landsat Collection 2 Level-2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2) collection and create a RGB median composite for Landsat-8 images for your chosen area of interest and year.
