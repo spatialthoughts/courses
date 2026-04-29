@@ -1142,7 +1142,7 @@ format, so it is efficient to fetch only the required columns.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" tabindex="-1"></a>adm1_name <span class="op">=</span> <span class="st">&#39;California&#39;</span></span>
 <span id="cb63-2"><a href="#cb63-2" tabindex="-1"></a></span>
 <span id="cb63-3"><a href="#cb63-3" tabindex="-1"></a>query <span class="op">=</span> <span class="ss">f&#39;&#39;&#39;</span></span>
-<span id="cb63-4"><a href="#cb63-4" tabindex="-1"></a><span class="ss">SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsText(geometry) AS geometry</span></span>
+<span id="cb63-4"><a href="#cb63-4" tabindex="-1"></a><span class="ss">SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsWKB(geometry) AS geometry</span></span>
 <span id="cb63-5"><a href="#cb63-5" tabindex="-1"></a><span class="ss">FROM read_parquet(&#39;</span><span class="sc">{</span>parquet_url<span class="sc">}</span><span class="ss">&#39;)</span></span>
 <span id="cb63-6"><a href="#cb63-6" tabindex="-1"></a><span class="ss">WHERE</span></span>
 <span id="cb63-7"><a href="#cb63-7" tabindex="-1"></a><span class="ss">  adm0_src = &#39;</span><span class="sc">{</span>country<span class="sc">}</span><span class="ss">&#39; and</span></span>
@@ -1154,9 +1154,10 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb63-1"><a h
 geometry column and the CRS.</p>
 <div class="sourceCode" id="cb64"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" tabindex="-1"></a>admin2_gdf <span class="op">=</span> gpd.GeoDataFrame(</span>
-<span id="cb64-2"><a href="#cb64-2" tabindex="-1"></a>    admin2_df, geometry<span class="op">=</span>gpd.GeoSeries.from_wkt(admin2_df.geometry), crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span></span>
-<span id="cb64-3"><a href="#cb64-3" tabindex="-1"></a>)</span>
-<span id="cb64-4"><a href="#cb64-4" tabindex="-1"></a>admin2_gdf</span></code></pre></div>
+<span id="cb64-2"><a href="#cb64-2" tabindex="-1"></a>    admin2_df,</span>
+<span id="cb64-3"><a href="#cb64-3" tabindex="-1"></a>    geometry<span class="op">=</span>gpd.GeoSeries.from_wkb(admin2_df[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="bu">bytes</span>)),</span>
+<span id="cb64-4"><a href="#cb64-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span>)</span>
+<span id="cb64-5"><a href="#cb64-5" tabindex="-1"></a>admin2_gdf</span></code></pre></div>
 <p>We can visualize the Admin2 polygons.</p>
 <div class="sourceCode" id="cb65"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
@@ -1250,7 +1251,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a h
 <span id="cb71-14"><a href="#cb71-14" tabindex="-1"></a><span class="ss">      subtype,</span></span>
 <span id="cb71-15"><a href="#cb71-15" tabindex="-1"></a><span class="ss">      country,</span></span>
 <span id="cb71-16"><a href="#cb71-16" tabindex="-1"></a><span class="ss">      region,</span></span>
-<span id="cb71-17"><a href="#cb71-17" tabindex="-1"></a><span class="ss">      ST_AsText(geometry) AS geometry</span></span>
+<span id="cb71-17"><a href="#cb71-17" tabindex="-1"></a><span class="ss">      ST_AsWKB(geometry) AS geometry</span></span>
 <span id="cb71-18"><a href="#cb71-18" tabindex="-1"></a><span class="ss">  FROM read_parquet(</span></span>
 <span id="cb71-19"><a href="#cb71-19" tabindex="-1"></a><span class="ss">      &#39;</span><span class="sc">{</span>s3_path<span class="sc">}</span><span class="ss">&#39;,</span></span>
 <span id="cb71-20"><a href="#cb71-20" tabindex="-1"></a><span class="ss">      filename=true,</span></span>
@@ -1272,13 +1273,15 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb71-1"><a h
 <p>View the resulting boundary.</p>
 <div class="sourceCode" id="cb72"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" tabindex="-1"></a>city_gdf <span class="op">=</span> gpd.GeoDataFrame(</span>
-<span id="cb72-2"><a href="#cb72-2" tabindex="-1"></a>    results, geometry<span class="op">=</span>gpd.GeoSeries.from_wkt(results.geometry), crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span></span>
-<span id="cb72-3"><a href="#cb72-3" tabindex="-1"></a>)</span>
-<span id="cb72-4"><a href="#cb72-4" tabindex="-1"></a></span>
-<span id="cb72-5"><a href="#cb72-5" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
-<span id="cb72-6"><a href="#cb72-6" tabindex="-1"></a>m.add_gdf(city_gdf, layer_name<span class="op">=</span><span class="st">&#39;City&#39;</span>, style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>:<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;weight&#39;</span>:<span class="fl">0.5</span>})</span>
-<span id="cb72-7"><a href="#cb72-7" tabindex="-1"></a>m.zoom_to_gdf(city_gdf)</span>
-<span id="cb72-8"><a href="#cb72-8" tabindex="-1"></a>m</span></code></pre></div>
+<span id="cb72-2"><a href="#cb72-2" tabindex="-1"></a>    results,</span>
+<span id="cb72-3"><a href="#cb72-3" tabindex="-1"></a>    geometry<span class="op">=</span>gpd.GeoSeries.from_wkb(results[<span class="st">&#39;geometry&#39;</span>].<span class="bu">apply</span>(<span class="bu">bytes</span>)),</span>
+<span id="cb72-4"><a href="#cb72-4" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;EPSG:4326&#39;</span></span>
+<span id="cb72-5"><a href="#cb72-5" tabindex="-1"></a>)</span>
+<span id="cb72-6"><a href="#cb72-6" tabindex="-1"></a></span>
+<span id="cb72-7"><a href="#cb72-7" tabindex="-1"></a>m <span class="op">=</span> leafmap.Map(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">500</span>)</span>
+<span id="cb72-8"><a href="#cb72-8" tabindex="-1"></a>m.add_gdf(city_gdf, layer_name<span class="op">=</span><span class="st">&#39;City&#39;</span>, style<span class="op">=</span>{<span class="st">&#39;color&#39;</span>:<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;weight&#39;</span>:<span class="fl">0.5</span>})</span>
+<span id="cb72-9"><a href="#cb72-9" tabindex="-1"></a>m.zoom_to_gdf(city_gdf)</span>
+<span id="cb72-10"><a href="#cb72-10" tabindex="-1"></a>m</span></code></pre></div>
 </div>
 </div>
 <div id="creating-a-median-composite" class="section level2">

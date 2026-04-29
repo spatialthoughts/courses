@@ -103,7 +103,7 @@ Notice that the dataset has a `geometry` column which stores the layer geometry.
 adm1_name = 'California'
 
 query = f'''
-SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsText(geometry) AS geometry
+SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsWKB(geometry) AS geometry
 FROM read_parquet('{parquet_url}')
 WHERE
   adm0_src = '{country}' and
@@ -118,8 +118,9 @@ We turn the results into a GeoPandas GeoDataFrame by specifying the geometry col
 
 ```python
 admin2_gdf = gpd.GeoDataFrame(
-    admin2_df, geometry=gpd.GeoSeries.from_wkt(admin2_df.geometry), crs='EPSG:4326'
-)
+    admin2_df,
+    geometry=gpd.GeoSeries.from_wkb(admin2_df['geometry'].apply(bytes)),
+    crs='EPSG:4326')
 admin2_gdf
 ```
 
@@ -220,7 +221,7 @@ query = f'''
       subtype,
       country,
       region,
-      ST_AsText(geometry) AS geometry
+      ST_AsWKB(geometry) AS geometry
   FROM read_parquet(
       '{s3_path}',
       filename=true,
@@ -246,7 +247,9 @@ View the resulting boundary.
 
 ```python
 city_gdf = gpd.GeoDataFrame(
-    results, geometry=gpd.GeoSeries.from_wkt(results.geometry), crs='EPSG:4326'
+    results,
+    geometry=gpd.GeoSeries.from_wkb(results['geometry'].apply(bytes)),
+    crs='EPSG:4326'
 )
 
 m = leafmap.Map(width=800, height=500)
