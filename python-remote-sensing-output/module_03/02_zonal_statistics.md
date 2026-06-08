@@ -40,22 +40,6 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 ```
 
-
-```python
-def download(url):
-    filename = os.path.join(data_folder, os.path.basename(url))
-    if not os.path.exists(filename):
-        from urllib.request import urlretrieve
-        local, _ = urlretrieve(url, filename)
-        print('Downloaded ' + local)
-
-census_folder = 'https://www2.census.gov/geo/tiger/GENZ2021/shp/'
-zones_file = 'cb_2021_us_county_500k.zip'
-
-for file in files:
-  download(census_folder + file)
-```
-
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
 
 
@@ -84,8 +68,8 @@ The dataframe has a column  as `STATE_NAME` having names of states that can be u
 
 
 ```python
-zones_file_path = os.path.join(data_folder, zones_file)
-
+zones_file_path = 'https://www2.census.gov/geo/tiger/GENZ2021/shp/' \
+  'cb_2021_us_county_500k.zip'
 zones_df = gpd.read_file(zones_file_path)
 state_gdf  = zones_df[zones_df['STATE_NAME'] == 'California'].copy()
 
@@ -98,7 +82,8 @@ We load the [Global Human Settlement Layer (GHSL)](https://ghsl.jrc.ec.europa.eu
 
 
 ```python
-raster_file_path = 'https://storage.googleapis.com/spatialthoughts-public-data/ghsl/GHS_POP_E2025_GLOBE_R2023A_54009_100_V1_0_cog.tif'
+raster_file_path = 'https://storage.googleapis.com/spatialthoughts-public-data/ghsl/' \
+    'GHS_POP_E2025_GLOBE_R2023A_54009_100_V1_0_cog.tif'
 da = rxr.open_rasterio(raster_file_path, chunks='auto', mask_and_scale=True)
 da
 ```
@@ -169,7 +154,7 @@ Convert the XArray Dataset back to a GeoDataFrame for tabular manipulation and e
 
 ```python
 aggregated_gdf = aggregated.xvec.to_geodataframe(name='population_sum', geometry='geometry')
-aggregated_gdf
+aggregated_gdf.head()
 ```
 
  Reset the index to convert the multi-index into columns, and select and rename columns to prepare the output.
@@ -180,7 +165,7 @@ aggregated_gdf
 output_gdf = aggregated_gdf.reset_index()
 output_gdf = output_gdf.rename(columns={'NAME': 'name', 'population_sum': 'population'})
 output_gdf = output_gdf[['name', 'population', 'geometry']]
-output_gdf
+output_gdf.head()
 ```
 
 Save the results as a GeoPackage file.
