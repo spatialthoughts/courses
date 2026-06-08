@@ -128,15 +128,6 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
-
-
-
-    
-![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_16_0.svg)
-    
-
-
-
 ### Load Data from GEE
 
 We will load the [VIIRS Nighttime Day/Night Annual Band Composites V2.1](https://developers.google.com/earth-engine/datasets/catalog/NOAA_VIIRS_DNB_ANNUAL_V21) dataset.
@@ -239,7 +230,14 @@ for i, ax in enumerate(axes.flat):
         fig.delaxes(ax)
 
 plt.tight_layout()
-plt.colorbar(im, ax=axes.ravel().tolist(), orientation='horizontal', fraction=0.03, pad=0.04, label='NTL Value')
+
+cbar_kwargs = {
+    'orientation':'horizontal',
+    'fraction': 0.03,
+    'pad': 0.05,
+    'extend':'neither',
+}
+plt.colorbar(im, ax=axes.ravel().tolist(), **cbar_kwargs)
 plt.show()
 ```
 
@@ -276,7 +274,7 @@ At this point we only have the geometries from the original vector data. It will
 
 
 ```python
-aggregated['name'] = ('geometry', aoi_gdf_reprojected['name'].values)
+aggregated['name'] = ('geometry', aoi_gdf['name'].values)
 aggregated = aggregated.assign_coords({'name': aggregated['name']})
 aggregated
 ```
@@ -304,7 +302,7 @@ output_gdf
 import matplotlib.pyplot as plt
 
 # Create the plot
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 4))
 plt.plot(output_gdf['time'], output_gdf['ntl_mean'], marker='o')
 
 # Add labels and title
