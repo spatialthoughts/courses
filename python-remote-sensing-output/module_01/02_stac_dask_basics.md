@@ -17,6 +17,7 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
+import dask
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
@@ -167,7 +168,23 @@ scene
 print(f'Scene size: {scene.nbytes/1e6:.2f} MB.')
 ```
 
-This scene is small enough to fit into RAM, so let's call `compute()` to load this into memory. Dask will query the cloud-hosted dataset to fetch the required pixels. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
+This scene is small enough to fit into RAM, so we can load it into memory. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. We can visualize the Dask graph to know the steps required to compute each chunk.
+
+
+```python
+dask.visualize(scene, optimize_graph=True, size='5x5')
+```
+
+
+
+
+    
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_31_0.png)
+    
+
+
+
+Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
 
 
 ```python
@@ -237,7 +254,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_43_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_45_0.png)
     
 
 

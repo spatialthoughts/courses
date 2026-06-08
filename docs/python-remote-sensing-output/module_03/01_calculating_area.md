@@ -28,6 +28,7 @@ import rioxarray as rxr
 import xarray as xr
 from matplotlib import cm
 from odc import stac
+from odc.geo.geobox import GeoBox
 ```
 
 
@@ -233,6 +234,12 @@ ax.set_axis_off()
 ax.set_title('Landcover Classes from ESA WorldCover');
 ```
 
+
+    
+![](python-remote-sensing-output/module_03/01_calculating_area_files/01_calculating_area_31_0.png)
+    
+
+
 ### Exercise
 Select a single landcover class and plot it.
 
@@ -293,9 +300,10 @@ area_df.to_csv(output_filepath, index=False)
 ```
 
 ### Calculating Area for Large Regions
+
 Our previous approach required loading the entire array of landcover classes in the memory using `.values`. If our dataset is very large, this will cause us to run out of memory and result in a crash. We can instead use `dask` to chunk the data which lazily loads each chunk into memory only when processing it.
 
-Let's read a shapefile for the boundary of a larse state in India.
+Let's read a shapefile for the boundary of a large state in India.
 
 
 ```python
