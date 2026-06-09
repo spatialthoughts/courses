@@ -13,6 +13,9 @@ The following blocks of code will install the required packages and download the
 ```python
 if 'google.colab' in str(get_ipython()):
     !pip install rioxarray scikit-learn aef-loader dask[distributed]
+    # Due to version conflict, you maybe prompted to
+    # restart the runtime after the installation
+    # After restarting proceed to run the cell below
 ```
 
 
@@ -26,7 +29,7 @@ import os
 import pandas as pd
 import rioxarray as rxr
 import xarray as xr
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 import asyncio
@@ -241,12 +244,9 @@ gcp_embeddings
 gcp_embeddings = gcp_embeddings.compute()
 ```
 
-
-```python
-gcp_embeddings
-```
-
 ### Train a Classifier
+
+We can now train a classifier with these extracted features. Scikit-learn has a wide-array of classifiers that we can choose from. For most remote sensing applications, [Random Forest](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) is the preferred classifier. However, a good choice for low-shot classification (classification using a very small number of examples, like our example), is [k-Nearest Neighbors (kNN)](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html). In a kNN classification, labeled examples are used to “partition” or cluster the embedding space, assigning a label for each pixel based on the label(s) of its closest neighbor(s) in the embedding space. Embeddings lend themselves very well to such partitioning. Let’s train a kNN classifier with our training data
 
 
 ```python
@@ -254,19 +254,16 @@ gcp_embeddings
 X = gcp_embeddings.values.T # Transpose to have (n_samples, n_features)
 y = gcp_embeddings['landcover'].values
 
-# Initialize the Random Forest Classifier
-# Using random_state for reproducibility
-classifier = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+# Initialize the KNeighborsClassifier
+# Using n_neighbors=5 as a common starting point
+classifier = KNeighborsClassifier(n_neighbors=5, weights="distance", n_jobs=1)
 
 # Train the classifier
 classifier.fit(X, y)
-
-print("RandomForestClassifier trained successfully!")
-print(f"Number of features: {classifier.n_features_in_}")
-print(f"Number of classes: {classifier.n_classes_}")
 ```
 
-### Classify the Embeddings Image
+### Classify the Image
+
 
 
 ```python
@@ -411,7 +408,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/01_supervised_classification_files/01_supervised_classification_34_0.png)
+![](python-remote-sensing-output/module_04/01_supervised_classification_files/01_supervised_classification_33_0.png)
     
 
 
