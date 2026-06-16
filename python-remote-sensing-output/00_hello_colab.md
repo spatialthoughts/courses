@@ -1,20 +1,20 @@
 [Google Colab](https://colab.research.google.com/) is a hosted Jupyter notebook environment that allows anyone to run Python code via a web-browser. It provides you free computation and data storage that can be utilized by your Python code.
 
-You can click the `+Code` button to create a new cell and enter a block of code. To run the code, click the **Run Code** button next to the cell, or press `Shirt+Enter` key.
+You can click the `+Code` button to create a new cell and enter a block of code. To run the code, click the **Run Code** button next to the cell, or press `Shift+Enter` key.
 
 
 ```python
 print('Hello World')
 ```
 
-#### Package Management
+### Package Management
 
 Colab comes pre-installed with many Python packages. You can use a package by simply importing it.
 
 
 ```python
-import geopandas as gpd
 import pandas as pd
+import geopandas as gpd
 ```
 
 Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If you want to install any packages, you can run a command by prefixing the command with a `!`. For example, you can install third-party packages via `pip` using the command `!pip`.
@@ -31,7 +31,7 @@ Each Colab notebook instance is run on a Ubuntu Linux machine in the cloud. If y
 import rioxarray
 ```
 
-#### Data Management
+### Data Management
 
 Colab provides 100GB of disk space along with your notebook. This can be used to store your data, intermediate outputs and results.
 
@@ -91,7 +91,9 @@ capitals = places[places['adm0cap'] == 1]
 capitals
 ```
 
-We can write the results to the disk as a GeoPackage file.
+### Saving Outputs
+
+We can write the results to the disk as a GeoPackage file. After running the cell, open the **Files** tab from the left-hand panel in Colab and browse to the `output` folder. Locate the `capitals.gpkg` file and click the **⋮** button and select *Download* to download the file locally.
 
 
 ```python
@@ -100,9 +102,7 @@ output_path = os.path.join(output_folder, output_file)
 capitals.to_file(driver='GPKG', filename=output_path)
 ```
 
-You can open the **Files** tab from the left-hand panel in Colab and browse to the `output` folder. Locate the `capitals.gpkg` file and click the **⋮** button and select *Download* to download the file locally.
-
-Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
+The local disk is not persistent and the data will be deleted when the Colab Runtime is disconnected. Instead, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
 
 Run the following cell to authenticate and mount the Google Drive.
 
@@ -116,21 +116,71 @@ if 'google.colab' in str(get_ipython()):
 
 ```python
 drive_folder_root = 'MyDrive'
-output_folder = 'data'
-drive_folder_path = os.path.join(
-    '/content/drive', drive_folder_root, output_folder)
-
-# Check if Google Drive is mounted
-if not os.path.exists('/content/drive'):
-    print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-else:
-    if not os.path.exists(drive_folder_path):
-        os.makedirs(drive_folder_path)
+output_folder = 'python-remote-sensing'
 ```
 
 
 ```python
-output_file_path = os.path.join(drive_folder_path, output_file)
-output_path = os.path.join(drive_folder_path, output_file)
-capitals.to_file(driver='GPKG', filename=output_path)
+if 'google.colab' in str(get_ipython()):
+  output_folder_path = os.path.join(
+      '/content/drive', drive_folder_root, output_folder)
+
+  # Check if Google Drive is mounted
+  if not os.path.exists('/content/drive'):
+      print('Google Drive is not mounted. ',
+            'Please run the cell above to mount your drive.')
+  else:
+      if not os.path.exists(output_folder_path):
+          os.makedirs(output_folder_path)
+          print(f'Created {output_folder_path}')
+```
+
+
+```python
+output_file = 'capitals.gpkg'
+output_path = os.path.join(output_folder_path, output_file)
+capitals.to_file(output_path)
+```
+
+### Using the Terminal (Advanced)
+
+A recent update to Google Colab added support for [Terminal](https://medium.com/google-colab/colab-terminal-is-now-free-for-all-users-9a10eaef2ca8) within Google Colab. Terminal access allows you to run Linux commands directly on your Colab Runtime and gives you advanced capabilities to do more analysis in the cloud.
+
+You can open the terminal by clicking on the **Terminal** button in the bottom left of the notebook.
+
+The Terminal opens in the default `/content` directory. As we have created a `data` folder, we can use the `cd` command to navigate to it and `ls` command to list the files.
+
+```
+cd data
+ls
+```
+
+#### Downloading Data
+
+As we have access to standard Linux commands, we can use `wget` command to download data from the internet.
+
+```
+wget https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_annual/tifs/chirps-v2.0.2024.tif
+```
+
+#### Installing Packages
+
+We can use the popular [GDAL](https://gdal.org/) utilities to help conversion of data formats. Run the following command to install the `gdal-bin` package.
+
+```
+apt-get install gdal-bin
+```
+
+#### Data Conversion
+
+We can use the `gdal_translate` command to convert the downloaded GeoTIFF file to a Cloud-Optimized GeoTIFF.
+
+```
+gdal_translate -of COG chirps-v2.0.2024.tif chirps-v2.0.2024_cog.tif
+```
+
+We can copy the resulting file to our Google Drive folder using the Linux `cp` command.
+
+```
+cp chirps-v2.0.2024_cog.tif /content/drive/MyDrive/python-remote-sensing/
 ```

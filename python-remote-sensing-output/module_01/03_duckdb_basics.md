@@ -1,6 +1,6 @@
 ### Overview
 
-In this section, we will explore cloud-native vector datasets and use [DuckDB](https://duckdb.org/) to query and load data directly from cloud.
+In this section, we will explore cloud-native vector datasets and use [DuckDB](https://duckdb.org/) to query and load data directly from cloud. We also use [Lonboard](https://developmentseed.org/lonboard/latest/) for interactively visualizing query results.
 
 ### Overview of the Task
 
@@ -10,14 +10,14 @@ We will query and load an Administrative Boundaries dataset provided by FieldMap
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install leafmap
+    !pip install lonboard
 ```
 
 
 ```python
 import duckdb
 import geopandas as gpd
-import leafmap.foliumap as leafmap
+from lonboard import viz
 import os
 ```
 
@@ -128,10 +128,7 @@ We can visualize the Admin2 polygons.
 
 
 ```python
-m = leafmap.Map(width=800, height=500)
-m.add_gdf(admin2_gdf, layer_name='Admin2', style={'color':'blue', 'weight':0.5})
-m.zoom_to_gdf(admin2_gdf)
-m
+viz(admin2_gdf)
 ```
 
 Select a single Admin2 region and extract the geometry.
@@ -207,7 +204,7 @@ region = 'US-NY'
 ```python
 # Overture does monthly releases of their dataset
 # Find the latest release at https://stac.overturemaps.org/
-OVERTURE_RELEASE = '2026-04-15.0'
+OVERTURE_RELEASE = '2026-05-20.0'
 
 s3_path = (
         f's3://overturemaps-us-west-2/release/{OVERTURE_RELEASE}/'
@@ -217,7 +214,8 @@ s3_path = (
 query = f'''
   SELECT
       id,
-      names.primary AS name,
+      names.primary AS primary_name,
+      names.common.en AS common_name,
       subtype,
       country,
       region,
@@ -230,12 +228,12 @@ query = f'''
   WHERE subtype in ('locality', 'county', 'localadmin', 'region') AND
   country = '{country_iso2}' AND
   region = '{region}' AND
-  names.primary ILIKE '{city_name}'
-  AND is_land = true          -- exclude maritime extensions
+  --(names.primary ILIKE '%{city_name}%' OR names.common.en ILIKE '%{city_name}%') AND
+  is_land = true          -- exclude maritime extensions
   ORDER BY
     -- prefer 'locality' over other types
     CASE subtype WHEN 'locality' THEN 0 ELSE 1 END
-  LIMIT 1
+  LIMIT 100
 '''
 
 results = con.sql(query).df()
@@ -252,8 +250,5 @@ city_gdf = gpd.GeoDataFrame(
     crs='EPSG:4326'
 )
 
-m = leafmap.Map(width=800, height=500)
-m.add_gdf(city_gdf, layer_name='City', style={'color':'blue', 'weight':0.5})
-m.zoom_to_gdf(city_gdf)
-m
+viz(city_gdf)
 ```
