@@ -87,7 +87,6 @@ ds = stac_load(
     chunks={},  # <-- use Dask
     groupby='solar_day',
 )
-ds
 ```
 
 
@@ -106,6 +105,13 @@ We now have a `xarray.Dataset` object. Let's understand what is contained in a D
 * *Attributes*: This is the metadata associated with the dataset.
 
 <img src='https://courses.spatialthoughts.com/images/common/xarray_terminology.png' width=800/>
+
+Let's see our `Dataset` and see what variables, coordinates and dimensions it contains.
+
+
+```python
+ds
+```
 
 A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset.variable_name` syntax.
 
@@ -140,6 +146,13 @@ You can query for a values at using multiple dimensions.
 da.isel(time=-1, x=-1, y=-1).values
 ```
 
+You can use `.item()` on any output to get the standard Python scalar object.
+
+
+```python
+da.isel(time=-1, x=-1, y=-1).values.item()
+```
+
 We can also specify a value to query using the `sel()` method.
 
 Let's see what are the values of `time` variable.
@@ -154,7 +167,7 @@ We can query using the value of a coordinate using the `sel()` method.
 
 
 ```python
-da.sel(time='2023-12-16')
+da.sel(time='2023-11-16T05:11:11.658000000')
 ```
 
 The `sel()` method also support nearest neighbor lookups. This is useful when you do not know the exact label of the dimension, but want to find the closest one.
@@ -164,6 +177,13 @@ The `sel()` method also support nearest neighbor lookups. This is useful when yo
 
 ```python
 da.sel(time='2023-01-01', method='nearest')
+```
+
+We can query using partial data strings for broad matches as well.
+
+
+```python
+da.sel(time='2023-01')
 ```
 
 The `sel()` method also allows specifying range of values using Python's built-in `slice()` function. The code below will select all observations during January 2023.
@@ -216,7 +236,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_41_0.png)
+![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_47_0.png)
     
 
 
