@@ -141,6 +141,15 @@ geometry = selected.geometry.union_all()
 geometry
 ```
 
+
+
+
+    
+![](python-remote-sensing-output/module_01/03_duckdb_basics_files/03_duckdb_basics_24_0.svg)
+    
+
+
+
 ### Save the Results
 
 We can save the selected subset as a GeoPackage. Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
@@ -156,15 +165,19 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  drive_folder_root = 'MyDrive'
-  output_folder = 'data'
-  output_folder_path = os.path.join(
+drive_folder_root = 'MyDrive'
+output_folder = 'python-remote-sensing'
+drive_folder_path = os.path.join(
       '/content/drive', drive_folder_root, output_folder)
+```
 
+
+```python
+if 'google.colab' in str(get_ipython()):
+  output_folder_path = drive_folder_path
   # Check if Google Drive is mounted
   if not os.path.exists('/content/drive'):
-      print('Google Drive is not mounted. Please run the cell above to mount your drive.')
+      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
   else:
       if not os.path.exists(output_folder_path):
           os.makedirs(output_folder_path)
@@ -178,26 +191,40 @@ else:
 output_filename = 'admin2.gpkg'
 output_path = os.path.join(output_folder_path, output_filename)
 admin2_gdf.to_file(output_path)
+print(f'Saved to {output_path}')
 ```
 
 ### Exercise
 
-[Overture Maps](https://overturemaps.org/) provides free and open map data curated from sources like OpenStreetMap. The entire dataset is available in cloud-native [GeoParquet format](https://docs.overturemaps.org/getting-data/cloud-sources/). We can use it to query and extract city municipal boundary for any city.
+[Overture Maps](https://overturemaps.org/) provides free and open map data curated from sources like OpenStreetMap. The entire dataset is available in cloud-native [GeoParquet format](https://docs.overturemaps.org/getting-data/cloud-sources/).
 
-Search for your city/region of interest using [Overture Explorer](https://explore.overturemaps.org/) and replace the name, country and region with your own area of interest.
+Extract the boundary for your selected city and save it to your Google Drive in GeoJSON format as `aoi.geojson`.
 
-Tips:
 
+```python
+drive_folder_root = 'MyDrive'
+output_folder = 'python-remote-sensing'
+drive_folder_path = os.path.join(
+      '/content/drive', drive_folder_root, output_folder)
+aoi_filename = 'aoi.geojson'
+aoi_filepath = os.path.join(drive_folder_path, aoi_filename)
+aoi_filepath
+```
+
+#### Tips
+
+Use the cells below with the starter code.
+
+* Search for your city/region of interest using [Overture Explorer](https://explore.overturemaps.org/) and replace the name, country and region with your own area of interest.
 * Cities are not uniformly represented across the world. Some cities are tagged as *locality* while others with *county* or *localadmin*. The SQL query below tries to capture all the variations, but if you get no matches, you can relax the query by commenting out some lines by prefixing it with `--`.
-  * Comment the line with `region = '{region}'` to search other regions in the country.
-  * By default the boundary tagged as `locality` will be picked. To see other options comment the line starting with `LIMIT 1`.
+* By default the boundary tagged as `locality` will be picked. To see other options comment the line starting with `LIMIT 1`.
 
 
 
 ```python
-country_iso2 = 'US'
-city_name = 'New York'
-region = 'US-NY'
+country_iso2 = 'IN'
+city_name = 'Bengaluru'
+region = 'IN-KA'
 ```
 
 
@@ -228,12 +255,12 @@ query = f'''
   WHERE subtype in ('locality', 'county', 'localadmin', 'region') AND
   country = '{country_iso2}' AND
   region = '{region}' AND
-  --(names.primary ILIKE '%{city_name}%' OR names.common.en ILIKE '%{city_name}%') AND
+  (names.primary ILIKE '{city_name}' OR names.common.en ILIKE '{city_name}') AND
   is_land = true          -- exclude maritime extensions
   ORDER BY
     -- prefer 'locality' over other types
     CASE subtype WHEN 'locality' THEN 0 ELSE 1 END
-  LIMIT 100
+  LIMIT 1
 '''
 
 results = con.sql(query).df()

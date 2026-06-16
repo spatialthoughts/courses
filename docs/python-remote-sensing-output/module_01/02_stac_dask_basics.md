@@ -12,7 +12,8 @@ The following blocks of code will install the required packages and download the
 ```python
 %%capture
 if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
+      jupyter-server-proxy
 ```
 
 
@@ -21,10 +22,11 @@ import dask
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import numpy as np
 import pystac_client
 import rioxarray as rxr
 import xarray as xr
-from odc import stac
+from odc.stac import configure_s3_access, load
 ```
 
 ### Dask
@@ -64,6 +66,15 @@ Let's use [Earth Search by Element 84](https://stacindex.org/catalogs/earth-sear
 ```python
 catalog = pystac_client.Client.open(
     'https://earth-search.aws.element84.com/v1')
+```
+
+The STAC API Catalog offers several collections. Some of the collections are publicly-available (such as *Sentinel-2 Collection 1 Level-2A* (`sentinel-2-c1-l2a`)), while others are available in a [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) bucket. To access data from a requester-pays bucket, you will need to ssupply your AWS credentials. Here we are accessing freely available data, so we set the configuration to not use credentials.
+
+
+```python
+configure_s3_access(
+    aws_unsigned=True,
+)
 ```
 
 We define a location and time of interest to get some satellite imagery.
@@ -129,11 +140,11 @@ items
 
 ### Load STAC Images to XArray
 
-Load the matching images as a XArray Dataset.
+Load the matching images as a XArray Dataset using [`odc.stac.load()`](https://odc-stac.readthedocs.io/en/latest/_api/odc.stac.load.html). We need to specify the required resolution and projection. This `crs` parameter in the function accepts a special value **utm** which automatically picks the appropriate UTM projection for the region.
 
 
 ```python
-ds = stac.load(
+ds = load(
     items,
     bands=['red', 'green', 'blue', 'nir'],
     resolution=10,
@@ -175,15 +186,6 @@ This scene is small enough to fit into RAM, so we can load it into memory. As we
 dask.visualize(scene, optimize_graph=True, size='5x5')
 ```
 
-
-
-
-    
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_31_0.png)
-    
-
-
-
 Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
 
 
@@ -216,34 +218,70 @@ scene = scene*scale + offset
 
 ### Visualize the Scene
 
+We can create a low-resolution preview by resampling the DataArray from its native resolution. The raster metadata is stored in the [rio accessor](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors). This is enabled by the `rioxarray` library which provides geospatial functions on top of xarray.
+
+
+```python
+print('CRS:', scene.rio.crs)
+print('Resolution:', scene.rio.resolution())
+```
+
+This is a fairly large scene with a lot of pixels. For visualizing, we resample it to a lower resolution preview.
+
+
+```python
+preview = scene.rio.reproject(
+    scene.rio.crs, resolution=300
+)
+preview
+```
+
 To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
 
 
 
 ```python
-scene_da = scene.to_array('band')
-scene_da
+preview_da = preview.to_array('band')
+preview_da
 ```
 
-We can create a low-resolution preview by resampling the DataArray from its native resolution. The raster metadata is stored in the [rio accessor](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray-rio-accessors). This is enabled by the `rioxarray` library which provides geospatial functions on top of xarray.
+Let's visualize the scene with RGB bands.
 
 
 ```python
-print('CRS:', scene_da.rio.crs)
-print('Resolution:', scene_da.rio.resolution())
-```
-
-This is a fairly large scene with a lot of pixels. For visualizing, we resample it to a lower resolution preview. When plotting the image, the `robust=True` option applies a *98-percentile* stretch to find the optimal min/max values for visualization.
-
-
-```python
-preview = scene_da.rio.reproject(
-    scene_da.rio.crs, resolution=300
-)
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
+preview_da.sel(band=['red', 'green', 'blue']).plot.imshow(
+    ax=ax)
+ax.set_title('RGB Visualization')
+ax.set_axis_off()
+ax.set_aspect('equal')
+plt.show()
+```
+
+We can improve the contrast by supplying the `vmin` and `vmax` values. Typical range of reflectances is between 0-0.3 so we apply those.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+preview_da.sel(band=['red', 'green', 'blue']).plot.imshow(
+    ax=ax,
+    vmin=0,
+    vmax=0.3)
+ax.set_title('RGB Visualization')
+ax.set_axis_off()
+ax.set_aspect('equal')
+plt.show()
+```
+
+When plotting the image, we can supply `robust=True` option applies a *98-percentile* stretch to find the optimal min/max values for visualization.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+preview_da.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
     robust=True)
 ax.set_title('RGB Visualization')
@@ -254,7 +292,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_45_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_53_0.png)
     
 
 
