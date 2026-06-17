@@ -1,6 +1,9 @@
-Guide for writing cloud-native remote sensing code in Python using the patterns from this course. Apply these patterns and best practices when helping with remote sensing analysis.
+---
+name: cloud-native-remote-sensing
+description: Guide for writing cloud-native remote sensing code in Python using the patterns from this course. Invoke at the start of a session before writing or editing any analysis code — e.g. when creating a new notebook, adding a new workflow, or debugging an existing one. Apply these patterns and best practices when helping with remote sensing analysis.
+---
 
-**Invoke this at the start of a session** before writing or editing any analysis code — e.g. when creating a new notebook, adding a new workflow, or debugging an existing one. No need to re-invoke within the same session.
+# Cloud-Native Remote Sensing Guide
 
 ## Stack
 
@@ -17,31 +20,36 @@ Guide for writing cloud-native remote sensing code in Python using the patterns 
 
 ## Coding Best Practices
 
-- Write new code to be compatible with Google Colab, but use the pattern below to ensure the notebooks run without changes on other computing environments.
+- Write new code to be compatible with Google Colab, but use the pattern below to ensure the notebooks run without changes on other computing environments:
     `if 'google.colab' in str(get_ipython())`
-- Import all required packages at the top and sort all imports
+- Import all required packages at the top and sort all imports.
 - Add a Markdown cell before each code cell with a brief explanation and link to the function(s) official documentation.
 
+---
 
 ## Dask Setup
 
-- Always create a local Dask cluster at the start:
-    ```python
-    from dask.distributed import Client
-    client = Client()
-    ```
-- Defer processing as much as you can. Prefer dask-aware processes, such as rioxarray's `clip_box()` vs `clip()`.
-- Never call `.compute()` until the lazy graph is fully built (all masking, indexing, calculations done). Then compute once at the end.
-- Order of preference for usage of functions of calculations.
-    1. Built-in XArray functions. Such as aggregations `median()`, resampling `resample()`.
-    2. Built-in Dask array functions. Such as `da.histogram()`
-    3. Custom functions via `map_blocks()` for working with NumPy-backed data.
-    4. Custom functions via `apply_ufunc()` for third-party libraries.
+Always create a local Dask cluster at the start:
+
+```python
+from dask.distributed import Client
+client = Client()
+```
+
+- Defer processing as much as you can. Prefer dask-aware ops, such as `rioxarray`'s `clip_box()` over `clip()`.
+- Never call `.compute()` until the lazy graph is fully built (all masking, indexing, calculations done). Compute once at the end.
+- Order of preference for computations:
+    1. Built-in XArray functions — e.g. `median()`, `resample()`
+    2. Built-in Dask array functions — e.g. `da.histogram()`
+    3. Custom functions via `map_blocks()` for NumPy-backed data
+    4. Custom functions via `apply_ufunc()` for third-party libraries
+
+---
 
 ## XArray Setup
 
-- Always use vectorized functions and avoid iterations whenever possible. i.e. `scene[data_bands].where(~mask)` vs. a for-loop to iterate over each band.
-- Prefer packages from XArray ecosystem
+- Always use vectorized functions and avoid iterations — e.g. `scene[data_bands].where(~mask)` instead of a per-band loop.
+- Prefer packages from the XArray ecosystem.
 
 ---
 
@@ -79,15 +87,15 @@ search = catalog.search(
 items = search.item_collection()
 ```
 
-When searching for a dataset that match a request, search the STAC Catalogs to fetch names and descriptions.
+When searching for a dataset, search the STAC Catalogs to fetch names and descriptions.
 
 Key STAC Catalogs:
-- Earth Search https://earth-search.aws.element84.com/v1/
-- Microsoft Planetary Computer STAC API https://planetarycomputer.microsoft.com/api/stac/v1/
-- NASA Common Metadata Repository CMR https://cmr.earthdata.nasa.gov/cloudstac/
-- OpenLandMap https://s3.eu-central-1.wasabisys.com/stac/openlandmap/catalog.json
+- Earth Search: `https://earth-search.aws.element84.com/v1/`
+- Microsoft Planetary Computer: `https://planetarycomputer.microsoft.com/api/stac/v1/`
+- NASA CMR: `https://cmr.earthdata.nasa.gov/cloudstac/`
+- OpenLandMap: `https://s3.eu-central-1.wasabisys.com/stac/openlandmap/catalog.json`
 
-If the dataset is not found in above, look for other catalogs at https://stacindex.org/catalogs
+If the dataset is not in the above, search `https://stacindex.org/catalogs`.
 
 ---
 
@@ -108,6 +116,7 @@ ds = load(
 ```
 
 For large regions, use explicit chunk sizes to avoid OOM:
+
 ```python
 chunks={'x': 5000, 'y': 5000}
 ```
@@ -142,11 +151,11 @@ ds = ds[data_bands].where(~cloud_mask)
 ## Spectral Indices
 
 ```python
-scene_da = ds.to_array('band')  # Dataset → DataArray with 'band' dim
+scene_da = ds.to_array('band')  # Dataset -> DataArray with 'band' dim
 
-red = scene_da.sel(band='red')
-nir = scene_da.sel(band='nir')
-green = scene_da.sel(band='green')
+red    = scene_da.sel(band='red')
+nir    = scene_da.sel(band='nir')
+green  = scene_da.sel(band='green')
 swir16 = scene_da.sel(band='swir16')
 
 ndvi  = (nir - red) / (nir + red)
@@ -183,7 +192,7 @@ fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5, 5)
 preview.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
-    robust=True,   # 2nd–98th percentile stretch; or use vmin/vmax=0,0.3
+    robust=True,   # 2nd-98th percentile stretch; or use vmin/vmax=0,0.3
 )
 ax.set_axis_off()
 ax.set_aspect('equal')
@@ -192,6 +201,7 @@ plt.show()
 ```
 
 Manual percentile stretch:
+
 ```python
 vmin, vmax = np.nanpercentile(preview.values, (1, 95))
 ```
@@ -244,6 +254,7 @@ gdf = gpd.GeoDataFrame(
 ```
 
 Overture Maps city boundary query pattern:
+
 ```python
 OVERTURE_RELEASE = '2026-05-20.0'
 s3_path = f's3://overturemaps-us-west-2/release/{OVERTURE_RELEASE}/theme=divisions/type=division_area/*'
@@ -388,9 +399,9 @@ utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
 
 ## Common Gotchas
 
-- Sentinel-2 SCL band must **not** have scale/offset applied — filter it from `data_bands` before scaling
-- `stac.load()` with `chunks={}` gives Dask arrays but without explicit chunk size may OOM on large regions — set `chunks={'x': 5000, 'y': 5000}` for state/country-scale analysis
-- `preserve_original_order=True` in `stac.load()` is needed to keep the sort order from the STAC search (e.g. least-cloudy first)
-- After `groupby='solar_day'` the `time` dimension is sorted ascending — use the item timestamp to index the desired scene, not its original position
-- When pre-filtering STAC items from OpenLandMap or similar catalogs, the `bbox` metadata may be unreliable — use `shapely` `.intersects()` to filter items before passing to `stac.load()`
-- `rioxarray` ops (`.clip()`, `.to_raster()`) require the CRS to be set — check `da.rio.crs` before calling these
+- Sentinel-2 SCL band must **not** have scale/offset applied — filter it from `data_bands` before scaling.
+- `stac.load()` with `chunks={}` gives Dask arrays but without explicit chunk size may OOM on large regions — set `chunks={'x': 5000, 'y': 5000}` for state/country-scale analysis.
+- `preserve_original_order=True` in `stac.load()` is needed to keep the sort order from the STAC search (e.g. least-cloudy first).
+- After `groupby='solar_day'` the `time` dimension is sorted ascending — use the item timestamp to index the desired scene, not its original position.
+- When pre-filtering STAC items from OpenLandMap or similar catalogs, the `bbox` metadata may be unreliable — use `shapely` `.intersects()` to filter items before passing to `stac.load()`.
+- `rioxarray` ops (`.clip()`, `.to_raster()`) require the CRS to be set — check `da.rio.crs` before calling these.
