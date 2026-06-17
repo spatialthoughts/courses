@@ -77,13 +77,12 @@ configure_s3_access(
 )
 ```
 
-We define a location and time of interest to get some satellite imagery.
+We define a location to get some satellite imagery.
 
 
 ```python
 latitude = 27.163
 longitude = 82.608
-year = 2023
 ```
 
 
@@ -95,27 +94,27 @@ r = 1 * km2deg  # radius in degrees
 bbox = (x - r, y - r, x + r, y + r)
 ```
 
-Search the catalog for matching items.
+Search the catalog for matching items. See the documentation of the [`pystac_client.Client.search()`](https://pystac-client.readthedocs.io/en/latest/api.html#pystac_client.Client.search) method for details on the parameters and valid values.
 
 
 ```python
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
     bbox=bbox,
-    datetime=f'{year}'
+    datetime='2023-01-01/2023-12-31',
 )
 items = search.item_collection()
 items
 ```
 
-We can apply some additional metadata filters to look for images with less cloud cover and granules with less nodata pixels.
+The `datatime` parameter can take a range or a single datetime. Here we specify `2023` which gets expanded to the range for the full year. We can also apply some additional metadata filters using the `query` parameter to look for images with less cloud cover and granules with less nodata pixels.
 
 
 ```python
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
     bbox=bbox,
-    datetime=f'{year}',
+    datetime='2023',
     query={'eo:cloud_cover': {'lt': 30}, 's2:nodata_pixel_percentage': {'lt': 10}}
 )
 items = search.item_collection()
@@ -129,7 +128,7 @@ We can also sort the results by some metadata. Here we sort by cloud cover.
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
     bbox=bbox,
-    datetime=f'{year}',
+    datetime='2023',
     query={'eo:cloud_cover': {'lt': 30}, 's2:nodata_pixel_percentage': {'lt': 10}},
     sortby=[{'field': 'properties.eo:cloud_cover', 'direction': 'asc'}]
 
@@ -274,6 +273,12 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_51_0.png)
+    
+
 
 When plotting the image, we can supply `robust=True` option applies a *98-percentile* stretch to find the optimal min/max values for visualization.
 

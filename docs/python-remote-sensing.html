@@ -978,34 +978,38 @@ available data, so we set the configuration to not use credentials.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" tabindex="-1"></a>configure_s3_access(</span>
 <span id="cb47-2"><a href="#cb47-2" tabindex="-1"></a>    aws_unsigned<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb47-3"><a href="#cb47-3" tabindex="-1"></a>)</span></code></pre></div>
-<p>We define a location and time of interest to get some satellite
-imagery.</p>
+<p>We define a location to get some satellite imagery.</p>
 <div class="sourceCode" id="cb48"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
-<span id="cb48-2"><a href="#cb48-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
-<span id="cb48-3"><a href="#cb48-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<span id="cb48-2"><a href="#cb48-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span></code></pre></div>
 <div class="sourceCode" id="cb49"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" tabindex="-1"></a><span class="co"># Define a small bounding box around the chosen point</span></span>
 <span id="cb49-2"><a href="#cb49-2" tabindex="-1"></a>km2deg <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="dv">111</span></span>
 <span id="cb49-3"><a href="#cb49-3" tabindex="-1"></a>x, y <span class="op">=</span> (longitude, latitude)</span>
 <span id="cb49-4"><a href="#cb49-4" tabindex="-1"></a>r <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> km2deg  <span class="co"># radius in degrees</span></span>
 <span id="cb49-5"><a href="#cb49-5" tabindex="-1"></a>bbox <span class="op">=</span> (x <span class="op">-</span> r, y <span class="op">-</span> r, x <span class="op">+</span> r, y <span class="op">+</span> r)</span></code></pre></div>
-<p>Search the catalog for matching items.</p>
+<p>Search the catalog for matching items. See the documentation of the
+<a
+href="https://pystac-client.readthedocs.io/en/latest/api.html#pystac_client.Client.search"><code>pystac_client.Client.search()</code></a>
+method for details on the parameters and valid values.</p>
 <div class="sourceCode" id="cb50"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
 <span id="cb50-2"><a href="#cb50-2" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
 <span id="cb50-3"><a href="#cb50-3" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb50-4"><a href="#cb50-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb50-4"><a href="#cb50-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="st">&#39;2023-01-01/2023-12-31&#39;</span>,</span>
 <span id="cb50-5"><a href="#cb50-5" tabindex="-1"></a>)</span>
 <span id="cb50-6"><a href="#cb50-6" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
 <span id="cb50-7"><a href="#cb50-7" tabindex="-1"></a>items</span></code></pre></div>
-<p>We can apply some additional metadata filters to look for images with
+<p>The <code>datatime</code> parameter can take a range or a single
+datetime. Here we specify <code>2023</code> which gets expanded to the
+range for the full year. We can also apply some additional metadata
+filters using the <code>query</code> parameter to look for images with
 less cloud cover and granules with less nodata pixels.</p>
 <div class="sourceCode" id="cb51"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
 <span id="cb51-2"><a href="#cb51-2" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
 <span id="cb51-3"><a href="#cb51-3" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb51-4"><a href="#cb51-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb51-4"><a href="#cb51-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="st">&#39;2023&#39;</span>,</span>
 <span id="cb51-5"><a href="#cb51-5" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}, <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}}</span>
 <span id="cb51-6"><a href="#cb51-6" tabindex="-1"></a>)</span>
 <span id="cb51-7"><a href="#cb51-7" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
@@ -1016,7 +1020,7 @@ cover.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
 <span id="cb52-2"><a href="#cb52-2" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
 <span id="cb52-3"><a href="#cb52-3" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb52-4"><a href="#cb52-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb52-4"><a href="#cb52-4" tabindex="-1"></a>    datetime<span class="op">=</span><span class="st">&#39;2023&#39;</span>,</span>
 <span id="cb52-5"><a href="#cb52-5" tabindex="-1"></a>    query<span class="op">=</span>{<span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">30</span>}, <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}},</span>
 <span id="cb52-6"><a href="#cb52-6" tabindex="-1"></a>    sortby<span class="op">=</span>[{<span class="st">&#39;field&#39;</span>: <span class="st">&#39;properties.eo:cloud_cover&#39;</span>, <span class="st">&#39;direction&#39;</span>: <span class="st">&#39;asc&#39;</span>}]</span>
 <span id="cb52-7"><a href="#cb52-7" tabindex="-1"></a></span>
@@ -1146,6 +1150,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb66-1"><a h
 <span id="cb66-8"><a href="#cb66-8" tabindex="-1"></a>ax.set_axis_off()</span>
 <span id="cb66-9"><a href="#cb66-9" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
 <span id="cb66-10"><a href="#cb66-10" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_51_0.png" /></p>
 <p>When plotting the image, we can supply <code>robust=True</code>
 option applies a <em>98-percentile</em> stretch to find the optimal
 min/max values for visualization.</p>
