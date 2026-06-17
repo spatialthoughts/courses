@@ -1,5 +1,7 @@
 Guide for writing cloud-native remote sensing code in Python using the patterns from this course. Apply these patterns and best practices when helping with remote sensing analysis.
 
+**Invoke this at the start of a session** before writing or editing any analysis code — e.g. when creating a new notebook, adding a new workflow, or debugging an existing one. No need to re-invoke within the same session.
+
 ## Stack
 
 - `pystac_client` — STAC catalog search
