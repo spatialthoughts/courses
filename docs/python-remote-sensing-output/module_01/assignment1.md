@@ -30,7 +30,7 @@ Accessing data from Planetary Computer is free but requires getting a Shared Acc
 
 
 ```python
-ds = stac.load(
+ds = load(
     items,
     bands=['red', 'green', 'blue'],
     bbox=bbox,

@@ -139,7 +139,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/01_supervised_classification_files/01_supervised_classification_14_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_14_0.png)
     
 
 
@@ -408,7 +408,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/01_supervised_classification_files/01_supervised_classification_33_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_33_0.png)
     
 
 
