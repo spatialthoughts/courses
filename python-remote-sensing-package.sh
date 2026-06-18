@@ -41,6 +41,12 @@ for md in python-remote-sensing-output/**/*.md python-remote-sensing-output/*.md
 done
 #cp -R code/python_remote_sensing/solutions/* $SOLUTIONS_DIR/
 
+# Update spatialthoughts-ai-skills repository with the latest skill
+SKILLS_REPO=~/projects/spatialthoughts-ai-skills
+mkdir -p "$SKILLS_REPO/skills/cloud-native-remote-sensing"
+cp code/python_remote_sensing/.claude/skills/cloud-native-remote-sensing/SKILL.md \
+    "$SKILLS_REPO/skills/cloud-native-remote-sensing/SKILL.md"
+
 # Update python-remote-sensing-web repository
 #cp code/python_remote_sensing/*.ipynb $WEB_DIR/
 #cp code/python_remote_sensing/*.py $WEB_DIR/

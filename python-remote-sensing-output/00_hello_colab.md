@@ -81,14 +81,25 @@ The file is now in our local filesystem. We can construct the path to the data f
 file = 'ne_10m_populated_places_simple.zip'
 filepath = os.path.join(data_folder, file)
 places = gpd.read_file(filepath)
+places
 ```
 
-Let's do some data processing and write the results to a new file. The code below will filter all places which are also country capitals.
+### Using AI-Assisted Coding
+
+Google Colab comes with an Gemini AI assistant to help you write and debug code. You can click the *Gemini spark* icon in the notebook footer to open the main chat panel.
+
+Let's ask the assistant to write the code to filter our `places` DataFrame. You can write the following prompt and click *send* button:
+
+```
+Select all the places from `places` Dataframe which are country capitals and save to a new variable `capitals`.
+```
+
+The coding agent will add a new cell in the notebook like below.
 
 
 ```python
 capitals = places[places['adm0cap'] == 1]
-capitals
+display(capitals)
 ```
 
 ### Saving Outputs

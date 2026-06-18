@@ -282,7 +282,7 @@ We can manually apply a contrast stretch as well.
 
 ```python
 percentile_stretch = (1, 95)
-stretch_vmin, stretch_vmax = np.nanpercentile(preview_da.values, percentile_stretch)
+stretch_vmin, stretch_vmax = np.nanpercentile(preview.values, percentile_stretch)
 print(stretch_vmin, stretch_vmax)
 ```
 
