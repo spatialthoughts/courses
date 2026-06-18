@@ -1,15 +1,7 @@
 ### Overview
 
-This notebook builds a cloud-masked Sentinel-2 median composite for Bangalore, India and computes five spectral indices. The output is saved to Google Drive as a multiband Cloud-Optimized GeoTIFF for use in downstream analysis.
+We will prepare a multi-band composite containing spectral bands, spectral indices, elevation and slope. When the composite is used to extract training features for machine learning models, each band adds a different context for the model.
 
-**Workflow**
-
-1. Search the Earth Search STAC catalog for Sentinel-2 L2A scenes covering the area of interest
-2. Load the scenes as a lazy XArray Dataset using Dask
-3. Apply Sentinel-2 preprocessing: nodata mask, scale/offset correction, SCL cloud mask
-4. Aggregate all scenes into a single median composite
-5. Compute five spectral indices: NDVI, NDBI, BSI, MNDWI, NDWI
-6. Save the 11-band composite (6 spectral bands + 5 indices) to Google Drive as `multiband_composite.tif`
 
 ### Setup and Data Download
 
@@ -20,7 +12,7 @@ The following blocks of code will install the required packages and set up the c
 %%capture
 if 'google.colab' in str(get_ipython()):
     !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
-      jupyter-server-proxy
+      jupyter-server-proxy planetary_computer xarray-spatial
 ```
 
 
@@ -33,6 +25,8 @@ import pystac_client
 import rioxarray as rxr
 import xarray as xr
 from odc.stac import configure_s3_access, load
+import planetary_computer as pc
+from xrspatial import slope
 ```
 
 
@@ -67,15 +61,43 @@ if 'google.colab' in str(get_ipython()):
 
 ### Load Area of Interest
 
-We load the boundary of Bangalore, India as our area of interest.
+Read the file containing the city boundary from your Google Drive saved in the previous notebook.
+
+Run the following cell to authenticate and mount the Google Drive.
+
 
 
 ```python
-aoi_file_path = ('https://storage.googleapis.com/spatialthoughts-public-data/'
-    'bangalore.geojson')
-aoi_gdf = gpd.read_file(aoi_file_path)
+if 'google.colab' in str(get_ipython()):
+  from google.colab import drive
+  drive.mount('/content/drive')
+```
+
+
+```python
+if 'google.colab' in str(get_ipython()):
+  drive_folder_root = 'MyDrive'
+  drive_data_folder = 'python-remote-sensing'
+  drive_folder_path = os.path.join(
+        '/content/drive', drive_folder_root, drive_data_folder)
+  data_folder = drive_folder_path
+else:
+  # Look for the file in local data folder
+  data_folder = data_folder
+
+aoi_filename = 'aoi.geojson'
+aoi_filepath = os.path.join(data_folder, aoi_filename)
+aoi_filepath
+```
+
+Read the GeoJSON and extract the geometry.
+
+
+```python
+aoi_gdf = gpd.read_file(aoi_filepath)
 geometry = aoi_gdf.geometry.union_all()
 geometry
+
 ```
 
 ### Search and Load Sentinel-2 Imagery
@@ -98,17 +120,16 @@ search = catalog.search(
     query={'eo:cloud_cover': {'lt': 30}},
 )
 items = search.item_collection()
-print(f'Found {len(items)} items')
 ```
 
-Load the matching scenes as a lazy XArray Dataset. We use 20m resolution to keep the dataset size manageable for a city-scale analysis.
+Load the matching scenes as a lazy XArray Dataset.
 
 
 ```python
 ds = load(
     items,
     bands=['red', 'green', 'blue', 'nir', 'swir16', 'swir22', 'scl'],
-    resolution=20,
+    resolution=10,
     crs='utm',
     bbox=geometry.bounds,
     chunks={},           # use Dask
@@ -116,10 +137,6 @@ ds = load(
 )
 ds
 ```
-
-### Preprocessing
-
-Apply the standard Sentinel-2 preprocessing steps: mask nodata pixels, apply scale and offset to convert raw values to reflectances, then apply the SCL cloud mask.
 
 
 ```python
@@ -148,40 +165,6 @@ Aggregate all cloud-masked scenes into a single median composite. The median eff
 ```python
 composite = ds.median(dim='time')
 composite
-```
-
-
-```python
-%%time
-composite = composite.compute()
-```
-
-Clip the composite to the AOI polygon.
-
-
-```python
-image_crs = composite.rio.crs
-aoi_gdf_reproj = aoi_gdf.to_crs(image_crs)
-composite = composite.rio.clip(aoi_gdf_reproj.geometry)
-composite
-```
-
-Visualize the composite as a true-color image.
-
-
-```python
-rgb_da = composite[['red', 'green', 'blue']].to_array('band')
-preview = rgb_da.rio.reproject(rgb_da.rio.crs, resolution=100)
-
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(6, 6)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
-    ax=ax,
-    vmin=0, vmax=0.3)
-ax.set_title(f'Sentinel-2 Median Composite {year}')
-ax.set_axis_off()
-ax.set_aspect('equal')
-plt.show()
 ```
 
 ### Calculate Spectral Indices
@@ -213,39 +196,164 @@ composite['ndwi']  = (green - nir)    / (green + nir)
 composite
 ```
 
-### Save to Google Drive
+### Add Elevation Data
 
-Rather than saving it to the temporary machine where Colab is running, we save the composite to Google Drive so it persists after the session ends and can be used in other notebooks.
+We query Microsoft’s Planetary Computer Data Catalog and load the [ALOS World 3D - 30m](https://planetarycomputer.microsoft.com/dataset/alos-dem#overview) elevation data.
 
-Run the following cell to authenticate and mount the Google Drive.
+
+
+
+```python
+catalog = pystac_client.Client.open(
+    'https://planetarycomputer.microsoft.com/api/stac/v1')
+
+search = catalog.search(
+    collections=['alos-dem'],
+    intersects=geometry,
+)
+items = search.item_collection()
+items
+```
+
+We will add the resulting data as a new band to the composite. To ensure the data is aligned with the pixel grid of the composite, we extract the [GeoBox](https://odc-geo.readthedocs.io/en/latest/intro-geobox.html) of the composite and use it to load the items.
+
+
+```python
+geobox = composite.odc.geobox
+geobox
+```
+
+
+```python
+chunks = dict(zip(ds['red'].dims, ds['red'].data.chunksize))
+chunks
+```
+
+
+```python
+# Load to XArray
+dem_ds = load(
+    items,
+    geobox=geobox, # <--- Match pixel grid
+    chunks=chunks,  # <-- Match dask chunks
+    patch_url=pc.sign,
+    groupby='solar_day',
+    preserve_original_order=True
+)
+dem_ds
+
+```
+
+We remove the extra `time` dimension to create a 2D DataArray.
+
+
+```python
+elevation_da = dem_ds.data.squeeze()
+elevation_da
+```
+
+We use [`xrspatial.slope.slope()`](https://xarray-spatial.readthedocs.io/en/latest/reference/_autosummary/xrspatial.slope.slope.html) function to calculate the slope.
+
+
+```python
+slope_da = slope(elevation_da)
+slope_da
+```
+
+Add the data to the composite.
+
+
+```python
+composite[['elevation', 'slope']] = elevation_da, slope_da
+composite
+```
+
+
+```python
+print(f'DataSet size: {composite.nbytes/1e6:.2f} MB.')
+```
+
+Compute and load the results.
+
+
+```python
+%%time
+composite = composite.compute()
+```
+
+### Clip and Export the Composite
+
+We first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
+
+
+
+```python
+composite_da = composite.to_array('band')
+composite_da
+```
+
+Clip the composite to the AOI polygon.
+
+
+```python
+image_crs = composite_da.rio.crs
+aoi_gdf_reproj = aoi_gdf.to_crs(image_crs)
+composite_clipped = composite_da.rio.clip(aoi_gdf_reproj.geometry)
+composite_clipped
+```
+
+We finally save the results as a local Cloud-Optimized GeoTIFF file.
 
 
 ```python
 if 'google.colab' in str(get_ipython()):
-    from google.colab import drive
-    drive.mount('/content/drive')
+  output_folder_path = drive_folder_path
+  # Check if Google Drive is mounted
+  if not os.path.exists('/content/drive'):
+      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+  else:
+      if not os.path.exists(output_folder_path):
+          os.makedirs(output_folder_path)
+else:
+  # Use the local output folder
+  output_folder_path = output_folder
+```
+
+Ww use the rioxarray accessor to save the results as a Cloud-Optimized GeoTIFF.
+
+
+```python
+output_file = f'multiband_composite.tif'
+local_output_path = os.path.join(output_folder_path, output_file)
+composite_clipped.rio.to_raster(local_output_path, driver='COG')
+print(f'Wrote {local_output_path}')
+```
+
+Optionally, we can also the output to Google Cloud Storage (GCS) bucket.
+
+
+```python
+# Specify your project ID and Bucket name
+project_id = 'python-363014'
+bucket_name = 'spatialthoughts-public-data'
+sub_folder = 'python-remote-sensing'
 ```
 
 
 ```python
 if 'google.colab' in str(get_ipython()):
-    drive_folder_root = 'MyDrive'
-    output_folder = 'python-remote-sensing'
-    output_folder_path = os.path.join(
-        '/content/drive', drive_folder_root, output_folder)
-    if not os.path.exists('/content/drive'):
-        print('Google Drive is not mounted. Please run the cell above.')
-    else:
-        if not os.path.exists(output_folder_path):
-            os.makedirs(output_folder_path)
-else:
-    output_folder_path = output_folder
+  from google.colab import auth
+  from google.cloud import storage
 
-band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
-              'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi']
-composite_da = composite[band_names].to_array('band')
-output_file = 'multiband_composite.tif'
-output_path = os.path.join(output_folder_path, output_file)
-composite_da.rio.to_raster(output_path, driver='COG')
-print(f'Saved {output_path}')
+  auth.authenticate_user()
+  client = storage.Client(project=project_id)
+  bucket = client.get_bucket(bucket_name)
+
+  print(f'Google Cloud Storage client initialized for project: {project_id}')
+  print(f'Bucket {bucket_name} selected.')
+  gcs_blob_path = f'{sub_folder}/{output_file}'
+  blob = bucket.blob(gcs_blob_path)
+
+  print(f'Uploading {local_output_path} to gs://{bucket.name}/{gcs_blob_path}')
+  blob.upload_from_filename(local_output_path)
 ```
