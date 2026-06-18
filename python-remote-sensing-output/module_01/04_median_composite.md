@@ -9,9 +9,11 @@ We will query the Overture Maps catalog for the boundary for the city of Bengalu
 
 ### Setup
 
+Determine our runtime environment.
+
+
 
 ```python
-# Determine the environment
 import os
 
 if 'COLAB_RELEASE_TAG' in os.environ:
@@ -47,7 +49,7 @@ print(f'Data folder: {data_folder}')
 print(f'Output folder: {output_folder}')
 ```
 
-Install packages on Colab runtime.
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
@@ -57,7 +59,7 @@ if environment in ['colab', 'colab_enterprise']:
       jupyter-server-proxy
 ```
 
-Import packages
+Import packages.
 
 
 ```python

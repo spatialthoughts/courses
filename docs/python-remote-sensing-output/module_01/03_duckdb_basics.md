@@ -6,12 +6,35 @@ In this section, we will explore cloud-native vector datasets and use [DuckDB](h
 
 We will query and load an Administrative Boundaries dataset provided by FieldMaps as a cloud-native GeoParquet file. We will interactively query and save the required boudary polygon for our analysis.
 
+### Setup
+
+Determine our runtime environment.
+
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+print(f'Environment: {environment}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
+
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install lonboard
+if environment in ['colab', 'colab_enterprise']:
+  !pip install lonboard
 ```
+
+Import packages.
 
 
 ```python
@@ -20,19 +43,6 @@ import geopandas as gpd
 from lonboard import viz
 import os
 ```
-
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-```
-
-If you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
 
 ### DuckDB
 
@@ -131,25 +141,6 @@ We can visualize the Admin2 polygons.
 viz(admin2_gdf)
 ```
 
-Select a single Admin2 region and extract the geometry.
-
-
-```python
-adm2_name = 'San Francisco'
-selected = admin2_gdf[admin2_gdf['adm2_name'] == adm2_name]
-geometry = selected.geometry.union_all()
-geometry
-```
-
-
-
-
-    
-![](python-remote-sensing-output/module_01/03_duckdb_basics_files/03_duckdb_basics_24_0.svg)
-    
-
-
-
 ### Save the Results
 
 We can save the selected subset as a GeoPackage. Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
@@ -158,39 +149,34 @@ Run the following cell to authenticate and mount the Google Drive.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
-```
+import os
 
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
 
-```python
-if 'google.colab' in str(get_ipython()):
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
     drive_folder_root = 'MyDrive'
     drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join(
-          '/content/drive', drive_folder_root, drive_data_folder)
-```
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-  output_folder_path = drive_folder_path
-  # Check if Google Drive is mounted
-  if not os.path.exists('/content/drive'):
-      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-  else:
-      if not os.path.exists(output_folder_path):
-          os.makedirs(output_folder_path)
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
 else:
-  # Use the local folder
-  output_folder_path = output_folder
+    output_folder = 'output'
+
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Output folder: {output_folder}')
 ```
 
 
 ```python
 output_filename = 'admin2.gpkg'
-output_path = os.path.join(output_folder_path, output_filename)
+output_path = os.path.join(output_folder, output_filename)
 admin2_gdf.to_file(output_path)
 print(f'Saved to {output_path}')
 ```
@@ -203,15 +189,7 @@ Extract the boundary for your selected city and save it to your Google Drive in 
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-    drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join(
-          '/content/drive', drive_folder_root, drive_data_folder)
-    aoi_filepath = os.path.join(drive_folder_path, 'aoi.geojson')
-else:
-    aoi_filepath = os.path.join(output_folder, 'aoi.geojson')
-aoi_filepath
+aoi_filepath = os.path.join(output_folder, 'aoi.geojson')
 ```
 
 #### Tips
@@ -274,11 +252,11 @@ View the resulting boundary.
 
 
 ```python
-city_gdf = gpd.GeoDataFrame(
+aoi_gdf = gpd.GeoDataFrame(
     results,
     geometry=gpd.GeoSeries.from_wkb(results['geometry'].apply(bytes)),
     crs='EPSG:4326'
 )
 
-viz(city_gdf)
+viz(aoi_gdf)
 ```
