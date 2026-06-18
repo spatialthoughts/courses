@@ -165,10 +165,11 @@ if 'google.colab' in str(get_ipython()):
 
 
 ```python
-drive_folder_root = 'MyDrive'
-output_folder = 'python-remote-sensing'
-drive_folder_path = os.path.join(
-      '/content/drive', drive_folder_root, output_folder)
+if 'google.colab' in str(get_ipython()):
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join(
+          '/content/drive', drive_folder_root, drive_data_folder)
 ```
 
 
@@ -202,12 +203,14 @@ Extract the boundary for your selected city and save it to your Google Drive in 
 
 
 ```python
-drive_folder_root = 'MyDrive'
-output_folder = 'python-remote-sensing'
-drive_folder_path = os.path.join(
-      '/content/drive', drive_folder_root, output_folder)
-aoi_filename = 'aoi.geojson'
-aoi_filepath = os.path.join(drive_folder_path, aoi_filename)
+if 'google.colab' in str(get_ipython()):
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join(
+          '/content/drive', drive_folder_root, drive_data_folder)
+    aoi_filepath = os.path.join(drive_folder_path, 'aoi.geojson')
+else:
+    aoi_filepath = os.path.join(output_folder, 'aoi.geojson')
 aoi_filepath
 ```
 

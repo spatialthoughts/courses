@@ -44,6 +44,17 @@ if 'google.colab' in str(get_ipython()):
 
 ```
 
+
+```python
+data_folder = 'data'
+output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+```
+
 ### Get a Sentinel-2 Scene
 
 We define a location and time of interest to get some satellite imagery.
@@ -149,7 +160,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_19_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_20_0.png)
     
 
 
@@ -199,7 +210,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_24_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_25_0.png)
     
 
 
@@ -241,23 +252,26 @@ Run the following cell to authenticate and mount the Google Drive.
 
 
 ```python
-from google.colab import drive
-drive.mount('/content/drive')
+if 'google.colab' in str(get_ipython()):
+    from google.colab import drive
+    drive.mount('/content/drive')
 ```
 
 
 ```python
-drive_folder_root = 'MyDrive'
-output_folder = 'data'
-output_folder_path = os.path.join(
-    '/content/drive', drive_folder_root, output_folder)
-
-# Check if Google Drive is mounted
-if not os.path.exists('/content/drive'):
-    print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+if 'google.colab' in str(get_ipython()):
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join(
+          '/content/drive', drive_folder_root, drive_data_folder)
+    output_folder_path = drive_folder_path
+    if not os.path.exists('/content/drive'):
+        print("Google Drive is not mounted. Please run the cell above to mount your drive.")
+    else:
+        if not os.path.exists(output_folder_path):
+            os.makedirs(output_folder_path)
 else:
-    if not os.path.exists(output_folder_path):
-        os.makedirs(output_folder_path)
+    output_folder_path = output_folder
 ```
 
 

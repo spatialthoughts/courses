@@ -11,11 +11,53 @@ We will query the Overture Maps catalog for the boundary for the city of Bengalu
 
 
 ```python
+# Determine the environment
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+Install packages on Colab runtime.
+
+
+```python
 %%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
+if environment in ['colab', 'colab_enterprise']:
+  !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
       jupyter-server-proxy
 ```
+
+Import packages
 
 
 ```python
@@ -29,17 +71,7 @@ import pystac_client
 import rioxarray as rxr
 import xarray as xr
 from odc.stac import configure_s3_access, load
-```
 
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -55,49 +87,36 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
-
 ```
 
 ### Load City Boundary
 
-Read the file containing the city boundary from your Google Drive saved in the previous notebook.
-
-Run the following cell to authenticate and mount the Google Drive.
+Read the file containing the city boundary.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
-```
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
-
-```python
-drive_folder_root = 'MyDrive'
-output_folder = 'python-remote-sensing'
-drive_folder_path = os.path.join(
-      '/content/drive', drive_folder_root, output_folder)
-aoi_filename = 'aoi.geojson'
-aoi_filepath = os.path.join(drive_folder_path, aoi_filename)
-aoi_filepath
+if not os.path.exists(aoi_filepath):
+    raise FileNotFoundError(f'AOI file not found at {aoi_filepath}. Please ensure the file exists.')
 ```
 
 Read the GeoJSON.
 
 
 ```python
-city_gdf = gpd.read_file(aoi_filepath)
+aoi_gdf = gpd.read_file(aoi_filepath)
 ```
 
 Extract the geometry.
 
 
 ```python
-geometry = city_gdf.geometry.union_all()
+geometry = aoi_gdf.geometry.unary_union
 geometry
 ```
 
@@ -154,7 +173,7 @@ items_gdf.plot(
     edgecolor='black',
     alpha=0.5)
 
-city_gdf.plot(
+aoi_gdf.plot(
     ax=ax,
     facecolor='blue',
     alpha=0.5
@@ -244,8 +263,8 @@ rgb_composite_da
 
 ```python
 image_crs = rgb_composite_da.rio.crs
-city_gdf_reprojected = city_gdf.to_crs(image_crs)
-rgb_composite_clipped = rgb_composite_da.rio.clip(city_gdf_reprojected.geometry)
+aoi_gdf_reprojected = aoi_gdf.to_crs(image_crs)
+rgb_composite_clipped = rgb_composite_da.rio.clip(aoi_gdf_reprojected.geometry)
 rgb_composite_clipped
 ```
 
@@ -271,12 +290,6 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_41_0.png)
-    
-
-
 We can manually apply a contrast stretch as well.
 
 
@@ -300,43 +313,17 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_44_0.png)
-    
-
-
 ### Export the Composite
 
-We finally save the results as a local Cloud-Optimized GeoTIFF file.
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-  output_folder_path = drive_folder_path
-  # Check if Google Drive is mounted
-  if not os.path.exists('/content/drive'):
-      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-  else:
-      if not os.path.exists(output_folder_path):
-          os.makedirs(output_folder_path)
-else:
-  # Use the local folder
-  output_folder_path = output_folder
-```
-
-Ww use the `rioxarray` accessor to save the results as a Cloud-Optimized GeoTIFF.
+We use the `rio` accessor to save the results as a Cloud-Optimized GeoTIFF.
 
 
 ```python
 output_file = f'raw_composite_{time_range}.tif'
-output_path = os.path.join(output_folder_path, output_file)
+output_path = os.path.join(output_folder, output_file)
 rgb_composite_clipped.rio.to_raster(output_path, driver='COG')
 print(f'Wrote {output_file}')
 ```
-
-    Wrote raw_composite_2024.tif
-
 
 The raw composite is suitable for downstream scientific analysis as it preserves the pixel reflectance values.Sometimes it is desirable to export the output as a colorized RGBA image. This visualized output suitable for use user-facing applications like basemaps or prints.
 
@@ -356,9 +343,9 @@ Save the visualized output.
 
 ```python
 visualized_file = f'visualized_composite_{time_range}.tif'
-visualized_output_path = os.path.join(output_folder_path, visualized_file)
+visualized_output_path = os.path.join(output_folder, visualized_file)
 composite_rgba.odc.write_cog(visualized_output_path)
-print(f'Wrote {output_file}')
+print(f'Wrote {visualized_file}')
 ```
 
 ### Exercise

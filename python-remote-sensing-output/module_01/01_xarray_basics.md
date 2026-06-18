@@ -25,17 +25,6 @@ import xarray as xr
 from odc.stac import configure_s3_access, stac_load
 ```
 
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-```
-
 ### Get Satellite Imagery
 
 We define a location and time of interest to get some satellite imagery.
@@ -236,7 +225,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_47_0.png)
+![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_46_0.png)
     
 
 
