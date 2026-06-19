@@ -269,8 +269,3 @@ scene_masked
 Save the masked scene to disk. Save the `scene_masked` to the output folder.
 
 Hint: You will need to convert the `scene_masked` to a DataArray before saving it.
-
-
-```python
-output_folder_path = output_folder
-```

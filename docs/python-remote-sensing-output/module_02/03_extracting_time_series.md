@@ -294,11 +294,6 @@ plt.show()
 
 ### Save the Time-Series.
 
-
-```python
-output_folder_path = output_folder
-```
-
 Convert the extracted time-series to a Pandas DataFrame.
 
 
@@ -314,7 +309,7 @@ Save the DataFrame as a CSV file.
 
 ```python
 output_filename = 'ndvi_time_series.csv'
-output_filepath = os.path.join(output_folder_path, output_filename)
+output_filepath = os.path.join(output_folder, output_filename)
 df.to_csv(output_filepath, index=False)
 ```
 

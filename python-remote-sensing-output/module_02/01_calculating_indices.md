@@ -291,11 +291,6 @@ Rather than saving it to the temporary machine where Colab is running, we can sa
 
 
 ```python
-output_folder_path = output_folder
-```
-
-
-```python
 files = {
     'ndvi.tif': ndvi,
     'mndwi.tif': mndwi,
@@ -303,7 +298,7 @@ files = {
 }
 
 for file in files:
-  output_path = os.path.join(output_folder_path, file)
+  output_path = os.path.join(output_folder, file)
   files[file].rio.to_raster(output_path, driver='COG')
   print(f'Saved {file} to {output_path}')
 ```

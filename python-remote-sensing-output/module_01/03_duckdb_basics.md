@@ -93,7 +93,7 @@ We can now form a query to find all all Admin1 names (States/Provinces) in a spe
 
 
 ```python
-country = 'USA'
+country = 'IND'
 
 query = f'''
 SELECT DISTINCT adm1_name
@@ -110,7 +110,7 @@ Notice that the dataset has a `geometry` column which stores the layer geometry.
 
 
 ```python
-adm1_name = 'California'
+adm1_name = 'Karnataka'
 
 query = f'''
 SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsWKB(geometry) AS geometry

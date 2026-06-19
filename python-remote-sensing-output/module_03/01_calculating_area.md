@@ -1,16 +1,59 @@
 ### Overview
 We will learn how to work with landcover data and calculate area of different landcover classes in a region. This section also shows how you can scale your analysis to large regions without running into memory limits using `dask`.
 
-### Setup and Data Download
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+### Setup
+
+Determine our runtime environment.
+
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask[distributed] \
+if environment in ['colab', 'colab_enterprise']:
+  !pip install pystac-client odc-stac rioxarray dask[distributed] \
       jupyter-server-proxy planetary_computer
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -31,6 +74,8 @@ from odc import stac
 from odc.geo.geobox import GeoBox
 ```
 
+Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
+
 
 ```python
 from dask.distributed import Client
@@ -42,75 +87,38 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
-
 ```
+
+### Load City Boundary
+
+Read the file containing the city boundary.
 
 
 ```python
-data_folder = 'data'
-output_folder = 'output'
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
+if not os.path.exists(aoi_filepath):
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/aoi.geojson'
 ```
 
-### Define a Region of Interest
-We define a location and choose a circular buffer area as our region of interest.
-
-
+Read the GeoJSON.
 
 
 ```python
-latitude = 27.163
-longitude = 82.608
+aoi_gdf = gpd.read_file(aoi_filepath)
 ```
 
-Create a GeoDataFrame. This helps us easily convert between CRSs, extract bounds etc.
+Extract the geometry.
 
 
 ```python
-point_gdf = gpd.GeoDataFrame(
-    data = {'name': ['aoi']},
-    geometry=gpd.points_from_xy([longitude], [latitude]),
-    crs='EPSG:4326')
-point_gdf
-```
-
-To create an accurate buffer, we must first convert the coordinates into a projected CRS. UTM is a good choice for a projected CRS that offers high accuracy with minimal distortions. We can automatically find the appropropriate UTM Zone for the chosen location using `pyproj`.
-
-
-```python
-# Small bounding box around the chosen coordinates
-bbox = (longitude - 0.001, latitude - 0.0001,
-        longitude + 0.001, latitude + 0.0001)
-aoi = pyproj.aoi.AreaOfInterest(*bbox)
-
-# Query for matching UTM CRS
-utm_crs_list = pyproj.database.query_utm_crs_info(
-    datum_name='WGS 84',
-    area_of_interest=aoi,
-)
-utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
-print(f'Selected CRS {utm_crs.name}')
-```
-
-Buffer the point.
-
-
-```python
-buffer_distance_meters = 500
-```
-
-
-```python
-buffered = point_gdf.to_crs(utm_crs).buffer(buffer_distance_meters)
-buffered
+geometry = aoi_gdf.geometry.union_all()
+geometry
 ```
 
 ### Get ESA WorldCover Data
@@ -129,8 +137,8 @@ bounds = buffered.to_crs('EPSG:4326').total_bounds
 
 search = catalog.search(
     collections=['esa-worldcover'],
-    bbox=bounds,
-    datetime=f'2021',
+    intersects=geometry,
+    datetime=f'2021', # Data available only for years 2020 and 2021
 )
 items = search.item_collection()
 items
@@ -155,7 +163,7 @@ Load the matching images as a XArray Dataset. Accessing data from Planetary Comp
 # Load to XArray
 ds = stac.load(
     items,
-    bbox=bounds, # <-- load data only for the bbox
+    bbox=geometry.bounds, # <-- load data only for the bbox
     resolution=10,
     crs=utm_crs,
     chunks={},  # <-- use Dask
@@ -172,6 +180,14 @@ The landcover classification data is in the `map` variable. Select it and remove
 ```python
 map_data = ds['map'].squeeze()
 map_data
+```
+
+Run this computation using the local Dask cluster and load the data into memory using `.compute()`.
+
+
+```python
+%%time
+map_data = map_data.compute()
 ```
 
 Clip the data to the buffered region.
@@ -236,7 +252,7 @@ ax.set_title('Landcover Classes from ESA WorldCover');
 
 
     
-![](python-remote-sensing-output/module_03/01_calculating_area_files/01_calculating_area_31_0.png)
+![](python-remote-sensing-output/module_03/01_calculating_area_files/01_calculating_area_35_0.png)
     
 
 
@@ -303,27 +319,34 @@ area_df.to_csv(output_filepath, index=False)
 
 Our previous approach required loading the entire array of landcover classes in the memory using `.values`. If our dataset is very large, this will cause us to run out of memory and result in a crash. We can instead use `dask` to chunk the data which lazily loads each chunk into memory only when processing it.
 
-Let's read a shapefile for the boundary of a large state in India.
+Read the file containing the Admin2 boundaries exported in Module 1.
 
 
 ```python
-state_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data/' +
-  'kgis/karnataka.zip')
-state = gpd.read_file(state_filepath)
-state
+admin2_filepath = os.path.join(data_folder, 'admin2.gpkg')
+
+if not os.path.exists(admin2_filepath):
+    print(f'Admin2 file not found at {admin2_filepath}. Using default Admin2 regions.')
+    admin2_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/admin2.gpkg'
+```
+
+Read the Admin2 GeoPackage.
+
+
+```python
+admin2_gdf = gpd.read_file(admin2_filepath)
 ```
 
 Automatically select a suitable UTM projection.
 
 
 ```python
-bbox = state.geometry.total_bounds
-aoi = pyproj.aoi.AreaOfInterest(*bbox)
+bbox = admin2_gdf.geometry.total_bounds
 
 # Query for matching UTM CRS
 utm_crs_list = pyproj.database.query_utm_crs_info(
     datum_name='WGS 84',
-    area_of_interest=aoi,
+    area_of_interest=pyproj.aoi.AreaOfInterest(*bbox),
 )
 utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
 print(f'Selected CRS {utm_crs.name}')
@@ -337,7 +360,7 @@ catalog = pystac_client.Client.open(
     'https://planetarycomputer.microsoft.com/api/stac/v1')
 
 # STAC search requires bounding box in EPSG:4326
-bounds = state.geometry.total_bounds
+bounds = admin2_gdf.geometry.union_all()
 
 search = catalog.search(
     collections=['esa-worldcover'],

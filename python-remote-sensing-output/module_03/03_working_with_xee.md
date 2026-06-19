@@ -5,16 +5,57 @@ Google Earth Engine (GEE) is a cloud-based platform that has a large public data
 
 *Note: You must have a Google Earth Engine account to complete this section. If you do not have one, [follow our guide](https://courses.spatialthoughts.com/gee-sign-up.html) to sign up.*
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+Determine our runtime environment.
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install xee rioxarray dask['distributed'] xvec exactextract
+if environment in ['colab', 'colab_enterprise']:
+  !pip install xee rioxarray dask['distributed'] xvec exactextract
 ```
+
+Import all required libraries.
 
 
 ```python
@@ -32,17 +73,6 @@ from xee import helpers
 import xvec
 import exactextract
 
-```
-
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
 ```
 
 ### Initialize EE and Dask Cluster
@@ -78,11 +108,10 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
-
 ```
 
 Each of our Dask workers need Earth Engine authentication. Initialize Dask workers using `ee.Initialize()`.
@@ -114,13 +143,25 @@ client.register_plugin(ee_plugin)
 ### Load Area of Interest
 
 
+Read the file containing the city boundary.
+
 
 ```python
-aoi_file_path = 'https://storage.googleapis.com/spatialthoughts-public-data/' \
-  'bangalore.geojson'
-aoi_gdf = gpd.read_file(aoi_file_path)
-aoi_gdf
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
+
+if not os.path.exists(aoi_filepath):
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/aoi.geojson'
 ```
+
+Read the GeoJSON.
+
+
+```python
+aoi_gdf = gpd.read_file(aoi_filepath)
+```
+
+Extract the geometry.
 
 
 ```python
@@ -132,7 +173,7 @@ geometry
 
 We will load the [VIIRS Nighttime Day/Night Annual Band Composites V2.1](https://developers.google.com/earth-engine/datasets/catalog/NOAA_VIIRS_DNB_ANNUAL_V21) dataset.
 
-Configure the time period and variables. Note that this dataset is available. form 2012 upto 2021.
+Configure the time period and variables. Note that this dataset is available from 2012 upto 2021.
 
 
 ```python
@@ -243,7 +284,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_33_0.png)
+![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_40_0.png)
     
 
 
@@ -322,7 +363,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_45_0.png)
+![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_52_0.png)
     
 
 

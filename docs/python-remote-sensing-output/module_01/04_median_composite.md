@@ -104,7 +104,8 @@ Read the file containing the city boundary.
 aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
 if not os.path.exists(aoi_filepath):
-    raise FileNotFoundError(f'AOI file not found at {aoi_filepath}. Please ensure the file exists.')
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/aoi.geojson'
 ```
 
 Read the GeoJSON.
