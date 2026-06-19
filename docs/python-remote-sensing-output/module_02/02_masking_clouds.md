@@ -51,7 +51,8 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 ```python
 %%capture
 if environment in ['colab', 'colab_enterprise']:
-    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] \
+        jupyter-server-proxy
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -156,6 +157,14 @@ for band in data_bands:
   scene[band] = scene[band] * scale + offset
 ```
 
+Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
+
+
+```python
+%%time
+scene = scene.compute()
+```
+
 ### Visualize the Scene
 
 The clouds will have a much higher reflectance, so `robust=True` will not give us appropriate visualization. We supply hardcoded min/max values as 0 and 0.3 which is the normal range of reflectance values of earth targets.
@@ -181,7 +190,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_20_0.png)
+![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_22_0.png)
     
 
 
@@ -242,7 +251,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_26_0.png)
+![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_28_0.png)
     
 
 

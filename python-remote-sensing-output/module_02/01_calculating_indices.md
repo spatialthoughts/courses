@@ -51,7 +51,8 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 ```python
 %%capture
 if environment in ['colab', 'colab_enterprise']:
-    !pip install pystac-client odc-stac rioxarray dask['distributed'] jupyter-server-proxy
+    !pip install pystac-client odc-stac rioxarray dask['distributed'] \
+        jupyter-server-proxy
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -147,6 +148,14 @@ offset = -0.1
 scene = scene*scale + offset
 ```
 
+Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
+
+
+```python
+%%time
+scene = scene.compute()
+```
+
 ### Visualize the Scene
 
 To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
@@ -192,7 +201,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_24_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_26_0.png)
     
 
 
@@ -242,7 +251,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_29_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_31_0.png)
     
 
 
