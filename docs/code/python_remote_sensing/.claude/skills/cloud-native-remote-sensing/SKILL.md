@@ -20,10 +20,8 @@ description: Guide for writing cloud-native remote sensing code in Python using 
 
 ## Coding Best Practices
 
-- Write new code to be compatible with Google Colab, but use the pattern below to ensure the notebooks run without changes on other computing environments:
-    `if 'google.colab' in str(get_ipython())`
-- Import all required packages at the top and sort all imports.
-- Add a Markdown cell before each code cell with a brief explanation and link to the function(s) official documentation.
+- Import all required packages at the beginning and keep all the imports sorted alphabetically.
+- Add a Markdown cell before each code cell with a brief explanation and link to the function(s) in the official documentation.
 
 ---
 
@@ -41,15 +39,16 @@ client = Client()
 - Order of preference for computations:
     1. Built-in XArray functions — e.g. `median()`, `resample()`
     2. Built-in Dask array functions — e.g. `da.histogram()`
-    3. Custom functions via `map_blocks()` for NumPy-backed data
-    4. Custom functions via `apply_ufunc()` for third-party libraries
+    3. Custom functions via `map_blocks()` for third-party libraries that work with NumPy arrays. We prefer this over `apply_ufunc()` because of simpler syntax.
+    4. Custom functions via `apply_ufunc()` for third-party libraries that work with NumPy arrays
+    5. Custom functions via `dask.delayed()` for arbitrary Python code (slowest, least efficient)
 
 ---
 
 ## XArray Setup
 
-- Always use vectorized functions and avoid iterations — e.g. `scene[data_bands].where(~mask)` instead of a per-band loop.
-- Prefer packages from the XArray ecosystem.
+- Always use vectorized functions and broadcasting to avoid iterations — e.g. `scene[data_bands].where(~mask)` instead of a per-band loop.
+- Prefer Python packages from the XArray ecosystem.
 
 ---
 

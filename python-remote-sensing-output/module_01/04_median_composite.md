@@ -59,7 +59,7 @@ if environment in ['colab', 'colab_enterprise']:
       jupyter-server-proxy
 ```
 
-Import packages.
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -118,8 +118,13 @@ Extract the geometry.
 
 
 ```python
-geometry = aoi_gdf.geometry.unary_union
+geometry = aoi_gdf.geometry.union_all()
 geometry
+```
+
+
+```python
+
 ```
 
 ### Search and Load Sentinel-2 Imagery

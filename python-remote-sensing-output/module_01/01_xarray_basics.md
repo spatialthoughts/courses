@@ -4,16 +4,34 @@
 
 In this section, we will learn about XArray basics and learn how to work with a time-series of Sentinel-2 satellite imagery to create and visualize a median composite image.
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+Determine our runtime environment.
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+print(f'Environment: {environment}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore
+if environment in ['colab', 'colab_enterprise']:
+      !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -225,7 +243,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_46_0.png)
+![](python-remote-sensing-output/module_01/01_xarray_basics_files/01_xarray_basics_50_0.png)
     
 
 

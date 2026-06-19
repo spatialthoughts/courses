@@ -12,14 +12,7 @@ Notes:
 
 ----
 
-Install and use the `planetary_computer` python package.
-
-
-```python
-%%capture
-if 'google.colab' in str(get_ipython()):
-    !pip install planetary_computer
-```
+Install and use the [`planetary_computer`](https://pypi.org/project/planetary-computer/) python package.
 
 
 ```python

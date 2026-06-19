@@ -4,17 +4,35 @@ In this section, we will learn the basics of querying cloud-hosted data via [STA
 
 We will learn how to query a catalog of Sentinel-2 images to find the least-cloudy scene over a chosen area, visualize it and download it as a GeoTIFF file.
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+Determine our runtime environment.
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+print(f'Environment: {environment}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
+if environment in ['colab', 'colab_enterprise']:
     !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
       jupyter-server-proxy
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -44,11 +62,10 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
-
 ```
 
 ### Spatio Temporal Asset Catalog (STAC)
@@ -276,7 +293,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_51_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_55_0.png)
     
 
 
@@ -297,7 +314,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_53_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_57_0.png)
     
 
 
