@@ -122,11 +122,6 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
-
-```python
-
-```
-
 ### Search and Load Sentinel-2 Imagery
 
 Let's use Element84 search endpoint to look for items from the `sentinel-2-c1-l2a` collection on AWS. We search for the imagery collected within the date range and intersecting the AOI geometry.
@@ -329,7 +324,7 @@ We use the `rio` accessor to save the results as a Cloud-Optimized GeoTIFF.
 output_file = f'raw_composite_{time_range}.tif'
 output_path = os.path.join(output_folder, output_file)
 rgb_composite_clipped.rio.to_raster(output_path, driver='COG')
-print(f'Wrote {output_file}')
+print(f'Wrote {output_path}')
 ```
 
 The raw composite is suitable for downstream scientific analysis as it preserves the pixel reflectance values.Sometimes it is desirable to export the output as a colorized RGBA image. This visualized output suitable for use user-facing applications like basemaps or prints.
@@ -351,8 +346,8 @@ Save the visualized output.
 ```python
 visualized_file = f'visualized_composite_{time_range}.tif'
 visualized_output_path = os.path.join(output_folder, visualized_file)
-composite_rgba.odc.write_cog(visualized_output_path)
-print(f'Wrote {visualized_file}')
+composite_rgba.odc.write_cog(visualized_output_path, overwrite=True)
+print(f'Wrote {visualized_output_path}')
 ```
 
 ### Exercise
