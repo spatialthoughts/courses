@@ -4,20 +4,62 @@ We are now ready to scale our analysis. Having learned how to calculate spectral
 
 In this section, we will get all Sentinel-2 scenes collected over our region of interest, apply a cloud-mask, calculate NDVI and extract a time-series of NDVI at a single location. We will also use XArray's built-in time-series processing functions to interpolat and smooth the results.
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+Determine our runtime environment.
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
+if environment in ['colab', 'colab_enterprise']:
     !pip install pystac-client odc-stac rioxarray \
-      dask['distributed'] jupyter-server-proxy xrscipy
+        dask['distributed'] jupyter-server-proxy xrscipy
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
+import dask
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,8 +69,10 @@ import pystac_client
 import rioxarray as rxr
 import xarray as xr
 import xrscipy.signal as xrs
-from odc import stac
+from odc.stac import configure_s3_access, load
 ```
+
+Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
 
 
 ```python
@@ -41,22 +85,10 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
-
-```
-
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
 ```
 
 ### Get Satellite Imagery using STAC API
@@ -98,7 +130,7 @@ search = catalog.search(
 items = search.item_collection()
 
 # Load to XArray
-ds = stac.load(
+ds = load(
     items,
     bands=['red', 'green', 'blue', 'nir', 'scl'],
     bbox=bbox, # <-- load data only for the bbox
@@ -256,7 +288,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_37_0.png)
+![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_41_0.png)
     
 
 
@@ -264,26 +296,7 @@ plt.show()
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-    from google.colab import drive
-    drive.mount('/content/drive')
-```
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-    drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join(
-          '/content/drive', drive_folder_root, drive_data_folder)
-    output_folder_path = drive_folder_path
-    if not os.path.exists('/content/drive'):
-        print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-    else:
-        if not os.path.exists(output_folder_path):
-            os.makedirs(output_folder_path)
-else:
-    output_folder_path = output_folder
+output_folder_path = output_folder
 ```
 
 Convert the extracted time-series to a Pandas DataFrame.
