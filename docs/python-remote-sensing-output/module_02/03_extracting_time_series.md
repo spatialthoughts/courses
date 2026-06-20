@@ -102,26 +102,23 @@ longitude = 82.608
 year = 2023
 ```
 
-
-```python
-# Define a small bounding box around the chosen point
-km2deg = 1.0 / 111
-x, y = (longitude, latitude)
-r = 1 * km2deg  # radius in degrees
-bbox = (x - r, y - r, x + r, y + r)
-```
-
 Let's use Element84 search endpoint to look for items from the sentinel-2-l2a collection on AWS and load the matching images as a XArray Dataset.
 
 
 ```python
+# Define a GeoJSON geometry
+geometry = {
+    'type': 'Point',
+    'coordinates': [longitude, latitude]
+}
+
 # Query the STAC Catalog
 catalog = pystac_client.Client.open(
     'https://earth-search.aws.element84.com/v1')
 
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime=f'{year}',
     query={
         'eo:cloud_cover': {'lt': 30},
@@ -133,7 +130,6 @@ items = search.item_collection()
 ds = load(
     items,
     bands=['red', 'green', 'blue', 'nir', 'scl'],
-    bbox=bbox, # <-- load data only for the bbox
     resolution=10,
     crs='utm',
     chunks={},  # <-- use Dask
@@ -288,7 +284,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_41_0.png)
+![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_40_0.png)
     
 
 

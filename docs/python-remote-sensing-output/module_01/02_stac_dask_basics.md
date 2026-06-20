@@ -102,13 +102,15 @@ latitude = 27.163
 longitude = 82.608
 ```
 
+Define a GeoJSON geometry.
+
+
 
 ```python
-# Define a small bounding box around the chosen point
-km2deg = 1.0 / 111
-x, y = (longitude, latitude)
-r = 1 * km2deg  # radius in degrees
-bbox = (x - r, y - r, x + r, y + r)
+geometry = {
+    'type': 'Point',
+    'coordinates': [longitude, latitude]
+}
 ```
 
 Search the catalog for matching items. See the documentation of the [`pystac_client.Client.search()`](https://pystac-client.readthedocs.io/en/latest/api.html#pystac_client.Client.search) method for details on the parameters and valid values.
@@ -117,7 +119,7 @@ Search the catalog for matching items. See the documentation of the [`pystac_cli
 ```python
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime='2023-01-01/2023-12-31',
 )
 items = search.item_collection()
@@ -130,9 +132,12 @@ The `datatime` parameter can take a range or a single datetime. Here we specify 
 ```python
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime='2023',
-    query={'eo:cloud_cover': {'lt': 30}, 's2:nodata_pixel_percentage': {'lt': 10}}
+    query={
+        'eo:cloud_cover': {'lt': 30},
+        's2:nodata_pixel_percentage': {'lt': 10}
+    }
 )
 items = search.item_collection()
 items
@@ -144,9 +149,12 @@ We can also sort the results by some metadata. Here we sort by cloud cover.
 ```python
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime='2023',
-    query={'eo:cloud_cover': {'lt': 30}, 's2:nodata_pixel_percentage': {'lt': 10}},
+    query={
+        'eo:cloud_cover': {'lt': 30},
+        's2:nodata_pixel_percentage': {'lt': 10}
+    },
     sortby=[{'field': 'properties.eo:cloud_cover', 'direction': 'asc'}]
 
 )
@@ -275,6 +283,15 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
+    WARNING:matplotlib.image:Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.0999..1.0].
+
+
+
+    
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_54_1.png)
+    
+
+
 We can improve the contrast by supplying the `vmin` and `vmax` values. Typical range of reflectances is between 0-0.3 so we apply those.
 
 
@@ -293,7 +310,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_55_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_56_0.png)
     
 
 
@@ -314,9 +331,16 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_57_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_58_0.png)
     
 
+
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine.
+
+
+```python
+client.shutdown()
+```
 
 ### Exercise
 

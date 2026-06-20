@@ -100,26 +100,23 @@ longitude = 82.608
 year = 2023
 ```
 
-
-```python
-# Define a small bounding box around the chosen point
-km2deg = 1.0 / 111
-x, y = (longitude, latitude)
-r = 1 * km2deg  # radius in degrees
-bbox = (x - r, y - r, x + r, y + r)
-```
-
 Search the catalog for matching items.
 
 
 ```python
+# Define a GeoJSON geometry
+geometry = {
+    'type': 'Point',
+    'coordinates': [longitude, latitude]
+}
+
 # Query the STAC Catalog
 catalog = pystac_client.Client.open(
     'https://earth-search.aws.element84.com/v1')
 
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime=f'{year}',
     query={'eo:cloud_cover': {'lt': 30}, 's2:nodata_pixel_percentage': {'lt': 10}},
     sortby=[{'field': 'properties.eo:cloud_cover', 'direction': 'asc'}]
@@ -199,12 +196,6 @@ ax.set_axis_off()
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_26_0.png)
-    
-
-
 ### Calculate Spectral Indices
 
 The Normalized Difference Vegetation Index (NDVI) is calculated using the following formula:
@@ -251,7 +242,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_31_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_30_0.png)
     
 
 

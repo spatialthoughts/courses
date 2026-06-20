@@ -99,7 +99,10 @@ admin2_filepath = os.path.join(data_folder, 'admin2.gpkg')
 
 if not os.path.exists(admin2_filepath):
     print(f'Admin2 file not found at {admin2_filepath}. Using default Admin2 regions.')
-    admin2_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/admin2.gpkg'
+    admin2_filepath = (
+        'https://storage.googleapis.com/spatialthoughts-public-data'
+        '/python-remote-sensing/admin2.gpkg'
+    )
 ```
 
 Read the Admin2 GeoPackage.

@@ -93,7 +93,7 @@ if environment == 'colab':
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
 ```
 
-### Load City Boundary
+### Load Area of Interest
 
 Read the file containing the city boundary.
 
@@ -103,7 +103,8 @@ aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
 if not os.path.exists(aoi_filepath):
     print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
-    aoi_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/aoi.geojson'
+    aoi_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                    '/python-remote-sensing/aoi.geojson')
 ```
 
 Read the GeoJSON.

@@ -95,7 +95,7 @@ if environment == 'colab':
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
 ```
 
-### Load City Boundary
+### Load Area of Interest
 
 Read the file containing the city boundary.
 
@@ -105,7 +105,8 @@ aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
 if not os.path.exists(aoi_filepath):
     print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
-    aoi_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/aoi.geojson'
+    aoi_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                    '/python-remote-sensing/aoi.geojson')
 ```
 
 Read the GeoJSON.
@@ -122,6 +123,15 @@ Extract the geometry.
 geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
+
+
+
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_18_0.svg)
+    
+
+
 
 ### Search and Load Sentinel-2 Imagery
 
@@ -185,6 +195,12 @@ ax.set_axis_off()
 ax.set_title('STAC Query Results')
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_23_0.png)
+    
+
 
 Load the matching images as a XArray Dataset.
 
@@ -293,6 +309,12 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
+    
+
+
 We can manually apply a contrast stretch as well.
 
 
@@ -315,6 +337,12 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_46_0.png)
+    
+
 
 ### Export the Composite
 
@@ -349,6 +377,13 @@ visualized_file = f'visualized_composite_{time_range}.tif'
 visualized_output_path = os.path.join(output_folder, visualized_file)
 composite_rgba.odc.write_cog(visualized_output_path, overwrite=True)
 print(f'Wrote {visualized_output_path}')
+```
+
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine.
+
+
+```python
+client.shutdown()
 ```
 
 ### Exercise

@@ -101,26 +101,23 @@ longitude = 82.608
 year = 2023
 ```
 
-
-```python
-# Define a small bounding box around the chosen point
-km2deg = 1.0 / 111
-x, y = (longitude, latitude)
-r = 1 * km2deg  # radius in degrees
-bbox = (x - r, y - r, x + r, y + r)
-```
-
 Search the catalog for matching items. This time we use `'direction': 'desc'` in the `sortby` parameter to get results where the first scene has the highest cloud-cover.
 
 
 ```python
+# Define a GeoJSON geometry
+geometry = {
+    'type': 'Point',
+    'coordinates': [longitude, latitude]
+}
+
 # Query the STAC Catalog
 catalog = pystac_client.Client.open(
     'https://earth-search.aws.element84.com/v1')
 
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,
+    intersects=geometry,
     datetime=f'{year}',
     query={
         'eo:cloud_cover': {'lt': 50},
@@ -190,7 +187,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_22_0.png)
+![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_21_0.png)
     
 
 
@@ -251,7 +248,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_28_0.png)
+![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_27_0.png)
     
 
 

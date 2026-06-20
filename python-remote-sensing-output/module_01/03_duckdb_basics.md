@@ -110,7 +110,7 @@ Notice that the dataset has a `geometry` column which stores the layer geometry.
 
 
 ```python
-adm1_name = 'Karnataka'
+adm1_name = 'Karnātaka'
 
 query = f'''
 SELECT adm1_name, adm1_id, adm2_name, adm2_id, ST_AsWKB(geometry) AS geometry
