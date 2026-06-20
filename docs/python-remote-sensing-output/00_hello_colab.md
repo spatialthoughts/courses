@@ -113,43 +113,53 @@ output_path = os.path.join(output_folder, output_file)
 capitals.to_file(driver='GPKG', filename=output_path)
 ```
 
-The local disk is not persistent and the data will be deleted when the Colab Runtime is disconnected. Instead, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
+The local disk is not persistent and the data will be deleted when the Colab Runtime is disconnected. Google Colab has a built-in integration with Google Drive and provides the easiest solution for storing persistent data.
 
-Run the following cell to authenticate and mount the Google Drive.
+Google Drive integration is only available in the consumer version of Colab so we check the runtime before mounting the drive.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+print('Environment:', environment)
 ```
 
-
-```python
-drive_folder_root = 'MyDrive'
-output_folder = 'python-remote-sensing'
-```
+The following cell mounts your Google Drive in the Colab runtime.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  output_folder_path = os.path.join(
-      '/content/drive', drive_folder_root, output_folder)
+if environment == 'colab':
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
 
-  # Check if Google Drive is mounted
-  if not os.path.exists('/content/drive'):
-      print('Google Drive is not mounted. ',
-            'Please run the cell above to mount your drive.')
-  else:
-      if not os.path.exists(output_folder_path):
-          os.makedirs(output_folder_path)
-          print(f'Created {output_folder_path}')
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
 ```
 
 
 ```python
 output_file = 'capitals.gpkg'
-output_path = os.path.join(output_folder_path, output_file)
+output_path = os.path.join(output_folder, output_file)
 capitals.to_file(output_path)
 ```
 
