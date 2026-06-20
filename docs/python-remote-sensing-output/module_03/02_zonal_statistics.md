@@ -1,5 +1,5 @@
 ### Overview
-We will learn how to calculate zonal statistics — aggregating raster pixel values within vector polygon boundaries. Using the Global Human Settlement Layer (GHSL) population raster and US county boundaries, we compute the total population for each county in California. We use [`xvec`](https://xvec.readthedocs.io/en/stable/index.html) for the zonal aggregation and `dask` to handle the large raster without loading it all into memory at once.
+We will learn how to calculate zonal statistics — aggregating raster pixel values within vector polygon boundaries. Using the Global Human Settlement Layer (GHSL) population raster and selected Admin2 polygons, we compute the total population for each Admin2 region. We use [`xvec`](https://xvec.readthedocs.io/en/stable/index.html) for the zonal aggregation and `dask` to handle the large raster without loading it all into memory at once.
 
 ### Setup
 
@@ -110,6 +110,7 @@ Read the Admin2 GeoPackage.
 
 ```python
 admin2_gdf = gpd.read_file(admin2_filepath)
+admin2_gdf
 ```
 
 ### Load Raster Data

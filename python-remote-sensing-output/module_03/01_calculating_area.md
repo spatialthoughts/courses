@@ -72,6 +72,8 @@ import xarray as xr
 from matplotlib import cm
 from odc import stac
 from odc.geo.geobox import GeoBox
+from affine import Affine
+import rasterio.features
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -133,9 +135,6 @@ ESA WorldCover has data for year 2020 and 2021. We will use the 2021 data.
 catalog = pystac_client.Client.open(
     'https://planetarycomputer.microsoft.com/api/stac/v1')
 
-# STAC search requires bounding box in EPSG:4326
-bounds = buffered.to_crs('EPSG:4326').total_bounds
-
 search = catalog.search(
     collections=['esa-worldcover'],
     intersects=geometry,
@@ -166,7 +165,7 @@ ds = stac.load(
     items,
     bbox=geometry.bounds, # <-- load data only for the bbox
     resolution=10,
-    crs=utm_crs,
+    crs='utm',
     chunks={},  # <-- use Dask
     patch_url=pc.sign,
     groupby='solar_day',
@@ -191,11 +190,12 @@ Run this computation using the local Dask cluster and load the data into memory 
 map_data = map_data.compute()
 ```
 
-Clip the data to the buffered region.
+Clip the data to the buffered region. Before we clip, we need to reproject the `aoi_gdf` to the same CRS as the data.
 
 
 ```python
-map_data_clipped = map_data.rio.clip(buffered)
+aoi_gdf_reprojected = aoi_gdf.to_crs(map_data.rio.crs)
+map_data_clipped = map_data.rio.clip(aoi_gdf_reprojected.geometry)
 ```
 
 ### Visualize the Landcover
@@ -257,11 +257,6 @@ ax.set_title('Landcover Classes from ESA WorldCover');
     
 
 
-### Exercise
-Select a single landcover class and plot it.
-
-Hint: Use the [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function.
-
 ### Calculate Area
 
 We can now calculate are of each class in our region of interest. As our data is in a projected CRS, each pixel's area is fixed. We can count the total number of pixels for each class and multiply it by the area of a single pixel to get the area.
@@ -311,128 +306,13 @@ Save the results as a CSV file.
 
 
 ```python
-output_filename = f'area_{buffer_distance_meters}.csv'
+output_filename = f'aoi_area.csv'
 output_filepath = os.path.join(output_folder, output_filename)
 area_df.to_csv(output_filepath, index=False)
 ```
 
-### Calculating Area for Large Regions
-
-Our previous approach required loading the entire array of landcover classes in the memory using `.values`. If our dataset is very large, this will cause us to run out of memory and result in a crash. We can instead use `dask` to chunk the data which lazily loads each chunk into memory only when processing it.
-
-Read the file containing the Admin2 boundaries exported in Module 1.
-
-
-```python
-admin2_filepath = os.path.join(data_folder, 'admin2.gpkg')
-
-if not os.path.exists(admin2_filepath):
-    print(f'Admin2 file not found at {admin2_filepath}. Using default Admin2 regions.')
-    admin2_filepath = 'https://storage.googleapis.com/spatialthoughts-public-data/python-remote-sensing/admin2.gpkg'
-```
-
-Read the Admin2 GeoPackage.
-
-
-```python
-admin2_gdf = gpd.read_file(admin2_filepath)
-```
-
-Automatically select a suitable UTM projection.
-
-
-```python
-bbox = admin2_gdf.geometry.total_bounds
-
-# Query for matching UTM CRS
-utm_crs_list = pyproj.database.query_utm_crs_info(
-    datum_name='WGS 84',
-    area_of_interest=pyproj.aoi.AreaOfInterest(*bbox),
-)
-utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
-print(f'Selected CRS {utm_crs.name}')
-```
-
-We update the code from earlier to now specify a large buffer distance for the region of interest and explicitely specify a chunk size of `5000 x 5000` - which is small enough to fit into memory.
-
-
-```python
-catalog = pystac_client.Client.open(
-    'https://planetarycomputer.microsoft.com/api/stac/v1')
-
-# STAC search requires bounding box in EPSG:4326
-bounds = admin2_gdf.geometry.union_all()
-
-search = catalog.search(
-    collections=['esa-worldcover'],
-    bbox=bounds,
-    datetime=f'2021',
-)
-items = search.item_collection()
-
-ds = stac.load(
-    items,
-    bbox=bounds, # <-- load data only for the bbox
-    resolution=10,
-    crs=utm_crs,
-    chunks={'x':5000, 'y':5000},  # <-- use Dask
-    patch_url=pc.sign,
-    groupby='solar_day',
-    preserve_original_order=True
-)
-map_data = ds['map'].squeeze()
-map_data
-```
-
-We get the data as a Dask Array using `.data`. This does not trigger any computation.
-
-
-```python
-dask_array = map_data.data
-large_area_counts, _ = da.histogram(dask_array, bins=bins)
-large_area_counts
-```
-
-Now we call `.compute()` to start the computation which uses distributed computing to process each chunk in parallel using all available resources.
-
-
-```python
-%%time
-large_area_counts = large_area_counts.compute()
-```
-
-We can now process the results into a nice table. Here we divide the area by `1e6` to get the results in `sq. km.`.
-
-
-```python
-pixel_area_m2 = 100.0
-
-large_area_df = pd.DataFrame({
-    'class_value': unique_classes,
-    'area_km2': large_area_counts * pixel_area_m2 / 1e6,
-})
-
-large_area_df['class_name'] = large_area_df['class_value'].map(
-    lambda x: class_dict[x]['description'])
-
-# Drop nodata class (0) and classes with no pixels
-large_area_df = large_area_df[
-    (area_df['class_value'] != 0) & (large_area_df['area_km2'] > 0)]
-
-large_area_df
-```
-
-Save the results as a CSV file.
-
-
-```python
-output_filename = f'area_{buffer_distance_meters}.csv'
-output_filepath = os.path.join(output_folder, output_filename)
-large_area_df.to_csv(output_filepath, index=False)
-```
-
 ### Exercise
-- Upload a vector layer (shapefile, GeoPackage, GeoJSON etc.) of your area of interest.
-- Calculate area of all landcover classes.
 
-Tip: If you do not have a data layer handy, you may use [geojson.io](https://geojson.io/next/) to draw a shape and Export it as a GeoJSON.
+Select only the pixels of *Tree Cover* (class value `10`) to create a map of tree cover in your region. Save the result as a Cloud-Optimized GeoTIFF (COG).
+
+Hint: Use the [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function.
