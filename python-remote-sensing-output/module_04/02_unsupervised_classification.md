@@ -77,16 +77,16 @@ Load the multiband composite saved by 01_preparing_composites.ipynb. The composi
 
 
 ```python
-multiband_composite_path = os.path.join(
-    data, 'multiband_composite.tif')
-
+multiband_composite_path = os.path.join(data_folder, 'multiband_composite.tif')
 if not os.path.exists(multiband_composite_path):
-    print(f'Composite file not found at {multiband_composite_path}. Using default composite.')
-    multiband_composite_path = ('https://storage.googleapis.com/spatialthoughts-public-data'
-                                '/python-remote-sensing/multiband_composite.tif')
-    
+    print(f'Composite file not found at {multiband_composite_path}.',
+          'Using default composite.')
+    multiband_composite_path = (
+        'https://storage.googleapis.com/spatialthoughts-public-data'
+        '/python-remote-sensing/multiband_composite.tif')
+
 band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
-              'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi']
+              'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope']
 composite_da = rxr.open_rasterio(multiband_composite_path, masked=True)
 composite_da = composite_da.assign_coords(band=band_names)
 composite = composite_da.to_dataset('band')
@@ -123,7 +123,7 @@ fig.set_size_inches(6, 6)
 preview.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
     vmin=0, vmax=0.3)
-ax.set_title(f'Sentinel-2 Median Composite {year}')
+ax.set_title(f'Sentinel-2 Composite')
 ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
@@ -311,6 +311,12 @@ for ax in axes:
 plt.tight_layout()
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_27_0.png)
+    
+
 
 ### Save the Water Mask
 

@@ -102,6 +102,12 @@ latitude = 27.163
 longitude = 82.608
 ```
 
+
+```python
+latitude = 59.436962
+longitude = 24.753574
+```
+
 Define a GeoJSON geometry.
 
 
@@ -180,6 +186,22 @@ ds = load(
 ds
 ```
 
+The default chunk size for Dask Arrays is 128 MB. We will be converting our data to floating point integers which increases the data size by a factor of 4. So we can explicitely set smaller chunk sizes. Here we select each chunk to be `2048x2048` pixels.
+
+
+```python
+ds = load(
+    items,
+    bands=['red', 'green', 'blue', 'nir'],
+    resolution=10,
+    crs='utm',
+    chunks={'x': 2048, 'y': 2048},  # Explicitly define chunk sizes
+    groupby='solar_day',
+    preserve_original_order=True
+)
+ds
+```
+
 Use[ `xarray.Dataset.nbytes`](https://docs.xarray.dev/en/latest/generated/xarray.Dataset.nbytes.html) property to check the size of the loaded dataset.
 
 
@@ -203,26 +225,6 @@ scene
 print(f'Scene size: {scene.nbytes/1e6:.2f} MB.')
 ```
 
-This scene is small enough to fit into RAM, so we can load it into memory. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. We can visualize the Dask graph to know the steps required to compute each chunk.
-
-
-```python
-dask.visualize(scene, optimize_graph=True, size='5x5')
-```
-
-Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
-
-
-```python
-%%time
-scene = scene.compute()
-```
-
-
-```python
-scene
-```
-
 The Sentinel-2 scenes come with NoData value of 0. So we set the correct NoData value before further processing.
 
 
@@ -238,6 +240,36 @@ Each band of the scene is saved with integer pixel values (data type `uint16`). 
 scale = 0.0001
 offset = -0.1
 scene = scene*scale + offset
+scene
+```
+
+This scene is small enough to fit into RAM, so we can load it into memory. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. We can visualize the Dask graph to know the steps required to compute each chunk.
+
+
+```python
+scene.__dask_graph__().visualize(size='5x5')
+```
+
+
+
+
+    
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_45_0.svg)
+    
+
+
+
+Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
+
+
+```python
+%%time
+scene = scene.compute()
+```
+
+
+```python
+scene
 ```
 
 ### Visualize the Scene
@@ -283,12 +315,12 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
-    WARNING:matplotlib.image:Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.0999..1.0].
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.0999..1.0].
 
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_54_1.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_57_1.png)
     
 
 
@@ -310,7 +342,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_56_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_59_0.png)
     
 
 
@@ -331,7 +363,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_58_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_61_0.png)
     
 
 
