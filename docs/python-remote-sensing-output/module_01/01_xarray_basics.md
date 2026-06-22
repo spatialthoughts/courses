@@ -120,11 +120,11 @@ Let's see our `Dataset` and see what variables, coordinates and dimensions it co
 ds
 ```
 
-A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset.variable_name` syntax.
+A Dataset consists of one or more `xarray.DataArray` object. This is the main object that consists of a single variable with dimension names, coordinates and attributes. You can access each variable using `dataset[variable_name]` or `dataset.varaible_name` syntax.
 
 
 ```python
-da = ds.red
+da = ds['red']
 da
 ```
 

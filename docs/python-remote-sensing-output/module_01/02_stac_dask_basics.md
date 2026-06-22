@@ -243,6 +243,13 @@ scene = scene*scale + offset
 scene
 ```
 
+Let's check the scene size now.
+
+
+```python
+print(f'Scene size: {scene.nbytes/1e6:.2f} MB.')
+```
+
 This scene is small enough to fit into RAM, so we can load it into memory. As we setup a Dask LocalCluster, the process will be paralellized across all available cores of the machine. We can visualize the Dask graph to know the steps required to compute each chunk.
 
 
@@ -254,7 +261,7 @@ scene.__dask_graph__().visualize(size='5x5')
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_45_0.svg)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_47_0.svg)
     
 
 
@@ -320,7 +327,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_57_1.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_59_1.png)
     
 
 
@@ -342,7 +349,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_59_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_61_0.png)
     
 
 
@@ -363,7 +370,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_61_0.png)
+![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_63_0.png)
     
 
 
