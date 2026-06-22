@@ -5,18 +5,60 @@ Embeddings are a way to compress large amounts of information into a smaller set
 
 Embeddings can be used as input features to the classification model and results in higher accuracy outputs We will perform supervised land cover classification of AEF Embeddings using a Random Forest classifier and generate a classified image for the chosen region of interest.
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+Determine our runtime environment.
+
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
+
+
+```python
+if environment in ['colab', 'colab_enterprise']:
     !pip install rioxarray scikit-learn aef-loader dask[distributed]
     # Due to version conflict, you maybe prompted to
     # restart the runtime after the installation
     # After restarting proceed to run the cell below
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -39,17 +81,6 @@ from odc.geo.geobox import GeoBox
 from pyproj import Transformer
 ```
 
-
-```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-```
-
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
 
 
@@ -65,7 +96,7 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
@@ -92,9 +123,14 @@ gcp_gdf['landcover'].value_counts(sort=False)
 
 
 ```python
-aoi_file_path = 'https://storage.googleapis.com/spatialthoughts-public-data/' \
-  'bangalore.geojson'
-aoi_gdf = gpd.read_file(aoi_file_path)
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
+
+if not os.path.exists(aoi_filepath):
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                    '/python-remote-sensing/aoi.geojson')
+
+aoi_gdf = gpd.read_file(aoi_filepath)
 geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
@@ -139,7 +175,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_14_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_17_0.png)
     
 
 
@@ -408,7 +444,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_33_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_36_0.png)
     
 
 
@@ -416,40 +452,10 @@ plt.show()
 
 We finally save the results as a local Cloud-Optimized GeoTIFF file.
 
-Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after existing Google Colab.
-
-Run the following cell to authenticate and mount the Google Drive.
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
-```
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-  drive_folder_root = 'MyDrive'
-  output_folder = 'data'
-  output_folder_path = os.path.join(
-      '/content/drive', drive_folder_root, output_folder)
-
-  # Check if Google Drive is mounted
-  if not os.path.exists('/content/drive'):
-      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-  else:
-      if not os.path.exists(output_folder_path):
-          os.makedirs(output_folder_path)
-else:
-  # Use the local folder
-  output_folder_path = output_folder
-```
-
 
 ```python
 output_file = f'classification_{year}.tif'
-output_path = os.path.join(output_folder_path, output_file)
+output_path = os.path.join(output_folder, output_file)
 predicted_landcover_clipped.rio.to_raster(output_path, driver='COG')
 print(f'Wrote {output_path}')
 ```

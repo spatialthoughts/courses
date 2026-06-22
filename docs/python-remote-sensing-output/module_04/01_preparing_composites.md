@@ -3,17 +3,59 @@
 We will prepare a multi-band composite containing spectral bands, spectral indices, elevation and slope. When the composite is used to extract training features for machine learning models, each band adds a different context for the model.
 
 
-### Setup and Data Download
+### Setup
 
-The following blocks of code will install the required packages and set up the computing environment.
+Determine our runtime environment.
+
+
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
+if environment in ['colab', 'colab_enterprise']:
     !pip install pystac-client odc-stac rioxarray dask['distributed'] botocore \
       jupyter-server-proxy planetary_computer xarray-spatial
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -31,13 +73,7 @@ from xrspatial import slope
 
 
 ```python
-data_folder = 'data'
-output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
+year = 2023
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -53,7 +89,7 @@ If you are running this notebook in Colab, you will need to create and use a pro
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
+if environment == 'colab':
     from google.colab import output
     port_to_expose = 8787  # This is the default port for Dask dashboard
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
@@ -61,32 +97,17 @@ if 'google.colab' in str(get_ipython()):
 
 ### Load Area of Interest
 
-Read the file containing the city boundary from your Google Drive saved in the previous notebook.
-
-Run the following cell to authenticate and mount the Google Drive.
-
+Read the file containing the city boundary.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  from google.colab import drive
-  drive.mount('/content/drive')
-```
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
 
+if not os.path.exists(aoi_filepath):
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                    '/python-remote-sensing/aoi.geojson')
 
-```python
-if 'google.colab' in str(get_ipython()):
-  drive_folder_root = 'MyDrive'
-  drive_data_folder = 'python-remote-sensing'
-  drive_folder_path = os.path.join(
-        '/content/drive', drive_folder_root, drive_data_folder)
-  data_folder = drive_folder_path
-else:
-  # Look for the file in local data folder
-  data_folder = data_folder
-
-aoi_filename = 'aoi.geojson'
-aoi_filepath = os.path.join(data_folder, aoi_filename)
 aoi_filepath
 ```
 
@@ -171,13 +192,11 @@ composite
 
 We compute five spectral indices that are useful for mapping urban land cover and water bodies.
 
-| Index | Formula | Bands (Sentinel-2) |
-|-------|---------|-------------------|
-| NDVI | (NIR − Red) / (NIR + Red) | B8, B4 |
-| NDBI | (SWIR1 − NIR) / (SWIR1 + NIR) | B11, B8 |
-| BSI | ((SWIR1 + Red) − (NIR + Blue)) / ((SWIR1 + Red) + (NIR + Blue)) | B11, B4, B8, B2 |
-| MNDWI | (Green − SWIR1) / (Green + SWIR1) | B3, B11 |
-| NDWI | (Green − NIR) / (Green + NIR) | B3, B8 |
+- NDVI: `(NIR − Red) / (NIR + Red)`
+- NDBI: `(SWIR1 − NIR) / (SWIR1 + NIR)`
+- BSI: `((SWIR1 + Red) − (NIR + Blue)) / ((SWIR1 + Red) + (NIR + Blue))`
+- MNDWI: `(Green − SWIR1) / (Green + SWIR1)`
+- NDWI: `(Green − NIR) / (Green + NIR)`
 
 
 ```python
@@ -189,7 +208,10 @@ swir16 = composite['swir16']
 
 composite['ndvi']  = (nir - red)    / (nir + red)
 composite['ndbi']  = (swir16 - nir) / (swir16 + nir)
-composite['bsi']   = ((swir16 + red) - (nir + blue)) / ((swir16 + red) + (nir + blue))
+composite['bsi'] = (
+    ((swir16 + red) - (nir + blue)) /
+    ((swir16 + red) + (nir + blue))
+)
 composite['mndwi'] = (green - swir16) / (green + swir16)
 composite['ndwi']  = (green - nir)    / (green + nir)
 
@@ -306,17 +328,10 @@ We finally save the results as a local Cloud-Optimized GeoTIFF file.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-  output_folder_path = drive_folder_path
-  # Check if Google Drive is mounted
-  if not os.path.exists('/content/drive'):
-      print("Google Drive is not mounted. Please run the cell above to mount your drive.")
-  else:
-      if not os.path.exists(output_folder_path):
-          os.makedirs(output_folder_path)
-else:
-  # Use the local output folder
-  output_folder_path = output_folder
+output_folder_path = output_folder
+
+if not os.path.exists(output_folder_path):
+    os.makedirs(output_folder_path)
 ```
 
 Ww use the rioxarray accessor to save the results as a Cloud-Optimized GeoTIFF.
@@ -333,15 +348,13 @@ Optionally, we can also the output to Google Cloud Storage (GCS) bucket.
 
 
 ```python
-# Specify your project ID and Bucket name
-project_id = 'python-363014'
-bucket_name = 'spatialthoughts-public-data'
-sub_folder = 'python-remote-sensing'
-```
+if environment == 'colab':
 
+  # Specify your project ID and Bucket name
+  project_id = 'python-363014'
+  bucket_name = 'spatialthoughts-public-data'
+  sub_folder = 'python-remote-sensing'
 
-```python
-if 'google.colab' in str(get_ipython()):
   from google.colab import auth
   from google.cloud import storage
 

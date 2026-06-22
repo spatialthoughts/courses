@@ -2,26 +2,60 @@
 
 The [WaterDetect algorithm](https://github.com/cordmaur/WaterDetect) uses unsupervised clustering on water-sensitive spectral indices to automatically detect open water bodies from satellite imagery — without any labeled training data.
 
-> Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. Automatic Water Detection from Multidimensional Hierarchical Clustering for Sentinel-2 Images and a Comparison with Level 2A Processors. *Remote Sensing of Environment* 2021, 253, 112209.
+In this notebook we adapt the WaterDetect workflow for a cloud-native Python stack. We start from the multiband composite prepared in the previous section and run a K-Means clustering on water-sensitive spectral indices and Identify the water cluster as the one with the highest mean MNDWI.
 
-In this notebook we adapt the WaterDetect workflow for a cloud-native Python stack. We start from the multiband composite prepared in `01_preparing_composites.ipynb`.
+### Setup
 
-1. Load the precomputed multiband composite from Google Drive
-2. Compute water-sensitive spectral indices: NDWI, MNDWI, and MIR2 (SWIR2)
-3. Sample pixels and run K-Means clustering on the three-band index stack
-4. Identify the water cluster as the one with the highest mean MNDWI
-5. Extract the water mask and export it as a Cloud-Optimized GeoTIFF
+Determine our runtime environment.
 
-### Setup and Data Download
 
-The following blocks of code will install the required packages and download the datasets to your Colab environment.
+
+```python
+import os
+
+if 'COLAB_RELEASE_TAG' in os.environ:
+    environment = 'colab'
+    if os.environ.get('VERTEX_PRODUCT') == 'COLAB_ENTERPRISE':
+        environment = 'colab_enterprise'
+else:
+    environment = 'local'
+
+# Set to True to use Google Drive for data storage in Colab
+use_google_drive = True
+
+# Google Drive is available only in 'colab' environment
+if environment == 'colab' and use_google_drive:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    drive_folder_root = 'MyDrive'
+    drive_data_folder = 'python-remote-sensing'
+    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
+    data_folder = drive_folder_path
+    output_folder = drive_folder_path
+else:
+    data_folder = 'data'
+    output_folder = 'output'
+
+if not os.path.exists(data_folder):
+    os.mkdir(data_folder)
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+print(f'Environment: {environment}')
+print(f'Data folder: {data_folder}')
+print(f'Output folder: {output_folder}')
+```
+
+If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
 
 
 ```python
 %%capture
-if 'google.colab' in str(get_ipython()):
+if environment in ['colab', 'colab_enterprise']:
     !pip install rioxarray dask scikit-learn
 ```
+
+Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
 
 
 ```python
@@ -37,46 +71,44 @@ import xarray as xr
 from sklearn.cluster import KMeans
 ```
 
+### Load Multiband Composite
 
-```python
-data_folder = 'data'
-output_folder = 'output'
-year = 2023
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-```
-
-### Load Multiband Composite from Google Drive
-
-Mount Google Drive and load the multiband composite saved by `01_preparing_composites.ipynb`. The composite contains 11 bands: 6 raw spectral bands (`red`, `green`, `blue`, `nir`, `swir16`, `swir22`) and 5 precomputed indices (`ndvi`, `ndbi`, `bsi`, `mndwi`, `ndwi`).
+Load the multiband composite saved by 01_preparing_composites.ipynb. The composite contains 11 bands: 6 raw spectral bands (red, green, blue, nir, swir16, swir22) and 5 precomputed indices (ndvi, ndbi, bsi, mndwi, ndwi).
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-    from google.colab import drive
-    drive.mount('/content/drive')
-```
+multiband_composite_path = os.path.join(
+    data, 'multiband_composite.tif')
 
-
-```python
-if 'google.colab' in str(get_ipython()):
-    drive_folder_root = 'MyDrive'
-    input_folder = 'python-remote-sensing'
-    input_folder_path = os.path.join(
-        '/content/drive', drive_folder_root, input_folder)
-else:
-    input_folder_path = output_folder
-
+if not os.path.exists(multiband_composite_path):
+    print(f'Composite file not found at {multiband_composite_path}. Using default composite.')
+    multiband_composite_path = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                                '/python-remote-sensing/multiband_composite.tif')
+    
 band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
               'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi']
-input_path = os.path.join(input_folder_path, 'multiband_composite.tif')
-composite_da = rxr.open_rasterio(input_path, masked=True)
+composite_da = rxr.open_rasterio(multiband_composite_path, masked=True)
 composite_da = composite_da.assign_coords(band=band_names)
 composite = composite_da.to_dataset('band')
 composite
+```
+
+### Load Area of Interest
+
+Read the file containing the city boundary.
+
+
+```python
+aoi_filepath = os.path.join(data_folder, 'aoi.geojson')
+
+if not os.path.exists(aoi_filepath):
+    print(f'AOI file not found at {aoi_filepath}. Using default AOI.')
+    aoi_filepath = ('https://storage.googleapis.com/spatialthoughts-public-data'
+                    '/python-remote-sensing/aoi.geojson')
+
+aoi_gdf = gpd.read_file(aoi_filepath)
+geometry = aoi_gdf.geometry.union_all()
+geometry
 ```
 
 Visualize the composite as a true-color image.
@@ -101,11 +133,9 @@ plt.show()
 
 The WaterDetect algorithm uses a three-band stack of water-sensitive indices as input to the clusterer.
 
-| Index | Formula | Bands (Sentinel-2) |
-|-------|---------|--------------------|
-| NDWI | (Green − NIR) / (Green + NIR) | B3, B8 |
-| MNDWI | (Green − SWIR1) / (Green + SWIR1) | B3, B11 |
-| MIR2 | SWIR2 reflectance | B12 |
+- MNDWI: `(Green − SWIR1) / (Green + SWIR1)`
+- NDWI: `(Green − NIR) / (Green + NIR)`
+- MIR2:  `SWIR2`
 
 Water has high NDWI and MNDWI values and low MIR2 reflectance, making this combination highly discriminative. Other band combinations are described in the [WaterDetect configuration reference](https://github.com/cordmaur/WaterDetect/blob/master/WaterDetect.ini).
 
@@ -119,7 +149,7 @@ composite[['ndwi', 'mndwi', 'mir2']]
 
 ### Unsupervised Clustering
 
-We sample pixels from the three-band index stack and train a K-Means clusterer. This mirrors the GEE approach which uses `wekaCascadeKMeans` (automatically searches for the optimal cluster count between `minClusters` and `maxClusters`). Here we use scikit-learn's `KMeans` with a fixed `n_clusters`. Adjust this value if water bodies are split across multiple clusters or merged with other land cover types.
+We sample pixels from the three-band index stack and train a K-Means clusterer. Here we use scikit-learn's `KMeans` with a fixed `n_clusters`. Adjust this value if water bodies are split across multiple clusters or merged with other land cover types.
 
 First, we extract all valid (non-NaN) pixels and draw a random sample to train on.
 
@@ -152,9 +182,7 @@ kmeans.fit(sample)
 print(f'Trained KMeans with {n_clusters} clusters')
 ```
 
-Apply the trained clusterer to all pixels using `map_blocks`, the same pattern used in the supervised
-classification notebook. NaN pixels (clouds, nodata) are handled inside the prediction function and
-carried through as NaN in the output.
+Apply the trained clusterer to all pixels using `map_blocks`.
 
 
 ```python
@@ -286,34 +314,12 @@ plt.show()
 
 ### Save the Water Mask
 
-Rather than saving it to the temporary machine where Colab is running, we save it to Google Drive so it persists after the session ends.
-
-Run the following cell to authenticate and mount the Google Drive.
+Save the result as a Cloud-Optimized GeoTIFF to the configured output folder.
 
 
 ```python
-if 'google.colab' in str(get_ipython()):
-    from google.colab import drive
-    drive.mount('/content/drive')
-```
-
-
-```python
-if 'google.colab' in str(get_ipython()):
-    drive_folder_root = 'MyDrive'
-    output_folder = 'python-remote-sensing'
-    output_folder_path = os.path.join(
-        '/content/drive', drive_folder_root, output_folder)
-    if not os.path.exists('/content/drive'):
-        print('Google Drive is not mounted. Please run the cell above.')
-    else:
-        if not os.path.exists(output_folder_path):
-            os.makedirs(output_folder_path)
-else:
-    output_folder_path = output_folder
-
 output_file = f'water_mask_{year}.tif'
-output_path = os.path.join(output_folder_path, output_file)
+output_path = os.path.join(output_folder, output_file)
 water_mask.rio.to_raster(output_path, driver='COG')
 print(f'Saved {output_path}')
 ```
