@@ -4,7 +4,7 @@ We are now ready to perform a large computation to create a median composite ima
 
 ### Overview of the Task
 
-We will query the Overture Maps catalog for the boundary for the city of Bengaluru, India, use it to query a STAC catalog for Sentinel-2 imagery for a chosen period and then use XArray and Dask to create a median composite image using distributed processing.
+We will use the extracted city boundary from the previous step to query and load Sentinel-2 scenes for a chosen time-period and create a median composite. We will then clip and save the output as a Cloud-Optimized GeoTIFF (COG).
 
 
 ### Setup
@@ -149,14 +149,12 @@ configure_s3_access(
     aws_unsigned=True,
 )
 
-# Search for images for the year
-year = 2024
-time_range = f'{year}'
-
-# Optionally, we can specify a range of months
-# start_month = 4
-# end_month = 6
-# time_range = f'{year}-{start_month:02d}/{year}-{end_month:02d}'
+# Search for images 
+# To ensure the process runs quickly, we will select images
+# from a specific time range and with low cloud cover
+start_month = 4
+end_month = 5
+time_range = f'{year}-{start_month:02d}/{year}-{end_month:02d}'
 
 filters = {
     'eo:cloud_cover': {'lt': 30},
