@@ -102,12 +102,6 @@ latitude = 27.163
 longitude = 82.608
 ```
 
-
-```python
-latitude = 59.436962
-longitude = 24.753574
-```
-
 Define a GeoJSON geometry.
 
 
@@ -176,7 +170,7 @@ Load the matching images as a XArray Dataset using [`odc.stac.load()`](https://o
 ```python
 ds = load(
     items,
-    bands=['red', 'green', 'blue', 'nir'],
+    bands=['red', 'green', 'blue'],
     resolution=10,
     crs='utm',
     chunks={},  # <-- use Dask
@@ -186,16 +180,16 @@ ds = load(
 ds
 ```
 
-The default chunk size for Dask Arrays is 128 MB. We will be converting our data to floating point integers which increases the data size by a factor of 4. So we can explicitely set smaller chunk sizes. Here we select each chunk to be `2048x2048` pixels.
+ Here each band is a single Dask chunk spanning the whole tile. We can explicitely set the chunk size to benefit from streaming. Here we select each chunk to be `1024x1024` pixels.
 
 
 ```python
 ds = load(
     items,
-    bands=['red', 'green', 'blue', 'nir'],
+    bands=['red', 'green', 'blue'],
     resolution=10,
     crs='utm',
-    chunks={'x': 2048, 'y': 2048},  # Explicitly define chunk sizes
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
     preserve_original_order=True
 )
@@ -211,12 +205,29 @@ print(f'DataSet size: {ds.nbytes/1e6:.2f} MB.')
 
 ### Select a Single Scene
 
-Let's work with a single scene for now. We will use the first item from our search (the least cloudy scene). When the items are loaded as a XArray Dataset, the `time` dimension is sorted. We get the timestamp of the least cloudy scene and select it from the dataset.
+Let's work with a single scene for now. We will use the first item from our search (the least cloudy scene).
 
 
 ```python
-timestamp = pd.to_datetime(items[0].properties['datetime']).tz_convert(None)
-scene = ds.sel(time=timestamp)
+least_cloudy = items[0]
+
+ds = load(
+    [least_cloudy],
+    bands=['red', 'green', 'blue'],
+    resolution=10,
+    crs='utm',
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
+    groupby='solar_day',
+    preserve_original_order=True
+)
+ds
+```
+
+We still get a 3-dimensional array with just one time step. Use `.squeeze()` to remove the empty time dimension.
+
+
+```python
+scene = ds.squeeze()
 scene
 ```
 
@@ -233,7 +244,7 @@ scene = scene.where(scene != 0)
 scene
 ```
 
-Each band of the scene is saved with integer pixel values (data type `uint16`). This help save the storage cost as storing the reflectance values as floating point numbers (data type `float64`) requires more storage. We need to convert the raw pixel values to reflectances by applying the *scale* and *offset* values. The [Earth Search STAC API](https://github.com/Element84/earth-search) does not apply the scale/offset automatically to Sentinel-2 scene and they are supplied in the `raster:bands` metadata for each band. The scale and offset for sentinel-2 scenes captured after Jan 25, 2022 is `0.0001` and `-0.1` respectively.
+Each band of the original scene is saved with integer pixel values. This help save the storage cost as storing the reflectance values as floating point numbers requires more storage. We need to convert the raw pixel values to reflectances by applying the *scale* and *offset* values. The [Earth Search STAC API](https://github.com/Element84/earth-search) does not apply the scale/offset automatically to Sentinel-2 scene and they are supplied in the `raster:bands` metadata for each band. The scale and offset for sentinel-2 scenes captured after Jan 25, 2022 is `0.0001` and `-0.1` respectively.
 
 
 ```python
@@ -257,26 +268,12 @@ This scene is small enough to fit into RAM, so we can load it into memory. As we
 scene.__dask_graph__().visualize(size='5x5')
 ```
 
-
-
-
-    
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_47_0.svg)
-    
-
-
-
 Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
 
 
 ```python
 %%time
 scene = scene.compute()
-```
-
-
-```python
-scene
 ```
 
 ### Visualize the Scene
@@ -321,15 +318,6 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
-
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.0999..1.0].
-
-
-
-    
-![](python-remote-sensing-output/module_01/02_stac_dask_basics_files/02_stac_dask_basics_59_1.png)
-    
-
 
 We can improve the contrast by supplying the `vmin` and `vmax` values. Typical range of reflectances is between 0-0.3 so we apply those.
 

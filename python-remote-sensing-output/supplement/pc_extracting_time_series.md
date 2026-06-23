@@ -1,6 +1,7 @@
 This notebook shows how to access Sentinel-2 Level-2A data by querying Microsoft's [Planetary Computer Data Catalog](https://planetarycomputer.microsoft.com/catalog). This catalog is served via STAC API and with the datasets hosted on Azure Blob Storage. As we are using open-standards for data-access, the process is largely similar to accessing the data from other STAC API endpoints, with a few minor differences based on how different providers have chosen to pre-process the data.
 
 #### Setup and Data Download
+
 The following blocks of code will install the required packages and download the datasets to your Colab environment.
 
 
@@ -100,7 +101,7 @@ ds = stac.load(
     bands=['red', 'green', 'blue', 'nir', 'SCL'],
     bbox=bbox, # <-- load data only for the bbox
     resolution=10,
-    chunks={},  # <-- use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     patch_url=pc.sign,
     groupby='solar_day',
     preserve_original_order=True
@@ -154,6 +155,7 @@ ds
 ```
 
 #### Extracting Time-Series
+
 We have a dataset with cloud-masked NDVI values at each pixel of each scene. Remember that none of these values are computed yet. Dask has a graph of all the operations that would be required to calculate the results.
 
 We can now query this results for values at our chosen location. Once we run `compute()` - Dask will fetch the required tiles from the source data and run the operations to give us the results.
@@ -205,6 +207,7 @@ plt.show()
 ```
 
 #### Interpolate and Smooth the time-series
+
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.
 
 

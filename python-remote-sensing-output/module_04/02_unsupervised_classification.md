@@ -87,7 +87,8 @@ if not os.path.exists(multiband_composite_path):
 
 band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
               'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope']
-composite_da = rxr.open_rasterio(multiband_composite_path, masked=True)
+composite_da = rxr.open_rasterio(
+    multiband_composite_path, masked=True, chunks='auto')
 composite_da = composite_da.assign_coords(band=band_names)
 composite = composite_da.to_dataset('band')
 composite
@@ -157,19 +158,23 @@ First, we extract all valid (non-NaN) pixels and draw a random sample to train o
 ```python
 # Stack the three index bands into a (3, y, x) array
 feature_da = composite[['ndwi', 'mndwi', 'mir2']].to_array('band')
-features_3d = feature_da.values  # (3, y, x)
+features_3d = feature_da.data  # (3, y, x)
 
 # Build a mask of pixels that are valid in all three bands
 valid_mask = ~np.isnan(features_3d).any(axis=0)  # (y, x) boolean
 features_valid = features_3d[:, valid_mask].T     # (n_valid, 3)
-
-print(f'Total valid pixels: {len(features_valid):,}')
 
 # Draw a random sample to train the clusterer
 rng = np.random.default_rng(42)
 sample_size = min(5000, len(features_valid))
 idx = rng.choice(len(features_valid), size=sample_size, replace=False)
 sample = features_valid[idx]
+```
+
+
+```python
+%%time
+sample = sample.compute()
 print(f'Training sample size: {len(sample):,}')
 ```
 
@@ -188,15 +193,15 @@ Apply the trained clusterer to all pixels using `map_blocks`.
 ```python
 # Convert the feature stack to a Dask array
 feature_da = composite[['ndwi', 'mndwi', 'mir2']].to_array('band')
-feature_da = feature_da.chunk({'band': -1, 'y': 500, 'x': 500})
-emb_dask = feature_da.data  # (bands, y, x)
+feature_da = feature_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
+feature_dask = feature_da.data  # (bands, y, x)
 
 # Transpose to (y, x, bands) then reshape to (y*x, bands)
-emb_dask = da.moveaxis(emb_dask, 0, -1)
-ny, nx, nb_feat = emb_dask.shape
-emb_2d_dask = emb_dask.reshape(-1, nb_feat)
+feature_dask = da.moveaxis(feature_dask, 0, -1)
+ny, nx, nb_feat = feature_dask.shape
+feature_2d_dask = feature_dask.reshape(-1, nb_feat)
 # Rechunk so each block has ALL bands — required by the classifier
-emb_2d_rechunked = emb_2d_dask.rechunk({0: 'auto', 1: -1})
+feature_2d_rechunked = feature_2d_dask.rechunk({0: 'auto', 1: -1})
 
 def predict_block(block, model):
     valid = ~np.isnan(block).any(axis=1)
@@ -205,7 +210,7 @@ def predict_block(block, model):
         result[valid] = model.predict(block[valid]).astype(float)
     return result
 
-predicted_labels_1d = emb_2d_rechunked.map_blocks(
+predicted_labels_1d = feature_2d_rechunked.map_blocks(
     predict_block,
     model=kmeans,
     dtype=np.float64,
@@ -314,7 +319,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_27_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_28_0.png)
     
 
 

@@ -129,22 +129,24 @@ search = catalog.search(
 )
 items = search.item_collection()
 
-# Load to XArray
+# Items were sorted in descending order of cloud cover,
+# so the first item is the most cloudy
+most_cloudy = items[0]
+
 ds = load(
-    items,
+    [most_cloudy],
     bands=['red', 'green', 'blue', 'scl'],
     resolution=10,
     crs='utm',
-    chunks={},  # <-- use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
     preserve_original_order=True
 )
 
-# Select the first scene
-timestamp = pd.to_datetime(items[0].properties['datetime']).tz_convert(None)
-scene = ds.sel(time=timestamp)
+scene = ds.squeeze()
 # Mask nodata values
 scene = scene.where(scene != 0)
+
 # Apply scale/offset
 scale = 0.0001
 offset = -0.1

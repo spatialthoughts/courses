@@ -212,7 +212,7 @@ ds = load(
     resolution=10,
     bbox=geometry.bounds,
     crs='utm',
-    chunks={},  # <-- use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
 )
 ds
@@ -230,13 +230,9 @@ Apply scale and offset to all spectral bands
 
 
 ```python
-# Apply scale/offset
 scale = 0.0001
 offset = -0.1
-# Select spectral bands (all except 'scl')
-data_bands = [band for band in ds.data_vars if band != 'scl']
-for band in data_bands:
-  ds[band] = ds[band] * scale + offset
+ds = ds*scale + offset
 ```
 
 ### Create a Median Composite

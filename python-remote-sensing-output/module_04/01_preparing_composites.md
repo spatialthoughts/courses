@@ -153,7 +153,7 @@ ds = load(
     resolution=10,
     crs='utm',
     bbox=geometry.bounds,
-    chunks={},           # use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
 )
 ds

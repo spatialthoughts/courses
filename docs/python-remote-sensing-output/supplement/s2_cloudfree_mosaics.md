@@ -172,7 +172,7 @@ ds = stac.load(
     bands=['B04', 'B03', 'B02'],
     resolution=10,
     crs='utm',
-    chunks={'x': 1000, 'y':1000},  # <-- use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
     preserve_original_order=True
 )
