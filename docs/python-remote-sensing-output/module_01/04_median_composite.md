@@ -149,9 +149,10 @@ configure_s3_access(
     aws_unsigned=True,
 )
 
-# Search for images 
+# Search for images
 # To ensure the process runs quickly, we will select images
 # from a specific time range and with low cloud cover
+year = 2024
 start_month = 4
 end_month = 5
 time_range = f'{year}-{start_month:02d}/{year}-{end_month:02d}'
