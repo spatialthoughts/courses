@@ -1,3 +1,5 @@
+<a href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/module_01/04_median_composite.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
 ### Overview
 
 We are now ready to perform a large computation to create a median composite image for a city using XArray and Dask, leveraging STAC and DuckDB for querying cloud-hosted data sources.
@@ -124,15 +126,6 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
-
-
-
-    
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_18_0.svg)
-    
-
-
-
 ### Search and Load Sentinel-2 Imagery
 
 Let's use Element84 search endpoint to look for items from the `sentinel-2-c1-l2a` collection on AWS. We search for the imagery collected within the date range and intersecting the AOI geometry.
@@ -194,12 +187,6 @@ ax.set_axis_off()
 ax.set_title('STAC Query Results')
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_23_0.png)
-    
-
 
 Load the matching images as a XArray Dataset.
 
@@ -306,7 +293,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_44_0.png)
     
 
 
@@ -335,7 +322,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_46_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_47_0.png)
     
 
 
@@ -345,7 +332,7 @@ We use the `rio` accessor to save the results as a Cloud-Optimized GeoTIFF.
 
 
 ```python
-output_file = f'raw_composite_{time_range}.tif'
+output_file = f'raw_composite_{year}.tif'
 output_path = os.path.join(output_folder, output_file)
 rgb_composite_clipped.rio.to_raster(output_path, driver='COG')
 print(f'Wrote {output_path}')
@@ -368,7 +355,7 @@ Save the visualized output.
 
 
 ```python
-visualized_file = f'visualized_composite_{time_range}.tif'
+visualized_file = f'visualized_composite_{year}.tif'
 visualized_output_path = os.path.join(output_folder, visualized_file)
 composite_rgba.odc.write_cog(visualized_output_path, overwrite=True)
 print(f'Wrote {visualized_output_path}')
