@@ -362,11 +362,11 @@ plt.show()
     
 
 
-Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine.
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
 
 
 ```python
-client.shutdown()
+#client.shutdown()
 ```
 
 ### Exercise

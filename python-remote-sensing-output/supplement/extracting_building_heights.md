@@ -1,4 +1,4 @@
-The [Global Building Atlas (GBA)](https://essd.copernicus.org/articles/17/6647/2025/) is an open, high-resolution dataset featuring 3D models and footprints for over 2.75 billion buildings worldwide. It provides Level of Detail 1 (LoD1) representations that capture basic building shape and height for all the buildings. This data has been processed into cloud-optimized GeoParquet files and is available on [Source Cooperative](https://source.coop/tge-labs/globalbuildingatlas-lod1). 
+The [Global Building Atlas (GBA)](https://essd.copernicus.org/articles/17/6647/2025/) is an open, high-resolution dataset featuring 3D models and footprints for over 2.75 billion buildings worldwide. It provides Level of Detail 1 (LoD1) representations that capture basic building shape and height for all the buildings. This data has been processed into cloud-optimized GeoParquet files and is available on [Source Cooperative](https://source.coop/tge-labs/globalbuildingatlas-lod1).
 
 This notebook shows how to query this dataset using DuckDB and extract a subset for your region of interest.
 
@@ -141,10 +141,10 @@ Query using DuckDB and load the results as a GeoDataFrame.
 
 
 ```python
-file_list = ', '.join(f''{f}'' for f in files)
+file_list = ', '.join(f'{f}' for f in files)
 query = f'''
 SELECT source, height, bbox, ST_AsWKB(geometry) AS geometry
-FROM read_parquet([{file_list}])
+FROM read_parquet('{file_list}')
 WHERE
       struct_extract(bbox, 'xmax') >= {xmin}
   AND struct_extract(bbox, 'xmin') <= {xmax}

@@ -1,5 +1,3 @@
-<a href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/module_01/04_median_composite.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-
 ### Overview
 
 We are now ready to perform a large computation to create a median composite image for a city using XArray and Dask, leveraging STAC and DuckDB for querying cloud-hosted data sources.
@@ -293,7 +291,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_44_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
     
 
 
@@ -322,7 +320,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_47_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_46_0.png)
     
 
 
