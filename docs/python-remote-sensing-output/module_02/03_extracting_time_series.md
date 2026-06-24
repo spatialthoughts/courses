@@ -132,7 +132,7 @@ ds = load(
     bands=['red', 'green', 'blue', 'nir', 'scl'],
     resolution=10,
     crs='utm',
-    chunks={},  # <-- use Dask
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
     preserve_original_order=True
 )
