@@ -143,7 +143,7 @@ configure_s3_access(
 # Search for images
 # To ensure the process runs quickly, we will select images
 # from a specific time range and with low cloud cover
-year = 2024
+year = 2023
 start_month = 4
 end_month = 5
 time_range = f'{year}-{start_month:02d}/{year}-{end_month:02d}'
@@ -289,12 +289,6 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
-    
-
-
 We can manually apply a contrast stretch as well.
 
 
@@ -359,13 +353,13 @@ composite_rgba.odc.write_cog(visualized_output_path, overwrite=True)
 print(f'Wrote {visualized_output_path}')
 ```
 
-Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine.
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
 
 
 ```python
-client.shutdown()
+#client.shutdown()
 ```
 
 ### Exercise
 
-Create and export a median composite for your city using the boundary extracted in the previous section.
+Create and export a median composites for years 2023 and 2025 for your city using the boundary extracted in the previous section.

@@ -189,16 +189,10 @@ print(f'Saved to {output_path}')
 
 Extract the boundary for your selected city and save it to your output directory in GeoJSON format as `aoi.geojson`.
 
-
-```python
-aoi_filepath = os.path.join(output_folder, 'aoi.geojson')
-```
-
 #### Tips
 
-Use the cells below with the starter code.
 
-* Search for your city/region of interest using [Overture Explorer](https://explore.overturemaps.org/) and replace the name, country and region with your own area of interest.
+* Search for your city/region of interest using [Overture Explorer](https://explore.overturemaps.org/) and replace the `country_iso2`, `city_name` and `region` variables with the appropriate values.
 * Cities are not uniformly represented across the world. Some cities are tagged as *locality* while others with *county* or *localadmin*. The SQL query below tries to capture all the variations, but if you get no matches, you can relax the query by commenting out some lines by prefixing it with `--`.
 * By default the boundary tagged as `locality` will be picked. To see other options comment the line starting with `LIMIT 1`.
 
@@ -261,4 +255,12 @@ aoi_gdf = gpd.GeoDataFrame(
 )
 
 viz(aoi_gdf)
+```
+
+Save the boundary as a GeoJSON file.
+
+
+```python
+aoi_filepath = os.path.join(output_folder, 'aoi.geojson')
+aoi_gdf.to_file(aoi_filepath)
 ```

@@ -206,6 +206,15 @@ Query NDVI values at the coordinates.
 ```python
 time_series = ds.ndvi \
   .interp(y=y, x=x, method='nearest')
+time_series
+```
+
+
+```python
+# As we are proceesing the time-series,
+# it needs to be in a single chunk along the time dimension
+time_series = time_series.chunk(dict(time=-1))
+time_series
 ```
 
 Run the calculation and load the results into memory.
@@ -214,6 +223,13 @@ Run the calculation and load the results into memory.
 ```python
 %%time
 time_series = time_series.compute()
+```
+
+See the computed values.
+
+
+```python
+time_series
 ```
 
 Plot the time-series.
@@ -240,23 +256,49 @@ plt.show()
 
 We use XArray's excellent time-series processing functionality to smooth the time-series and remove noise.
 
-
-```python
-# As we are proceesing the time-series,
-# it needs to be in a single chunk along the time dimension
-time_series = time_series.chunk(dict(time=-1))
-```
-
-First, we resample the time-series to have a value every 5-days and fill the missing values with linear interpolation. Then we apply a moving-window smoothing to remove noise.
+First, we resample the time-series to have a value every 5-days and fill the missing values with linear interpolation.
 
 
 ```python
 time_series_resampled = time_series\
-  .resample(time='5d').mean(dim='time').chunk(dict(time=-1))
+  .resample(time='5d').mean(dim='time')
 time_series_interpolated = time_series_resampled \
-  .interpolate_na('time', use_coordinate=False)
+  .interpolate_na('time', use_coordinate=False) \
+  .bfill('time').ffill('time')
+```
+
+We now have a gap-filled and regular time-series.
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(15, 7)
+time_series.plot.line(
+    ax=ax, x='time',
+    marker='^', color='#66c2a4',
+    linestyle='--', linewidth=1, markersize=2)
+time_series_interpolated.plot.line(
+    ax=ax, x='time',
+    marker='o', color='#238b45',
+    linestyle='-', linewidth=1, markersize=4)
+
+# Format the x-axis to display dates as YYYY-MM
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
+
+ax.set_title('Original vs. Gap-Filled NDVI Time-Series')
+
+plt.show()
+
+```
+
+But we still have a lot of noise. This is caused by atmospheric variability and cloud contamination. We can apply a moving-window smoothing to remove outliers.
+
+
+```python
 time_series_smoothed = time_series_interpolated \
   .rolling(time=3, min_periods=1, center=True).mean()
+time_series_smoothed
 ```
 
 
@@ -284,7 +326,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_40_0.png)
+![](python-remote-sensing-output/module_02/03_extracting_time_series_files/03_extracting_time_series_46_0.png)
     
 
 
@@ -310,6 +352,8 @@ df.to_csv(output_filepath, index=False)
 ```
 
 ### Exercise
+
+The Savitzky–Golay (SG) filter is a widely used smoothing technique for time-series data. When applied to remote sensing data - particularly NDVI time-series - it helps recovers the true signal of vegetation change. [Learn more](https://www.sciencedirect.com/science/article/abs/pii/S003442570400080X).
 
 [Scipy for Xarray (`xrscipy`)](https://xr-scipy.readthedocs.io/en/stable/index.html) package wraps the popular scipy package for Xarray and provides many useful time-series processing functions. The code snippet below uses [`xrscipy.signal.savgol_filter`](https://xr-scipy.readthedocs.io/en/1.0.0/generated/xrscipy.other.signal.savgol_filter.html) function to apply a Savitzky-Golay filter on our gap-filled NDVI time-series.
 
@@ -339,6 +383,8 @@ time_series_sg = xrs.savgol_filter(
 )
 
 # Write back the original timestamps
-time_series_sg.coords['time'] = timestamps
 time_series_interpolated.coords['time'] = timestamps
+time_series_sg.coords['time'] = timestamps
+
+time_series_sg
 ```
