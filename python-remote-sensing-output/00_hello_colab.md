@@ -184,20 +184,46 @@ As we have access to standard Linux commands, we can use `wget` command to downl
 wget https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_annual/tifs/chirps-v2.0.2024.tif
 ```
 
-#### Installing Packages
+#### Running Command-Line Utilities
 
-We can use the popular [GDAL](https://gdal.org/) utilities to help conversion of data formats. Run the following command to install the `gdal-bin` package.
+The Terminal offers us a great interface to run command-line utilities for data validation and conversion.
+
+While working on cloud-native data analysis, you will often need to convert data into cloud-native data formats, such as Cloud-Optimized GeoTIFF (COG). Let's see how you can accomplish this on the Colab Terminal.
+
+Let's install the [`rio-cogeo`](https://cogeotiff.github.io/rio-cogeo/) package which help validation of Cloud Optimized GeoTIFF.
+
+```
+pip install rio-cogeo
+```
+
+This package installs the [`rio`](https://cogeotiff.github.io/rio-cogeo/CLI/#validate) command line tool that we can use to  check if the downloaded tif is a valid COG.
+
+```
+rio cogeo validate chirps-v2.0.2024.tif
+```
+
+*The downloaded file fails the validation as it is not a Cloud-Optimized GeoTIFF.*
+
+Let's convert the file to a proper COG using [GDAL](https://gdal.org/).
+
+Run the following command to install the `gdal-bin` package.
 
 ```
 apt-get install gdal-bin
 ```
 
-#### Data Conversion
-
-We can use the `gdal_translate` command to convert the downloaded GeoTIFF file to a Cloud-Optimized GeoTIFF.
+ We can use the [`gdal_translate`](https://gdal.org/en/stable/programs/gdal_translate.html) command to convert the downloaded GeoTIFF file to a Cloud-Optimized GeoTIFF.
 
 ```
 gdal_translate -of COG chirps-v2.0.2024.tif chirps-v2.0.2024_cog.tif
+```
+
+> Note: GDAL tools have a new interface starting from v3.11. Colab Runtime currently has GDAL v3.8.
+
+Now we run the validator on the converted file. The valiation will now be successful.
+
+```
+rio cogeo validate chirps-v2.0.2024_cog.tif
 ```
 
 We can copy the resulting file to our Google Drive folder using the Linux `cp` command.

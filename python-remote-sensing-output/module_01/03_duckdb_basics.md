@@ -121,6 +121,7 @@ WHERE
 '''
 
 admin2_df = con.sql(query).df()
+admin2_df
 ```
 
 We turn the results into a GeoPandas GeoDataFrame by specifying the geometry column and the CRS.
