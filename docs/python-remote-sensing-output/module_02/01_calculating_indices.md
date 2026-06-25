@@ -202,6 +202,7 @@ The Normalized Difference Vegetation Index (NDVI) is calculated using the follow
 `NDVI = (NIR - Red)/(NIR + Red)`
 
 Where:
+
 *   NIR = Near-Infrared band reflectance
 *   Red = Red band reflectance
 
@@ -250,6 +251,7 @@ The Modified Normalized Difference Water Index (MNDWI) is calculated using the f
 `MNDWI = (Green - SWIR1)/(Green + SWIR1)`
 
 Where:
+
 *   Green = Green band reflectance
 *   SWIR1 = Short-wave infrared band 1 reflectance
 
@@ -266,6 +268,7 @@ The Soil Adjusted Vegetation Index (SAVI) is calculated using the following form
 `SAVI = (1 + L) * ((NIR - Red)/(NIR + Red + L))`
 
 Where:
+
 *   NIR = Near-Infrared band reflectance
 *   Red = Red band reflectance
 *   L = Soil brightness correction factor (typically 0.5 for moderate vegetation)
@@ -277,7 +280,7 @@ savi = 1.5 * ((nir - red) / (nir + red + 0.5))
 
 ### Save the Computed Indices
 
-Rather than saving it to the temporary machine where Colab is running, we can save it to our own Google Drive. This will ensure the image will be available to us even after exiting Google Colab.
+We can save all the computed indicies to the output folder.
 
 
 ```python

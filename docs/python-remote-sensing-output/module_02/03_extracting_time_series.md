@@ -351,6 +351,13 @@ output_filepath = os.path.join(output_folder, output_filename)
 df.to_csv(output_filepath, index=False)
 ```
 
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
+
+
+```python
+#client.shutdown()
+```
+
 ### Exercise
 
 The Savitzky–Golay (SG) filter is a widely used smoothing technique for time-series data. When applied to remote sensing data - particularly NDVI time-series - it helps recovers the true signal of vegetation change. [Learn more](https://www.sciencedirect.com/science/article/abs/pii/S003442570400080X).
@@ -358,6 +365,9 @@ The Savitzky–Golay (SG) filter is a widely used smoothing technique for time-s
 [Scipy for Xarray (`xrscipy`)](https://xr-scipy.readthedocs.io/en/stable/index.html) package wraps the popular scipy package for Xarray and provides many useful time-series processing functions. The code snippet below uses [`xrscipy.signal.savgol_filter`](https://xr-scipy.readthedocs.io/en/1.0.0/generated/xrscipy.other.signal.savgol_filter.html) function to apply a Savitzky-Golay filter on our gap-filled NDVI time-series.
 
 Try SG-Filter with different values of window_length and polyorder and plot the results on a chart.
+
+* `window_length`: Number of data points included in a moving window to calculate the smoothed value. Typically values are odd integers between 5 and 15.
+* `polyorder`: The degree (or complexity) of the mathematical polynomial used to fit the data within the window. Typically values are 2 (quadratic) or 3 (cubic).
 
 
 ```python
@@ -372,7 +382,7 @@ time_series_interpolated.coords['time'] = np.arange(len(timestamps))
 
 # Apply the SG filter
 window_length = 5 # Size of filter window
-polyorder = 2 # Order of the polynomial used in the filtering
+polyorder = 2 # Order of the polynomial
 
 time_series_sg = xrs.savgol_filter(
     time_series_interpolated,
