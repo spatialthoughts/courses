@@ -128,7 +128,7 @@ least_cloudy = items[0]
 ds = load(
     [least_cloudy],
     bands=['red', 'green', 'blue', 'nir', 'swir16'],
-    resolution=10,
+    resolution=100, # Load the data at lower resolution to speed up processing 
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
@@ -166,13 +166,9 @@ Rather than loading the entire scene into memory, we resample it to a lower reso
 
 
 ```python
-preview = scene_da.rio.reproject(
-    scene.rio.crs, resolution=300
-)
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
+scene_da.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
     robust=True)
 ax.set_title('RGB Visualization')
@@ -187,7 +183,7 @@ We can also view a False Color Composite (FCC) with a different combination of s
 ```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-preview.sel(band=['nir', 'red', 'green']).plot.imshow(
+scene_da.sel(band=['nir', 'red', 'green']).plot.imshow(
     ax=ax,
     robust=True)
 ax.set_title('NRG Visualization')
@@ -215,13 +211,10 @@ ndvi = (nir - red)/(nir + red)
 ndvi
 ```
 
-Let’s visualize the results.
+Let’s visualize the results. While the theoritical range of NDVI is between -1 and +1, most vegetation has NDVI values in the range 0-0.5. We can use this range to visualize the variation the vegetation better.
 
 
 ```python
-ndvi_preview = ndvi.rio.reproject(
-    ndvi.rio.crs, resolution=300
-)
 cbar_kwargs = {
     'orientation':'horizontal',
     'fraction': 0.025,
@@ -230,10 +223,11 @@ cbar_kwargs = {
 }
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-ndvi_preview.plot.imshow(
+ndvi.plot.imshow(
     ax=ax,
     cmap='Greens',
-    robust=True,
+    vmin=0,
+    vmax=0.7,
     cbar_kwargs=cbar_kwargs)
 ax.set_title('NDVI')
 ax.set_axis_off()
@@ -262,6 +256,29 @@ swir16 = scene_da.sel(band='swir16')
 mndwi = (green - swir16)/(green + swir16)
 ```
 
+Visualize the MNDWI values.
+
+
+```python
+cbar_kwargs = {
+    'orientation':'horizontal',
+    'fraction': 0.025,
+    'pad': 0.05,
+    'extend':'neither'
+}
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(5,5)
+mndwi.plot.imshow(
+    ax=ax,
+    cmap='Blues',
+    vmin=0,
+    vmax=0.7,
+    cbar_kwargs=cbar_kwargs)
+ax.set_title('MNDWI')
+ax.set_axis_off()
+plt.show()
+```
+
 The Soil Adjusted Vegetation Index (SAVI) is calculated using the following formula:
 
 
@@ -278,34 +295,17 @@ Where:
 savi = 1.5 * ((nir - red) / (nir + red + 0.5))
 ```
 
-### Save the Computed Indices
-
-We can save all the computed indicies to the output folder.
-
-
-```python
-files = {
-    'ndvi.tif': ndvi,
-    'mndwi.tif': mndwi,
-    'savi.tif': savi
-}
-
-for file in files:
-  output_path = os.path.join(output_folder, file)
-  files[file].rio.to_raster(output_path, driver='COG')
-  print(f'Saved {file} to {output_path}')
-```
-
 ### Exercise
 
-Apply a threshold to the NDVI values to create a binary raster.
+A simple technique for water detection is applying a threshold on the MNDWI image. Apply a threshold and create a water mask where all values above the threshold is 1, and others are set to 0.
 
 Hint: Use the [`xarray.where`](https://docs.xarray.dev/en/stable/generated/xarray.where.html) function that allows you to set both matching and non-matching values.
 
 
 
 ```python
-threshold = 0.5
-# Create a new array 'vegetation' where all NDVI values
+threshold = 0
+# Create a new array 'water' where all MNDWI values
 #  greater than the threshold is 1 and others are 0
+# Visualize the results.
 ```

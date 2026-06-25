@@ -136,7 +136,7 @@ most_cloudy = items[0]
 ds = load(
     [most_cloudy],
     bands=['red', 'green', 'blue', 'scl'],
-    resolution=10,
+    resolution=100, # Load the data at lower resolution to speed up processing 
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
@@ -172,13 +172,9 @@ The clouds will have a much higher reflectance, so `robust=True` will not give u
 ```python
 scene_da = scene.to_array('band')
 
-preview = scene_da.rio.reproject(
-    scene_da.rio.crs, resolution=300
-)
-
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
+scene_da.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax,
     vmin=0, vmax=0.3)
 ax.set_title('RGB Visualization')
@@ -186,12 +182,6 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_21_0.png)
-    
-
 
 ### Create a Cloud Mask
 
@@ -223,20 +213,18 @@ Visualize the mask by overlaying it on the scene.
 
 
 ```python
-mask_preview = mask.astype('uint8').rio.reproject(
-    mask.rio.crs, resolution=300
-)
+mask_da = mask.to_array('band')
 
 fig, (ax0, ax1) = plt.subplots(1, 2)
 fig.set_size_inches(10,5)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
+scene_da.sel(band=['red', 'green', 'blue']).plot.imshow(
     ax=ax0,
     vmin=0, vmax=0.3)
 ax0.set_title('RGB Visualization')
 
 # RGBA: Transparent, Red
 mask_colormap = ListedColormap(['#00000000', '#FF0000FF'])
-mask_preview.plot.imshow(
+mask_da.plot.imshow(
     ax=ax1,
     cmap=mask_colormap,
     add_colorbar=False)
@@ -248,12 +236,6 @@ for ax in (ax0, ax1):
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_27_0.png)
-    
-
-
 Once we are satisfied that the mask looks good, we go ahead and apply the mask on the scene.
 
 
@@ -262,9 +244,3 @@ Once we are satisfied that the mask looks good, we go ahead and apply the mask o
 scene_masked = scene[data_bands].where(~mask)
 scene_masked
 ```
-
-### Exercise
-
-Save the masked scene to disk. Save the `scene_masked` to the output folder.
-
-Hint: You will need to convert the `scene_masked` to a DataArray before saving it.
