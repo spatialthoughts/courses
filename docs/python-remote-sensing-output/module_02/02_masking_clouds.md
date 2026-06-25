@@ -19,30 +19,7 @@ if 'COLAB_RELEASE_TAG' in os.environ:
 else:
     environment = 'local'
 
-# Set to True to use Google Drive for data storage in Colab
-use_google_drive = True
-
-# Google Drive is available only in 'colab' environment
-if environment == 'colab' and use_google_drive:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
-    data_folder = drive_folder_path
-    output_folder = drive_folder_path
-else:
-    data_folder = 'data'
-    output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-
 print(f'Environment: {environment}')
-print(f'Data folder: {data_folder}')
-print(f'Output folder: {output_folder}')
 ```
 
 If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
@@ -52,7 +29,7 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 %%capture
 if environment in ['colab', 'colab_enterprise']:
     !pip install pystac-client odc-stac rioxarray dask['distributed'] \
-        jupyter-server-proxy
+        jupyter-server-proxy odc-algo
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -166,12 +143,18 @@ scene = scene.compute()
 
 ### Visualize the Scene
 
-The clouds will have a much higher reflectance, so `robust=True` will not give us appropriate visualization. We supply hardcoded min/max values as 0 and 0.3 which is the normal range of reflectance values of earth targets.
+To visualize our Dataset, we first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
+
 
 
 ```python
 scene_da = scene.to_array('band')
+```
 
+The clouds will have a much higher reflectance, so `robust=True` will not give us appropriate visualization. We supply hardcoded min/max values as 0 and 0.3 which is the normal range of reflectance values of earth targets.
+
+
+```python
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(5,5)
 scene_da.sel(band=['red', 'green', 'blue']).plot.imshow(
@@ -206,15 +189,13 @@ We select the types of pixels we want to mask. Let's create a mask that will rem
 
 
 ```python
-mask = scene.scl.isin([3,8,9,10])
+mask = scene['scl'].isin([3,8,9,10])
 ```
 
 Visualize the mask by overlaying it on the scene.
 
 
 ```python
-mask_da = mask.to_array('band')
-
 fig, (ax0, ax1) = plt.subplots(1, 2)
 fig.set_size_inches(10,5)
 scene_da.sel(band=['red', 'green', 'blue']).plot.imshow(
@@ -224,7 +205,7 @@ ax0.set_title('RGB Visualization')
 
 # RGBA: Transparent, Red
 mask_colormap = ListedColormap(['#00000000', '#FF0000FF'])
-mask_da.plot.imshow(
+mask.plot.imshow(
     ax=ax1,
     cmap=mask_colormap,
     add_colorbar=False)
@@ -236,6 +217,12 @@ for ax in (ax0, ax1):
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/module_02/02_masking_clouds_files/02_masking_clouds_29_0.png)
+    
+
+
 Once we are satisfied that the mask looks good, we go ahead and apply the mask on the scene.
 
 
@@ -243,4 +230,34 @@ Once we are satisfied that the mask looks good, we go ahead and apply the mask o
 # Apply the mask to all the data bands
 scene_masked = scene[data_bands].where(~mask)
 scene_masked
+```
+
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
+
+
+```python
+#client.shutdown()
+```
+
+### Exercise
+
+The [`odc-algo`](https://github.com/opendatacube/odc-algo/tree/main) package provides useful algorithms for remote sensing data processing. We will use the `mask_cleanup()` function to apply morphological operators to clean up the cloud mask for more robust cloud masking. 
+
+It supports the following operations
+
+* `closing`: Removes small holes in cloud - morphological closing
+* `opening`: Shrinks away small areas of the mask
+* `dilation`: Adds padding to the mask
+* `erosion`: Shrinks the mask
+
+Along with the operation, you specify a `radius` parameter that controls the size of the window when applying the operations. 
+
+The code snippet below shows how to use the function. Test these operations to see its effect on the mask. Visualize the `mask` and `cleaned_mask` side-by-side to see the results.
+
+
+```python
+from odc.algo import mask_cleanup
+
+# Contract and then expand the cloud mask to remove small areas
+cleaned_mask = mask_cleanup(mask, [('opening', 2), ('dilation', 3)])
 ```

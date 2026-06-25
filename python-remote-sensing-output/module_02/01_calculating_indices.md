@@ -19,30 +19,7 @@ if 'COLAB_RELEASE_TAG' in os.environ:
 else:
     environment = 'local'
 
-# Set to True to use Google Drive for data storage in Colab
-use_google_drive = True
-
-# Google Drive is available only in 'colab' environment
-if environment == 'colab' and use_google_drive:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
-    data_folder = drive_folder_path
-    output_folder = drive_folder_path
-else:
-    data_folder = 'data'
-    output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-
 print(f'Environment: {environment}')
-print(f'Data folder: {data_folder}')
-print(f'Output folder: {output_folder}')
 ```
 
 If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
@@ -345,6 +322,13 @@ Where:
 
 ```python
 savi = 1.5 * ((nir - red) / (nir + red + 0.5))
+```
+
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
+
+
+```python
+#client.shutdown()
 ```
 
 ### Exercise

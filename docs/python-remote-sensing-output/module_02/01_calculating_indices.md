@@ -19,30 +19,7 @@ if 'COLAB_RELEASE_TAG' in os.environ:
 else:
     environment = 'local'
 
-# Set to True to use Google Drive for data storage in Colab
-use_google_drive = True
-
-# Google Drive is available only in 'colab' environment
-if environment == 'colab' and use_google_drive:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing'
-    drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
-    data_folder = drive_folder_path
-    output_folder = drive_folder_path
-else:
-    data_folder = 'data'
-    output_folder = 'output'
-
-if not os.path.exists(data_folder):
-    os.mkdir(data_folder)
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
-
 print(f'Environment: {environment}')
-print(f'Data folder: {data_folder}')
-print(f'Output folder: {output_folder}')
 ```
 
 If we are on Google Colab, install the required packages. Local runtimes are expected to have the packages already installed.
@@ -142,6 +119,7 @@ scene = scene.where(scene != 0)
 scale = 0.0001
 offset = -0.1
 scene = scene*scale + offset
+scene
 ```
 
 Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
@@ -177,6 +155,12 @@ ax.set_aspect('equal')
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_23_0.png)
+    
+
+
 We can also view a False Color Composite (FCC) with a different combination of spectral bands.
 
 
@@ -190,6 +174,12 @@ ax.set_title('NRG Visualization')
 ax.set_axis_off()
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_25_0.png)
+    
+
 
 ### Calculate Spectral Indices
 
@@ -211,7 +201,40 @@ ndvi = (nir - red)/(nir + red)
 ndvi
 ```
 
-Let’s visualize the results. While the theoritical range of NDVI is between -1 and +1, most vegetation has NDVI values in the range 0-0.5. We can use this range to visualize the variation the vegetation better.
+Let's plot a histogram of the NDVI values.
+
+
+```python
+ndvi_values = ndvi.values.flatten()
+ndvi_values = ndvi_values[~np.isnan(ndvi_values)]
+
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(8, 4)
+
+ax.hist(ndvi_values, bins=100, 
+        color='#4CAF50', edgecolor='none', alpha=0.85)
+
+ax.set_title('NDVI Distribution', fontsize=14, pad=12)
+ax.set_xlabel('NDVI Value', fontsize=11)
+ax.set_ylabel('Pixel Count', fontsize=11)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_color('#cccccc')
+ax.spines['bottom'].set_color('#cccccc')
+ax.yaxis.grid(True, color='#eeeeee', zorder=0)
+ax.set_axisbelow(True)
+plt.tight_layout()
+plt.show()
+```
+
+
+    
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_30_0.png)
+    
+
+
+Let’s visualize the results. While the theoritical range of NDVI is between -1 and +1, most vegetation has NDVI values tend to be in the range 0-0.8. We can use this range to visualize the variation the vegetation better.
 
 
 ```python
@@ -227,7 +250,7 @@ ndvi.plot.imshow(
     ax=ax,
     cmap='Greens',
     vmin=0,
-    vmax=0.7,
+    vmax=0.8,
     cbar_kwargs=cbar_kwargs)
 ax.set_title('NDVI')
 ax.set_axis_off()
@@ -236,7 +259,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_30_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_32_0.png)
     
 
 
@@ -279,6 +302,12 @@ ax.set_axis_off()
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_36_0.png)
+    
+
+
 The Soil Adjusted Vegetation Index (SAVI) is calculated using the following formula:
 
 
@@ -293,6 +322,13 @@ Where:
 
 ```python
 savi = 1.5 * ((nir - red) / (nir + red + 0.5))
+```
+
+Close the dask client. This presents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shutdown the dask cluster.
+
+
+```python
+#client.shutdown()
 ```
 
 ### Exercise
