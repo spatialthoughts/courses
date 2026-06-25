@@ -107,17 +107,11 @@ ds = load(
     resolution=10,
     crs='utm',           # auto-selects UTM zone for the region
     bbox=bbox,           # always pass bbox to limit data loaded
-    chunks={},           # empty dict = use Dask with auto chunk sizes
+    chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day', # deduplicates scenes from same day
     preserve_original_order=True,  # keeps search sort order
     # patch_url=pc.sign  # for Planetary Computer only
 )
-```
-
-For large regions, use explicit chunk sizes to avoid OOM:
-
-```python
-chunks={'x': 5000, 'y': 5000}
 ```
 
 **Do not use `chunks={}` and then call `.rechunk()` — set explicit chunks in `load()` for large datasets.**
@@ -399,7 +393,7 @@ utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
 ## Common Gotchas
 
 - Sentinel-2 SCL band must **not** have scale/offset applied — filter it from `data_bands` before scaling.
-- `stac.load()` with `chunks={}` gives Dask arrays but without explicit chunk size may OOM on large regions — set `chunks={'x': 5000, 'y': 5000}` for state/country-scale analysis.
+- `stac.load()` with `chunks={}` gives Dask arrays but without explicit chunk size may OOM on large regions — set `chunks={'x': 1024, 'y': 1024}` explicitely.
 - `preserve_original_order=True` in `stac.load()` is needed to keep the sort order from the STAC search (e.g. least-cloudy first).
 - After `groupby='solar_day'` the `time` dimension is sorted ascending — use the item timestamp to index the desired scene, not its original position.
 - When pre-filtering STAC items from OpenLandMap or similar catalogs, the `bbox` metadata may be unreliable — use `shapely` `.intersects()` to filter items before passing to `stac.load()`.
