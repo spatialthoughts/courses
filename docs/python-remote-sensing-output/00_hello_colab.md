@@ -190,7 +190,7 @@ The Terminal offers us a great interface to run command-line utilities for data 
 
 While working on cloud-native data analysis, you will often need to convert data into cloud-native data formats, such as Cloud-Optimized GeoTIFF (COG). Let's see how you can accomplish this on the Colab Terminal.
 
-Let's install the [`rio-cogeo`](https://cogeotiff.github.io/rio-cogeo/) package which help validation of Cloud Optimized GeoTIFF.
+Let's install the [`rio-cogeo`](https://cogeotiff.github.io/rio-cogeo/) package which has features that help validate Cloud Optimized GeoTIFF files.
 
 ```
 pip install rio-cogeo
