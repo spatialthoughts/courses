@@ -104,7 +104,7 @@ least_cloudy = items[0]
 
 ds = load(
     [least_cloudy],
-    bands=['red', 'green', 'blue', 'nir', 'swir16'],
+    bands=['red', 'green', 'blue', 'nir', 'swir16', 'swir22'],
     resolution=100, # Load the data at lower resolution to speed up processing 
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
@@ -140,7 +140,7 @@ To visualize our Dataset, we first convert it to a DataArray using the `to_array
 scene_da = scene.to_array('band')
 ```
 
-Rather than loading the entire scene into memory, we resample it to a lower resolution preview and render it.
+Let's visualize a nature color band combination (RGB).
 
 
 ```python
@@ -281,6 +281,39 @@ swir16 = scene_da.sel(band='swir16')
 mndwi = (green - swir16)/(green + swir16)
 ```
 
+Let's plot a histogram of the MNDWI values.
+
+
+```python
+mndwi_values = mndwi.values.flatten()
+mndwi_values = mndwi_values[~np.isnan(mndwi_values)]
+
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(8, 4)
+
+ax.hist(mndwi_values, bins=100, 
+        color="#4F77CD", edgecolor='none', alpha=0.85)
+
+ax.set_title('MNDWI Distribution', fontsize=14, pad=12)
+ax.set_xlabel('MNDWI Value', fontsize=11)
+ax.set_ylabel('Pixel Count', fontsize=11)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_color('#cccccc')
+ax.spines['bottom'].set_color('#cccccc')
+ax.yaxis.grid(True, color='#eeeeee', zorder=0)
+ax.set_axisbelow(True)
+plt.tight_layout()
+plt.show()
+```
+
+
+    
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_36_0.png)
+    
+
+
 Visualize the MNDWI values.
 
 
@@ -296,8 +329,8 @@ fig.set_size_inches(5,5)
 mndwi.plot.imshow(
     ax=ax,
     cmap='Blues',
-    vmin=0,
-    vmax=0.7,
+    vmin=-0.5,
+    vmax=0.5,
     cbar_kwargs=cbar_kwargs)
 ax.set_title('MNDWI')
 ax.set_axis_off()
@@ -307,7 +340,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_36_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_38_0.png)
     
 
 
