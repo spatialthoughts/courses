@@ -172,6 +172,7 @@ scene_da.sel(band=['nir', 'red', 'green']).plot.imshow(
     robust=True)
 ax.set_title('NRG Visualization')
 ax.set_axis_off()
+ax.set_aspect('equal')
 plt.show()
 ```
 
@@ -254,6 +255,7 @@ ndvi.plot.imshow(
     cbar_kwargs=cbar_kwargs)
 ax.set_title('NDVI')
 ax.set_axis_off()
+ax.set_aspect('equal')
 plt.show()
 ```
 
@@ -299,6 +301,7 @@ mndwi.plot.imshow(
     cbar_kwargs=cbar_kwargs)
 ax.set_title('MNDWI')
 ax.set_axis_off()
+ax.set_aspect('equal')
 plt.show()
 ```
 

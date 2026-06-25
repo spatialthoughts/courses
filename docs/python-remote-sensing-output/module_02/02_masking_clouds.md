@@ -131,6 +131,7 @@ offset = -0.1
 data_bands = [band for band in scene.data_vars if band != 'scl']
 for band in data_bands:
   scene[band] = scene[band] * scale + offset
+scene
 ```
 
 Let's call `compute()` to kick-off the dask graph. Dask will query the cloud-hosted dataset to fetch the required pixels. Once you run the cell, look at the Dask Diagnostic Dashboard to see the data processing in action.
