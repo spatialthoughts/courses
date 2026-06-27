@@ -266,6 +266,27 @@ query = f"""
 
 ---
 
+## Reclassifying/Remapping a Raster
+
+Use `xrspatial.classify.reclassify` for reclassifying landcover data. Bins define **upper bounds** — each value falling in `(prev_bin, bin]` is mapped to the corresponding `new_value`. NaN is preserved automatically.
+
+```python
+from xrspatial.classify import reclassify
+import numpy as np
+
+# bins: sorted upper bounds; new_values: output class for each bin
+bins =       [20,  92, 122, 130, 140, 153, 183, 184, 185, 187, 190, 202, 210, np.inf]
+new_values = [40,  10,  20,  30, 100,  60,  90,  60,  95,  90,  50,  60,  80,     70]
+
+reclassified = reclassify(da, bins=bins, new_values=new_values, name='reclassify')
+```
+
+- `len(bins)` must equal `len(new_values)`.
+- Use `np.inf` as the last bin to catch all remaining values.
+- Gaps between class values (e.g. values that don't exist in the data) are harmless — they just fall into the nearest bin range.
+
+---
+
 ## Calculating Area from a Landcover Raster
 
 ```python
