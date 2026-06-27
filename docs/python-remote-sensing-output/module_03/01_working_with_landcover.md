@@ -283,6 +283,9 @@ At present `rioxarray` as well as `odc-geo`packages do not have built-in support
 
 ```python
 def write_cog_with_colormap(data_array, output_path, color_table):
+    if data_array.dtype != np.dtype('uint8'):
+        raise TypeError(f'data_array must be uint8 for a color table to attach')
+
     # Write to a temp file, add color table, then convert to COG
     tmp_path = output_path + '.tmp.tif'
     data_array.rio.to_raster(tmp_path)
@@ -366,7 +369,7 @@ output_filepath = os.path.join(output_folder, output_filename)
 area_df.to_csv(output_filepath, index=False)
 ```
 
-### Reclassify Values
+### Comparing Different Landcover Datasets
 
 Let's load another landcover dataset and learn how we can compare two different classification schemes by harmonizing them. [UMD GLAD Annual Land Cover and Land Use (GLCUC)](https://glad.umd.edu/dataset/GLCLUC2020) is a long time-series of landcover classification dataset derived from Landsat. It has detailed classification scheme with over 100 classes grouped into 7 primary classes.
 
@@ -416,31 +419,31 @@ glad_da = glad_da.compute()
 glad_da
 ```
 
-### Reclassify GLAD GLCLUC to ESA WorldCover Classes
+### Reclassify Pixel Values
 
 GLAD GLCLUC encodes land cover, tree height, and change type in the range (0–254). The table below shows how value ranges map to ESA WorldCover classes.
 
-| GLAD Values | GLAD Description | ESA Value | ESA Class |
+| GLCLUC Values | GLAD Description | WorldCover Value | WorldCover Class |
 |---|---|---|---|
-| 0–24 | Terra Firma short vegetation (desert to dense) | 30 | Grassland |
-| 25–96 | Terra Firma tree cover (stable, disturbed, height gain) | 10 | Tree cover |
+| 0–24 | Terra Firma short vegetation | 30 | Grassland |
+| 25–96 | Terra Firma tree cover | 10 | Tree cover |
 | 100–124 | Wetland short vegetation | 90 | Herbaceous wetland |
-| 125–196 | Wetland tree cover (stable, disturbed, height gain) | 10 | Tree cover |
-| 208–211 | Open surface water (permanent, gain, loss, variable) | 80 | Permanent water bodies |
+| 125–196 | Wetland tree cover | 10 | Tree cover |
+| 208–211 | Open surface water | 80 | Permanent water bodies |
 | 240 | Short vegetation after tree loss | 30 | Grassland |
-| 241–243 | Snow and ice (stable, gain, loss) | 70 | Snow and ice |
-| 244–249 | Cropland (stable, gain from trees/wetland/other, loss) | 40 | Cropland |
-| 250–253 | Built-up (stable, gain from trees/crop/other) | 50 | Built-up |
+| 241–243 | Snow and ice | 70 | Snow and ice |
+| 244–249 | Cropland  | 40 | Cropland |
+| 250–253 | Built-up  | 50 | Built-up |
 | 254 | Ocean | 80 | Permanent water bodies |
+
 
 To compare both these datasets, we must harmonize the class values. We use from [`xrspatial.classify.reclassify()`](https://xarray-spatial.readthedocs.io/en/stable/reference/_autosummary/xrspatial.classify.reclassify.html) from Xarray Spatial package to remap and group the pixel values to match ESA WorldCover classes.
 
 
 
 ```python
-# Each bin defines the upper bound of a range (prev_bin, bin] → new_value
-# Gaps (97-99, 197-207, 212-239) are "not used" in GLAD and never appear in real data;
-# they are given value 0 here which will not appear in any output pixel
+# Each bin defines the upper bound of a range (low, high]
+# Gaps (97-99, 197-207, 212-239) are assigned 0 value
 bins =       [ 24,  96,  99, 124, 196, 207, 211, 239, 240, 243, 249, 253, 254, 255]
 new_values = [ 30,  10,   0,  90,  10,   0,  80,   0,  30,  70,  40,  50,  80,   0]
 
@@ -456,6 +459,15 @@ Clip the data to geometry. Before we clip, we need to reproject the `aoi_gdf` to
 ```python
 aoi_gdf_reprojected = aoi_gdf.to_crs(glad_da_reclass.rio.crs)
 glad_da_reclass_clipped = glad_da_reclass.rio.clip(aoi_gdf_reprojected.geometry)
+```
+
+The reclassify function turns the output to `float32`. We convert it back to 8-bit interger and set 0 as nodata. This is required to created a paletted output.
+
+
+```python
+glad_da_reclass_clipped = glad_da_reclass_clipped.fillna(0).astype('uint8')
+glad_da_reclass_clipped.rio.set_nodata(0, inplace=True)
+glad_da_reclass_clipped
 ```
 
 Plot and compare both the datasets. Notice where both these datasets differ. The different in resolution (10m for ESA WorldCover vs. 30m for GLCLUC) also plays a big role in what features can be distinguished. 
@@ -489,7 +501,7 @@ colorbar.set_ticks(ticks, labels=tick_labels)
 
 
     
-![](python-remote-sensing-output/module_03/01_working_with_landcover_files/01_working_with_landcover_70_0.png)
+![](python-remote-sensing-output/module_03/01_working_with_landcover_files/01_working_with_landcover_72_0.png)
     
 
 
