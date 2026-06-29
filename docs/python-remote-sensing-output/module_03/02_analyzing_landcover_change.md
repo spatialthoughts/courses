@@ -53,7 +53,7 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 %%capture
 if environment in ['colab', 'colab_enterprise']:
   !pip install pystac-client odc-stac rioxarray xarray-spatial \
-    dask[distributed] jupyter-server-proxy planetary_computer
+    dask[distributed] jupyter-server-proxy planetary_computer botocore
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -61,7 +61,6 @@ Import all required libraries. Make sure to import everything at the beginning a
 
 ```python
 import os
-
 import dask.array as da
 import geopandas as gpd
 import matplotlib.colors
@@ -239,16 +238,18 @@ nrows = (n_times + ncols - 1) // ncols
 fig, axes = plt.subplots(nrows, ncols)
 fig.set_size_inches(20, nrows * 5)
 
-# Resample to 100m and plot to reduce the number of pixels and speed up plotting
-io_data_resampled = io_data_clipped.rio.reproject(
+# Create a preview
+io_data_preview = io_data_clipped.rio.reproject(
     io_data_clipped.rio.crs, resolution=100)
 
-for i, t in enumerate(io_data_clipped.time.values):
+for i, t in enumerate(io_data_preview.time.values):
     ax = axes.flat[i]
-    io_data_resampled.sel(time=t).plot(
+    io_data_preview.sel(time=t).plot(
         ax=ax, cmap=io_cmap, norm=io_normalizer, add_colorbar=False)
     ax.set_title(str(t)[:4])
     ax.set_axis_off()
+    ax.set_aspect('equal')
+
 
 for j in range(n_times, nrows * ncols):
     axes.flat[j].set_visible(False)
@@ -281,9 +282,9 @@ before = io_data_clipped.sel(time='2017').squeeze()
 after = io_data_clipped.sel(time='2024').squeeze()
 ```
 
-We have pick a landcover and find the pixels which have experienced change. 
+We have pick a landcover and find the pixels which have experienced change.
 
-Here are the pixel values in before and after images and their classes for reference. 
+Here are the pixel values in before and after images and their classes for reference.
 
 | Pixel Value | Class Name |
 |---|---|
@@ -320,19 +321,35 @@ Let's visualize the results.
 fig, axes = plt.subplots(1, 3)
 fig.set_size_inches(20, 6)
 
-before.plot(ax=axes[0], cmap=io_cmap, norm=io_normalizer, add_colorbar=False)
+# Create previews
+before_preview = before.rio.reproject(
+    before.rio.crs, resolution=100
+)
+after_preview = after.rio.reproject(
+    after.rio.crs, resolution=100
+)
+change_preview = change.rio.reproject(
+    change.rio.crs, resolution=100
+)
+
+before_preview.plot(ax=axes[0], cmap=io_cmap,
+                    norm=io_normalizer, add_colorbar=False)
 axes[0].set_title('Before')
 axes[0].set_axis_off()
+axes[0].set_aspect('equal')
 
-after.plot(ax=axes[1], cmap=io_cmap, norm=io_normalizer, add_colorbar=False)
+before_preview.plot(ax=axes[1], cmap=io_cmap,
+                    norm=io_normalizer, add_colorbar=False)
 axes[1].set_title('After')
 axes[1].set_axis_off()
+axes[1].set_aspect('equal')
 
 change_cmap = matplotlib.colors.ListedColormap(['white', 'red'])
 aoi_gdf_reprojected.boundary.plot(ax=axes[2], color='black', linewidth=1)
-change.plot(ax=axes[2], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
+change_preview.plot(ax=axes[2], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
 axes[2].set_title('Change')
 axes[2].set_axis_off()
+axes[2].set_aspect('equal')
 
 plt.tight_layout()
 plt.show()
@@ -363,15 +380,23 @@ Let's visualize the results.
 ```python
 change_cmap = matplotlib.colors.ListedColormap(['white', 'red'])
 
+# Create previews
+change_preview = change.rio.reproject(
+    change.rio.crs, resolution=100
+)
+change_filtered_preview = change_filtered.rio.reproject(
+    change_filtered.rio.crs, resolution=100
+)
+
 fig, axes = plt.subplots(1, 2)
 fig.set_size_inches(16, 6)
 
-change.plot(ax=axes[0], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
+change_preview.plot(ax=axes[0], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
 aoi_gdf_reprojected.boundary.plot(ax=axes[0], color='black', linewidth=1)
 axes[0].set_title('Original')
 axes[0].set_axis_off()
 
-change_filtered.plot(ax=axes[1], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
+change_filtered_preview.plot(ax=axes[1], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
 aoi_gdf_reprojected.boundary.plot(ax=axes[1], color='black', linewidth=1)
 axes[1].set_title('Filtered')
 axes[1].set_axis_off()
@@ -402,6 +427,28 @@ We have polygons for both *change* (DN==1) and *no-change* (DN==0). Let's select
 change_gdf = polygons[polygons['DN'] == 1]
 change_gdf
 ```
+
+
+```python
+fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+
+# Plot the AOI boundary
+aoi_gdf_reprojected.boundary.plot(ax=ax, color='black', linewidth=1)
+
+# Plot the change polygons
+change_gdf.plot(ax=ax, color='red', alpha=0.7)
+
+ax.set_title('Landcover Change Polygons')
+ax.set_axis_off()
+plt.tight_layout()
+plt.show()
+```
+
+
+    
+![](python-remote-sensing-output/module_03/02_analyzing_landcover_change_files/02_analyzing_landcover_change_51_0.png)
+    
+
 
 Save the results as a GeoPackage file.
 
