@@ -258,7 +258,7 @@ da_clipped = da_clipped.compute()
 ```python
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(4, 3)
+fig, axes = plt.subplots(3, 4)
 fig.set_size_inches(10,5)
 fig.suptitle('Average Annual Nighttime Lights (NTL)', fontsize=16)
 
@@ -271,10 +271,11 @@ for i, ax in enumerate(axes.flat):
         time_slice = da_clipped.isel(year=i)
         # Using imshow to visualize the 2D data for each timestep
         # Pass the numpy array values to imshow
-        im = ax.imshow(time_slice.values, 
+        im = ax.imshow(time_slice.values,
                        vmin=0, vmax=100, cmap='viridis', origin='lower')
         ax.set_title(f'Time: {time_slice.year.item()}')
         ax.set_axis_off()
+        ax.set_aspect('equal')
     else:
         # Hide any unused subplots
         fig.delaxes(ax)
