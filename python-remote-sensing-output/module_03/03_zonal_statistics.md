@@ -128,7 +128,15 @@ ghsl_da = rxr.open_rasterio(
 ghsl_da
 ```
 
-This is a global raster at 100m resolution available as a single COG. We get the subset for our region of interest. We compute the bounding box of the polygons.
+This is a global raster at 100m resolution and *World Mollweide* projection - which is a global equal area projection suitable for gridded datasets. We will continue to work in this projection.
+
+
+```python
+print('Resolution', ghsl_da.rio.resolution())
+print('CRS', ghsl_da.rio.crs)
+```
+
+We can subset the global data for our region's bounding box.
 
 
 ```python
@@ -237,3 +245,5 @@ output_gdf.to_file(output_path, driver='GPKG')
 The annual GeoTIFF files are available at https://data.chc.ucsb.edu/products/CHIRPS/v3.0/annual/global/tifs/.
 
 Pick a year and calculate the average rainfall in each admin2 polygon.
+
+> Remember to calculate the *mean* precipitation when aggregating it over polygons.
