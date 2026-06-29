@@ -285,7 +285,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_40_0.png)
+![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_40_0.png)
     
 
 
@@ -364,7 +364,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/03_working_with_xee_files/03_working_with_xee_52_0.png)
+![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_52_0.png)
     
 
 
