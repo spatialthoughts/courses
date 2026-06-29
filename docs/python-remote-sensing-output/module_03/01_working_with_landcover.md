@@ -74,6 +74,7 @@ import pandas as pd
 import planetary_computer as pc
 import pyproj
 import pystac_client
+import rasterio
 import rioxarray as rxr
 import xarray as xr
 from affine import Affine

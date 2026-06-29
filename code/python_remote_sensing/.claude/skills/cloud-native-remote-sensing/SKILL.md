@@ -10,6 +10,7 @@ description: Guide for writing cloud-native remote sensing code in Python using 
 - `pystac_client` — STAC catalog search
 - `odc.stac` (`odc-stac`) — load STAC items to XArray
 - `xarray` + `rioxarray` — raster data model and geospatial ops
+- `xrspatial` — raster spatial analysis
 - `dask` / `dask.distributed` — lazy parallel computation
 - `geopandas` — vector data
 - `duckdb` — querying cloud-native vector files (GeoParquet, Parquet)
@@ -34,7 +35,7 @@ from dask.distributed import Client
 client = Client()
 ```
 
-- Defer processing as much as you can. Prefer dask-aware ops, such as `rioxarray`'s `clip_box()` over `clip()`.
+- Defer processing as much as you can.
 - Never call `.compute()` until the lazy graph is fully built (all masking, indexing, calculations done). Compute once at the end.
 - Order of preference for computations:
     1. Built-in XArray functions — e.g. `median()`, `resample()`
@@ -67,15 +68,10 @@ import planetary_computer as pc
 catalog = pystac_client.Client.open('https://planetarycomputer.microsoft.com/api/stac/v1')
 # add patch_url=pc.sign to stac.load()
 
-# Build bbox from a point
-km2deg = 1.0 / 111
-r = radius_km * km2deg
-bbox = (lon - r, lat - r, lon + r, lat + r)
-
 # Search
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
-    bbox=bbox,                          # or intersects=geometry
+    intersects=geometry, # or bbox from a point
     datetime='2023',                    # year, range '2023-01/2023-06', or ISO datetime
     query={
         'eo:cloud_cover': {'lt': 30},
@@ -98,7 +94,9 @@ If the dataset is not in the above, search `https://stacindex.org/catalogs`.
 
 ---
 
-## Loading STAC Items to XArray
+## STAC Loading Pattern
+
+Load STAC items via `odc.stac`. Pass `bbox` to `load()` to limit the data read and a `crs` to reproject to. 
 
 ```python
 ds = load(
@@ -116,6 +114,25 @@ ds = load(
 
 **Do not use `chunks={}` and then call `.rechunk()` — set explicit chunks in `load()` for large datasets.**
 
+## rioxarray Loading Pattern
+
+Always specify chunk sizes when loading a raster with `rioxarray` to avoid OOM errors on large rasters. 
+
+
+```python
+glad_ds = rxr.open_rasterio(
+    data_url,
+    chunks={'x': 1024, 'y': 1024}, # Explicitly define chunk sizes
+)
+```
+
+Use `clip_box()` to clip to a bounding box and use `odc.reproject()` to reproject. `odc.reproeject()` is preferred over `rio.reproject()` because it is Dask-aware and does lazy-reprojection.
+
+```python
+glad_ds = glad_ds.rio.clip_box(*geometry.bounds)
+glad_ds = glad_ds.odc.reproject('utm')
+glad_ds
+```
 ---
 
 ## Sentinel-2 Preprocessing
@@ -171,9 +188,22 @@ rgb = rgb.compute()                     # triggers Dask computation
 
 ---
 
+## Clipping
+
+Clip only after data has been loaded into memory. If you need to clip a large raster use `clip_box()` instead - which is Dask aware. Cliping to actual geometry is required only before visualizing or exporting. Use `rioxarray`'s `clip()`. Ensure the clipping geometry is in the same CRS as the raster:
+
+```python
+aoi_gdf_reprojected = aoi_gdf.to_crs(map_data.rio.crs)
+map_data_clipped = map_data.rio.clip(aoi_gdf_reprojected.geometry)
+```
+
+
+
+---
+
 ## Visualization
 
-Always convert Dataset to DataArray before plotting:
+Always convert Dataset to DataArray before plotting. To ensure better memory management, create a preview at a lower resolution before plotting. Use `robust=True` to apply a 2nd-98th percentile stretch for better visualization.
 
 ```python
 da = rgb.to_array('band')
