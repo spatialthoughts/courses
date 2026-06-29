@@ -243,7 +243,12 @@ tick_labels
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(12, 10)
 
-map_data_clipped.plot(
+# Create a preview
+map_data_preview = map_data_clipped.rio.reproject(
+    map_data_clipped.rio.crs, resolution=100
+)
+
+map_data_preview.plot(
     ax=ax, cmap=cmap, norm=normalizer
 )
 
@@ -258,6 +263,12 @@ colorbar.set_ticks(ticks, labels=tick_labels)
 ax.set_axis_off()
 ax.set_title('Landcover Classes from ESA WorldCover');
 ```
+
+
+    
+![](python-remote-sensing-output/module_03/01_working_with_landcover_files/01_working_with_landcover_35_0.png)
+    
+
 
 ### Write a Paletted GeoTIFF
 
@@ -321,7 +332,7 @@ print(f'Wrote {output_path}')
 
 ### Calculate Class Areas
 
-Landcover datasets are crucial for quantifying landuse patterns. We can now calculate the area of each class within our region of interest. As our data is in a projected CRS, each pixel's area is fixed. We can count the total number of pixels for each class and multiply it by the area of a single pixel to get the area. 
+Landcover datasets are crucial for quantifying landuse patterns. We can now calculate the area of each class within our region of interest. As our data is in a projected CRS, each pixel's area is fixed. We can count the total number of pixels for each class and multiply it by the area of a single pixel to get the area.
 
 Let's get the underlying array of pixel values.
 
@@ -377,10 +388,10 @@ area_df.to_csv(output_filepath, index=False)
 
 Let's load another landcover dataset and learn how we can compare two different classification schemes by harmonizing them. [UMD GLAD Annual Land Cover and Land Use (GLCUC)](https://glad.umd.edu/dataset/GLCLUC2020) is a long time-series of landcover classification dataset derived from Landsat. It has detailed classification scheme with over 100 classes grouped into 7 primary classes.
 
-The complete dataset is available on [OpenLandMap STAC Catalog](https://stac.openlandmap.org/). This is a static catalog containing many useful remote sensing dataset. As it is a static catalog, we cannot use the `search` function. You can see [Loading Data from a Static STAC Catalog](https://www.geopythontutorials.com/notebooks/stac_static_catalog.html) for a guide on how to list and load items of interest. 
+The complete dataset is available on [OpenLandMap STAC Catalog](https://stac.openlandmap.org/). This is a static catalog containing many useful remote sensing dataset. As it is a static catalog, we cannot use the `search` function. You can see [Loading Data from a Static STAC Catalog](https://www.geopythontutorials.com/notebooks/stac_static_catalog.html) for a guide on how to list and load items of interest.
 
 As we want to access just one image, it is easiest to load it directly. We access the [UMD GLAD annual land cover and land use (GLCLUC)
-](https://stac.openlandmap.org/lc_glad.glcluc/collection.json?.language=en) page and obtain the URL for the COG file for 2020 landcover classification. 
+](https://stac.openlandmap.org/lc_glad.glcluc/collection.json?.language=en) page and obtain the URL for the COG file for 2020 landcover classification.
 
 
 ```python
@@ -478,22 +489,27 @@ glad_da_reclass_clipped
 
 ### Compare GLCLUC with ESA WorldCover
 
-Plot and compare both the datasets. Notice where both these datasets differ. The different in resolution (10m for ESA WorldCover vs. 30m for GLCLUC) also plays a big role in what features can be distinguished. 
+Plot and compare both the datasets. Notice where both these datasets differ. The different in resolution (10m for ESA WorldCover vs. 30m for GLCLUC) also plays a big role in what features can be distinguished.
 
 
 ```python
 fig, axes = plt.subplots(1, 2)
 fig.set_size_inches(20, 8)
 
-glad_da_reclass_clipped.plot(
+map_data_preview.plot(
     ax=axes[0], cmap=cmap, norm=normalizer, add_colorbar=False)
 axes[0].set_axis_off()
-axes[0].set_title('GLAD GLCLUC Reclassified to ESA WorldCover Classes')
+axes[0].set_title('ESA WorldCover')
 
-map_data_clipped.plot(
+# Creat a preview
+glad_data_preview = glad_da_reclass_clipped.rio.reproject(
+    glad_da_reclass_clipped.rio.crs, resolution=100
+)
+
+glad_data_preview.plot(
     ax=axes[1], cmap=cmap, norm=normalizer, add_colorbar=False)
 axes[1].set_axis_off()
-axes[1].set_title('ESA WorldCover')
+axes[1].set_title('GLAD GLCLUC Reclassified to ESA WorldCover Classes')
 
 cbar_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
 
@@ -506,6 +522,12 @@ colorbar = fig.colorbar(
 colorbar.set_ticks(ticks, labels=tick_labels)
 
 ```
+
+
+    
+![](python-remote-sensing-output/module_03/01_working_with_landcover_files/01_working_with_landcover_75_0.png)
+    
+
 
 Save the output as a palleted raster. Once saved, open the resulting COG in GeoLibre and compare the output with ESA WorldCover.
 
@@ -521,11 +543,11 @@ Close the dask client. This presents multiple clients being instantiated when ru
 
 
 ```python
-client.shutdown()
+#client.shutdown()
 ```
 
 ### Exercise
 
-Select only the pixels of *Tree Cover* (class value `10`) from the ESA WorldCover dataset to create a map of tree cover in your region. 
+Select only the pixels of *Tree Cover* (class value `10`) from the ESA WorldCover dataset to create a map of tree cover in your region.
 
 Hint: Use the [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function.
