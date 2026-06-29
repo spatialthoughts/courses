@@ -119,37 +119,40 @@ We load the [Global Human Settlement Layer (GHSL)](https://ghsl.jrc.ec.europa.eu
 
 
 ```python
-raster_file_path = 'https://storage.googleapis.com/spatialthoughts-public-data/ghsl/' \
+data_url = 'https://storage.googleapis.com/spatialthoughts-public-data/ghsl/' \
     'GHS_POP_E2025_GLOBE_R2023A_54009_100_V1_0_cog.tif'
-da = rxr.open_rasterio(raster_file_path, chunks='auto', mask_and_scale=True)
-da
+ghsl_da = rxr.open_rasterio(
+    data_url,
+    chunks={'x': 1024, 'y': 1024},
+)
+ghsl_da
+```
+
+This is a global raster at 100m resolution available as a single COG. We get the subset for our region of interest. We compute the bounding box of the polygons.
+
+
+```python
+admin2_gdf_reprojected = admin2_gdf.to_crs(ghsl_da.rio.crs)
+bounds = admin2_gdf_reprojected.total_bounds  # (minx, miny, maxx, maxy)
+```
+
+`clip_box()` is window-read aware with COGs — it only fetches the tiles that overlap the bounding box, so the data stays lazy until you call `.compute()`.
+
+
+```python
+ghsl_da_clipped = ghsl_da.rio.clip_box(*bounds)
+ghsl_da_clipped
 ```
 
 The raster has a single `band` dimension. We use `squeeze()` to drop it and work with a 2D array.
 
 
 ```python
-pop_da = da.squeeze()
+pop_da = ghsl_da_clipped.squeeze()
 pop_da
 ```
 
 ### Calculate Zonal Statistics
-
-Reproject the polygons to match the projection of the population raster.
-
-
-```python
-admin2_gdf_reprojected = admin2_gdf.to_crs(pop_da.rio.crs)
-```
-
-Clip the raster to the bounds of the zones. `clip_box` is window-read aware with COGs — it only fetches the tiles that overlap the bounding box, so the data stays lazy until you call .compute().
-
-
-```python
-bounds = admin2_gdf_reprojected.total_bounds  # (minx, miny, maxx, maxy)
-pop_da_clipped = pop_da.rio.clip_box(*bounds)
-pop_da_clipped
-```
 
 We will now use the [`xvec.zonal_stats()`](https://xvec.readthedocs.io/en/stable/zonal_stats.html) method to aggregates raster pixel values within each polygon.
 
@@ -161,7 +164,7 @@ We request the `sum` statistic, which gives us total population per county. Runn
 
 ```python
 %%time
-aggregated = pop_da_clipped.xvec.zonal_stats(
+aggregated = pop_da.xvec.zonal_stats(
     admin2_gdf_reprojected.geometry,
     x_coords='x',
     y_coords='y',
@@ -190,7 +193,8 @@ Convert the XArray Dataset back to a GeoDataFrame for tabular manipulation and e
 
 
 ```python
-aggregated_gdf = aggregated.xvec.to_geodataframe(name='population_sum', geometry='geometry')
+aggregated_gdf = aggregated.xvec.to_geodataframe(
+    name='population_sum', geometry='geometry')
 aggregated_gdf.head()
 ```
 
@@ -199,10 +203,19 @@ aggregated_gdf.head()
 
 
 ```python
-output_gdf = aggregated_gdf.reset_index()
-output_gdf = output_gdf.rename(columns={'population_sum': 'population'})
-output_gdf = output_gdf[['adm2_name', 'population', 'geometry']]
-output_gdf.head()
+aggregated_gdf = aggregated_gdf.reset_index()
+aggregated_gdf = aggregated_gdf.rename(columns={'population_sum': 'population'})
+aggregated_gdf = aggregated_gdf[['adm2_name', 'population', 'geometry']]
+aggregated_gdf.head()
+```
+
+Calculat the area and population density.
+
+
+```python
+aggregated_gdf['area_km2'] = aggregated_gdf.geometry.area / 1e6
+aggregated_gdf['pop_density'] = aggregated_gdf['population'] / aggregated_gdf['area_km2']
+aggregated_gdf.head()
 ```
 
 Save the results as a GeoPackage file.
