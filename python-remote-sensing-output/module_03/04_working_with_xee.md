@@ -172,15 +172,14 @@ geometry
 
 ### Load Data from GEE
 
-We will load the [VIIRS Nighttime Day/Night Annual Band Composites V2.1](https://developers.google.com/earth-engine/datasets/catalog/NOAA_VIIRS_DNB_ANNUAL_V21) dataset.
+We will load the [VIIRS Stray Light Corrected Nighttime Day/Night Band Composites Version 1](https://developers.google.com/earth-engine/datasets/catalog/NOAA_VIIRS_DNB_MONTHLY_V1_VCMSLCFG) dataset.
 
-Configure the time period and variables. Note that this dataset is available from 2012 upto 2021.
+Configure the time period and variables. Note that this dataset is available from 2014-current.
 
 
 ```python
-start_year = 2016
-end_year = 2021
-variable = 'average'
+start_year = 2014
+end_year = 2025
 ```
 
 Define the ImageCollection and apply filters using the Earth Engine Python API syntax.
@@ -190,11 +189,10 @@ Define the ImageCollection and apply filters using the Earth Engine Python API s
 start_date = ee.Date.fromYMD(start_year, 1, 1)
 end_date = ee.Date.fromYMD(end_year + 1, 1, 1)
 
-ntlCol = ee.ImageCollection('NOAA/VIIRS/DNB/ANNUAL_V21')
+ntlCol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')
 
 filtered = ntlCol \
-  .filter(ee.Filter.date(start_date, end_date)) \
-  .select(variable)
+  .filter(ee.Filter.date(start_date, end_date))
 ```
 
 We now read the filtered collecting using XEE. XEE requires explicit grid parameters. We extract these using the helper function [`extract_grid_params`](hhttps://xee.readthedocs.io/en/latest/_autosummary/xee.extract_grid_params.html#xee.extract_grid_params).
@@ -213,17 +211,26 @@ ds = xr.open_dataset(
     filtered,
     engine='ee',
     **grid_params,
-    chunks={} # Enable dask
+    chunks={'x': 1024, 'y': 1024} # Enable dask
 )
 ds
 ```
 
-Select the variable. Many XArray functions require all the dimensions to be sorted in ascending order. Make sure y and x are sorted.
+Select the variable. The `avg_rad` band contains the average DNB radiance values. Many XArray functions require all the dimensions to be sorted in ascending order. Make sure y and x are sorted.
 
 
 ```python
-da = ds.average
+da = ds['avg_rad']
 da = da.sortby(['y', 'x'])
+da
+```
+
+This is a monthly-cadence dataset. Let's aggregate it to be an annual average.
+
+
+```python
+da_annual = da.groupby('time.year').mean(dim='time')
+da_annual
 ```
 
 Clip the raster to the bounds of the zones.
@@ -233,7 +240,7 @@ Clip the raster to the bounds of the zones.
 
 ```python
 bounds = aoi_gdf.total_bounds  # (minx, miny, maxx, maxy)
-da_clipped = da.rio.clip_box(*bounds)
+da_clipped = da_annual.rio.clip_box(*bounds)
 da_clipped
 ```
 
@@ -251,7 +258,7 @@ da_clipped = da_clipped.compute()
 ```python
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(2, 3)
+fig, axes = plt.subplots(4, 3)
 fig.set_size_inches(10,5)
 fig.suptitle('Average Annual Nighttime Lights (NTL)', fontsize=16)
 
@@ -260,12 +267,13 @@ da_clipped = da_clipped.rio.clip(aoi_gdf.geometry)
 
 for i, ax in enumerate(axes.flat):
     # Check if we have enough time slices to plot
-    if i < da_clipped.sizes['time']:
-        time_slice = da_clipped.isel(time=i)
+    if i < da_clipped.sizes['year']:
+        time_slice = da_clipped.isel(year=i)
         # Using imshow to visualize the 2D data for each timestep
         # Pass the numpy array values to imshow
-        im = ax.imshow(time_slice.values, cmap='viridis', origin='lower')
-        ax.set_title(f'Time: {time_slice.time.dt.year.item()}')
+        im = ax.imshow(time_slice.values, 
+                       vmin=0, vmax=100, cmap='viridis', origin='lower')
+        ax.set_title(f'Time: {time_slice.year.item()}')
         ax.set_axis_off()
     else:
         # Hide any unused subplots
@@ -285,7 +293,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_40_0.png)
+![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_42_0.png)
     
 
 
@@ -316,7 +324,7 @@ At this point we only have the geometries from the original vector data. It will
 
 
 ```python
-aggregated['name'] = ('geometry', aoi_gdf['name'].values)
+aggregated['name'] = ('geometry', aoi_gdf['primary_name'].values)
 aggregated = aggregated.assign_coords({'name': aggregated['name']})
 aggregated
 ```
@@ -335,7 +343,7 @@ aggregated_gdf
 
 ```python
 output_gdf = aggregated_gdf.reset_index()
-output_gdf = output_gdf[['name', 'time', 'ntl_mean', 'geometry']]
+output_gdf = output_gdf[['name', 'year', 'ntl_mean', 'geometry']]
 output_gdf
 ```
 
@@ -345,7 +353,7 @@ import matplotlib.pyplot as plt
 
 # Create the plot
 plt.figure(figsize=(8, 4))
-plt.plot(output_gdf['time'], output_gdf['ntl_mean'], marker='o')
+plt.plot(output_gdf['year'], output_gdf['ntl_mean'], marker='o')
 
 # Add labels and title
 plt.xlabel('Year')
@@ -364,7 +372,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_52_0.png)
+![](python-remote-sensing-output/module_03/04_working_with_xee_files/04_working_with_xee_54_0.png)
     
 
 
@@ -372,4 +380,42 @@ plt.show()
 
 The [GEE Community Catalog](https://gee-community-catalog.org/) is a large collection of community curated datasets hosted on Earth Engine. The XEE extension works equally well on these datasets.
 
-Access the [Global Annual Simulated NPP-VIIRS Nighttime Light Dataset (1992-2023)](https://gee-community-catalog.org/projects/srunet_npp_viirs_ntl/) dataset and plot a time-series of average nighttime lights for your region of interest.
+Access the [Global Annual Simulated NPP-VIIRS Nighttime Light Dataset (1992-2023)](https://gee-community-catalog.org/projects/srunet_npp_viirs_ntl/) dataset and plot a time-series of average nighttime lights for your region of interest. Below is a starter code that opens the collection using XEE.
+
+
+```python
+ntlCol = ee.ImageCollection('projects/sat-io/open-datasets/srunet-npp-viirs-ntl')
+
+grid_params = helpers.extract_grid_params(ntlCol)
+
+ds = xr.open_dataset(
+    ntlCol,
+    engine='ee',
+    **grid_params,
+    chunks={'x': 1024, 'y': 1024} # Enable dask
+)
+ds
+```
+
+This dataset spans the years 1992 to 2023, but the `time` coordinates are integers from 0 to 31. Let's fix this to add the actual year.
+
+
+```python
+start_year = 1992
+end_year = 2023
+
+# Create a new time coordinate representing the years
+years = pd.to_datetime([
+    f'{year}-01-01' for year in range(start_year, end_year + 1)
+])
+
+# Assign the new time coordinate to the dataset
+ds['time'] = years
+
+ds
+```
+
+
+```python
+# Add the code to process and visualize the new dataset as needed.
+```
