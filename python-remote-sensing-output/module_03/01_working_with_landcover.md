@@ -534,7 +534,7 @@ Save the output as a palleted raster. Once saved, open the resulting COG in GeoL
 
 
 ```python
-output_file = 'glad_glcuc.tif'
+output_file = 'glad_glcuc_colormap.tif'
 output_path = os.path.join(output_folder, output_file)
 write_cog_with_colormap(glad_da_reclass_clipped, output_path, color_table)
 print(f'Wrote {output_path}')

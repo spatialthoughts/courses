@@ -468,4 +468,22 @@ Close the dask client. This presents multiple clients being instantiated when ru
 
 ### Exercise
 
-Select a class of interest (i.e. Built Area, Water etc.) and calculate the total area for each year from 2017 to 2023 and create a Pandas Dataframe of your results.
+Polygons derived from classified raster data have unnatural pixelated edges. These are not suitable for use in mapping. [Smoothify](https://github.com/DPIRD-DMA/Smoothify) is a Python-package designed to convert these jagged features to smooth natural looking polygnos. Apply the `smoothify` function to your change polygons and create a smoothed version. You can review the [Usage Examples](https://github.com/DPIRD-DMA/Smoothify/blob/main/examples/usage_examples.ipynb) for explanations of parameters and advanced usage.
+
+Save the results as `landcover_change_smoothed.gpkg`.
+
+
+```python
+if environment in ['colab', 'colab_enterprise']:
+    !pip install smoothify
+```
+
+
+```python
+from smoothify import smoothify
+smoothed_gdf = smoothify(
+    geom=change_gdf,
+    smooth_iterations=3,  # More iterations = smoother result
+    num_cores=4  # Use parallel processing for large datasets
+)
+```
