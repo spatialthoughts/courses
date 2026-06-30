@@ -1,4 +1,6 @@
-The [Global Land Cover by Fine Classification System at 30m (GLC_FCS30D)](https://zenodo.org/records/8239305) is a dynamic land cover product produced by the Chinese Academy of Sciences. This notebook shows how to access, visualize and reclassify GLC_FCS30D land cover data for a region of interest using cloud-optimized GeoTIFF data hosted on OpenLandMap.
+The [Global Land Cover by Fine Classification System at 30m (GLC_FCS30D)](https://zenodo.org/records/8239305) is a dynamic land cover product produced by the Chinese Academy of Sciences. It provides a high-resolution landcover time-series derived from the Landsat archive (1984-2022) at 30m resolution with 35 classes.
+
+This notebook shows how to access, visualize and reclassify GLC_FCS30D land cover data for a region of interest using cloud-optimized GeoTIFF data hosted on OpenLandMap.
 
 #### Setup
 
@@ -16,7 +18,7 @@ else:
     environment = 'local'
 
 # Set to True to use Google Drive for data storage in Colab
-use_google_drive = True
+use_google_drive = False
 
 # Google Drive is available only in 'colab' environment
 if environment == 'colab' and use_google_drive:
@@ -47,7 +49,8 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 ```python
 %%capture
 if environment in ['colab', 'colab_enterprise']:
-  !pip install rioxarray dask[distributed] jupyter-server-proxy
+  !pip install rioxarray dask[distributed] odc-stac \
+    jupyter-server-proxy
 ```
 
 Import all required libraries.
@@ -62,6 +65,8 @@ import os
 import pyproj
 import rioxarray as rxr
 from matplotlib import cm
+from odc import stac
+
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -112,15 +117,27 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
-### GLC-FCS30
+#### Load GLC-FCS30 Data
 
 
 ```python
-data_url = 'https://s3.openlandmap.org/arco/lc_glc.fcs30d_c_30m_s_20210101_20211231_go_epsg.4326_v20231026.tif'
+data_url = (
+    'https://s3.openlandmap.org/arco/'
+    'lc_glc.fcs30d_c_30m_s_20210101_20211231_go_epsg.4326_v20231026.tif')
 glc_fcs_ds = rxr.open_rasterio(
-    data_url, 
+    data_url,
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
 )
+glc_fcs_ds
+```
+
+This is a global raster at 30m resolution available as a single COG. We can clip and reproject the data to get the subset for our region of interest.
+
+
+```python
+bbox = aoi_gdf.geometry.total_bounds
+glc_fcs_ds = glc_fcs_ds.rio.clip_box(*bbox)
+glc_fcs_ds = glc_fcs_ds.odc.reproject('utm')
 glc_fcs_ds
 ```
 
@@ -132,31 +149,21 @@ glc_fcs_da
 
 
 ```python
-bbox = aoi_gdf.geometry.total_bounds
-glc_fcs_da_subset = glc_fcs_da.rio.clip_box(*bbox)
-glc_fcs_da_subset
-```
-
-
-```python
 %%time
-glc_fcs_da_subset = glc_fcs_da_subset.compute()
+glc_fcs_da = glc_fcs_da.compute()
 ```
+
+Clip the data to geometry. Before we clip, we need to reproject the `aoi_gdf` to the same CRS as the data.
 
 
 ```python
-aoi = pyproj.aoi.AreaOfInterest(*bbox)
-utm_crs_list = pyproj.database.query_utm_crs_info(datum_name='WGS 84', area_of_interest=aoi)
-utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
-utm_crs
+aoi_gdf_reprojected = aoi_gdf.to_crs(glc_fcs_da.rio.crs)
+glc_fcs_da_clipped = glc_fcs_da.rio.clip(aoi_gdf_reprojected.geometry)
 ```
 
+#### Visualize the Data
 
-```python
-glc_fcs_da_clipped = glc_fcs_da_subset.astype('float32').rio.clip(aoi_gdf.geometry)
-glc_fcs_da_reprojected = glc_fcs_da_clipped.rio.reproject(utm_crs)
-glc_fcs_da_reprojected
-```
+To create a meaningful legend, we create a dictionary of class names and colors for the landcover classes.
 
 
 ```python
@@ -197,35 +204,59 @@ glc_fcs_class_dict = {
     210: {'description': 'Water body', 'hex': '0046c8'},
     220: {'description': 'Permanent ice and snow', 'hex': 'ffffff'},
 }
+```
 
-colors = ['#000000'] * 256
+Create a preview and plot.
+
+
+```python
+import matplotlib.patches as mpatches
+
+# Create a preview
+glc_fcs_da_preview = glc_fcs_da_clipped.rio.reproject(
+    glc_fcs_da_clipped.rio.crs, resolution=100
+)
+
+colors_map = ['#000000'] * 256
 for key, value in glc_fcs_class_dict.items():
-    colors[key] = f'#{value["hex"]}'
-colors[0] = (0, 0, 0, 0)  # transparent for nodata
-glc_cmap = matplotlib.colors.ListedColormap(colors)
+    colors_map[key] = f'#{value["hex"]}'
+colors_map[0] = (0, 0, 0, 0)  # transparent for nodata
+glc_cmap = matplotlib.colors.ListedColormap(colors_map)
 normalizer = matplotlib.colors.Normalize(vmin=0, vmax=255)
 
-unique_classes = sorted(glc_fcs_class_dict.keys())
-boundaries = [(unique_classes[i + 1] + unique_classes[i]) / 2
-              for i in range(len(unique_classes) - 1)]
-boundaries = [0] + boundaries + [255]
-ticks = [(boundaries[i + 1] + boundaries[i]) / 2
-         for i in range(len(boundaries) - 1)]
-tick_labels = [f'{v["description"]} ({k})' for k, v in glc_fcs_class_dict.items()]
-
 fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(12, 14)
+fig.set_size_inches(10, 10) # Increased width to accommodate 2-column legend
 
-glc_fcs_da_clipped.plot(ax=ax, cmap=glc_cmap, norm=normalizer)
+glc_fcs_da_preview.plot(ax=ax, cmap=glc_cmap,
+                        norm=normalizer, add_colorbar=False)
 
-colorbar = fig.colorbar(
-    cm.ScalarMappable(norm=normalizer, cmap=glc_cmap),
-    boundaries=boundaries,
-    values=unique_classes,
-    cax=fig.axes[1].axes,
-)
-colorbar.set_ticks(ticks, labels=tick_labels)
+# # Create custom legend handles
+legend_handles = []
+for class_id in sorted(glc_fcs_class_dict.keys()): # Ensure consistent order
+    class_info = glc_fcs_class_dict[class_id]
+    hex_color = f'#{class_info["hex"]}'
+    description = class_info["description"]
+    handle = mpatches.Patch(color=hex_color, label=f'{description} ({class_id})')
+    legend_handles.append(handle)
+
+# Add the legend with 2 columns
+ax.legend(handles=legend_handles,
+          loc='center left',
+          bbox_to_anchor=(1.05, 0.5),
+          ncol=1,
+          fontsize='small',
+          )
 
 ax.set_axis_off()
+ax.set_aspect('equal')
 ax.set_title('Landcover Classes from GLC_FCS30D')
+
+fig.tight_layout() # Adjust layout to prevent labels from being cut off
+plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/supplement/glc_fcs30d_landcover_files/glc_fcs30d_landcover_31_0.png)
+    
+
