@@ -62,23 +62,25 @@ Import all required libraries. Make sure to import everything at the beginning a
 
 
 ```python
+import asyncio
 import geopandas as gpd
 import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches # Import Patch from matplotlib.patches
 import numpy as np
 import os
 import pandas as pd
+import pyproj
+import rasterio
 import rioxarray as rxr
 import xarray as xr
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
-import asyncio
 from aef_loader import AEFIndex, VirtualTiffReader, DataSource
 from aef_loader.utils import dequantize_aef, reproject_datatree
 from odc.geo.geobox import GeoBox
 from pyproj import Transformer
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -173,12 +175,6 @@ ax.set_axis_off()
 plt.show()
 ```
 
-
-    
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_17_0.png)
-    
-
-
 ### Load the Satellite Embeddings
 
 We now use the `aef-loader` package to load all the matching tiles of AlphaEarth Foundations Satellite Embeddings from Source Cooperative for the chosen year. This Lazily load the tiles as a XArray DataArray that we can fetch and process in chunks using Dask.
@@ -187,14 +183,21 @@ Create a `odc.geo.geobox.GeoBox` object which is a representation of the boundin
 
 
 ```python
-year = 2024
+year = 2023
 bbox = geometry.bounds
-target_crs = 'EPSG:3857'
+
 ```
 
 
 ```python
+aoi = pyproj.aoi.AreaOfInterest(*bbox)
+utm_crs_list = pyproj.database.query_utm_crs_info(datum_name='WGS 84', area_of_interest=aoi)
+target_crs = f'EPSG:{utm_crs_list[0].code}'
+print(f'Target CRS: {target_crs}')
+```
 
+
+```python
 # Transform bbox from EPSG:4326 to chosen crs
 transformer = Transformer.from_crs('EPSG:4326', target_crs, always_xy=True)
 x_min, y_min = transformer.transform(bbox[0], bbox[1])
@@ -247,21 +250,17 @@ We reproject the training points to match the composite CRS, then overlay them o
 
 
 ```python
-# Extract longitude and latitude from gcp_gdf
-gcp_lon = gcp_gdf.geometry.x.values
-gcp_lat = gcp_gdf.geometry.y.values
-
-# Transform GCP coordinates to the target CRS (EPSG:3857)
-# 'transformer' was defined previously in cell 'zjbO4zJ-CFOf'
-gcp_x_coords, gcp_y_coords = transformer.transform(gcp_lon, gcp_lat)
+gcp_gdf_reprojected = gcp_gdf.to_crs(composite.rio.crs)
+x_coords = gcp_gdf_reprojected.geometry.x.values
+y_coords = gcp_gdf_reprojected.geometry.y.values
 
 # Create xarray DataArrays for indexing with a 'gcp_id' dimension
 # This dimension will match the order of the gcp_gdf for easy association
 gcp_ids = np.arange(len(gcp_gdf))
 
 gcp_embeddings = embeddings_float.sel(
-    x=xr.DataArray(gcp_x_coords, dims='gcp_id'),
-    y=xr.DataArray(gcp_y_coords, dims='gcp_id'),
+    x=xr.DataArray(x_coords, dims='gcp_id'),
+    y=xr.DataArray(y_coords, dims='gcp_id'),
     method='nearest'
 )
 
@@ -292,7 +291,7 @@ y = gcp_embeddings['landcover'].values
 
 # Initialize the KNeighborsClassifier
 # Using n_neighbors=5 as a common starting point
-classifier = KNeighborsClassifier(n_neighbors=5, weights="distance", n_jobs=1)
+classifier = KNeighborsClassifier(n_neighbors=5, weights='distance')
 
 # Train the classifier
 classifier.fit(X, y)
@@ -303,150 +302,68 @@ classifier.fit(X, y)
 
 
 ```python
-import dask.array as da
+emb_dask = embeddings_float.chunk({'band': -1}).data  # (bands, y, x)
 
-# Get embeddings as dask array: (bands, y, x)
-# `embeddings_float` is an xarray DataArray, so `embeddings_float.data` gives the Dask array
-emb_dask = embeddings_float.data
+def predict_block(block, model):
+    bands, h, w = block.shape
+    pixels = block.reshape(bands, -1).T.astype(np.float64)  # (n_pixels, bands)
+    valid = ~np.isnan(pixels).any(axis=1)
+    result = np.full(h * w, np.nan)
+    if valid.any():
+        result[valid] = model.predict(pixels[valid]).astype(float)
+    return result.reshape(h, w)
 
-# Transpose to (y, x, bands) then reshape to (y*x, bands)
-# dask.array.moveaxis is used for dask arrays
-emb_dask = da.moveaxis(emb_dask, 0, -1)  # (y, x, bands)
-ny, nx, nb = emb_dask.shape
-emb_2d_dask = emb_dask.reshape(-1, nb)  # (y*x, bands)
-
-# Rechunk so each block has ALL bands (axis 1 = single chunk)
-# This is crucial for applying the classifier which expects all features for each sample
-emb_2d_rechunked = emb_2d_dask.rechunk({0: 'auto', 1: -1})
-
-# Define the prediction function to be mapped over Dask blocks
-def predict_block(block, classifier_model):
-    """Predict landcover class for one chunk of pixels."""
-    # The classifier expects (n_samples, n_features)
-    return classifier_model.predict(block)
-
-# Map the prediction function over dask blocks
-# The output will be a 1D array of class labels
-predicted_labels_1d = emb_2d_rechunked.map_blocks(
+predicted_2d = da.map_blocks(
     predict_block,
-    classifier_model=classifier, # Pass the trained classifier
-    dtype=np.int32,  # Output dtype will be integer class labels
-    drop_axis=1,     # The bands axis is collapsed after prediction
+    emb_dask,
+    model=classifier,
+    dtype=np.float64,
+    drop_axis=0,
 )
 
-# Reshape the 1D predictions back to the original 2D (y, x) shape
-predicted_labels_2d = predicted_labels_1d.reshape(ny, nx)
-
-# Convert to an xarray DataArray for easier handling and plotting
-# Align coordinates with the original embeddings_float
-predicted_landcover = xr.DataArray(
-    predicted_labels_2d,
-    coords={
-        'y': embeddings_float.y,
-        'x': embeddings_float.x
-    },
+classified = xr.DataArray(
+    predicted_2d,
+    coords={'y': embeddings_float.y, 'x': embeddings_float.x},
     dims=['y', 'x'],
-    name='predicted_landcover'
-)
-predicted_landcover
+    name='landcover'
+).rio.write_crs(embeddings_float.rio.crs)
+classified
 ```
 
 
 ```python
 %%time
 # Compute the predicted landcover map
-predicted_landcover_map = predicted_landcover.compute()
-predicted_landcover_map
-```
-
-
-```python
-import numpy as np
-
-predicted_landcover_map = predicted_landcover_map.rio.write_crs(embeddings_float.rio.crs)
-
-# Convert to float32 to allow NaN as nodata, as landcover values are integers anyway
-predicted_landcover_map = predicted_landcover_map.astype(np.float32)
-predicted_landcover_map = predicted_landcover_map.rio.write_nodata(embeddings_float.rio.nodata)
-
-# Ensure valid geometry before reprojecting
-valid_aoi_gdf = aoi_gdf.make_valid()
-aoi_gdf_reprojected = valid_aoi_gdf.to_crs(embeddings_float.rio.crs)
-
-# Clip the predicted landcover map. Now use np.nan as nodata for float dtype.
-predicted_landcover_clipped = predicted_landcover_map.rio.clip(
-    aoi_gdf_reprojected)
-# Explicitly set the nodata attribute on the clipped DataArray
-predicted_landcover_clipped = predicted_landcover_clipped.rio.write_nodata(np.nan)
-
-predicted_landcover_clipped
+classified = classified.compute()
+classified
 ```
 
 ### Visualize the Classification
 
 
 ```python
-# Create a custom colormap from the defined class_colors
-# Ensure the colors are in order of the class labels (0, 1, 2, 3)
-sorted_class_labels = sorted(class_colors.keys())
-colors_for_colormap = [class_colors[label] for label in sorted_class_labels]
-cmap = mcolors.ListedColormap(colors_for_colormap)
-
-# Set the color for nodata values (often internally represented as NaN after operations)
-# to be transparent. This will hide the clipped-out areas.
+sorted_labels = sorted(class_colors.keys())
+cmap = mcolors.ListedColormap([class_colors[c] for c in sorted_labels])
 cmap.set_bad(alpha=0)
+norm = mcolors.BoundaryNorm(
+    [i - 0.5 for i in range(len(sorted_labels) + 1)], cmap.N)
 
-# Define the normalization for the colorbar to align with integer classes
-# Boundaries should be num_classes + 1, centered around the integers
-boundaries = [i - 0.5 for i in range(len(sorted_class_labels) + 1)]
-norm = mcolors.BoundaryNorm(boundaries, cmap.N)
+preview = classified.rio.reproject(classified.rio.crs, resolution=100)
 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(7, 7)
-
-# Reproject the already clipped predicted_landcover_clipped for preview
-# The .rio.nodata attribute on predicted_landcover_clipped will be respected by plot.imshow
-preview = predicted_landcover_clipped.rio.reproject(
-    predicted_landcover_clipped.rio.crs,
-    resolution=100
+preview.plot.imshow(ax=ax, cmap=cmap, norm=norm, add_colorbar=False)
+ax.legend(
+    handles=[mpatches.Patch(
+        color=class_colors[c], 
+        label=class_names[c]) for c in sorted_labels],
+    loc='upper right'
 )
-
-# Plot the predicted landcover map using the custom colormap
-preview.plot.imshow(
-    ax=ax,
-    cmap=cmap,
-    norm=norm,
-    add_colorbar=False # Remove the default colorbar
-)
-
-ax.set_title(f'Predicted Landcover Map {year}')
+ax.set_title(f'Predicted Landcover (Embeddings)')
 ax.set_axis_off()
 ax.set_aspect('equal')
-
-# Create a custom legend
-legend_patches = []
-for class_label in sorted_class_labels:
-    color = class_colors[class_label]
-    name = class_names[class_label]
-    legend_patches.append(mpatches.Patch(color=color, label=name))
-
-# Add the legend to the plot
-ax.legend(
-    handles=legend_patches,
-    loc='upper right', # Changed to upper right
-    ncol=1, # Changed to 1 class per row
-    fancybox=True,
-    shadow=True
-)
-
 plt.show()
 ```
-
-
-    
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_36_0.png)
-    
-
 
 ### Save Classified Image
 
@@ -454,8 +371,43 @@ We finally save the results as a local Cloud-Optimized GeoTIFF file.
 
 
 ```python
-output_file = f'classification_{year}.tif'
+def write_cog_with_colormap(data_array, output_path, color_table):
+    if data_array.dtype != np.dtype('uint8'):
+        raise TypeError(f'data_array must be uint8 for a color table to attach')
+
+    # Write to a temp file, add color table, then convert to COG
+    tmp_path = output_path + '.tmp.tif'
+    data_array.rio.to_raster(tmp_path)
+
+    with rasterio.open(tmp_path) as src:
+        profile = src.profile.copy()
+        profile['driver'] = 'COG'
+        data = src.read(1)
+        with rasterio.open(output_path, 'w', **profile) as dst:
+            dst.write(data, 1)
+            dst.write_colormap(1, color_table)
+
+    os.remove(tmp_path)
+```
+
+
+```python
+# Build rasterio color table from the class_colors hex dict
+color_table = {
+    label: tuple(int(c * 255) for c in mcolors.to_rgb(hex_color))
+    for label, hex_color in class_colors.items()
+}
+
+# Cast to uint8 (labels 0-3 fit; use 255 as nodata)
+classified_uint8 = (
+    predicted_landcover_clipped
+    .fillna(255)
+    .astype(np.uint8)
+    .rio.write_nodata(255)
+)
+
+output_file = f'classification_embeddings.tif'
 output_path = os.path.join(output_folder, output_file)
-predicted_landcover_clipped.rio.to_raster(output_path, driver='COG')
+write_cog_with_colormap(classified_uint8, output_path, color_table)
 print(f'Wrote {output_path}')
 ```
