@@ -211,19 +211,19 @@ aggregated_gdf.head()
 
 
 ```python
-aggregated_gdf = aggregated_gdf.reset_index()
-aggregated_gdf = aggregated_gdf.rename(columns={'population_sum': 'population'})
-aggregated_gdf = aggregated_gdf[['adm2_name', 'population', 'geometry']]
-aggregated_gdf.head()
+output_gdf = aggregated_gdf.reset_index()
+output_gdf = output_gdf.rename(columns={'population_sum': 'population'})
+output_gdf = output_gdf[['adm2_name', 'population', 'geometry']]
+output_gdf.head()
 ```
 
 Calculat the area and population density.
 
 
 ```python
-aggregated_gdf['area_km2'] = aggregated_gdf.geometry.area / 1e6
-aggregated_gdf['pop_density'] = aggregated_gdf['population'] / aggregated_gdf['area_km2']
-aggregated_gdf.head()
+output_gdf['area_km2'] = output_gdf.geometry.area / 1e6
+output_gdf['pop_density'] = output_gdf['population'] / output_gdf['area_km2']
+output_gdf.head()
 ```
 
 Save the results as a GeoPackage file.
@@ -246,4 +246,4 @@ The annual GeoTIFF files are available at https://data.chc.ucsb.edu/products/CHI
 
 Pick a year and calculate the average rainfall in each admin2 polygon.
 
-> Remember to calculate the *mean* precipitation when aggregating it over polygons.
+> Remember to use *mean* when aggregating precipitation over a region.
