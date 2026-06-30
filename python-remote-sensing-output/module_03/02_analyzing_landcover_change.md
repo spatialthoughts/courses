@@ -395,11 +395,13 @@ change_preview.plot(ax=axes[0], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=F
 aoi_gdf_reprojected.boundary.plot(ax=axes[0], color='black', linewidth=1)
 axes[0].set_title('Original')
 axes[0].set_axis_off()
+axes[0].set_aspect('equal')
 
 change_filtered_preview.plot(ax=axes[1], cmap=change_cmap, vmin=0, vmax=1, add_colorbar=False)
 aoi_gdf_reprojected.boundary.plot(ax=axes[1], color='black', linewidth=1)
 axes[1].set_title('Filtered')
 axes[1].set_axis_off()
+axes[1].set_aspect('equal')
 
 fig.suptitle('Filtering Noise from Change Detection')
 plt.tight_layout()
@@ -440,6 +442,7 @@ change_gdf.plot(ax=ax, color='red', alpha=0.7)
 
 ax.set_title('Landcover Change Polygons')
 ax.set_axis_off()
+ax.set_aspect('equal')
 plt.tight_layout()
 plt.show()
 ```

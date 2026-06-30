@@ -262,6 +262,7 @@ colorbar = fig.colorbar(
 colorbar.set_ticks(ticks, labels=tick_labels)
 
 ax.set_axis_off()
+ax.set_aspect('equal')
 ax.set_title('Landcover Classes from ESA WorldCover');
 ```
 
@@ -501,6 +502,7 @@ map_data_preview.plot(
     ax=axes[0], cmap=cmap, norm=normalizer, add_colorbar=False)
 axes[0].set_axis_off()
 axes[0].set_title('ESA WorldCover')
+axes[0].set_aspect('equal')
 
 # Creat a preview
 glad_data_preview = glad_da_reclass_clipped.rio.reproject(
@@ -511,7 +513,7 @@ glad_data_preview.plot(
     ax=axes[1], cmap=cmap, norm=normalizer, add_colorbar=False)
 axes[1].set_axis_off()
 axes[1].set_title('GLAD GLCLUC Reclassified to ESA WorldCover Classes')
-
+axes[1].set_aspect('equal')
 cbar_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
 
 colorbar = fig.colorbar(
