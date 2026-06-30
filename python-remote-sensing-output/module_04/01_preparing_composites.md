@@ -343,30 +343,3 @@ local_output_path = os.path.join(output_folder_path, output_file)
 composite_clipped.rio.to_raster(local_output_path, driver='COG')
 print(f'Wrote {local_output_path}')
 ```
-
-Optionally, we can also the output to Google Cloud Storage (GCS) bucket.
-
-
-```python
-if environment == 'colab':
-
-  # Specify your project ID and Bucket name
-  project_id = 'python-363014'
-  bucket_name = 'spatialthoughts-public-data'
-  sub_folder = 'python-remote-sensing'
-
-  from google.colab import auth
-  from google.cloud import storage
-
-  auth.authenticate_user()
-  client = storage.Client(project=project_id)
-  bucket = client.get_bucket(bucket_name)
-
-  print(f'Google Cloud Storage client initialized for project: {project_id}')
-  print(f'Bucket {bucket_name} selected.')
-  gcs_blob_path = f'{sub_folder}/{output_file}'
-  blob = bucket.blob(gcs_blob_path)
-
-  print(f'Uploading {local_output_path} to gs://{bucket.name}/{gcs_blob_path}')
-  blob.upload_from_filename(local_output_path)
-```

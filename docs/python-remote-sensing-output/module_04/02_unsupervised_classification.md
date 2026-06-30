@@ -52,7 +52,7 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 ```python
 %%capture
 if environment in ['colab', 'colab_enterprise']:
-    !pip install rioxarray dask scikit-learn
+    !pip install rioxarray dask['distributed'] scikit-learn
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -71,9 +71,28 @@ import xarray as xr
 from sklearn.cluster import KMeans
 ```
 
+Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
+
+
+```python
+from dask.distributed import Client
+client = Client()  # set up local cluster on the machine
+client
+```
+
+If you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
+
+
+```python
+if environment == 'colab':
+    from google.colab import output
+    port_to_expose = 8787  # This is the default port for Dask dashboard
+    print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
+```
+
 ### Load Multiband Composite
 
-Load the multiband composite saved by 01_preparing_composites.ipynb. The composite contains 11 bands: 6 raw spectral bands (red, green, blue, nir, swir16, swir22) and 5 precomputed indices (ndvi, ndbi, bsi, mndwi, ndwi).
+Load the multiband composite saved by the previous notebook in this section `01_preparing_composites.ipynb`. The composite contains 13 bands: 6 raw spectral bands (red, green, blue, nir, swir16, swir22), 5 precomputed indices (ndvi, ndbi, bsi, mndwi, ndwi) and 2 bands derived from a DEM (elevation, slope).
 
 
 ```python
@@ -88,7 +107,10 @@ if not os.path.exists(multiband_composite_path):
 band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
               'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope']
 composite_da = rxr.open_rasterio(
-    multiband_composite_path, masked=True, chunks='auto')
+    multiband_composite_path,
+    masked=True,
+    chunks={'x': 1024, 'y': 1024},
+)
 composite_da = composite_da.assign_coords(band=band_names)
 composite = composite_da.to_dataset('band')
 composite
@@ -112,24 +134,6 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
-Visualize the composite as a true-color image.
-
-
-```python
-rgb_da = composite[['red', 'green', 'blue']].to_array('band')
-preview = rgb_da.rio.reproject(rgb_da.rio.crs, resolution=100)
-
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(6, 6)
-preview.sel(band=['red', 'green', 'blue']).plot.imshow(
-    ax=ax,
-    vmin=0, vmax=0.3)
-ax.set_title(f'Sentinel-2 Composite')
-ax.set_axis_off()
-ax.set_aspect('equal')
-plt.show()
-```
-
 ### Prepare WaterDetect Indices
 
 The WaterDetect algorithm uses a three-band stack of water-sensitive indices as input to the clusterer.
@@ -138,14 +142,20 @@ The WaterDetect algorithm uses a three-band stack of water-sensitive indices as 
 - NDWI: `(Green − NIR) / (Green + NIR)`
 - MIR2:  `SWIR2`
 
-Water has high NDWI and MNDWI values and low MIR2 reflectance, making this combination highly discriminative. Other band combinations are described in the [WaterDetect configuration reference](https://github.com/cordmaur/WaterDetect/blob/master/WaterDetect.ini).
-
 NDWI and MNDWI are already available in the loaded composite. We add MIR2 as an alias for the SWIR2 band.
+
 
 
 ```python
 composite['mir2'] = composite['swir22']
-composite[['ndwi', 'mndwi', 'mir2']]
+```
+
+Water has high NDWI and MNDWI values and low MIR2 reflectance, making this combination highly discriminative. Other band combinations are described in the [WaterDetect configuration reference](https://github.com/cordmaur/WaterDetect/blob/master/WaterDetect.ini).
+
+
+```python
+clustering_bands = ['ndwi', 'mndwi', 'mir2']
+#clustering_bands = ['ndwi', 'mndwi', 'nir']
 ```
 
 ### Unsupervised Clustering
@@ -156,75 +166,98 @@ First, we extract all valid (non-NaN) pixels and draw a random sample to train o
 
 
 ```python
-# Stack the three index bands into a (3, y, x) array
-feature_da = composite[['ndwi', 'mndwi', 'mir2']].to_array('band')
-features_3d = feature_da.data  # (3, y, x)
+# Convert the feature stack to a Dask array
+feature_da = composite[clustering_bands].to_array('band')
+feature_da = feature_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
+feature_da
+```
 
-# Build a mask of pixels that are valid in all three bands
-valid_mask = ~np.isnan(features_3d).any(axis=0)  # (y, x) boolean
-features_valid = features_3d[:, valid_mask].T     # (n_valid, 3)
 
-# Draw a random sample to train the clusterer
-rng = np.random.default_rng(42)
-sample_size = min(5000, len(features_valid))
-idx = rng.choice(len(features_valid), size=sample_size, replace=False)
-sample = features_valid[idx]
+```python
+sample_size = 1000
+
+# Stack spatial dims into a single point dimension (lazy, known size)
+stacked = feature_da.stack(point=['y', 'x'])
+
+# Oversample to account for NaN pixels at the data boundary
+random_generator = np.random.default_rng(seed=42)
+random_indices = random_generator.choice(
+    len(stacked.point), size=sample_size * 2, replace=False)
+random_sample = stacked.isel(point=random_indices)
 ```
 
 
 ```python
 %%time
-sample = sample.compute()
-print(f'Training sample size: {len(sample):,}')
+random_sample = random_sample.compute()
 ```
+
+
+```python
+random_sample
+```
+
+Scikit-Learn requires a 2D array of values. We transform the samples into pairs of band values, i.e. [[band1_val, band2_val, band3_val], [...]]. We then remove the null values and get our training set.
+
+
+```python
+transposed = random_sample.T.astype(np.float64)  # (n, 3)
+valid = ~np.isnan(transposed).any(axis=1)
+sample = transposed[valid][:sample_size]
+sample
+```
+
+Train a clusterer. We use the [KMeans](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html) clusterer.
 
 
 ```python
 n_clusters = 4
 
-kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-kmeans.fit(sample)
+model = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+model.fit(sample)
 print(f'Trained KMeans with {n_clusters} clusters')
 ```
 
-Apply the trained clusterer to all pixels using `map_blocks`.
+Test the clusterer with some values.
 
 
 ```python
-# Convert the feature stack to a Dask array
-feature_da = composite[['ndwi', 'mndwi', 'mir2']].to_array('band')
-feature_da = feature_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
+model.predict(np.array([
+    [-0.21984932, -0.34398526,  0.2298],
+    [-0.6138097 , -0.49620321,  0.07855 ]
+  ]))
+```
+
+Apply the trained clusterer to all pixels using [`map_blocks`](https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html).
+
+
+```python
 feature_dask = feature_da.data  # (bands, y, x)
 
-# Transpose to (y, x, bands) then reshape to (y*x, bands)
-feature_dask = da.moveaxis(feature_dask, 0, -1)
-ny, nx, nb_feat = feature_dask.shape
-feature_2d_dask = feature_dask.reshape(-1, nb_feat)
-# Rechunk so each block has ALL bands — required by the classifier
-feature_2d_rechunked = feature_2d_dask.rechunk({0: 'auto', 1: -1})
-
 def predict_block(block, model):
-    valid = ~np.isnan(block).any(axis=1)
-    result = np.full(len(block), np.nan)
+    bands, h, w = block.shape
+    pixels = block.reshape(bands, -1).T.astype(float)
+    valid = ~np.isnan(pixels).any(axis=1)
+    result = np.full(h * w, np.nan)
     if valid.any():
-        result[valid] = model.predict(block[valid]).astype(float)
-    return result
+        result[valid] = model.predict(pixels[valid]).astype(float)
+    return result.reshape(h, w)
 
-predicted_labels_1d = feature_2d_rechunked.map_blocks(
+predicted_2d = da.map_blocks(
     predict_block,
-    model=kmeans,
+    feature_dask,
+    model=model,
     dtype=np.float64,
-    drop_axis=1,
+    drop_axis=0,
 )
 
-predicted_labels_2d = predicted_labels_1d.reshape(ny, nx)
-
 clustered = xr.DataArray(
-    predicted_labels_2d,
+    predicted_2d,
     coords={'y': composite.y, 'x': composite.x},
     dims=['y', 'x'],
     name='cluster'
 ).rio.write_crs(composite.rio.crs)
+
 clustered
 ```
 
@@ -234,26 +267,67 @@ clustered
 clustered = clustered.compute()
 ```
 
+
+```python
+# Random distinct colors for each cluster
+rng_colors = np.random.default_rng(0)
+cluster_colors = rng_colors.random((n_clusters, 3))
+cmap_clusters = mcolors.ListedColormap(cluster_colors)
+preview_clusters = clustered.rio.reproject(clustered.rio.crs, resolution=100)
+
+
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(6, 6)
+
+preview_clusters.plot.imshow(
+    ax=ax,
+    cmap=cmap_clusters,
+    vmin=-0.5, vmax=n_clusters - 0.5,
+    add_colorbar=False)
+# Add cluster number labels to legend
+handles = [mpatches.Patch(color=cluster_colors[c], label=f'Cluster {c}') for c in range(n_clusters)]
+ax.legend(handles=handles, loc='upper right', fontsize=7)
+ax.set_title('Clusters')
+ax.set_axis_off()
+ax.set_aspect('equal')
+
+plt.tight_layout()
+plt.show()
+```
+
+
+    
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_34_0.png)
+    
+
+
 ### Identify the Water Cluster
 
 We compute the mean MNDWI for every cluster. Water bodies have distinctively high MNDWI values (typically > 0), so the cluster with the highest mean MNDWI is the water cluster.
 
 
 ```python
-# Compute mean MNDWI for each cluster directly on the 2D spatial arrays
 mndwi_da = composite['mndwi']
 
-cluster_mndwi_mean = {}
-for c in range(n_clusters):
-    cluster_mndwi = mndwi_da.where(clustered == c)
-    cluster_mndwi_mean[c] = float(cluster_mndwi.mean())
+# Group MNDWI by cluster label and compute mean per cluster
+cluster_mndwi_mean = mndwi_da.groupby(clustered).mean()
+```
+
+
+```python
+%%time
+cluster_mndwi_mean = cluster_mndwi_mean.compute()
+```
+
+
+```python
+water_cluster = int(cluster_mndwi_mean.idxmax())
 
 print('Mean MNDWI per cluster:')
-for c, v in sorted(cluster_mndwi_mean.items()):
-    marker = ' <-- water' if c == max(cluster_mndwi_mean, key=cluster_mndwi_mean.get) else ''
-    print(f'  Cluster {c}: {v:+.4f}{marker}')
+for label, value in zip(cluster_mndwi_mean.cluster.values, cluster_mndwi_mean.values):
+    marker = ' <-- water' if label == water_cluster else ''
+    print(f'  Cluster {int(label)}: {float(value):+.4f}{marker}')
 
-water_cluster = max(cluster_mndwi_mean, key=cluster_mndwi_mean.get)
 print(f'\nWater cluster: {water_cluster}')
 ```
 
@@ -279,7 +353,7 @@ cluster_colors = rng_colors.random((n_clusters, 3))
 cmap_clusters = mcolors.ListedColormap(cluster_colors)
 
 # Low-resolution previews
-preview_rgb      = composite[['red', 'green', 'blue']].to_array('band').rio.reproject(
+preview_rgb = composite[['red', 'green', 'blue']].to_array('band').rio.reproject(
     composite.rio.crs, resolution=100)
 preview_clusters = clustered.rio.reproject(clustered.rio.crs, resolution=100)
 preview_water    = water_mask.rio.reproject(water_mask.rio.crs, resolution=100)
@@ -319,7 +393,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_28_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_42_0.png)
     
 
 
@@ -329,7 +403,7 @@ Save the result as a Cloud-Optimized GeoTIFF to the configured output folder.
 
 
 ```python
-output_file = f'water_mask_{year}.tif'
+output_file = f'water_mask_{n_clusters}.tif'
 output_path = os.path.join(output_folder, output_file)
 water_mask.rio.to_raster(output_path, driver='COG')
 print(f'Saved {output_path}')
@@ -337,6 +411,36 @@ print(f'Saved {output_path}')
 
 ### Exercise
 
-The WaterDetect algorithm works with any combination of water-sensitive bands. The [WaterDetect configuration file](https://github.com/cordmaur/WaterDetect/blob/master/WaterDetect.ini) lists several alternative band combinations.
+Instead of manually specifying the number of clusters used, we can determine the optimal number clusters. There are variety of methods available for selecting clusters. See all available metrics at [Clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation).
 
-Try replacing the `[ndwi, mndwi, mir2]` feature stack with `[ndwi, mndwi, nir]` and compare the results. Which combination produces a cleaner water mask for Bangalore?
+The cells below have an implementation of one of the metrics named **Silhouette Score**. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). The Silhouette score ranges from -1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters. If most objects have a high value, then the clustering configuration is appropriate. The optimal number of clusters is typically the one that maximizes the average Silhouette score.
+
+Select the optimal number of clusters and export the resulting water mask. Evaluate and compare the results.
+
+
+```python
+from sklearn.metrics import silhouette_score
+
+silhouette_scores = []
+
+min_clusters = 2 # need a minimum of 2 clusters
+max_clusters = 10
+for i in range(min_clusters, max_clusters + 1):
+    kmeans = KMeans(n_clusters=i, random_state=42, n_init='auto')
+    cluster_labels = kmeans.fit_predict(sample)
+    score = silhouette_score(sample, cluster_labels)
+    silhouette_scores.append(score)
+
+silhouette_scores
+```
+
+
+```python
+plt.figure(figsize=(10, 6))
+plt.plot(range(min_clusters, max_clusters + 1), silhouette_scores, marker='o', linestyle='--')
+plt.title('Silhouette Score for Optimal K')
+plt.xlabel('Number of Clusters (K)')
+plt.ylabel('Silhouette Score')
+plt.grid(True)
+plt.show()
+```
