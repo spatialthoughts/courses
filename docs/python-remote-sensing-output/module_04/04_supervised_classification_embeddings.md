@@ -55,7 +55,7 @@ if environment in ['colab', 'colab_enterprise']:
     !pip install rioxarray scikit-learn aef-loader dask[distributed]
     # Due to version conflict, you maybe prompted to
     # restart the runtime after the installation
-    # After restarting proceed to run the cell below
+    # After restarting proceed to run all the cells from the top again
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -63,6 +63,7 @@ Import all required libraries. Make sure to import everything at the beginning a
 
 ```python
 import asyncio
+import dask.array as da
 import geopandas as gpd
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
@@ -104,24 +105,9 @@ if environment == 'colab':
     print(output.eval_js(f'google.colab.kernel.proxyPort({port_to_expose})'))
 ```
 
-### Load Training Data
+### Load Area of Interest
 
-The training data is a set of Ground Control Points (GCPs) — point features, each labeled with a land cover class. We load the GeoJSON file with GeoPandas.
-
-
-```python
-gcps = (
-    'https://storage.googleapis.com/spatialthoughts-public-data/'
-    'python-remote-sensing/bangalore_gcps.geojson'
-)
-gcp_gdf = gpd.read_file(gcps)
-gcp_gdf.head()
-```
-
-
-```python
-gcp_gdf['landcover'].value_counts(sort=False)
-```
+Read the file containing the city boundary.
 
 
 ```python
@@ -137,15 +123,32 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
+### Load Training Data
+
+The training data is a set of Ground Control Points (GCPs) — point features, each labeled with a land cover class. We load the GeoJSON file with GeoPandas.
+
 
 ```python
-fig, ax = plt.subplots(1, 1)
-fig.set_size_inches(7,7)
-aoi_gdf.plot(
-    ax=ax,
-    facecolor='none',
-    edgecolor='#969696')
+gcp_filepath = os.path.join(data_folder, 'gcps.geojson')
 
+if not os.path.exists(gcp_filepath):
+    print(f'GCP file not found at {gcp_filepath}. Using default GCPs.')
+    gcp_filepath = (
+        'https://storage.googleapis.com/spatialthoughts-public-data/'
+        'python-remote-sensing/gcps.geojson'
+    )
+
+gcp_gdf = gpd.read_file(gcp_filepath)
+gcp_gdf.head()
+```
+
+
+```python
+gcp_gdf['landcover'].value_counts(sort=False)
+```
+
+
+```python
 class_colors = {
     0: '#cc6d8f', # Urban
     1: '#ffc107', # Bare
@@ -159,6 +162,16 @@ class_names = {
     2: 'Water',
     3: 'Vegetation'
 }
+```
+
+
+```python
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(7,7)
+aoi_gdf.plot(
+    ax=ax,
+    facecolor='none',
+    edgecolor='#969696')
 
 # Plot the GCPs
 for class_label, group in gcp_gdf.groupby('landcover'):
@@ -174,6 +187,12 @@ ax.set_title('Area of Interest with Training Samples')
 ax.set_axis_off()
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_19_0.png)
+    
+
 
 ### Load the Satellite Embeddings
 
@@ -242,6 +261,12 @@ embeddings_float = dequantize_aef(embeddings_year)
 embeddings_float
 ```
 
+
+```python
+embeddings_da = embeddings_float.chunk({'y': 1024, 'x': 1024})
+embeddings_da
+```
+
 We reproject the training points to match the composite CRS, then overlay them on an RGB preview of the composite. This lets us verify that the training points cover the expected land cover types.
 
 ### Extract Embeddings at Training Samples
@@ -250,7 +275,7 @@ We reproject the training points to match the composite CRS, then overlay them o
 
 
 ```python
-gcp_gdf_reprojected = gcp_gdf.to_crs(composite.rio.crs)
+gcp_gdf_reprojected = gcp_gdf.to_crs(embeddings_da.rio.crs)
 x_coords = gcp_gdf_reprojected.geometry.x.values
 y_coords = gcp_gdf_reprojected.geometry.y.values
 
@@ -258,7 +283,7 @@ y_coords = gcp_gdf_reprojected.geometry.y.values
 # This dimension will match the order of the gcp_gdf for easy association
 gcp_ids = np.arange(len(gcp_gdf))
 
-gcp_embeddings = embeddings_float.sel(
+gcp_embeddings = embeddings_da.sel(
     x=xr.DataArray(x_coords, dims='gcp_id'),
     y=xr.DataArray(y_coords, dims='gcp_id'),
     method='nearest'
@@ -302,7 +327,7 @@ classifier.fit(X, y)
 
 
 ```python
-emb_dask = embeddings_float.chunk({'band': -1}).data  # (bands, y, x)
+emb_dask = embeddings_da.chunk({'band': -1}).data  # (bands, y, x)
 
 def predict_block(block, model):
     bands, h, w = block.shape
@@ -342,28 +367,41 @@ classified
 
 
 ```python
+aoi_gdf_reprojected = aoi_gdf.to_crs(classified.rio.crs)
+classified_clipped = classified.rio.clip(aoi_gdf_reprojected.geometry)
+```
+
+
+```python
 sorted_labels = sorted(class_colors.keys())
 cmap = mcolors.ListedColormap([class_colors[c] for c in sorted_labels])
 cmap.set_bad(alpha=0)
 norm = mcolors.BoundaryNorm(
     [i - 0.5 for i in range(len(sorted_labels) + 1)], cmap.N)
 
-preview = classified.rio.reproject(classified.rio.crs, resolution=100)
+preview = classified_clipped.rio.reproject(
+    classified_clipped.rio.crs, resolution=100)
 
 fig, ax = plt.subplots(1, 1)
 fig.set_size_inches(7, 7)
 preview.plot.imshow(ax=ax, cmap=cmap, norm=norm, add_colorbar=False)
 ax.legend(
     handles=[mpatches.Patch(
-        color=class_colors[c], 
+        color=class_colors[c],
         label=class_names[c]) for c in sorted_labels],
     loc='upper right'
 )
-ax.set_title(f'Predicted Landcover (Embeddings)')
+ax.set_title(f'Classified Image (Embeddings)')
 ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_40_0.png)
+    
+
 
 ### Save Classified Image
 
@@ -400,7 +438,7 @@ color_table = {
 
 # Cast to uint8 (labels 0-3 fit; use 255 as nodata)
 classified_uint8 = (
-    predicted_landcover_clipped
+    classified_clipped
     .fillna(255)
     .astype(np.uint8)
     .rio.write_nodata(255)
