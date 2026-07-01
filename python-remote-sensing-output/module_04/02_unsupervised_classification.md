@@ -263,11 +263,27 @@ clustered = xr.DataArray(
 clustered
 ```
 
+Before we compute the clusters, let's also extract the MNDWI band and create a stacked image. We will need the MNDWI values in the next step, so we can compute both together.
+
+
+```python
+mndwi_da = composite['mndwi']
+stacked = xr.Dataset({
+    'clustered': clustered,
+    'mndwi': mndwi_da
+})
+stacked
+```
+
+Run the computation to predict the clusters.
+
 
 ```python
 %%time
-clustered = clustered.compute()
+stacked = stacked.compute()
 ```
+
+Visualize the clusters.
 
 
 ```python
@@ -275,7 +291,7 @@ clustered = clustered.compute()
 rng_colors = np.random.default_rng(0)
 cluster_colors = rng_colors.random((n_clusters, 3))
 cmap_clusters = mcolors.ListedColormap(cluster_colors)
-preview_clusters = clustered.rio.reproject(clustered.rio.crs, resolution=100)
+preview_clusters = stacked['clustered'].rio.reproject(clustered.rio.crs, resolution=100)
 
 
 fig, ax = plt.subplots(1, 1)
@@ -299,7 +315,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_34_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_38_0.png)
     
 
 
@@ -309,16 +325,11 @@ We compute the mean MNDWI for every cluster. Water bodies have distinctively hig
 
 
 ```python
-mndwi_da = composite['mndwi']
+mndwi = stacked['mndwi']
+clustered = stacked['clustered']
 
 # Group MNDWI by cluster label and compute mean per cluster
-cluster_mndwi_mean = mndwi_da.groupby(clustered).mean()
-```
-
-
-```python
-%%time
-cluster_mndwi_mean = cluster_mndwi_mean.compute()
+cluster_mndwi_mean = mndwi.groupby(clustered).mean()
 ```
 
 
@@ -326,7 +337,7 @@ cluster_mndwi_mean = cluster_mndwi_mean.compute()
 water_cluster = int(cluster_mndwi_mean.idxmax())
 
 print('Mean MNDWI per cluster:')
-for label, value in zip(cluster_mndwi_mean.cluster.values, cluster_mndwi_mean.values):
+for label, value in zip(cluster_mndwi_mean.clustered.values, cluster_mndwi_mean.values):
     marker = ' <-- water' if label == water_cluster else ''
     print(f'  Cluster {int(label)}: {float(value):+.4f}{marker}')
 
@@ -401,7 +412,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_42_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_45_0.png)
     
 
 

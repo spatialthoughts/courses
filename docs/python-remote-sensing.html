@@ -5319,55 +5319,65 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb336-1"><a 
 <span id="cb336-25"><a href="#cb336-25" tabindex="-1"></a>).rio.write_crs(composite.rio.crs)</span>
 <span id="cb336-26"><a href="#cb336-26" tabindex="-1"></a></span>
 <span id="cb336-27"><a href="#cb336-27" tabindex="-1"></a>clustered</span></code></pre></div>
+<p>Before we compute the clusters, let’s also extract the MNDWI band and
+create a stacked image. We will need the MNDWI values in the next step,
+so we can compute both together.</p>
 <div class="sourceCode" id="cb337"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb337-1"><a href="#cb337-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb337-2"><a href="#cb337-2" tabindex="-1"></a>clustered <span class="op">=</span> clustered.compute()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb337-1"><a href="#cb337-1" tabindex="-1"></a>mndwi_da <span class="op">=</span> composite[<span class="st">&#39;mndwi&#39;</span>]</span>
+<span id="cb337-2"><a href="#cb337-2" tabindex="-1"></a>stacked <span class="op">=</span> xr.Dataset({</span>
+<span id="cb337-3"><a href="#cb337-3" tabindex="-1"></a>    <span class="st">&#39;clustered&#39;</span>: clustered,</span>
+<span id="cb337-4"><a href="#cb337-4" tabindex="-1"></a>    <span class="st">&#39;mndwi&#39;</span>: mndwi_da</span>
+<span id="cb337-5"><a href="#cb337-5" tabindex="-1"></a>})</span>
+<span id="cb337-6"><a href="#cb337-6" tabindex="-1"></a>stacked</span></code></pre></div>
+<p>Run the computation to predict the clusters.</p>
 <div class="sourceCode" id="cb338"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb338-1"><a href="#cb338-1" tabindex="-1"></a><span class="co"># Random distinct colors for each cluster</span></span>
-<span id="cb338-2"><a href="#cb338-2" tabindex="-1"></a>rng_colors <span class="op">=</span> np.random.default_rng(<span class="dv">0</span>)</span>
-<span id="cb338-3"><a href="#cb338-3" tabindex="-1"></a>cluster_colors <span class="op">=</span> rng_colors.random((n_clusters, <span class="dv">3</span>))</span>
-<span id="cb338-4"><a href="#cb338-4" tabindex="-1"></a>cmap_clusters <span class="op">=</span> mcolors.ListedColormap(cluster_colors)</span>
-<span id="cb338-5"><a href="#cb338-5" tabindex="-1"></a>preview_clusters <span class="op">=</span> clustered.rio.reproject(clustered.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>)</span>
-<span id="cb338-6"><a href="#cb338-6" tabindex="-1"></a></span>
-<span id="cb338-7"><a href="#cb338-7" tabindex="-1"></a></span>
-<span id="cb338-8"><a href="#cb338-8" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb338-9"><a href="#cb338-9" tabindex="-1"></a>fig.set_size_inches(<span class="dv">6</span>, <span class="dv">6</span>)</span>
-<span id="cb338-10"><a href="#cb338-10" tabindex="-1"></a></span>
-<span id="cb338-11"><a href="#cb338-11" tabindex="-1"></a>preview_clusters.plot.imshow(</span>
-<span id="cb338-12"><a href="#cb338-12" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb338-13"><a href="#cb338-13" tabindex="-1"></a>    cmap<span class="op">=</span>cmap_clusters,</span>
-<span id="cb338-14"><a href="#cb338-14" tabindex="-1"></a>    vmin<span class="op">=-</span><span class="fl">0.5</span>, vmax<span class="op">=</span>n_clusters <span class="op">-</span> <span class="fl">0.5</span>,</span>
-<span id="cb338-15"><a href="#cb338-15" tabindex="-1"></a>    add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb338-16"><a href="#cb338-16" tabindex="-1"></a><span class="co"># Add cluster number labels to legend</span></span>
-<span id="cb338-17"><a href="#cb338-17" tabindex="-1"></a>handles <span class="op">=</span> [mpatches.Patch(color<span class="op">=</span>cluster_colors[c], label<span class="op">=</span><span class="ss">f&#39;Cluster </span><span class="sc">{</span>c<span class="sc">}</span><span class="ss">&#39;</span>) <span class="cf">for</span> c <span class="kw">in</span> <span class="bu">range</span>(n_clusters)]</span>
-<span id="cb338-18"><a href="#cb338-18" tabindex="-1"></a>ax.legend(handles<span class="op">=</span>handles, loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span>, fontsize<span class="op">=</span><span class="dv">7</span>)</span>
-<span id="cb338-19"><a href="#cb338-19" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Clusters&#39;</span>)</span>
-<span id="cb338-20"><a href="#cb338-20" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb338-21"><a href="#cb338-21" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
-<span id="cb338-22"><a href="#cb338-22" tabindex="-1"></a></span>
-<span id="cb338-23"><a href="#cb338-23" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb338-24"><a href="#cb338-24" tabindex="-1"></a>plt.show()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb338-1"><a href="#cb338-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb338-2"><a href="#cb338-2" tabindex="-1"></a>stacked <span class="op">=</span> stacked.compute()</span></code></pre></div>
+<p>Visualize the clusters.</p>
+<div class="sourceCode" id="cb339"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb339-1"><a href="#cb339-1" tabindex="-1"></a><span class="co"># Random distinct colors for each cluster</span></span>
+<span id="cb339-2"><a href="#cb339-2" tabindex="-1"></a>rng_colors <span class="op">=</span> np.random.default_rng(<span class="dv">0</span>)</span>
+<span id="cb339-3"><a href="#cb339-3" tabindex="-1"></a>cluster_colors <span class="op">=</span> rng_colors.random((n_clusters, <span class="dv">3</span>))</span>
+<span id="cb339-4"><a href="#cb339-4" tabindex="-1"></a>cmap_clusters <span class="op">=</span> mcolors.ListedColormap(cluster_colors)</span>
+<span id="cb339-5"><a href="#cb339-5" tabindex="-1"></a>preview_clusters <span class="op">=</span> stacked[<span class="st">&#39;clustered&#39;</span>].rio.reproject(clustered.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb339-6"><a href="#cb339-6" tabindex="-1"></a></span>
+<span id="cb339-7"><a href="#cb339-7" tabindex="-1"></a></span>
+<span id="cb339-8"><a href="#cb339-8" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb339-9"><a href="#cb339-9" tabindex="-1"></a>fig.set_size_inches(<span class="dv">6</span>, <span class="dv">6</span>)</span>
+<span id="cb339-10"><a href="#cb339-10" tabindex="-1"></a></span>
+<span id="cb339-11"><a href="#cb339-11" tabindex="-1"></a>preview_clusters.plot.imshow(</span>
+<span id="cb339-12"><a href="#cb339-12" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb339-13"><a href="#cb339-13" tabindex="-1"></a>    cmap<span class="op">=</span>cmap_clusters,</span>
+<span id="cb339-14"><a href="#cb339-14" tabindex="-1"></a>    vmin<span class="op">=-</span><span class="fl">0.5</span>, vmax<span class="op">=</span>n_clusters <span class="op">-</span> <span class="fl">0.5</span>,</span>
+<span id="cb339-15"><a href="#cb339-15" tabindex="-1"></a>    add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb339-16"><a href="#cb339-16" tabindex="-1"></a><span class="co"># Add cluster number labels to legend</span></span>
+<span id="cb339-17"><a href="#cb339-17" tabindex="-1"></a>handles <span class="op">=</span> [mpatches.Patch(color<span class="op">=</span>cluster_colors[c], label<span class="op">=</span><span class="ss">f&#39;Cluster </span><span class="sc">{</span>c<span class="sc">}</span><span class="ss">&#39;</span>) <span class="cf">for</span> c <span class="kw">in</span> <span class="bu">range</span>(n_clusters)]</span>
+<span id="cb339-18"><a href="#cb339-18" tabindex="-1"></a>ax.legend(handles<span class="op">=</span>handles, loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span>, fontsize<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb339-19"><a href="#cb339-19" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Clusters&#39;</span>)</span>
+<span id="cb339-20"><a href="#cb339-20" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb339-21"><a href="#cb339-21" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb339-22"><a href="#cb339-22" tabindex="-1"></a></span>
+<span id="cb339-23"><a href="#cb339-23" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb339-24"><a href="#cb339-24" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
-src="python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_34_0.png" /></p>
+src="python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_38_0.png" /></p>
 </div>
 <div id="identify-the-water-cluster" class="section level3">
 <h3>Identify the Water Cluster</h3>
 <p>We compute the mean MNDWI for every cluster. Water bodies have
 distinctively high MNDWI values (typically &gt; 0), so the cluster with
 the highest mean MNDWI is the water cluster.</p>
-<div class="sourceCode" id="cb339"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb339-1"><a href="#cb339-1" tabindex="-1"></a>mndwi_da <span class="op">=</span> composite[<span class="st">&#39;mndwi&#39;</span>]</span>
-<span id="cb339-2"><a href="#cb339-2" tabindex="-1"></a></span>
-<span id="cb339-3"><a href="#cb339-3" tabindex="-1"></a><span class="co"># Group MNDWI by cluster label and compute mean per cluster</span></span>
-<span id="cb339-4"><a href="#cb339-4" tabindex="-1"></a>cluster_mndwi_mean <span class="op">=</span> mndwi_da.groupby(clustered).mean()</span></code></pre></div>
 <div class="sourceCode" id="cb340"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb340-1"><a href="#cb340-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb340-2"><a href="#cb340-2" tabindex="-1"></a>cluster_mndwi_mean <span class="op">=</span> cluster_mndwi_mean.compute()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb340-1"><a href="#cb340-1" tabindex="-1"></a>mndwi <span class="op">=</span> stacked[<span class="st">&#39;mndwi&#39;</span>]</span>
+<span id="cb340-2"><a href="#cb340-2" tabindex="-1"></a>clustered <span class="op">=</span> stacked[<span class="st">&#39;clustered&#39;</span>]</span>
+<span id="cb340-3"><a href="#cb340-3" tabindex="-1"></a></span>
+<span id="cb340-4"><a href="#cb340-4" tabindex="-1"></a><span class="co"># Group MNDWI by cluster label and compute mean per cluster</span></span>
+<span id="cb340-5"><a href="#cb340-5" tabindex="-1"></a>cluster_mndwi_mean <span class="op">=</span> mndwi.groupby(clustered).mean()</span></code></pre></div>
 <div class="sourceCode" id="cb341"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb341-1"><a href="#cb341-1" tabindex="-1"></a>water_cluster <span class="op">=</span> <span class="bu">int</span>(cluster_mndwi_mean.idxmax())</span>
 <span id="cb341-2"><a href="#cb341-2" tabindex="-1"></a></span>
 <span id="cb341-3"><a href="#cb341-3" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;Mean MNDWI per cluster:&#39;</span>)</span>
-<span id="cb341-4"><a href="#cb341-4" tabindex="-1"></a><span class="cf">for</span> label, value <span class="kw">in</span> <span class="bu">zip</span>(cluster_mndwi_mean.cluster.values, cluster_mndwi_mean.values):</span>
+<span id="cb341-4"><a href="#cb341-4" tabindex="-1"></a><span class="cf">for</span> label, value <span class="kw">in</span> <span class="bu">zip</span>(cluster_mndwi_mean.clustered.values, cluster_mndwi_mean.values):</span>
 <span id="cb341-5"><a href="#cb341-5" tabindex="-1"></a>    marker <span class="op">=</span> <span class="st">&#39; &lt;-- water&#39;</span> <span class="cf">if</span> label <span class="op">==</span> water_cluster <span class="cf">else</span> <span class="st">&#39;&#39;</span></span>
 <span id="cb341-6"><a href="#cb341-6" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Cluster </span><span class="sc">{</span><span class="bu">int</span>(label)<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span><span class="bu">float</span>(value)<span class="sc">:+.4f}{</span>marker<span class="sc">}</span><span class="ss">&#39;</span>)</span>
 <span id="cb341-7"><a href="#cb341-7" tabindex="-1"></a></span>
@@ -5432,7 +5442,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb343-1"><a 
 <span id="cb343-47"><a href="#cb343-47" tabindex="-1"></a>plt.tight_layout()</span>
 <span id="cb343-48"><a href="#cb343-48" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
-src="python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_42_0.png" /></p>
+src="python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_45_0.png" /></p>
 </div>
 <div id="save-the-water-mask" class="section level3">
 <h3>Save the Water Mask</h3>
