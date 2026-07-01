@@ -66,6 +66,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import rasterio
 import rioxarray as rxr
 import xarray as xr
 from sklearn.cluster import KMeans
@@ -136,7 +137,7 @@ geometry
 
 ### Prepare WaterDetect Indices
 
-The WaterDetect algorithm uses a three-band stack of water-sensitive indices as input to the clusterer.
+The WaterDetect algorithm uses a stack of water-sensitive indices as input to the clusterer. The following are the commonly used indicies.
 
 - MNDWI: `(Green − SWIR1) / (Green + SWIR1)`
 - NDWI: `(Green − NIR) / (Green + NIR)`
@@ -154,8 +155,9 @@ Water has high NDWI and MNDWI values and low MIR2 reflectance, making this combi
 
 
 ```python
-clustering_bands = ['ndwi', 'mndwi', 'mir2']
-#clustering_bands = ['ndwi', 'mndwi', 'nir']
+clustering_bands = ['mndwi', 'ndwi', 'mir2']
+#clustering_bands = ['mndwi', 'ndwi', 'nir']
+#clustering_bands = ['mndwi', 'ndwi']
 ```
 
 ### Unsupervised Clustering
@@ -335,10 +337,10 @@ Select all pixels belonging to the water cluster.
 
 
 ```python
-water_mask = (clustered == water_cluster).astype('float32')
-water_mask = water_mask.where(~np.isnan(clustered))
-water_mask = water_mask.rio.write_nodata(np.nan)
+water_mask = (clustered == water_cluster).astype('uint8')
+water_mask = water_mask.rio.write_nodata(0)
 water_mask
+
 ```
 
 ### Visualize Results
@@ -371,17 +373,23 @@ preview_clusters.plot.imshow(
     vmin=-0.5, vmax=n_clusters - 0.5,
     add_colorbar=False)
 # Add cluster number labels to legend
-handles = [mpatches.Patch(color=cluster_colors[c], label=f'Cluster {c}') for c in range(n_clusters)]
+handles = [mpatches.Patch(color=cluster_colors[c],
+                          label=f'Cluster {c}') for c in range(n_clusters)]
 axes[1].legend(handles=handles, loc='upper right', fontsize=7)
 axes[1].set_title('Clusters')
 
-water_cmap = mcolors.ListedColormap(['#e0e0e0', '#1565C0'])
+
+water_cmap = mcolors.ListedColormap(['white', 'blue'])
 preview_water.plot.imshow(
     ax=axes[2],
     cmap=water_cmap,
     vmin=0, vmax=1,
     add_colorbar=False)
 axes[2].set_title('Water Mask')
+
+# Show AOI boundary
+aoi_gdf_reprojected = aoi_gdf.to_crs(water_mask.rio.crs)
+aoi_gdf_reprojected.boundary.plot(ax=axes[2], color='black', linewidth=1)
 
 for ax in axes:
     ax.set_axis_off()
@@ -399,13 +407,38 @@ plt.show()
 
 ### Save the Water Mask
 
-Save the result as a Cloud-Optimized GeoTIFF to the configured output folder.
+Save the result as a paletted Cloud-Optimized GeoTIFF to the configured output folder.
+
+
+```python
+def write_cog_with_colormap(data_array, output_path, color_table):
+    if data_array.dtype != np.dtype('uint8'):
+        raise TypeError(f'data_array must be uint8 for a color table to attach')
+
+    # Write to a temp file, add color table, then convert to COG
+    tmp_path = output_path + '.tmp.tif'
+    data_array.rio.to_raster(tmp_path)
+
+    with rasterio.open(tmp_path) as src:
+        profile = src.profile.copy()
+        profile['driver'] = 'COG'
+        data = src.read(1)
+        with rasterio.open(output_path, 'w', **profile) as dst:
+            dst.write(data, 1)
+            dst.write_colormap(1, color_table)
+
+    os.remove(tmp_path)
+```
 
 
 ```python
 output_file = f'water_mask_{n_clusters}.tif'
 output_path = os.path.join(output_folder, output_file)
-water_mask.rio.to_raster(output_path, driver='COG')
+
+# Define the color table: 0 for transparent, 1 for blue (RGBA)
+color_table = {0: (0, 0, 0, 0), 1: (0, 0, 255, 255)}
+
+write_cog_with_colormap(water_mask, output_path, color_table)
 print(f'Saved {output_path}')
 ```
 

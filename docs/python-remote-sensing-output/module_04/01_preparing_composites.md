@@ -132,12 +132,18 @@ catalog = pystac_client.Client.open(
 
 configure_s3_access(aws_unsigned=True)
 
+# Search for images
+# To ensure the process runs quickly, we will select images
+# from a specific time range and with low cloud cover
 year = 2023
+start_month = 4
+end_month = 5
+time_range = f'{year}-{start_month:02d}/{year}-{end_month:02d}'
 
 search = catalog.search(
     collections=['sentinel-2-c1-l2a'],
     intersects=geometry,
-    datetime=f'{year}',
+    datetime=time_range,
     query={'eo:cloud_cover': {'lt': 30}},
 )
 items = search.item_collection()
