@@ -208,11 +208,17 @@ plt.show()
 
 ### Normalize the Composite
 
+Before we use the composit for building the classification model, we must normalize the values. Some bands such has elevation has very large values while others such as indices have small values. To ensure our model does not get biased, we must normalize the bands so they all have the values in the same range.
+
+First we chunk the input so all the bands are in the same chunk.
+
 
 ```python
 feature_da = composite_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
 feature_da
 ```
+
+Scale the values so they are between 0 and 1. The scaling is done independently for each band by computing the minimum and maximum values in each band.
 
 
 ```python
@@ -342,7 +348,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_36_0.png)
+![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_38_0.png)
     
 
 

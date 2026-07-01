@@ -178,32 +178,27 @@ feature_da
 ```python
 sample_size = 1000
 
-# Stack spatial dims into a single point dimension (lazy, known size)
+# Stack spatial dims into a single point dimension
 stacked = feature_da.stack(point=['y', 'x'])
 
 # Oversample to account for NaN pixels at the data boundary
 random_generator = np.random.default_rng(seed=42)
 random_indices = random_generator.choice(
     len(stacked.point), size=sample_size * 2, replace=False)
-random_sample = stacked.isel(point=random_indices)
+random_pixels = stacked.isel(point=random_indices)
 ```
 
 
 ```python
 %%time
-random_sample = random_sample.compute()
+random_pixels = random_pixels.compute()
 ```
+
+Scikit-Learn requires a 2D array of values. We transform the extracted random subset into pairs of band values, i.e. [[band1_val, band2_val, band3_val], [...]]. We then remove the null values and get our training set.
 
 
 ```python
-random_sample
-```
-
-Scikit-Learn requires a 2D array of values. We transform the samples into pairs of band values, i.e. [[band1_val, band2_val, band3_val], [...]]. We then remove the null values and get our training set.
-
-
-```python
-transposed = random_sample.T.astype(np.float64)  # (n, 3)
+transposed = random_pixels.T.astype(np.float64)  # (n, 3)
 valid = ~np.isnan(transposed).any(axis=1)
 sample = transposed[valid][:sample_size]
 sample
@@ -315,7 +310,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_38_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_37_0.png)
     
 
 
@@ -412,7 +407,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_45_0.png)
+![](python-remote-sensing-output/module_04/02_unsupervised_classification_files/02_unsupervised_classification_44_0.png)
     
 
 
