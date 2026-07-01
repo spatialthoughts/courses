@@ -50,6 +50,7 @@ client = Client()
 
 - Always use vectorized functions and broadcasting to avoid iterations — e.g. `scene[data_bands].where(~mask)` instead of a per-band loop.
 - Prefer Python packages from the XArray ecosystem.
+- For per-group aggregations (e.g. mean value per class/cluster), always use `groupby()` — never loop over groups and call `.compute()` inside the loop.
 
 ---
 
@@ -314,6 +315,33 @@ reclassified = reclassify(da, bins=bins, new_values=new_values, name='reclassify
 - `len(bins)` must equal `len(new_values)`.
 - Use `np.inf` as the last bin to catch all remaining values.
 - Gaps between class values (e.g. values that don't exist in the data) are harmless — they just fall into the nearest bin range.
+
+---
+
+## Group Statistics
+
+For per-class or per-cluster aggregations, use xarray's `groupby()` — it stays lazy and computes all groups in a single pass.
+
+```python
+# group_da: DataArray of integer labels (e.g. cluster map, land-cover class map)
+# value_da: DataArray of values to aggregate (e.g. MNDWI, NDVI)
+
+# Lazy — builds the Dask graph, does not compute yet
+group_stats = value_da.groupby(group_da).mean()
+
+# Single compute for all groups
+group_stats = group_stats.compute()
+
+# Find the label with the highest mean value
+best_label = int(group_stats.idxmax())
+```
+
+**Anti-pattern — never do this:**
+```python
+# Bad: triggers a separate .compute() call per group, reads data n times
+for c in range(n_clusters):
+    mean = float(value_da.where(group_da == c).mean())  # n round-trips
+```
 
 ---
 

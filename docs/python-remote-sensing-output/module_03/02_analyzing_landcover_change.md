@@ -338,7 +338,7 @@ axes[0].set_title('Before')
 axes[0].set_axis_off()
 axes[0].set_aspect('equal')
 
-before_preview.plot(ax=axes[1], cmap=io_cmap,
+after_preview.plot(ax=axes[1], cmap=io_cmap,
                     norm=io_normalizer, add_colorbar=False)
 axes[1].set_title('After')
 axes[1].set_axis_off()

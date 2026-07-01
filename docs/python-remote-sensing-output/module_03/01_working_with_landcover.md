@@ -553,4 +553,4 @@ Close the dask client. This presents multiple clients being instantiated when ru
 
 Select only the pixels of *Tree Cover* (class value `10`) from the ESA WorldCover dataset to create a map of tree cover in your region.
 
-Hint: Use the [`where()`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.where.html) function.
+Hint: Use the [`xr.where()`](https://docs.xarray.dev/en/stable/generated/xarray.where.html) function.
