@@ -65,8 +65,12 @@ import numpy as np
 import os
 import pystac_client
 import rioxarray as rxr
+from shapely.geometry import box
+import shutil
+import tempfile
 import xarray as xr
 from odc.stac import configure_s3_access, load
+from osgeo import gdal
 import planetary_computer as pc
 from xrspatial import slope
 ```
@@ -301,51 +305,102 @@ composite
 print(f'DataSet size: {composite.nbytes/1e6:.2f} MB.')
 ```
 
-Compute and load the results.
-
-
-```python
-%%time
-composite = composite.compute()
-```
-
 ### Clip and Export the Composite
 
 We first convert it to a DataArray using the `to_array()` method. All the variables will be converted to a new dimension. Since our variables are image bands, we give the name of the new dimesion as band.
 
 
-
 ```python
 composite_da = composite.to_array('band')
+composite_da = composite_da.rio.write_nodata(np.nan)
 composite_da
 ```
 
-Clip the composite to the AOI polygon.
+### Tile and Export the Composite
+
+Writing a large multi-band composite in one shot can exceed available memory, since it forces the entire Dask graph (all bands, full extent) to materialize at once. To avoid this, we only tile the export when the composite is large: if it is smaller than `TILE_SIZE` pixels in both dimensions, we export it as a single file as before. Otherwise, we split the AOI into a grid of tiles, and compute/clip/write one tile at a time to a local temporary folder. We then mosaic the local tiles into a single Cloud-Optimized GeoTIFF and copy just that one file to `output_folder`.
 
 
 ```python
-image_crs = composite_da.rio.crs
-aoi_gdf_reproj = aoi_gdf.to_crs(image_crs)
-composite_clipped = composite_da.rio.clip(aoi_gdf_reproj.geometry)
-composite_clipped
+TILE_SIZE = 5000  # pixels
+
+x_size = composite_da.sizes['x']
+y_size = composite_da.sizes['y']
+tiled_export = x_size >= TILE_SIZE or y_size >= TILE_SIZE
+
+print(f'Composite size: {x_size} x {y_size} pixels')
+print(f'Tiled export: {tiled_export}')
 ```
 
-We finally save the results as a local Cloud-Optimized GeoTIFF file.
+If the composite is small enough, we clip it to the AOI, compute it, and save it as a single Cloud-Optimized GeoTIFF using the rioxarray accessor. Otherwise, we build a grid of tiles over the AOI and, for each tile, use [`clip_box()`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.raster_array.RasterArray.clip_box) for a lazy windowed read, `.compute()` to materialize just that tile, and [`clip()`](https://corteva.github.io/rioxarray/stable/rioxarray.html#rioxarray.raster_array.RasterArray.clip) to trim it to the exact AOI boundary. Each tile is saved locally, then [`gdal.BuildVRT()`](https://gdal.org/en/stable/programs/gdalbuildvrt.html) and [`gdal.Translate()`](https://gdal.org/en/stable/programs/gdal_translate.html) mosaic the tiles into a single local COG, which we copy to `output_folder`.
 
 
 ```python
-output_folder_path = output_folder
+aoi_gdf_reproj = aoi_gdf.to_crs(composite_da.rio.crs)
 
-if not os.path.exists(output_folder_path):
-    os.makedirs(output_folder_path)
-```
+output_file = 'multiband_composite.tif'
+local_output_path = os.path.join(output_folder, output_file)
 
-Ww use the rioxarray accessor to save the results as a Cloud-Optimized GeoTIFF.
+if not tiled_export:
+    print('Exporting composite as a single COG')
+    composite_da = composite_da.compute()
+    composite_clipped = composite_da.rio.clip(aoi_gdf_reproj.geometry)
+    composite_clipped.rio.to_raster(local_output_path, driver='COG')
+else:
+    print('Exporting composite as tiled COGs')
+    left, bottom, right, top = composite_da.rio.bounds()
+    res_x = (right - left) / x_size
+    tile_size_m = TILE_SIZE * res_x
 
+    minx, miny, maxx, maxy = aoi_gdf_reproj.total_bounds
+    xs = np.arange(minx, maxx, tile_size_m)
+    ys = np.arange(miny, maxy, tile_size_m)
 
-```python
-output_file = f'multiband_composite.tif'
-local_output_path = os.path.join(output_folder_path, output_file)
-composite_clipped.rio.to_raster(local_output_path, driver='COG')
+    tiles = [
+        box(x, y, x + tile_size_m, y + tile_size_m)
+        for y in sorted(ys, reverse=True)
+        for x in xs
+    ]
+    grid = gpd.GeoDataFrame(geometry=tiles, crs=composite_da.rio.crs)
+    grid = grid[grid.intersects(aoi_gdf_reproj.union_all())].reset_index(drop=True)
+    grid['tile_id'] = [
+        f'tile_{(i // len(ys)) + 1:02d}_{(i % len(ys)) + 1:02d}'
+        for i in grid.index
+    ]
+    print(f'{len(grid)} tiles intersect the AOI')
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tile_paths = []
+
+        for _, row in grid.iterrows():
+            print(f'Processing tile {row["tile_id"]}')
+            tile_id = row['tile_id']
+            tile_bounds = row.geometry.bounds
+
+            # Pull only this tile into memory
+            tile = composite_da.rio.clip_box(*tile_bounds).compute()
+
+            try:
+                tile_clipped = tile.rio.clip(aoi_gdf_reproj.geometry)
+            except Exception:
+                continue
+
+            tile_path = os.path.join(tmp_dir, f'{tile_id}.tif')
+            tile_clipped.rio.to_raster(tile_path, driver='COG')
+            tile_paths.append(tile_path)
+            print(f'Wrote tile {tile_id}')
+
+        # Mosaic the local tiles into a single local COG
+        vrt_path = os.path.join(tmp_dir, 'mosaic.vrt')
+        vrt = gdal.BuildVRT(vrt_path, tile_paths)
+        vrt.FlushCache()
+        vrt = None
+
+        mosaic_path = os.path.join(tmp_dir, output_file)
+        gdal.Translate(mosaic_path, vrt_path, format='COG')
+
+        # Copy just the final mosaic to the output folder
+        shutil.copy(mosaic_path, local_output_path)
+
 print(f'Wrote {local_output_path}')
 ```
