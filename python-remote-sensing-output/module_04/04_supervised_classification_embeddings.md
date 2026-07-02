@@ -291,20 +291,7 @@ We also need to have the `landcover` class values at each extraced sample for tr
 gcp_embeddings = gcp_embeddings.assign_coords(
     landcover=('gcp_id', gcp_gdf_reprojected['landcover'].values)
 )
-
-# Display the extracted embeddings for verification
 gcp_embeddings
-```
-
-
-```python
-
-# Create xarray DataArrays for indexing with a 'gcp_id' dimension
-# This dimension will match the order of the gcp_gdf for easy association
-#gcp_ids = np.arange(len(gcp_gdf))
-
-
-
 ```
 
 
@@ -407,7 +394,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_46_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_45_0.png)
     
 
 

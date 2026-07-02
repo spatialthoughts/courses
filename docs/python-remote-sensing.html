@@ -5965,16 +5965,23 @@ at each training point.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb357-1"><a href="#cb357-1" tabindex="-1"></a>gcp_gdf_reprojected <span class="op">=</span> gcp_gdf.to_crs(feature_da.rio.crs)</span>
 <span id="cb357-2"><a href="#cb357-2" tabindex="-1"></a>x_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.x.values</span>
 <span id="cb357-3"><a href="#cb357-3" tabindex="-1"></a>y_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.y.values</span></code></pre></div>
+<p>Extract the pixel values.</p>
 <div class="sourceCode" id="cb358"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb358-1"><a href="#cb358-1" tabindex="-1"></a>gcp_features <span class="op">=</span> feature_da.sel(</span>
 <span id="cb358-2"><a href="#cb358-2" tabindex="-1"></a>    x<span class="op">=</span>xr.DataArray(x_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
 <span id="cb358-3"><a href="#cb358-3" tabindex="-1"></a>    y<span class="op">=</span>xr.DataArray(y_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
 <span id="cb358-4"><a href="#cb358-4" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&#39;nearest&#39;</span></span>
-<span id="cb358-5"><a href="#cb358-5" tabindex="-1"></a>).assign_coords(landcover<span class="op">=</span>(<span class="st">&#39;gcp_id&#39;</span>, gcp_gdf[<span class="st">&#39;landcover&#39;</span>].values))</span></code></pre></div>
+<span id="cb358-5"><a href="#cb358-5" tabindex="-1"></a>)</span>
+<span id="cb358-6"><a href="#cb358-6" tabindex="-1"></a>gcp_features</span></code></pre></div>
+<p>We also need to have the <code>landcover</code> class values at each
+extraced sample for training the model.</p>
 <div class="sourceCode" id="cb359"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb359-1"><a href="#cb359-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb359-2"><a href="#cb359-2" tabindex="-1"></a>gcp_features <span class="op">=</span> gcp_features.compute()</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb359-1"><a href="#cb359-1" tabindex="-1"></a>gcp_features.assign_coords(</span>
+<span id="cb359-2"><a href="#cb359-2" tabindex="-1"></a>    landcover<span class="op">=</span>(<span class="st">&#39;gcp_id&#39;</span>, gcp_gdf[<span class="st">&#39;landcover&#39;</span>].values))</span>
 <span id="cb359-3"><a href="#cb359-3" tabindex="-1"></a>gcp_features</span></code></pre></div>
+<div class="sourceCode" id="cb360"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb360-1"><a href="#cb360-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb360-2"><a href="#cb360-2" tabindex="-1"></a>gcp_features <span class="op">=</span> gcp_features.compute()</span></code></pre></div>
 </div>
 <div id="train-a-classifier" class="section level3">
 <h3>Train a Classifier</h3>
@@ -5984,17 +5991,17 @@ Forest</a> on the extracted band values. Random Forest is robust to
 correlated features (spectral bands are often correlated) and provides
 feature importances that show which bands contributed most to the
 classification.</p>
-<div class="sourceCode" id="cb360"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb360-1"><a href="#cb360-1" tabindex="-1"></a>X <span class="op">=</span> gcp_features.values.T.astype(np.float64)  <span class="co"># (n_samples, n_bands)</span></span>
-<span id="cb360-2"><a href="#cb360-2" tabindex="-1"></a>y <span class="op">=</span> gcp_features[<span class="st">&#39;landcover&#39;</span>].values</span>
-<span id="cb360-3"><a href="#cb360-3" tabindex="-1"></a></span>
-<span id="cb360-4"><a href="#cb360-4" tabindex="-1"></a>model <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
-<span id="cb360-5"><a href="#cb360-5" tabindex="-1"></a>model.fit(X, y)</span></code></pre></div>
 <div class="sourceCode" id="cb361"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb361-1"><a href="#cb361-1" tabindex="-1"></a><span class="co"># Feature importances</span></span>
-<span id="cb361-2"><a href="#cb361-2" tabindex="-1"></a>importances <span class="op">=</span> model.feature_importances_</span>
-<span id="cb361-3"><a href="#cb361-3" tabindex="-1"></a><span class="cf">for</span> band, importance <span class="kw">in</span> <span class="bu">sorted</span>(<span class="bu">zip</span>(band_names, importances), key<span class="op">=</span><span class="kw">lambda</span> t: <span class="op">-</span>t[<span class="dv">1</span>]):</span>
-<span id="cb361-4"><a href="#cb361-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  </span><span class="sc">{</span>band<span class="sc">:10s}</span><span class="ss">: </span><span class="sc">{</span>importance<span class="sc">:.3f}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb361-1"><a href="#cb361-1" tabindex="-1"></a>X <span class="op">=</span> gcp_features.values.T.astype(np.float64)  <span class="co"># (n_samples, n_bands)</span></span>
+<span id="cb361-2"><a href="#cb361-2" tabindex="-1"></a>y <span class="op">=</span> gcp_features[<span class="st">&#39;landcover&#39;</span>].values</span>
+<span id="cb361-3"><a href="#cb361-3" tabindex="-1"></a></span>
+<span id="cb361-4"><a href="#cb361-4" tabindex="-1"></a>model <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb361-5"><a href="#cb361-5" tabindex="-1"></a>model.fit(X, y)</span></code></pre></div>
+<div class="sourceCode" id="cb362"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb362-1"><a href="#cb362-1" tabindex="-1"></a><span class="co"># Feature importances</span></span>
+<span id="cb362-2"><a href="#cb362-2" tabindex="-1"></a>importances <span class="op">=</span> model.feature_importances_</span>
+<span id="cb362-3"><a href="#cb362-3" tabindex="-1"></a><span class="cf">for</span> band, importance <span class="kw">in</span> <span class="bu">sorted</span>(<span class="bu">zip</span>(band_names, importances), key<span class="op">=</span><span class="kw">lambda</span> t: <span class="op">-</span>t[<span class="dv">1</span>]):</span>
+<span id="cb362-4"><a href="#cb362-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  </span><span class="sc">{</span>band<span class="sc">:10s}</span><span class="ss">: </span><span class="sc">{</span>importance<span class="sc">:.3f}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 </div>
 <div id="classify-the-image" class="section level3">
 <h3>Classify the Image</h3>
@@ -6005,103 +6012,103 @@ The <code>predict_block</code> function receives one
 <code>(n_pixels, bands)</code>, skips NaN pixels, and returns a
 <code>(h, w)</code> label array. Setting <code>drop_axis=0</code> tells
 Dask that the band axis is consumed by the function.</p>
-<div class="sourceCode" id="cb362"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb362-1"><a href="#cb362-1" tabindex="-1"></a>feature_dask <span class="op">=</span> feature_da.data  <span class="co"># (bands, y, x)</span></span>
-<span id="cb362-2"><a href="#cb362-2" tabindex="-1"></a></span>
-<span id="cb362-3"><a href="#cb362-3" tabindex="-1"></a><span class="kw">def</span> predict_block(block, model):</span>
-<span id="cb362-4"><a href="#cb362-4" tabindex="-1"></a>    bands, h, w <span class="op">=</span> block.shape</span>
-<span id="cb362-5"><a href="#cb362-5" tabindex="-1"></a>    pixels <span class="op">=</span> block.reshape(bands, <span class="op">-</span><span class="dv">1</span>).T.astype(np.float64)  <span class="co"># (n_pixels, bands)</span></span>
-<span id="cb362-6"><a href="#cb362-6" tabindex="-1"></a>    valid <span class="op">=</span> <span class="op">~</span>np.isnan(pixels).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb362-7"><a href="#cb362-7" tabindex="-1"></a>    result <span class="op">=</span> np.full(h <span class="op">*</span> w, np.nan)</span>
-<span id="cb362-8"><a href="#cb362-8" tabindex="-1"></a>    <span class="cf">if</span> valid.<span class="bu">any</span>():</span>
-<span id="cb362-9"><a href="#cb362-9" tabindex="-1"></a>        result[valid] <span class="op">=</span> model.predict(pixels[valid]).astype(<span class="bu">float</span>)</span>
-<span id="cb362-10"><a href="#cb362-10" tabindex="-1"></a>    <span class="cf">return</span> result.reshape(h, w)</span>
-<span id="cb362-11"><a href="#cb362-11" tabindex="-1"></a></span>
-<span id="cb362-12"><a href="#cb362-12" tabindex="-1"></a>predicted_2d <span class="op">=</span> da.map_blocks(</span>
-<span id="cb362-13"><a href="#cb362-13" tabindex="-1"></a>    predict_block,</span>
-<span id="cb362-14"><a href="#cb362-14" tabindex="-1"></a>    feature_dask,</span>
-<span id="cb362-15"><a href="#cb362-15" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
-<span id="cb362-16"><a href="#cb362-16" tabindex="-1"></a>    dtype<span class="op">=</span>np.float64,</span>
-<span id="cb362-17"><a href="#cb362-17" tabindex="-1"></a>    drop_axis<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb362-18"><a href="#cb362-18" tabindex="-1"></a>)</span>
-<span id="cb362-19"><a href="#cb362-19" tabindex="-1"></a>classified <span class="op">=</span> xr.DataArray(</span>
-<span id="cb362-20"><a href="#cb362-20" tabindex="-1"></a>    predicted_2d,</span>
-<span id="cb362-21"><a href="#cb362-21" tabindex="-1"></a>    coords<span class="op">=</span>{<span class="st">&#39;y&#39;</span>: feature_da.y, <span class="st">&#39;x&#39;</span>: feature_da.x},</span>
-<span id="cb362-22"><a href="#cb362-22" tabindex="-1"></a>    dims<span class="op">=</span>[<span class="st">&#39;y&#39;</span>, <span class="st">&#39;x&#39;</span>],</span>
-<span id="cb362-23"><a href="#cb362-23" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;landcover&#39;</span></span>
-<span id="cb362-24"><a href="#cb362-24" tabindex="-1"></a>).rio.write_crs(feature_da.rio.crs)</span>
-<span id="cb362-25"><a href="#cb362-25" tabindex="-1"></a>classified</span></code></pre></div>
 <div class="sourceCode" id="cb363"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb363-1"><a href="#cb363-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb363-2"><a href="#cb363-2" tabindex="-1"></a>classified <span class="op">=</span> classified.compute()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb363-1"><a href="#cb363-1" tabindex="-1"></a>feature_dask <span class="op">=</span> feature_da.data  <span class="co"># (bands, y, x)</span></span>
+<span id="cb363-2"><a href="#cb363-2" tabindex="-1"></a></span>
+<span id="cb363-3"><a href="#cb363-3" tabindex="-1"></a><span class="kw">def</span> predict_block(block, model):</span>
+<span id="cb363-4"><a href="#cb363-4" tabindex="-1"></a>    bands, h, w <span class="op">=</span> block.shape</span>
+<span id="cb363-5"><a href="#cb363-5" tabindex="-1"></a>    pixels <span class="op">=</span> block.reshape(bands, <span class="op">-</span><span class="dv">1</span>).T.astype(np.float64)  <span class="co"># (n_pixels, bands)</span></span>
+<span id="cb363-6"><a href="#cb363-6" tabindex="-1"></a>    valid <span class="op">=</span> <span class="op">~</span>np.isnan(pixels).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb363-7"><a href="#cb363-7" tabindex="-1"></a>    result <span class="op">=</span> np.full(h <span class="op">*</span> w, np.nan)</span>
+<span id="cb363-8"><a href="#cb363-8" tabindex="-1"></a>    <span class="cf">if</span> valid.<span class="bu">any</span>():</span>
+<span id="cb363-9"><a href="#cb363-9" tabindex="-1"></a>        result[valid] <span class="op">=</span> model.predict(pixels[valid]).astype(<span class="bu">float</span>)</span>
+<span id="cb363-10"><a href="#cb363-10" tabindex="-1"></a>    <span class="cf">return</span> result.reshape(h, w)</span>
+<span id="cb363-11"><a href="#cb363-11" tabindex="-1"></a></span>
+<span id="cb363-12"><a href="#cb363-12" tabindex="-1"></a>predicted_2d <span class="op">=</span> da.map_blocks(</span>
+<span id="cb363-13"><a href="#cb363-13" tabindex="-1"></a>    predict_block,</span>
+<span id="cb363-14"><a href="#cb363-14" tabindex="-1"></a>    feature_dask,</span>
+<span id="cb363-15"><a href="#cb363-15" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb363-16"><a href="#cb363-16" tabindex="-1"></a>    dtype<span class="op">=</span>np.float64,</span>
+<span id="cb363-17"><a href="#cb363-17" tabindex="-1"></a>    drop_axis<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb363-18"><a href="#cb363-18" tabindex="-1"></a>)</span>
+<span id="cb363-19"><a href="#cb363-19" tabindex="-1"></a>classified <span class="op">=</span> xr.DataArray(</span>
+<span id="cb363-20"><a href="#cb363-20" tabindex="-1"></a>    predicted_2d,</span>
+<span id="cb363-21"><a href="#cb363-21" tabindex="-1"></a>    coords<span class="op">=</span>{<span class="st">&#39;y&#39;</span>: feature_da.y, <span class="st">&#39;x&#39;</span>: feature_da.x},</span>
+<span id="cb363-22"><a href="#cb363-22" tabindex="-1"></a>    dims<span class="op">=</span>[<span class="st">&#39;y&#39;</span>, <span class="st">&#39;x&#39;</span>],</span>
+<span id="cb363-23"><a href="#cb363-23" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&#39;landcover&#39;</span></span>
+<span id="cb363-24"><a href="#cb363-24" tabindex="-1"></a>).rio.write_crs(feature_da.rio.crs)</span>
+<span id="cb363-25"><a href="#cb363-25" tabindex="-1"></a>classified</span></code></pre></div>
+<div class="sourceCode" id="cb364"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb364-1"><a href="#cb364-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb364-2"><a href="#cb364-2" tabindex="-1"></a>classified <span class="op">=</span> classified.compute()</span></code></pre></div>
 </div>
 <div id="visualize-the-classification" class="section level3">
 <h3>Visualize the Classification</h3>
 <p>We build a discrete colormap from the class color dictionary and plot
 a downsampled preview.</p>
-<div class="sourceCode" id="cb364"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb364-1"><a href="#cb364-1" tabindex="-1"></a>sorted_labels <span class="op">=</span> <span class="bu">sorted</span>(class_colors.keys())</span>
-<span id="cb364-2"><a href="#cb364-2" tabindex="-1"></a>cmap <span class="op">=</span> mcolors.ListedColormap([class_colors[c] <span class="cf">for</span> c <span class="kw">in</span> sorted_labels])</span>
-<span id="cb364-3"><a href="#cb364-3" tabindex="-1"></a>cmap.set_bad(alpha<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb364-4"><a href="#cb364-4" tabindex="-1"></a>norm <span class="op">=</span> mcolors.BoundaryNorm(</span>
-<span id="cb364-5"><a href="#cb364-5" tabindex="-1"></a>    [i <span class="op">-</span> <span class="fl">0.5</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(sorted_labels) <span class="op">+</span> <span class="dv">1</span>)], cmap.N)</span>
-<span id="cb364-6"><a href="#cb364-6" tabindex="-1"></a></span>
-<span id="cb364-7"><a href="#cb364-7" tabindex="-1"></a>preview <span class="op">=</span> classified.rio.reproject(classified.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>)</span>
-<span id="cb364-8"><a href="#cb364-8" tabindex="-1"></a></span>
-<span id="cb364-9"><a href="#cb364-9" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb364-10"><a href="#cb364-10" tabindex="-1"></a>fig.set_size_inches(<span class="dv">7</span>, <span class="dv">7</span>)</span>
-<span id="cb364-11"><a href="#cb364-11" tabindex="-1"></a>preview.plot.imshow(ax<span class="op">=</span>ax, cmap<span class="op">=</span>cmap, norm<span class="op">=</span>norm, add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb364-12"><a href="#cb364-12" tabindex="-1"></a>ax.legend(</span>
-<span id="cb364-13"><a href="#cb364-13" tabindex="-1"></a>    handles<span class="op">=</span>[mpatches.Patch(</span>
-<span id="cb364-14"><a href="#cb364-14" tabindex="-1"></a>        color<span class="op">=</span>class_colors[c],</span>
-<span id="cb364-15"><a href="#cb364-15" tabindex="-1"></a>        label<span class="op">=</span>class_names[c]) <span class="cf">for</span> c <span class="kw">in</span> sorted_labels],</span>
-<span id="cb364-16"><a href="#cb364-16" tabindex="-1"></a>    loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span></span>
-<span id="cb364-17"><a href="#cb364-17" tabindex="-1"></a>)</span>
-<span id="cb364-18"><a href="#cb364-18" tabindex="-1"></a>ax.set_title(<span class="ss">f&#39;Classified Image&#39;</span>)</span>
-<span id="cb364-19"><a href="#cb364-19" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb364-20"><a href="#cb364-20" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
-<span id="cb364-21"><a href="#cb364-21" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb365"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb365-1"><a href="#cb365-1" tabindex="-1"></a>sorted_labels <span class="op">=</span> <span class="bu">sorted</span>(class_colors.keys())</span>
+<span id="cb365-2"><a href="#cb365-2" tabindex="-1"></a>cmap <span class="op">=</span> mcolors.ListedColormap([class_colors[c] <span class="cf">for</span> c <span class="kw">in</span> sorted_labels])</span>
+<span id="cb365-3"><a href="#cb365-3" tabindex="-1"></a>cmap.set_bad(alpha<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb365-4"><a href="#cb365-4" tabindex="-1"></a>norm <span class="op">=</span> mcolors.BoundaryNorm(</span>
+<span id="cb365-5"><a href="#cb365-5" tabindex="-1"></a>    [i <span class="op">-</span> <span class="fl">0.5</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(sorted_labels) <span class="op">+</span> <span class="dv">1</span>)], cmap.N)</span>
+<span id="cb365-6"><a href="#cb365-6" tabindex="-1"></a></span>
+<span id="cb365-7"><a href="#cb365-7" tabindex="-1"></a>preview <span class="op">=</span> classified.rio.reproject(classified.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb365-8"><a href="#cb365-8" tabindex="-1"></a></span>
+<span id="cb365-9"><a href="#cb365-9" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb365-10"><a href="#cb365-10" tabindex="-1"></a>fig.set_size_inches(<span class="dv">7</span>, <span class="dv">7</span>)</span>
+<span id="cb365-11"><a href="#cb365-11" tabindex="-1"></a>preview.plot.imshow(ax<span class="op">=</span>ax, cmap<span class="op">=</span>cmap, norm<span class="op">=</span>norm, add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb365-12"><a href="#cb365-12" tabindex="-1"></a>ax.legend(</span>
+<span id="cb365-13"><a href="#cb365-13" tabindex="-1"></a>    handles<span class="op">=</span>[mpatches.Patch(</span>
+<span id="cb365-14"><a href="#cb365-14" tabindex="-1"></a>        color<span class="op">=</span>class_colors[c],</span>
+<span id="cb365-15"><a href="#cb365-15" tabindex="-1"></a>        label<span class="op">=</span>class_names[c]) <span class="cf">for</span> c <span class="kw">in</span> sorted_labels],</span>
+<span id="cb365-16"><a href="#cb365-16" tabindex="-1"></a>    loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span></span>
+<span id="cb365-17"><a href="#cb365-17" tabindex="-1"></a>)</span>
+<span id="cb365-18"><a href="#cb365-18" tabindex="-1"></a>ax.set_title(<span class="ss">f&#39;Classified Image&#39;</span>)</span>
+<span id="cb365-19"><a href="#cb365-19" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb365-20"><a href="#cb365-20" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb365-21"><a href="#cb365-21" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
-src="python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_39_0.png" /></p>
+src="python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_42_0.png" /></p>
 </div>
 <div id="save-classified-image" class="section level3">
 <h3>Save Classified Image</h3>
 <p>Save the result as a Cloud-Optimized GeoTIFF to the configured output
 folder.</p>
-<div class="sourceCode" id="cb365"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb365-1"><a href="#cb365-1" tabindex="-1"></a><span class="kw">def</span> write_cog_with_colormap(data_array, output_path, color_table):</span>
-<span id="cb365-2"><a href="#cb365-2" tabindex="-1"></a>    <span class="cf">if</span> data_array.dtype <span class="op">!=</span> np.dtype(<span class="st">&#39;uint8&#39;</span>):</span>
-<span id="cb365-3"><a href="#cb365-3" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="ss">f&#39;data_array must be uint8 for a color table to attach&#39;</span>)</span>
-<span id="cb365-4"><a href="#cb365-4" tabindex="-1"></a></span>
-<span id="cb365-5"><a href="#cb365-5" tabindex="-1"></a>    <span class="co"># Write to a temp file, add color table, then convert to COG</span></span>
-<span id="cb365-6"><a href="#cb365-6" tabindex="-1"></a>    tmp_path <span class="op">=</span> output_path <span class="op">+</span> <span class="st">&#39;.tmp.tif&#39;</span></span>
-<span id="cb365-7"><a href="#cb365-7" tabindex="-1"></a>    data_array.rio.to_raster(tmp_path)</span>
-<span id="cb365-8"><a href="#cb365-8" tabindex="-1"></a></span>
-<span id="cb365-9"><a href="#cb365-9" tabindex="-1"></a>    <span class="cf">with</span> rasterio.<span class="bu">open</span>(tmp_path) <span class="im">as</span> src:</span>
-<span id="cb365-10"><a href="#cb365-10" tabindex="-1"></a>        profile <span class="op">=</span> src.profile.copy()</span>
-<span id="cb365-11"><a href="#cb365-11" tabindex="-1"></a>        profile[<span class="st">&#39;driver&#39;</span>] <span class="op">=</span> <span class="st">&#39;COG&#39;</span></span>
-<span id="cb365-12"><a href="#cb365-12" tabindex="-1"></a>        data <span class="op">=</span> src.read(<span class="dv">1</span>)</span>
-<span id="cb365-13"><a href="#cb365-13" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>profile) <span class="im">as</span> dst:</span>
-<span id="cb365-14"><a href="#cb365-14" tabindex="-1"></a>            dst.write(data, <span class="dv">1</span>)</span>
-<span id="cb365-15"><a href="#cb365-15" tabindex="-1"></a>            dst.write_colormap(<span class="dv">1</span>, color_table)</span>
-<span id="cb365-16"><a href="#cb365-16" tabindex="-1"></a></span>
-<span id="cb365-17"><a href="#cb365-17" tabindex="-1"></a>    os.remove(tmp_path)</span></code></pre></div>
 <div class="sourceCode" id="cb366"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb366-1"><a href="#cb366-1" tabindex="-1"></a>color_table <span class="op">=</span> {</span>
-<span id="cb366-2"><a href="#cb366-2" tabindex="-1"></a>    label: <span class="bu">tuple</span>(<span class="bu">int</span>(c <span class="op">*</span> <span class="dv">255</span>) <span class="cf">for</span> c <span class="kw">in</span> mcolors.to_rgb(hex_color))</span>
-<span id="cb366-3"><a href="#cb366-3" tabindex="-1"></a>    <span class="cf">for</span> label, hex_color <span class="kw">in</span> class_colors.items()</span>
-<span id="cb366-4"><a href="#cb366-4" tabindex="-1"></a>}</span>
-<span id="cb366-5"><a href="#cb366-5" tabindex="-1"></a></span>
-<span id="cb366-6"><a href="#cb366-6" tabindex="-1"></a>classified_uint8 <span class="op">=</span> (</span>
-<span id="cb366-7"><a href="#cb366-7" tabindex="-1"></a>    classified</span>
-<span id="cb366-8"><a href="#cb366-8" tabindex="-1"></a>    .fillna(<span class="dv">255</span>)</span>
-<span id="cb366-9"><a href="#cb366-9" tabindex="-1"></a>    .astype(np.uint8)</span>
-<span id="cb366-10"><a href="#cb366-10" tabindex="-1"></a>    .rio.write_nodata(<span class="dv">255</span>)</span>
-<span id="cb366-11"><a href="#cb366-11" tabindex="-1"></a>)</span>
-<span id="cb366-12"><a href="#cb366-12" tabindex="-1"></a></span>
-<span id="cb366-13"><a href="#cb366-13" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;classification.tif&#39;</span>)</span>
-<span id="cb366-14"><a href="#cb366-14" tabindex="-1"></a>write_cog_with_colormap(classified_uint8, output_path, color_table)</span>
-<span id="cb366-15"><a href="#cb366-15" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Saved </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb366-1"><a href="#cb366-1" tabindex="-1"></a><span class="kw">def</span> write_cog_with_colormap(data_array, output_path, color_table):</span>
+<span id="cb366-2"><a href="#cb366-2" tabindex="-1"></a>    <span class="cf">if</span> data_array.dtype <span class="op">!=</span> np.dtype(<span class="st">&#39;uint8&#39;</span>):</span>
+<span id="cb366-3"><a href="#cb366-3" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="ss">f&#39;data_array must be uint8 for a color table to attach&#39;</span>)</span>
+<span id="cb366-4"><a href="#cb366-4" tabindex="-1"></a></span>
+<span id="cb366-5"><a href="#cb366-5" tabindex="-1"></a>    <span class="co"># Write to a temp file, add color table, then convert to COG</span></span>
+<span id="cb366-6"><a href="#cb366-6" tabindex="-1"></a>    tmp_path <span class="op">=</span> output_path <span class="op">+</span> <span class="st">&#39;.tmp.tif&#39;</span></span>
+<span id="cb366-7"><a href="#cb366-7" tabindex="-1"></a>    data_array.rio.to_raster(tmp_path)</span>
+<span id="cb366-8"><a href="#cb366-8" tabindex="-1"></a></span>
+<span id="cb366-9"><a href="#cb366-9" tabindex="-1"></a>    <span class="cf">with</span> rasterio.<span class="bu">open</span>(tmp_path) <span class="im">as</span> src:</span>
+<span id="cb366-10"><a href="#cb366-10" tabindex="-1"></a>        profile <span class="op">=</span> src.profile.copy()</span>
+<span id="cb366-11"><a href="#cb366-11" tabindex="-1"></a>        profile[<span class="st">&#39;driver&#39;</span>] <span class="op">=</span> <span class="st">&#39;COG&#39;</span></span>
+<span id="cb366-12"><a href="#cb366-12" tabindex="-1"></a>        data <span class="op">=</span> src.read(<span class="dv">1</span>)</span>
+<span id="cb366-13"><a href="#cb366-13" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(output_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>profile) <span class="im">as</span> dst:</span>
+<span id="cb366-14"><a href="#cb366-14" tabindex="-1"></a>            dst.write(data, <span class="dv">1</span>)</span>
+<span id="cb366-15"><a href="#cb366-15" tabindex="-1"></a>            dst.write_colormap(<span class="dv">1</span>, color_table)</span>
+<span id="cb366-16"><a href="#cb366-16" tabindex="-1"></a></span>
+<span id="cb366-17"><a href="#cb366-17" tabindex="-1"></a>    os.remove(tmp_path)</span></code></pre></div>
+<div class="sourceCode" id="cb367"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb367-1"><a href="#cb367-1" tabindex="-1"></a>color_table <span class="op">=</span> {</span>
+<span id="cb367-2"><a href="#cb367-2" tabindex="-1"></a>    label: <span class="bu">tuple</span>(<span class="bu">int</span>(c <span class="op">*</span> <span class="dv">255</span>) <span class="cf">for</span> c <span class="kw">in</span> mcolors.to_rgb(hex_color))</span>
+<span id="cb367-3"><a href="#cb367-3" tabindex="-1"></a>    <span class="cf">for</span> label, hex_color <span class="kw">in</span> class_colors.items()</span>
+<span id="cb367-4"><a href="#cb367-4" tabindex="-1"></a>}</span>
+<span id="cb367-5"><a href="#cb367-5" tabindex="-1"></a></span>
+<span id="cb367-6"><a href="#cb367-6" tabindex="-1"></a>classified_uint8 <span class="op">=</span> (</span>
+<span id="cb367-7"><a href="#cb367-7" tabindex="-1"></a>    classified</span>
+<span id="cb367-8"><a href="#cb367-8" tabindex="-1"></a>    .fillna(<span class="dv">255</span>)</span>
+<span id="cb367-9"><a href="#cb367-9" tabindex="-1"></a>    .astype(np.uint8)</span>
+<span id="cb367-10"><a href="#cb367-10" tabindex="-1"></a>    .rio.write_nodata(<span class="dv">255</span>)</span>
+<span id="cb367-11"><a href="#cb367-11" tabindex="-1"></a>)</span>
+<span id="cb367-12"><a href="#cb367-12" tabindex="-1"></a></span>
+<span id="cb367-13"><a href="#cb367-13" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;classification.tif&#39;</span>)</span>
+<span id="cb367-14"><a href="#cb367-14" tabindex="-1"></a>write_cog_with_colormap(classified_uint8, output_path, color_table)</span>
+<span id="cb367-15"><a href="#cb367-15" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Saved </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="supervised-classification-with-embeddings"
@@ -6132,158 +6139,158 @@ and generate a classified image for the chosen region of interest.</p>
 <div id="setup-14" class="section level3">
 <h3>Setup</h3>
 <p>Determine our runtime environment.</p>
-<div class="sourceCode" id="cb367"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb367-1"><a href="#cb367-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb367-2"><a href="#cb367-2" tabindex="-1"></a></span>
-<span id="cb367-3"><a href="#cb367-3" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;COLAB_RELEASE_TAG&#39;</span> <span class="kw">in</span> os.environ:</span>
-<span id="cb367-4"><a href="#cb367-4" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;colab&#39;</span></span>
-<span id="cb367-5"><a href="#cb367-5" tabindex="-1"></a>    <span class="cf">if</span> os.environ.get(<span class="st">&#39;VERTEX_PRODUCT&#39;</span>) <span class="op">==</span> <span class="st">&#39;COLAB_ENTERPRISE&#39;</span>:</span>
-<span id="cb367-6"><a href="#cb367-6" tabindex="-1"></a>        environment <span class="op">=</span> <span class="st">&#39;colab_enterprise&#39;</span></span>
-<span id="cb367-7"><a href="#cb367-7" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb367-8"><a href="#cb367-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
-<span id="cb367-9"><a href="#cb367-9" tabindex="-1"></a></span>
-<span id="cb367-10"><a href="#cb367-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
-<span id="cb367-11"><a href="#cb367-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">True</span></span>
-<span id="cb367-12"><a href="#cb367-12" tabindex="-1"></a></span>
-<span id="cb367-13"><a href="#cb367-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
-<span id="cb367-14"><a href="#cb367-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
-<span id="cb367-15"><a href="#cb367-15" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> drive</span>
-<span id="cb367-16"><a href="#cb367-16" tabindex="-1"></a>    drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span>
-<span id="cb367-17"><a href="#cb367-17" tabindex="-1"></a>    drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
-<span id="cb367-18"><a href="#cb367-18" tabindex="-1"></a>    drive_data_folder <span class="op">=</span> <span class="st">&#39;python-remote-sensing&#39;</span></span>
-<span id="cb367-19"><a href="#cb367-19" tabindex="-1"></a>    drive_folder_path <span class="op">=</span> os.path.join(<span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, drive_data_folder)</span>
-<span id="cb367-20"><a href="#cb367-20" tabindex="-1"></a>    data_folder <span class="op">=</span> drive_folder_path</span>
-<span id="cb367-21"><a href="#cb367-21" tabindex="-1"></a>    output_folder <span class="op">=</span> drive_folder_path</span>
-<span id="cb367-22"><a href="#cb367-22" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb367-23"><a href="#cb367-23" tabindex="-1"></a>    data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb367-24"><a href="#cb367-24" tabindex="-1"></a>    output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb367-25"><a href="#cb367-25" tabindex="-1"></a></span>
-<span id="cb367-26"><a href="#cb367-26" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb367-27"><a href="#cb367-27" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb367-28"><a href="#cb367-28" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb367-29"><a href="#cb367-29" tabindex="-1"></a>    os.mkdir(output_folder)</span>
-<span id="cb367-30"><a href="#cb367-30" tabindex="-1"></a></span>
-<span id="cb367-31"><a href="#cb367-31" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Environment: </span><span class="sc">{</span>environment<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb367-32"><a href="#cb367-32" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Data folder: </span><span class="sc">{</span>data_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb367-33"><a href="#cb367-33" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Output folder: </span><span class="sc">{</span>output_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb368"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb368-1"><a href="#cb368-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb368-2"><a href="#cb368-2" tabindex="-1"></a></span>
+<span id="cb368-3"><a href="#cb368-3" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;COLAB_RELEASE_TAG&#39;</span> <span class="kw">in</span> os.environ:</span>
+<span id="cb368-4"><a href="#cb368-4" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;colab&#39;</span></span>
+<span id="cb368-5"><a href="#cb368-5" tabindex="-1"></a>    <span class="cf">if</span> os.environ.get(<span class="st">&#39;VERTEX_PRODUCT&#39;</span>) <span class="op">==</span> <span class="st">&#39;COLAB_ENTERPRISE&#39;</span>:</span>
+<span id="cb368-6"><a href="#cb368-6" tabindex="-1"></a>        environment <span class="op">=</span> <span class="st">&#39;colab_enterprise&#39;</span></span>
+<span id="cb368-7"><a href="#cb368-7" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb368-8"><a href="#cb368-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
+<span id="cb368-9"><a href="#cb368-9" tabindex="-1"></a></span>
+<span id="cb368-10"><a href="#cb368-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
+<span id="cb368-11"><a href="#cb368-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb368-12"><a href="#cb368-12" tabindex="-1"></a></span>
+<span id="cb368-13"><a href="#cb368-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
+<span id="cb368-14"><a href="#cb368-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
+<span id="cb368-15"><a href="#cb368-15" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> drive</span>
+<span id="cb368-16"><a href="#cb368-16" tabindex="-1"></a>    drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span>
+<span id="cb368-17"><a href="#cb368-17" tabindex="-1"></a>    drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
+<span id="cb368-18"><a href="#cb368-18" tabindex="-1"></a>    drive_data_folder <span class="op">=</span> <span class="st">&#39;python-remote-sensing&#39;</span></span>
+<span id="cb368-19"><a href="#cb368-19" tabindex="-1"></a>    drive_folder_path <span class="op">=</span> os.path.join(<span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, drive_data_folder)</span>
+<span id="cb368-20"><a href="#cb368-20" tabindex="-1"></a>    data_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb368-21"><a href="#cb368-21" tabindex="-1"></a>    output_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb368-22"><a href="#cb368-22" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb368-23"><a href="#cb368-23" tabindex="-1"></a>    data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb368-24"><a href="#cb368-24" tabindex="-1"></a>    output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb368-25"><a href="#cb368-25" tabindex="-1"></a></span>
+<span id="cb368-26"><a href="#cb368-26" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb368-27"><a href="#cb368-27" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb368-28"><a href="#cb368-28" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb368-29"><a href="#cb368-29" tabindex="-1"></a>    os.mkdir(output_folder)</span>
+<span id="cb368-30"><a href="#cb368-30" tabindex="-1"></a></span>
+<span id="cb368-31"><a href="#cb368-31" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Environment: </span><span class="sc">{</span>environment<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb368-32"><a href="#cb368-32" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Data folder: </span><span class="sc">{</span>data_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb368-33"><a href="#cb368-33" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Output folder: </span><span class="sc">{</span>output_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 <p>If we are on Google Colab, install the required packages. Local
 runtimes are expected to have the packages already installed.</p>
-<div class="sourceCode" id="cb368"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb368-1"><a href="#cb368-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
-<span id="cb368-2"><a href="#cb368-2" tabindex="-1"></a>    <span class="op">!</span>pip install rioxarray scikit<span class="op">-</span>learn aef<span class="op">-</span>loader dask[distributed]</span>
-<span id="cb368-3"><a href="#cb368-3" tabindex="-1"></a>    <span class="co"># Due to version conflict, you maybe prompted to</span></span>
-<span id="cb368-4"><a href="#cb368-4" tabindex="-1"></a>    <span class="co"># restart the runtime after the installation</span></span>
-<span id="cb368-5"><a href="#cb368-5" tabindex="-1"></a>    <span class="co"># After restarting proceed to run all the cells from the top again</span></span></code></pre></div>
+<div class="sourceCode" id="cb369"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb369-1"><a href="#cb369-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
+<span id="cb369-2"><a href="#cb369-2" tabindex="-1"></a>    <span class="op">!</span>pip install rioxarray scikit<span class="op">-</span>learn aef<span class="op">-</span>loader dask[distributed]</span>
+<span id="cb369-3"><a href="#cb369-3" tabindex="-1"></a>    <span class="co"># Due to version conflict, you maybe prompted to</span></span>
+<span id="cb369-4"><a href="#cb369-4" tabindex="-1"></a>    <span class="co"># restart the runtime after the installation</span></span>
+<span id="cb369-5"><a href="#cb369-5" tabindex="-1"></a>    <span class="co"># After restarting proceed to run all the cells from the top again</span></span></code></pre></div>
 <p>Import all required libraries. Make sure to import everything at the
 beginning as certain Xarray extensions are activated on import and
 registers certain accesors, like <code>.rio</code> and <code>.odc</code>
 for Xarray objects.</p>
-<div class="sourceCode" id="cb369"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb369-1"><a href="#cb369-1" tabindex="-1"></a><span class="im">import</span> asyncio</span>
-<span id="cb369-2"><a href="#cb369-2" tabindex="-1"></a><span class="im">import</span> dask.array <span class="im">as</span> da</span>
-<span id="cb369-3"><a href="#cb369-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb369-4"><a href="#cb369-4" tabindex="-1"></a><span class="im">import</span> matplotlib.colors <span class="im">as</span> mcolors</span>
-<span id="cb369-5"><a href="#cb369-5" tabindex="-1"></a><span class="im">import</span> matplotlib.patches <span class="im">as</span> mpatches</span>
-<span id="cb369-6"><a href="#cb369-6" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb369-7"><a href="#cb369-7" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb369-8"><a href="#cb369-8" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb369-9"><a href="#cb369-9" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb369-10"><a href="#cb369-10" tabindex="-1"></a><span class="im">import</span> pyproj</span>
-<span id="cb369-11"><a href="#cb369-11" tabindex="-1"></a><span class="im">import</span> rasterio</span>
-<span id="cb369-12"><a href="#cb369-12" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb369-13"><a href="#cb369-13" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb369-14"><a href="#cb369-14" tabindex="-1"></a><span class="im">from</span> aef_loader <span class="im">import</span> AEFIndex, VirtualTiffReader, DataSource</span>
-<span id="cb369-15"><a href="#cb369-15" tabindex="-1"></a><span class="im">from</span> aef_loader.utils <span class="im">import</span> dequantize_aef, reproject_datatree</span>
-<span id="cb369-16"><a href="#cb369-16" tabindex="-1"></a><span class="im">from</span> odc.geo.geobox <span class="im">import</span> GeoBox</span>
-<span id="cb369-17"><a href="#cb369-17" tabindex="-1"></a><span class="im">from</span> pyproj <span class="im">import</span> Transformer</span>
-<span id="cb369-18"><a href="#cb369-18" tabindex="-1"></a><span class="im">from</span> sklearn.neighbors <span class="im">import</span> KNeighborsClassifier</span>
-<span id="cb369-19"><a href="#cb369-19" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> accuracy_score, classification_report, confusion_matrix</span>
-<span id="cb369-20"><a href="#cb369-20" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span></code></pre></div>
+<div class="sourceCode" id="cb370"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb370-1"><a href="#cb370-1" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb370-2"><a href="#cb370-2" tabindex="-1"></a><span class="im">import</span> dask.array <span class="im">as</span> da</span>
+<span id="cb370-3"><a href="#cb370-3" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb370-4"><a href="#cb370-4" tabindex="-1"></a><span class="im">import</span> matplotlib.colors <span class="im">as</span> mcolors</span>
+<span id="cb370-5"><a href="#cb370-5" tabindex="-1"></a><span class="im">import</span> matplotlib.patches <span class="im">as</span> mpatches</span>
+<span id="cb370-6"><a href="#cb370-6" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb370-7"><a href="#cb370-7" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb370-8"><a href="#cb370-8" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb370-9"><a href="#cb370-9" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb370-10"><a href="#cb370-10" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb370-11"><a href="#cb370-11" tabindex="-1"></a><span class="im">import</span> rasterio</span>
+<span id="cb370-12"><a href="#cb370-12" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb370-13"><a href="#cb370-13" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb370-14"><a href="#cb370-14" tabindex="-1"></a><span class="im">from</span> aef_loader <span class="im">import</span> AEFIndex, VirtualTiffReader, DataSource</span>
+<span id="cb370-15"><a href="#cb370-15" tabindex="-1"></a><span class="im">from</span> aef_loader.utils <span class="im">import</span> dequantize_aef, reproject_datatree</span>
+<span id="cb370-16"><a href="#cb370-16" tabindex="-1"></a><span class="im">from</span> odc.geo.geobox <span class="im">import</span> GeoBox</span>
+<span id="cb370-17"><a href="#cb370-17" tabindex="-1"></a><span class="im">from</span> pyproj <span class="im">import</span> Transformer</span>
+<span id="cb370-18"><a href="#cb370-18" tabindex="-1"></a><span class="im">from</span> sklearn.neighbors <span class="im">import</span> KNeighborsClassifier</span>
+<span id="cb370-19"><a href="#cb370-19" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> accuracy_score, classification_report, confusion_matrix</span>
+<span id="cb370-20"><a href="#cb370-20" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span></code></pre></div>
 <p>Setup a local Dask cluster. This distributes the computation across
 multiple workers on your computer.</p>
-<div class="sourceCode" id="cb370"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb370-1"><a href="#cb370-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
-<span id="cb370-2"><a href="#cb370-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
-<span id="cb370-3"><a href="#cb370-3" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb371"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb371-1"><a href="#cb371-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb371-2"><a href="#cb371-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb371-3"><a href="#cb371-3" tabindex="-1"></a>client</span></code></pre></div>
 <p>If you are running this notebook in Colab, you will need to create
 and use a proxy URL to see the dashboard running on the local
 server.</p>
-<div class="sourceCode" id="cb371"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb371-1"><a href="#cb371-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
-<span id="cb371-2"><a href="#cb371-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
-<span id="cb371-3"><a href="#cb371-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
-<span id="cb371-4"><a href="#cb371-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb372"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb372-1"><a href="#cb372-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
+<span id="cb372-2"><a href="#cb372-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb372-3"><a href="#cb372-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb372-4"><a href="#cb372-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
 </div>
 <div id="load-area-of-interest-7" class="section level3">
 <h3>Load Area of Interest</h3>
 <p>Read the file containing the city boundary.</p>
-<div class="sourceCode" id="cb372"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb372-1"><a href="#cb372-1" tabindex="-1"></a>aoi_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;aoi.geojson&#39;</span>)</span>
-<span id="cb372-2"><a href="#cb372-2" tabindex="-1"></a></span>
-<span id="cb372-3"><a href="#cb372-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(aoi_filepath):</span>
-<span id="cb372-4"><a href="#cb372-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;AOI file not found at </span><span class="sc">{</span>aoi_filepath<span class="sc">}</span><span class="ss">. Using default AOI.&#39;</span>)</span>
-<span id="cb372-5"><a href="#cb372-5" tabindex="-1"></a>    aoi_filepath <span class="op">=</span> (<span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
-<span id="cb372-6"><a href="#cb372-6" tabindex="-1"></a>                    <span class="st">&#39;/python-remote-sensing/aoi.geojson&#39;</span>)</span>
-<span id="cb372-7"><a href="#cb372-7" tabindex="-1"></a></span>
-<span id="cb372-8"><a href="#cb372-8" tabindex="-1"></a>aoi_gdf <span class="op">=</span> gpd.read_file(aoi_filepath)</span>
-<span id="cb372-9"><a href="#cb372-9" tabindex="-1"></a>geometry <span class="op">=</span> aoi_gdf.geometry.union_all()</span>
-<span id="cb372-10"><a href="#cb372-10" tabindex="-1"></a>geometry</span></code></pre></div>
+<div class="sourceCode" id="cb373"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb373-1"><a href="#cb373-1" tabindex="-1"></a>aoi_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;aoi.geojson&#39;</span>)</span>
+<span id="cb373-2"><a href="#cb373-2" tabindex="-1"></a></span>
+<span id="cb373-3"><a href="#cb373-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(aoi_filepath):</span>
+<span id="cb373-4"><a href="#cb373-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;AOI file not found at </span><span class="sc">{</span>aoi_filepath<span class="sc">}</span><span class="ss">. Using default AOI.&#39;</span>)</span>
+<span id="cb373-5"><a href="#cb373-5" tabindex="-1"></a>    aoi_filepath <span class="op">=</span> (<span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
+<span id="cb373-6"><a href="#cb373-6" tabindex="-1"></a>                    <span class="st">&#39;/python-remote-sensing/aoi.geojson&#39;</span>)</span>
+<span id="cb373-7"><a href="#cb373-7" tabindex="-1"></a></span>
+<span id="cb373-8"><a href="#cb373-8" tabindex="-1"></a>aoi_gdf <span class="op">=</span> gpd.read_file(aoi_filepath)</span>
+<span id="cb373-9"><a href="#cb373-9" tabindex="-1"></a>geometry <span class="op">=</span> aoi_gdf.geometry.union_all()</span>
+<span id="cb373-10"><a href="#cb373-10" tabindex="-1"></a>geometry</span></code></pre></div>
 </div>
 <div id="load-training-data-1" class="section level3">
 <h3>Load Training Data</h3>
 <p>The training data is a set of Ground Control Points (GCPs) — point
 features, each labeled with a land cover class. We load the GeoJSON file
 with GeoPandas.</p>
-<div class="sourceCode" id="cb373"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb373-1"><a href="#cb373-1" tabindex="-1"></a>gcp_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;gcps.geojson&#39;</span>)</span>
-<span id="cb373-2"><a href="#cb373-2" tabindex="-1"></a></span>
-<span id="cb373-3"><a href="#cb373-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(gcp_filepath):</span>
-<span id="cb373-4"><a href="#cb373-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;GCP file not found at </span><span class="sc">{</span>gcp_filepath<span class="sc">}</span><span class="ss">. Using default GCPs.&#39;</span>)</span>
-<span id="cb373-5"><a href="#cb373-5" tabindex="-1"></a>    gcp_filepath <span class="op">=</span> (</span>
-<span id="cb373-6"><a href="#cb373-6" tabindex="-1"></a>        <span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data/&#39;</span></span>
-<span id="cb373-7"><a href="#cb373-7" tabindex="-1"></a>        <span class="st">&#39;python-remote-sensing/gcps.geojson&#39;</span></span>
-<span id="cb373-8"><a href="#cb373-8" tabindex="-1"></a>    )</span>
-<span id="cb373-9"><a href="#cb373-9" tabindex="-1"></a></span>
-<span id="cb373-10"><a href="#cb373-10" tabindex="-1"></a>gcp_gdf <span class="op">=</span> gpd.read_file(gcp_filepath)</span>
-<span id="cb373-11"><a href="#cb373-11" tabindex="-1"></a>gcp_gdf.head()</span></code></pre></div>
-<p>Let’s check how many samples we have for each class.</p>
 <div class="sourceCode" id="cb374"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb374-1"><a href="#cb374-1" tabindex="-1"></a>gcp_gdf[<span class="st">&#39;landcover&#39;</span>].value_counts(sort<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb374-1"><a href="#cb374-1" tabindex="-1"></a>gcp_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;gcps.geojson&#39;</span>)</span>
+<span id="cb374-2"><a href="#cb374-2" tabindex="-1"></a></span>
+<span id="cb374-3"><a href="#cb374-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(gcp_filepath):</span>
+<span id="cb374-4"><a href="#cb374-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;GCP file not found at </span><span class="sc">{</span>gcp_filepath<span class="sc">}</span><span class="ss">. Using default GCPs.&#39;</span>)</span>
+<span id="cb374-5"><a href="#cb374-5" tabindex="-1"></a>    gcp_filepath <span class="op">=</span> (</span>
+<span id="cb374-6"><a href="#cb374-6" tabindex="-1"></a>        <span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data/&#39;</span></span>
+<span id="cb374-7"><a href="#cb374-7" tabindex="-1"></a>        <span class="st">&#39;python-remote-sensing/gcps.geojson&#39;</span></span>
+<span id="cb374-8"><a href="#cb374-8" tabindex="-1"></a>    )</span>
+<span id="cb374-9"><a href="#cb374-9" tabindex="-1"></a></span>
+<span id="cb374-10"><a href="#cb374-10" tabindex="-1"></a>gcp_gdf <span class="op">=</span> gpd.read_file(gcp_filepath)</span>
+<span id="cb374-11"><a href="#cb374-11" tabindex="-1"></a>gcp_gdf.head()</span></code></pre></div>
+<p>Let’s check how many samples we have for each class.</p>
 <div class="sourceCode" id="cb375"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb375-1"><a href="#cb375-1" tabindex="-1"></a>class_colors <span class="op">=</span> {</span>
-<span id="cb375-2"><a href="#cb375-2" tabindex="-1"></a>    <span class="dv">0</span>: <span class="st">&#39;#cc6d8f&#39;</span>, <span class="co"># Urban</span></span>
-<span id="cb375-3"><a href="#cb375-3" tabindex="-1"></a>    <span class="dv">1</span>: <span class="st">&#39;#ffc107&#39;</span>, <span class="co"># Bare</span></span>
-<span id="cb375-4"><a href="#cb375-4" tabindex="-1"></a>    <span class="dv">2</span>: <span class="st">&#39;#1e88e5&#39;</span>, <span class="co"># Water</span></span>
-<span id="cb375-5"><a href="#cb375-5" tabindex="-1"></a>    <span class="dv">3</span>: <span class="st">&#39;#004d40&#39;</span>, <span class="co"># Vegetation</span></span>
-<span id="cb375-6"><a href="#cb375-6" tabindex="-1"></a>}</span>
-<span id="cb375-7"><a href="#cb375-7" tabindex="-1"></a></span>
-<span id="cb375-8"><a href="#cb375-8" tabindex="-1"></a>class_names <span class="op">=</span> {</span>
-<span id="cb375-9"><a href="#cb375-9" tabindex="-1"></a>    <span class="dv">0</span>: <span class="st">&#39;Urban&#39;</span>,</span>
-<span id="cb375-10"><a href="#cb375-10" tabindex="-1"></a>    <span class="dv">1</span>: <span class="st">&#39;Bare&#39;</span>,</span>
-<span id="cb375-11"><a href="#cb375-11" tabindex="-1"></a>    <span class="dv">2</span>: <span class="st">&#39;Water&#39;</span>,</span>
-<span id="cb375-12"><a href="#cb375-12" tabindex="-1"></a>    <span class="dv">3</span>: <span class="st">&#39;Vegetation&#39;</span></span>
-<span id="cb375-13"><a href="#cb375-13" tabindex="-1"></a>}</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb375-1"><a href="#cb375-1" tabindex="-1"></a>gcp_gdf[<span class="st">&#39;landcover&#39;</span>].value_counts(sort<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb376"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb376-1"><a href="#cb376-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb376-2"><a href="#cb376-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">7</span>,<span class="dv">7</span>)</span>
-<span id="cb376-3"><a href="#cb376-3" tabindex="-1"></a>aoi_gdf.plot(</span>
-<span id="cb376-4"><a href="#cb376-4" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
-<span id="cb376-5"><a href="#cb376-5" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
-<span id="cb376-6"><a href="#cb376-6" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>)</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb376-1"><a href="#cb376-1" tabindex="-1"></a>class_colors <span class="op">=</span> {</span>
+<span id="cb376-2"><a href="#cb376-2" tabindex="-1"></a>    <span class="dv">0</span>: <span class="st">&#39;#cc6d8f&#39;</span>, <span class="co"># Urban</span></span>
+<span id="cb376-3"><a href="#cb376-3" tabindex="-1"></a>    <span class="dv">1</span>: <span class="st">&#39;#ffc107&#39;</span>, <span class="co"># Bare</span></span>
+<span id="cb376-4"><a href="#cb376-4" tabindex="-1"></a>    <span class="dv">2</span>: <span class="st">&#39;#1e88e5&#39;</span>, <span class="co"># Water</span></span>
+<span id="cb376-5"><a href="#cb376-5" tabindex="-1"></a>    <span class="dv">3</span>: <span class="st">&#39;#004d40&#39;</span>, <span class="co"># Vegetation</span></span>
+<span id="cb376-6"><a href="#cb376-6" tabindex="-1"></a>}</span>
 <span id="cb376-7"><a href="#cb376-7" tabindex="-1"></a></span>
-<span id="cb376-8"><a href="#cb376-8" tabindex="-1"></a><span class="co"># Plot the GCPs</span></span>
-<span id="cb376-9"><a href="#cb376-9" tabindex="-1"></a><span class="cf">for</span> class_label, group <span class="kw">in</span> gcp_gdf.groupby(<span class="st">&#39;landcover&#39;</span>):</span>
-<span id="cb376-10"><a href="#cb376-10" tabindex="-1"></a>    group.plot(</span>
-<span id="cb376-11"><a href="#cb376-11" tabindex="-1"></a>        ax<span class="op">=</span>ax,</span>
-<span id="cb376-12"><a href="#cb376-12" tabindex="-1"></a>        color<span class="op">=</span>class_colors.get(class_label, <span class="st">&#39;red&#39;</span>),</span>
-<span id="cb376-13"><a href="#cb376-13" tabindex="-1"></a>        markersize<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb376-14"><a href="#cb376-14" tabindex="-1"></a>        label<span class="op">=</span>class_names.get(class_label, <span class="ss">f&#39;Unknown Class </span><span class="sc">{</span>class_label<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb376-15"><a href="#cb376-15" tabindex="-1"></a>    )</span>
-<span id="cb376-16"><a href="#cb376-16" tabindex="-1"></a></span>
-<span id="cb376-17"><a href="#cb376-17" tabindex="-1"></a>ax.legend(loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span>)</span>
-<span id="cb376-18"><a href="#cb376-18" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Area of Interest with Training Samples&#39;</span>)</span>
-<span id="cb376-19"><a href="#cb376-19" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb376-20"><a href="#cb376-20" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<span id="cb376-8"><a href="#cb376-8" tabindex="-1"></a>class_names <span class="op">=</span> {</span>
+<span id="cb376-9"><a href="#cb376-9" tabindex="-1"></a>    <span class="dv">0</span>: <span class="st">&#39;Urban&#39;</span>,</span>
+<span id="cb376-10"><a href="#cb376-10" tabindex="-1"></a>    <span class="dv">1</span>: <span class="st">&#39;Bare&#39;</span>,</span>
+<span id="cb376-11"><a href="#cb376-11" tabindex="-1"></a>    <span class="dv">2</span>: <span class="st">&#39;Water&#39;</span>,</span>
+<span id="cb376-12"><a href="#cb376-12" tabindex="-1"></a>    <span class="dv">3</span>: <span class="st">&#39;Vegetation&#39;</span></span>
+<span id="cb376-13"><a href="#cb376-13" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb377"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb377-1"><a href="#cb377-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb377-2"><a href="#cb377-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">7</span>,<span class="dv">7</span>)</span>
+<span id="cb377-3"><a href="#cb377-3" tabindex="-1"></a>aoi_gdf.plot(</span>
+<span id="cb377-4"><a href="#cb377-4" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb377-5"><a href="#cb377-5" tabindex="-1"></a>    facecolor<span class="op">=</span><span class="st">&#39;none&#39;</span>,</span>
+<span id="cb377-6"><a href="#cb377-6" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">&#39;#969696&#39;</span>)</span>
+<span id="cb377-7"><a href="#cb377-7" tabindex="-1"></a></span>
+<span id="cb377-8"><a href="#cb377-8" tabindex="-1"></a><span class="co"># Plot the GCPs</span></span>
+<span id="cb377-9"><a href="#cb377-9" tabindex="-1"></a><span class="cf">for</span> class_label, group <span class="kw">in</span> gcp_gdf.groupby(<span class="st">&#39;landcover&#39;</span>):</span>
+<span id="cb377-10"><a href="#cb377-10" tabindex="-1"></a>    group.plot(</span>
+<span id="cb377-11"><a href="#cb377-11" tabindex="-1"></a>        ax<span class="op">=</span>ax,</span>
+<span id="cb377-12"><a href="#cb377-12" tabindex="-1"></a>        color<span class="op">=</span>class_colors.get(class_label, <span class="st">&#39;red&#39;</span>),</span>
+<span id="cb377-13"><a href="#cb377-13" tabindex="-1"></a>        markersize<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb377-14"><a href="#cb377-14" tabindex="-1"></a>        label<span class="op">=</span>class_names.get(class_label, <span class="ss">f&#39;Unknown Class </span><span class="sc">{</span>class_label<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb377-15"><a href="#cb377-15" tabindex="-1"></a>    )</span>
+<span id="cb377-16"><a href="#cb377-16" tabindex="-1"></a></span>
+<span id="cb377-17"><a href="#cb377-17" tabindex="-1"></a>ax.legend(loc<span class="op">=</span><span class="st">&#39;upper right&#39;</span>)</span>
+<span id="cb377-18"><a href="#cb377-18" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Area of Interest with Training Samples&#39;</span>)</span>
+<span id="cb377-19"><a href="#cb377-19" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb377-20"><a href="#cb377-20" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
 src="python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_20_0.png" /></p>
 </div>
@@ -6292,55 +6299,55 @@ src="python-remote-sensing-output/module_04/04_supervised_classification_embeddi
 <p>Create a <code>odc.geo.geobox.GeoBox</code> object which is a
 representation of the bounding box with a specific CRS and pixel
 grid.</p>
-<div class="sourceCode" id="cb377"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb377-1"><a href="#cb377-1" tabindex="-1"></a>bbox <span class="op">=</span> geometry.bounds</span>
-<span id="cb377-2"><a href="#cb377-2" tabindex="-1"></a></span>
-<span id="cb377-3"><a href="#cb377-3" tabindex="-1"></a>geobox <span class="op">=</span> GeoBox.from_bbox(</span>
-<span id="cb377-4"><a href="#cb377-4" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb377-5"><a href="#cb377-5" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
-<span id="cb377-6"><a href="#cb377-6" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb377-7"><a href="#cb377-7" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb378"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb378-1"><a href="#cb378-1" tabindex="-1"></a>bbox <span class="op">=</span> geometry.bounds</span>
+<span id="cb378-2"><a href="#cb378-2" tabindex="-1"></a></span>
+<span id="cb378-3"><a href="#cb378-3" tabindex="-1"></a>geobox <span class="op">=</span> GeoBox.from_bbox(</span>
+<span id="cb378-4"><a href="#cb378-4" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb378-5"><a href="#cb378-5" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb378-6"><a href="#cb378-6" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb378-7"><a href="#cb378-7" tabindex="-1"></a>)</span></code></pre></div>
 <p>We now use the <a
 href="https://aef-loader.readthedocs.io/en/latest/"><code>aef-loader</code></a>
 package to load all the matching tiles of AlphaEarth Foundations
 Satellite Embeddings from Source Cooperative for the chosen year. This
 Lazily load the tiles as a XArray DataArray that we can fetch and
 process in chunks using Dask.</p>
-<div class="sourceCode" id="cb378"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb378-1"><a href="#cb378-1" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span>
-<span id="cb378-2"><a href="#cb378-2" tabindex="-1"></a></span>
-<span id="cb378-3"><a href="#cb378-3" tabindex="-1"></a><span class="co"># Use the GeoParquet index</span></span>
-<span id="cb378-4"><a href="#cb378-4" tabindex="-1"></a>index <span class="op">=</span> AEFIndex(source<span class="op">=</span>DataSource.SOURCE_COOP)</span>
-<span id="cb378-5"><a href="#cb378-5" tabindex="-1"></a><span class="cf">await</span> index.download()</span>
-<span id="cb378-6"><a href="#cb378-6" tabindex="-1"></a></span>
-<span id="cb378-7"><a href="#cb378-7" tabindex="-1"></a><span class="co"># Query for tiles</span></span>
-<span id="cb378-8"><a href="#cb378-8" tabindex="-1"></a>tiles <span class="op">=</span> <span class="cf">await</span> index.query(</span>
-<span id="cb378-9"><a href="#cb378-9" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
-<span id="cb378-10"><a href="#cb378-10" tabindex="-1"></a>    years<span class="op">=</span>(year),</span>
-<span id="cb378-11"><a href="#cb378-11" tabindex="-1"></a>)</span>
-<span id="cb378-12"><a href="#cb378-12" tabindex="-1"></a><span class="co"># Load tiles organized by UTM zone</span></span>
-<span id="cb378-13"><a href="#cb378-13" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> VirtualTiffReader() <span class="im">as</span> reader:</span>
-<span id="cb378-14"><a href="#cb378-14" tabindex="-1"></a>    tree <span class="op">=</span> <span class="cf">await</span> reader.open_tiles_by_zone(tiles)</span>
-<span id="cb378-15"><a href="#cb378-15" tabindex="-1"></a></span>
-<span id="cb378-16"><a href="#cb378-16" tabindex="-1"></a><span class="co"># Depending on the region, there maybe multiple</span></span>
-<span id="cb378-17"><a href="#cb378-17" tabindex="-1"></a><span class="co"># tiles spanning different UTM zones</span></span>
-<span id="cb378-18"><a href="#cb378-18" tabindex="-1"></a><span class="co"># Reproject all the tiles to the target GeoBox</span></span>
-<span id="cb378-19"><a href="#cb378-19" tabindex="-1"></a><span class="co"># with the chosen projection and pixel resolution</span></span>
-<span id="cb378-20"><a href="#cb378-20" tabindex="-1"></a>combined <span class="op">=</span> reproject_datatree(tree, target_geobox<span class="op">=</span>geobox)</span>
-<span id="cb378-21"><a href="#cb378-21" tabindex="-1"></a>embeddings <span class="op">=</span> combined.embeddings</span>
-<span id="cb378-22"><a href="#cb378-22" tabindex="-1"></a>embeddings</span></code></pre></div>
+<div class="sourceCode" id="cb379"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb379-1"><a href="#cb379-1" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span>
+<span id="cb379-2"><a href="#cb379-2" tabindex="-1"></a></span>
+<span id="cb379-3"><a href="#cb379-3" tabindex="-1"></a><span class="co"># Use the GeoParquet index</span></span>
+<span id="cb379-4"><a href="#cb379-4" tabindex="-1"></a>index <span class="op">=</span> AEFIndex(source<span class="op">=</span>DataSource.SOURCE_COOP)</span>
+<span id="cb379-5"><a href="#cb379-5" tabindex="-1"></a><span class="cf">await</span> index.download()</span>
+<span id="cb379-6"><a href="#cb379-6" tabindex="-1"></a></span>
+<span id="cb379-7"><a href="#cb379-7" tabindex="-1"></a><span class="co"># Query for tiles</span></span>
+<span id="cb379-8"><a href="#cb379-8" tabindex="-1"></a>tiles <span class="op">=</span> <span class="cf">await</span> index.query(</span>
+<span id="cb379-9"><a href="#cb379-9" tabindex="-1"></a>    bbox<span class="op">=</span>bbox,</span>
+<span id="cb379-10"><a href="#cb379-10" tabindex="-1"></a>    years<span class="op">=</span>(year),</span>
+<span id="cb379-11"><a href="#cb379-11" tabindex="-1"></a>)</span>
+<span id="cb379-12"><a href="#cb379-12" tabindex="-1"></a><span class="co"># Load tiles organized by UTM zone</span></span>
+<span id="cb379-13"><a href="#cb379-13" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> VirtualTiffReader() <span class="im">as</span> reader:</span>
+<span id="cb379-14"><a href="#cb379-14" tabindex="-1"></a>    tree <span class="op">=</span> <span class="cf">await</span> reader.open_tiles_by_zone(tiles)</span>
+<span id="cb379-15"><a href="#cb379-15" tabindex="-1"></a></span>
+<span id="cb379-16"><a href="#cb379-16" tabindex="-1"></a><span class="co"># Depending on the region, there maybe multiple</span></span>
+<span id="cb379-17"><a href="#cb379-17" tabindex="-1"></a><span class="co"># tiles spanning different UTM zones</span></span>
+<span id="cb379-18"><a href="#cb379-18" tabindex="-1"></a><span class="co"># Reproject all the tiles to the target GeoBox</span></span>
+<span id="cb379-19"><a href="#cb379-19" tabindex="-1"></a><span class="co"># with the chosen projection and pixel resolution</span></span>
+<span id="cb379-20"><a href="#cb379-20" tabindex="-1"></a>combined <span class="op">=</span> reproject_datatree(tree, target_geobox<span class="op">=</span>geobox)</span>
+<span id="cb379-21"><a href="#cb379-21" tabindex="-1"></a>embeddings <span class="op">=</span> combined.embeddings</span>
+<span id="cb379-22"><a href="#cb379-22" tabindex="-1"></a>embeddings</span></code></pre></div>
 <p>The embeddings are saved as 8-bit integer values to save space. We
 use the <a
 href="https://aef-loader.readthedocs.io/en/latest/api_reference/"><code>dequantize_aef()</code></a>
 helper function provided by <code>aef-loader</code> to convert them to
 the original 32-bit floating point values.</p>
-<div class="sourceCode" id="cb379"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb379-1"><a href="#cb379-1" tabindex="-1"></a>embeddings_year <span class="op">=</span> embeddings.squeeze()</span>
-<span id="cb379-2"><a href="#cb379-2" tabindex="-1"></a>embeddings_float <span class="op">=</span> dequantize_aef(embeddings_year)</span>
-<span id="cb379-3"><a href="#cb379-3" tabindex="-1"></a>embeddings_float</span></code></pre></div>
 <div class="sourceCode" id="cb380"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb380-1"><a href="#cb380-1" tabindex="-1"></a>embeddings_da <span class="op">=</span> embeddings_float.chunk({<span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>})</span>
-<span id="cb380-2"><a href="#cb380-2" tabindex="-1"></a>embeddings_da</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb380-1"><a href="#cb380-1" tabindex="-1"></a>embeddings_year <span class="op">=</span> embeddings.squeeze()</span>
+<span id="cb380-2"><a href="#cb380-2" tabindex="-1"></a>embeddings_float <span class="op">=</span> dequantize_aef(embeddings_year)</span>
+<span id="cb380-3"><a href="#cb380-3" tabindex="-1"></a>embeddings_float</span></code></pre></div>
+<div class="sourceCode" id="cb381"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb381-1"><a href="#cb381-1" tabindex="-1"></a>embeddings_da <span class="op">=</span> embeddings_float.chunk({<span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>})</span>
+<span id="cb381-2"><a href="#cb381-2" tabindex="-1"></a>embeddings_da</span></code></pre></div>
 <p>We reproject the training points to match the composite CRS, then
 overlay them on an RGB preview of the composite. This lets us verify
 that the training points cover the expected land cover types.</p>
@@ -6350,35 +6357,26 @@ that the training points cover the expected land cover types.</p>
 <p>We reproject the GCP coordinates from WGS84 to the composite CRS,
 then use vectorized XArray selection to read the composite band values
 at each training point.</p>
-<div class="sourceCode" id="cb381"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb381-1"><a href="#cb381-1" tabindex="-1"></a>gcp_gdf_reprojected <span class="op">=</span> gcp_gdf.to_crs(embeddings_da.rio.crs)</span>
-<span id="cb381-2"><a href="#cb381-2" tabindex="-1"></a>x_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.x.values</span>
-<span id="cb381-3"><a href="#cb381-3" tabindex="-1"></a>y_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.y.values</span></code></pre></div>
-<p>Extract the pixel values.</p>
 <div class="sourceCode" id="cb382"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb382-1"><a href="#cb382-1" tabindex="-1"></a>gcp_embeddings <span class="op">=</span> embeddings_da.sel(</span>
-<span id="cb382-2"><a href="#cb382-2" tabindex="-1"></a>    x<span class="op">=</span>xr.DataArray(x_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
-<span id="cb382-3"><a href="#cb382-3" tabindex="-1"></a>    y<span class="op">=</span>xr.DataArray(y_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
-<span id="cb382-4"><a href="#cb382-4" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&#39;nearest&#39;</span></span>
-<span id="cb382-5"><a href="#cb382-5" tabindex="-1"></a>)</span>
-<span id="cb382-6"><a href="#cb382-6" tabindex="-1"></a>gcp_embeddings</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb382-1"><a href="#cb382-1" tabindex="-1"></a>gcp_gdf_reprojected <span class="op">=</span> gcp_gdf.to_crs(embeddings_da.rio.crs)</span>
+<span id="cb382-2"><a href="#cb382-2" tabindex="-1"></a>x_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.x.values</span>
+<span id="cb382-3"><a href="#cb382-3" tabindex="-1"></a>y_coords <span class="op">=</span> gcp_gdf_reprojected.geometry.y.values</span></code></pre></div>
+<p>Extract the pixel values.</p>
+<div class="sourceCode" id="cb383"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb383-1"><a href="#cb383-1" tabindex="-1"></a>gcp_embeddings <span class="op">=</span> embeddings_da.sel(</span>
+<span id="cb383-2"><a href="#cb383-2" tabindex="-1"></a>    x<span class="op">=</span>xr.DataArray(x_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
+<span id="cb383-3"><a href="#cb383-3" tabindex="-1"></a>    y<span class="op">=</span>xr.DataArray(y_coords, dims<span class="op">=</span><span class="st">&#39;gcp_id&#39;</span>),</span>
+<span id="cb383-4"><a href="#cb383-4" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&#39;nearest&#39;</span></span>
+<span id="cb383-5"><a href="#cb383-5" tabindex="-1"></a>)</span>
+<span id="cb383-6"><a href="#cb383-6" tabindex="-1"></a>gcp_embeddings</span></code></pre></div>
 <p>We also need to have the <code>landcover</code> class values at each
 extraced sample for training the model.</p>
-<div class="sourceCode" id="cb383"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb383-1"><a href="#cb383-1" tabindex="-1"></a><span class="co"># Add landcover labels as a coordinate to the extracted embeddings</span></span>
-<span id="cb383-2"><a href="#cb383-2" tabindex="-1"></a>gcp_embeddings <span class="op">=</span> gcp_embeddings.assign_coords(</span>
-<span id="cb383-3"><a href="#cb383-3" tabindex="-1"></a>    landcover<span class="op">=</span>(<span class="st">&#39;gcp_id&#39;</span>, gcp_gdf_reprojected[<span class="st">&#39;landcover&#39;</span>].values)</span>
-<span id="cb383-4"><a href="#cb383-4" tabindex="-1"></a>)</span>
-<span id="cb383-5"><a href="#cb383-5" tabindex="-1"></a></span>
-<span id="cb383-6"><a href="#cb383-6" tabindex="-1"></a><span class="co"># Display the extracted embeddings for verification</span></span>
-<span id="cb383-7"><a href="#cb383-7" tabindex="-1"></a>gcp_embeddings</span></code></pre></div>
 <div class="sourceCode" id="cb384"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb384-1"><a href="#cb384-1" tabindex="-1"></a></span>
-<span id="cb384-2"><a href="#cb384-2" tabindex="-1"></a><span class="co"># Create xarray DataArrays for indexing with a &#39;gcp_id&#39; dimension</span></span>
-<span id="cb384-3"><a href="#cb384-3" tabindex="-1"></a><span class="co"># This dimension will match the order of the gcp_gdf for easy association</span></span>
-<span id="cb384-4"><a href="#cb384-4" tabindex="-1"></a><span class="co">#gcp_ids = np.arange(len(gcp_gdf))</span></span>
-<span id="cb384-5"><a href="#cb384-5" tabindex="-1"></a></span>
-<span id="cb384-6"><a href="#cb384-6" tabindex="-1"></a></span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb384-1"><a href="#cb384-1" tabindex="-1"></a><span class="co"># Add landcover labels as a coordinate to the extracted embeddings</span></span>
+<span id="cb384-2"><a href="#cb384-2" tabindex="-1"></a>gcp_embeddings <span class="op">=</span> gcp_embeddings.assign_coords(</span>
+<span id="cb384-3"><a href="#cb384-3" tabindex="-1"></a>    landcover<span class="op">=</span>(<span class="st">&#39;gcp_id&#39;</span>, gcp_gdf_reprojected[<span class="st">&#39;landcover&#39;</span>].values)</span>
+<span id="cb384-4"><a href="#cb384-4" tabindex="-1"></a>)</span>
+<span id="cb384-5"><a href="#cb384-5" tabindex="-1"></a>gcp_embeddings</span></code></pre></div>
 <div class="sourceCode" id="cb385"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb385-1"><a href="#cb385-1" tabindex="-1"></a><span class="op">%%</span>time</span>
 <span id="cb385-2"><a href="#cb385-2" tabindex="-1"></a>gcp_embeddings <span class="op">=</span> gcp_embeddings.compute()</span></code></pre></div>
@@ -6473,7 +6471,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb390-1"><a 
 <span id="cb390-21"><a href="#cb390-21" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
 <span id="cb390-22"><a href="#cb390-22" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
-src="python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_46_0.png" /></p>
+src="python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_45_0.png" /></p>
 </div>
 <div id="save-classified-image-1" class="section level3">
 <h3>Save Classified Image</h3>

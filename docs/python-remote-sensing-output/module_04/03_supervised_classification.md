@@ -241,21 +241,31 @@ x_coords = gcp_gdf_reprojected.geometry.x.values
 y_coords = gcp_gdf_reprojected.geometry.y.values
 ```
 
+Extract the pixel values.
+
 
 ```python
 gcp_features = feature_da.sel(
     x=xr.DataArray(x_coords, dims='gcp_id'),
     y=xr.DataArray(y_coords, dims='gcp_id'),
     method='nearest'
-).assign_coords(landcover=('gcp_id', gcp_gdf['landcover'].values))
+)
+gcp_features
+```
 
+We also need to have the `landcover` class values at each extraced sample for training the model.
+
+
+```python
+gcp_features.assign_coords(
+    landcover=('gcp_id', gcp_gdf['landcover'].values))
+gcp_features
 ```
 
 
 ```python
 %%time
 gcp_features = gcp_features.compute()
-gcp_features
 ```
 
 ### Train a Classifier
@@ -350,7 +360,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_39_0.png)
+![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_42_0.png)
     
 
 
