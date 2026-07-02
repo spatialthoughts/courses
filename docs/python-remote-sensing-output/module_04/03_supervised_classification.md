@@ -52,7 +52,8 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 ```python
 %%capture
 if environment in ['colab', 'colab_enterprise']:
-    !pip install rioxarray dask['distributed'] scikit-learn
+    !pip install rioxarray dask['distributed'] scikit-learn \
+        xarray-spatial
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -257,7 +258,7 @@ We also need to have the `landcover` class values at each extraced sample for tr
 
 
 ```python
-gcp_features.assign_coords(
+gcp_features = gcp_features.assign_coords(
     landcover=('gcp_id', gcp_gdf['landcover'].values))
 gcp_features
 ```
@@ -396,14 +397,60 @@ color_table = {
     for label, hex_color in class_colors.items()
 }
 
-classified_uint8 = (
-    classified
-    .fillna(255)
-    .astype(np.uint8)
+# Set no-data
+classified = classified.fillna(255).astype(np.uint8)\
     .rio.write_nodata(255)
-)
 
 output_path = os.path.join(output_folder, 'classification.tif')
-write_cog_with_colormap(classified_uint8, output_path, color_table)
+write_cog_with_colormap(classified, output_path, color_table)
 print(f'Saved {output_path}')
+```
+
+### Exercise
+
+Pixel-based classifications result in a lot of salt-and-pepper noise. You can apply a spatial filters to clean up the output. We will use a *Focal Majority* filter that passes a moving-window across the image and replaces the center pixel with the most frequently occuring value in that neighborhood. The code below implements the majority filter using the [`xrspatial.focal.apply()`](https://xarray-spatial.readthedocs.io/en/stable/reference/_autosummary/xrspatial.focal.apply.html#xrspatial.focal.apply) function.
+
+Run the code and save the `classified_smoothed` image as a paletted COG. Compare the result with the raw classification.
+
+
+```python
+from xrspatial import convolution
+from xrspatial.focal import apply
+from xrspatial.utils import ngjit
+
+# Creates a standard 3x3 square moving window
+kernel = convolution.custom_kernel(np.ones((3, 3)))
+
+# Define a custom 'Mode' function as there is no built-in mode operation
+# This function calculates the majority class in a moving window
+@ngjit
+def custom_mode(kernel_data):
+    # Flatten the moving window array
+    flat = kernel_data.ravel()
+    
+    # Track the majority class manually (Numba-safe approach)
+    counts = {}
+    max_count = -1
+    mode_val = flat[0]
+    
+    for val in flat:
+        if np.isnan(val): 
+            continue # Ignore missing data/boundaries
+            
+        # Count occurrences of each class
+        if val in counts:
+            counts[val] += 1
+        else:
+            counts[val] = 1
+            
+        # Track the highest count
+        if counts[val] > max_count:
+            max_count = counts[val]
+            mode_val = val
+            
+    return mode_val
+
+
+classified_smoothed = apply(classified, kernel, func=custom_mode)
+
 ```

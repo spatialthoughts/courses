@@ -431,16 +431,13 @@ color_table = {
     for label, hex_color in class_colors.items()
 }
 
-# Cast to uint8 (labels 0-3 fit; use 255 as nodata)
-classified_uint8 = (
-    classified_clipped
-    .fillna(255)
-    .astype(np.uint8)
+
+# Set no-data
+classified_clipped = classified_clipped.fillna(255).astype(np.uint8)\
     .rio.write_nodata(255)
-)
 
 output_file = f'classification_embeddings.tif'
 output_path = os.path.join(output_folder, output_file)
-write_cog_with_colormap(classified_uint8, output_path, color_table)
+write_cog_with_colormap(classified_clipped, output_path, color_table)
 print(f'Wrote {output_path}')
 ```
