@@ -441,3 +441,7 @@ output_path = os.path.join(output_folder, output_file)
 write_cog_with_colormap(classified_clipped, output_path, color_table)
 print(f'Wrote {output_path}')
 ```
+
+### Exercise
+
+If your training samples are noisy, the Random Forest classifier may perform better than the KNeighborsClassifier used here. Change the model to use the [`RandomForestClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) and compare the output.

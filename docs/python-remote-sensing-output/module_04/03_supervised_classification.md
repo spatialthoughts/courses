@@ -410,7 +410,7 @@ print(f'Saved {output_path}')
 
 Pixel-based classifications result in a lot of salt-and-pepper noise. You can apply a spatial filters to clean up the output. We will use a *Focal Majority* filter that passes a moving-window across the image and replaces the center pixel with the most frequently occuring value in that neighborhood. The code below implements the majority filter using the [`xrspatial.focal.apply()`](https://xarray-spatial.readthedocs.io/en/stable/reference/_autosummary/xrspatial.focal.apply.html#xrspatial.focal.apply) function.
 
-Run the code and save the `classified_smoothed` image as a paletted COG. Compare the result with the raw classification.
+Run the code and to create the `classified_smoothed` image as a paletted COG. Compare the result with the raw classification. Adjust the kernel size to see its impact on the output.
 
 
 ```python
@@ -421,36 +421,43 @@ from xrspatial.utils import ngjit
 # Creates a standard 3x3 square moving window
 kernel = convolution.custom_kernel(np.ones((3, 3)))
 
-# Define a custom 'Mode' function as there is no built-in mode operation
-# This function calculates the majority class in a moving window
+# Xarray-spatial does not have a built-in mode function
+# Define a custom 'Mode' function to select majority class
 @ngjit
 def custom_mode(kernel_data):
     # Flatten the moving window array
     flat = kernel_data.ravel()
-    
+
     # Track the majority class manually (Numba-safe approach)
     counts = {}
     max_count = -1
     mode_val = flat[0]
-    
+
     for val in flat:
-        if np.isnan(val): 
+        if np.isnan(val):
             continue # Ignore missing data/boundaries
-            
+
         # Count occurrences of each class
         if val in counts:
             counts[val] += 1
         else:
             counts[val] = 1
-            
+
         # Track the highest count
         if counts[val] > max_count:
             max_count = counts[val]
             mode_val = val
-            
+
     return mode_val
 
 
 classified_smoothed = apply(classified, kernel, func=custom_mode)
 
+# Set no-data
+classified_smoothed = classified_smoothed.fillna(255).astype(np.uint8)\
+    .rio.write_nodata(255)
+
+output_path = os.path.join(output_folder, 'classification_smoothed.tif')
+write_cog_with_colormap(classified_smoothed, output_path, color_table)
+print(f'Saved {output_path}')
 ```

@@ -6118,8 +6118,9 @@ value in that neighborhood. The code below implements the majority
 filter using the <a
 href="https://xarray-spatial.readthedocs.io/en/stable/reference/_autosummary/xrspatial.focal.apply.html#xrspatial.focal.apply"><code>xrspatial.focal.apply()</code></a>
 function.</p>
-<p>Run the code and save the <code>classified_smoothed</code> image as a
-paletted COG. Compare the result with the raw classification.</p>
+<p>Run the code and to create the <code>classified_smoothed</code> image
+as a paletted COG. Compare the result with the raw classification.
+Adjust the kernel size to see its impact on the output.</p>
 <div class="sourceCode" id="cb368"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb368-1"><a href="#cb368-1" tabindex="-1"></a><span class="im">from</span> xrspatial <span class="im">import</span> convolution</span>
 <span id="cb368-2"><a href="#cb368-2" tabindex="-1"></a><span class="im">from</span> xrspatial.focal <span class="im">import</span> <span class="bu">apply</span></span>
@@ -6128,37 +6129,45 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb368-1"><a 
 <span id="cb368-5"><a href="#cb368-5" tabindex="-1"></a><span class="co"># Creates a standard 3x3 square moving window</span></span>
 <span id="cb368-6"><a href="#cb368-6" tabindex="-1"></a>kernel <span class="op">=</span> convolution.custom_kernel(np.ones((<span class="dv">3</span>, <span class="dv">3</span>)))</span>
 <span id="cb368-7"><a href="#cb368-7" tabindex="-1"></a></span>
-<span id="cb368-8"><a href="#cb368-8" tabindex="-1"></a><span class="co"># Define a custom &#39;Mode&#39; function as there is no built-in mode operation</span></span>
-<span id="cb368-9"><a href="#cb368-9" tabindex="-1"></a><span class="co"># This function calculates the majority class in a moving window</span></span>
+<span id="cb368-8"><a href="#cb368-8" tabindex="-1"></a><span class="co"># Xarray-spatial does not have a built-in mode function</span></span>
+<span id="cb368-9"><a href="#cb368-9" tabindex="-1"></a><span class="co"># Define a custom &#39;Mode&#39; function to select majority class</span></span>
 <span id="cb368-10"><a href="#cb368-10" tabindex="-1"></a><span class="at">@ngjit</span></span>
 <span id="cb368-11"><a href="#cb368-11" tabindex="-1"></a><span class="kw">def</span> custom_mode(kernel_data):</span>
 <span id="cb368-12"><a href="#cb368-12" tabindex="-1"></a>    <span class="co"># Flatten the moving window array</span></span>
 <span id="cb368-13"><a href="#cb368-13" tabindex="-1"></a>    flat <span class="op">=</span> kernel_data.ravel()</span>
-<span id="cb368-14"><a href="#cb368-14" tabindex="-1"></a>    </span>
+<span id="cb368-14"><a href="#cb368-14" tabindex="-1"></a></span>
 <span id="cb368-15"><a href="#cb368-15" tabindex="-1"></a>    <span class="co"># Track the majority class manually (Numba-safe approach)</span></span>
 <span id="cb368-16"><a href="#cb368-16" tabindex="-1"></a>    counts <span class="op">=</span> {}</span>
 <span id="cb368-17"><a href="#cb368-17" tabindex="-1"></a>    max_count <span class="op">=</span> <span class="op">-</span><span class="dv">1</span></span>
 <span id="cb368-18"><a href="#cb368-18" tabindex="-1"></a>    mode_val <span class="op">=</span> flat[<span class="dv">0</span>]</span>
-<span id="cb368-19"><a href="#cb368-19" tabindex="-1"></a>    </span>
+<span id="cb368-19"><a href="#cb368-19" tabindex="-1"></a></span>
 <span id="cb368-20"><a href="#cb368-20" tabindex="-1"></a>    <span class="cf">for</span> val <span class="kw">in</span> flat:</span>
-<span id="cb368-21"><a href="#cb368-21" tabindex="-1"></a>        <span class="cf">if</span> np.isnan(val): </span>
+<span id="cb368-21"><a href="#cb368-21" tabindex="-1"></a>        <span class="cf">if</span> np.isnan(val):</span>
 <span id="cb368-22"><a href="#cb368-22" tabindex="-1"></a>            <span class="cf">continue</span> <span class="co"># Ignore missing data/boundaries</span></span>
-<span id="cb368-23"><a href="#cb368-23" tabindex="-1"></a>            </span>
+<span id="cb368-23"><a href="#cb368-23" tabindex="-1"></a></span>
 <span id="cb368-24"><a href="#cb368-24" tabindex="-1"></a>        <span class="co"># Count occurrences of each class</span></span>
 <span id="cb368-25"><a href="#cb368-25" tabindex="-1"></a>        <span class="cf">if</span> val <span class="kw">in</span> counts:</span>
 <span id="cb368-26"><a href="#cb368-26" tabindex="-1"></a>            counts[val] <span class="op">+=</span> <span class="dv">1</span></span>
 <span id="cb368-27"><a href="#cb368-27" tabindex="-1"></a>        <span class="cf">else</span>:</span>
 <span id="cb368-28"><a href="#cb368-28" tabindex="-1"></a>            counts[val] <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb368-29"><a href="#cb368-29" tabindex="-1"></a>            </span>
+<span id="cb368-29"><a href="#cb368-29" tabindex="-1"></a></span>
 <span id="cb368-30"><a href="#cb368-30" tabindex="-1"></a>        <span class="co"># Track the highest count</span></span>
 <span id="cb368-31"><a href="#cb368-31" tabindex="-1"></a>        <span class="cf">if</span> counts[val] <span class="op">&gt;</span> max_count:</span>
 <span id="cb368-32"><a href="#cb368-32" tabindex="-1"></a>            max_count <span class="op">=</span> counts[val]</span>
 <span id="cb368-33"><a href="#cb368-33" tabindex="-1"></a>            mode_val <span class="op">=</span> val</span>
-<span id="cb368-34"><a href="#cb368-34" tabindex="-1"></a>            </span>
+<span id="cb368-34"><a href="#cb368-34" tabindex="-1"></a></span>
 <span id="cb368-35"><a href="#cb368-35" tabindex="-1"></a>    <span class="cf">return</span> mode_val</span>
 <span id="cb368-36"><a href="#cb368-36" tabindex="-1"></a></span>
 <span id="cb368-37"><a href="#cb368-37" tabindex="-1"></a></span>
-<span id="cb368-38"><a href="#cb368-38" tabindex="-1"></a>classified_smoothed <span class="op">=</span> <span class="bu">apply</span>(classified, kernel, func<span class="op">=</span>custom_mode)</span></code></pre></div>
+<span id="cb368-38"><a href="#cb368-38" tabindex="-1"></a>classified_smoothed <span class="op">=</span> <span class="bu">apply</span>(classified, kernel, func<span class="op">=</span>custom_mode)</span>
+<span id="cb368-39"><a href="#cb368-39" tabindex="-1"></a></span>
+<span id="cb368-40"><a href="#cb368-40" tabindex="-1"></a><span class="co"># Set no-data</span></span>
+<span id="cb368-41"><a href="#cb368-41" tabindex="-1"></a>classified_smoothed <span class="op">=</span> classified_smoothed.fillna(<span class="dv">255</span>).astype(np.uint8)<span class="op">\</span></span>
+<span id="cb368-42"><a href="#cb368-42" tabindex="-1"></a>    .rio.write_nodata(<span class="dv">255</span>)</span>
+<span id="cb368-43"><a href="#cb368-43" tabindex="-1"></a></span>
+<span id="cb368-44"><a href="#cb368-44" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;classification_smoothed.tif&#39;</span>)</span>
+<span id="cb368-45"><a href="#cb368-45" tabindex="-1"></a>write_cog_with_colormap(classified_smoothed, output_path, color_table)</span>
+<span id="cb368-46"><a href="#cb368-46" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Saved </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="supervised-classification-with-embeddings"
@@ -6561,6 +6570,14 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb393-1"><a 
 <span id="cb393-13"><a href="#cb393-13" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
 <span id="cb393-14"><a href="#cb393-14" tabindex="-1"></a>write_cog_with_colormap(classified_clipped, output_path, color_table)</span>
 <span id="cb393-15"><a href="#cb393-15" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+</div>
+<div id="exercise-13" class="section level3">
+<h3>Exercise</h3>
+<p>If your training samples are noisy, the Random Forest classifier may
+perform better than the KNeighborsClassifier used here. Change the model
+to use the <a
+href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html"><code>RandomForestClassifier</code></a>
+and compare the output.</p>
 </div>
 </div>
 </div>
