@@ -154,6 +154,8 @@ gcp_gdf = gpd.read_file(gcp_filepath)
 gcp_gdf.head()
 ```
 
+Let's check how many samples we have for each class.
+
 
 ```python
 gcp_gdf['landcover'].value_counts(sort=False)
@@ -202,7 +204,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_21_0.png)
+![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_22_0.png)
     
 
 
@@ -348,7 +350,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_38_0.png)
+![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_39_0.png)
     
 
 

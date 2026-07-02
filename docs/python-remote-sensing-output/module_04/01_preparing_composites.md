@@ -75,11 +75,6 @@ import planetary_computer as pc
 from xrspatial import slope
 ```
 
-
-```python
-year = 2023
-```
-
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
 
 

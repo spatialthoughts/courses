@@ -1,7 +1,7 @@
 ### Overview
 
 
-Embeddings are a way to compress large amounts of information into a smaller set of features that represent meaningful semantics. Instead of raw pixel values, each location is represented by a dense vector that captures the semantic content of the landscape. [AlphaEarth Foundations (AEF) Embeddings](https://aef-loader.readthedocs.io/en/latest/) is an openly available global dataset of satellite embeddings derived from multiple earth observation datasets, accessible via [Source Cooperative](https://source.coop/). The [`aef-loader`](https://aef-loader.readthedocs.io/en/latest/) package provides a convenient Python interface to query and stream these embeddings without downloading the entire dataset.
+Embeddings are a way to compress large amounts of information into a smaller set of features that represent meaningful semantics. Instead of raw pixel values, each location is represented by a dense vector that captures the semantic content of the landscape. [AlphaEarth Foundations (AEF) Embeddings](https://source.coop/tge-labs/aef) is an openly available global dataset of satellite embeddings derived from multiple earth observation datasets, accessible via Source Cooperative. The [`aef-loader`](https://aef-loader.readthedocs.io/en/latest/) package provides a convenient Python interface to query and stream these embeddings without downloading the entire dataset.
 
 Embeddings can be used as input features to the classification model and results in higher accuracy outputs We will perform supervised land cover classification of AEF Embeddings using a Random Forest classifier and generate a classified image for the chosen region of interest.
 
@@ -142,6 +142,8 @@ gcp_gdf = gpd.read_file(gcp_filepath)
 gcp_gdf.head()
 ```
 
+Let's check how many samples we have for each class.
+
 
 ```python
 gcp_gdf['landcover'].value_counts(sort=False)
@@ -190,47 +192,33 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_19_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_20_0.png)
     
 
 
 ### Load the Satellite Embeddings
 
-We now use the `aef-loader` package to load all the matching tiles of AlphaEarth Foundations Satellite Embeddings from Source Cooperative for the chosen year. This Lazily load the tiles as a XArray DataArray that we can fetch and process in chunks using Dask.
 
 Create a `odc.geo.geobox.GeoBox` object which is a representation of the bounding box with a specific CRS and pixel grid.
 
 
 ```python
-year = 2023
 bbox = geometry.bounds
 
-```
-
-
-```python
-aoi = pyproj.aoi.AreaOfInterest(*bbox)
-utm_crs_list = pyproj.database.query_utm_crs_info(datum_name='WGS 84', area_of_interest=aoi)
-target_crs = f'EPSG:{utm_crs_list[0].code}'
-print(f'Target CRS: {target_crs}')
-```
-
-
-```python
-# Transform bbox from EPSG:4326 to chosen crs
-transformer = Transformer.from_crs('EPSG:4326', target_crs, always_xy=True)
-x_min, y_min = transformer.transform(bbox[0], bbox[1])
-x_max, y_max = transformer.transform(bbox[2], bbox[3])
-
 geobox = GeoBox.from_bbox(
-    bbox=(x_min, y_min, x_max, y_max),
-    crs=target_crs,
+    bbox=bbox,
+    crs='utm',
     resolution=10,
 )
 ```
 
+We now use the [`aef-loader`](https://aef-loader.readthedocs.io/en/latest/) package to load all the matching tiles of AlphaEarth Foundations Satellite Embeddings from Source Cooperative for the chosen year. This Lazily load the tiles as a XArray DataArray that we can fetch and process in chunks using Dask.
+
 
 ```python
+year = 2023
+
+# Use the GeoParquet index
 index = AEFIndex(source=DataSource.SOURCE_COOP)
 await index.download()
 
@@ -252,11 +240,11 @@ embeddings = combined.embeddings
 embeddings
 ```
 
-The embeddings are saved as 8-bit integer values to save space. We use the `dequantize_aef` helper function provided by `aef-loader` to convert them to the original 32-bit floating point values.
+The embeddings are saved as 8-bit integer values to save space. We use the [`dequantize_aef()`](https://aef-loader.readthedocs.io/en/latest/api_reference/) helper function provided by `aef-loader` to convert them to the original 32-bit floating point values.
 
 
 ```python
-embeddings_year = embeddings.isel(time=0)
+embeddings_year = embeddings.squeeze()
 embeddings_float = dequantize_aef(embeddings_year)
 embeddings_float
 ```
@@ -273,29 +261,50 @@ We reproject the training points to match the composite CRS, then overlay them o
 
 
 
+We reproject the GCP coordinates from WGS84 to the composite CRS, then use vectorized XArray selection to read the composite band values at each training point.
+
 
 ```python
 gcp_gdf_reprojected = gcp_gdf.to_crs(embeddings_da.rio.crs)
 x_coords = gcp_gdf_reprojected.geometry.x.values
 y_coords = gcp_gdf_reprojected.geometry.y.values
 
-# Create xarray DataArrays for indexing with a 'gcp_id' dimension
-# This dimension will match the order of the gcp_gdf for easy association
-gcp_ids = np.arange(len(gcp_gdf))
+```
 
+Extract the pixel values.
+
+
+```python
 gcp_embeddings = embeddings_da.sel(
     x=xr.DataArray(x_coords, dims='gcp_id'),
     y=xr.DataArray(y_coords, dims='gcp_id'),
     method='nearest'
 )
+gcp_embeddings
+```
 
+We also need to have the `landcover` class values at each extraced sample for training the model.
+
+
+```python
 # Add landcover labels as a coordinate to the extracted embeddings
 gcp_embeddings = gcp_embeddings.assign_coords(
-    landcover=('gcp_id', gcp_gdf['landcover'].values)
+    landcover=('gcp_id', gcp_gdf_reprojected['landcover'].values)
 )
 
 # Display the extracted embeddings for verification
 gcp_embeddings
+```
+
+
+```python
+
+# Create xarray DataArrays for indexing with a 'gcp_id' dimension
+# This dimension will match the order of the gcp_gdf for easy association
+#gcp_ids = np.arange(len(gcp_gdf))
+
+
+
 ```
 
 
@@ -360,7 +369,6 @@ classified
 %%time
 # Compute the predicted landcover map
 classified = classified.compute()
-classified
 ```
 
 ### Visualize the Classification
@@ -399,7 +407,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_40_0.png)
+![](python-remote-sensing-output/module_04/04_supervised_classification_embeddings_files/04_supervised_classification_embeddings_46_0.png)
     
 
 
