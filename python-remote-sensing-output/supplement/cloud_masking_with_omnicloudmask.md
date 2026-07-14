@@ -243,7 +243,7 @@ ocm_prediction = predict_from_array(ocm_input,  inference_device=inference_devic
 ocm_prediction_da = xr.DataArray(
     ocm_prediction,
     dims=('mask', 'y', 'x'),
-    coords={'y': scene_da.y, 'x': scene_da.x, 'spatial_ref': scene_da.spatial_ref},
+    coords={'y': scene.y, 'x': scene.x, 'spatial_ref': scene.spatial_ref},
 ).squeeze()
 ```
 
@@ -278,8 +278,9 @@ Let's visualize and compare both the masks.
 
 
 ```python
-scene_preview = scene_da.rio.reproject(
-    scene_da.rio.crs, resolution=100
+scene_preview = scene[['red', 'green', 'blue']].to_array('band')\
+  .rio.reproject(
+    scene.rio.crs, resolution=100
 )
 scl_mask_preview = scl_mask.astype('uint8').rio.reproject(
     scl_mask.rio.crs, resolution=100
