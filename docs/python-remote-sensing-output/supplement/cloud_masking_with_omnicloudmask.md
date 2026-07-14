@@ -50,7 +50,7 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 %%capture
 if environment in ['colab', 'colab_enterprise']:
     !pip install pystac-client odc-stac rioxarray dask['distributed'] \
-        jupyter-server-proxy odc-algo omnicloudmask
+        jupyter-server-proxy odc-algo botocore omnicloudmask
 ```
 
 Import all required libraries. Make sure to import everything at the beginning as certain Xarray extensions are activated on import and registers certain accesors, like `.rio` and `.odc` for Xarray objects.
@@ -58,19 +58,47 @@ Import all required libraries. Make sure to import everything at the beginning a
 
 ```python
 import dask
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import pyproj
 import pystac_client
 import rioxarray as rxr
 import torch
 import xarray as xr
-import pyproj
 from matplotlib.colors import ListedColormap
 from odc.stac import configure_s3_access, load
 from omnicloudmask import predict_from_array
+```
+
+OmniCloudMask uses a pre-trained neural network to predict the mask and hence is it best run on a machine with a GPU. We first check and configure the backend available and download the model.
+
+> If this cell gets stuck waiting to download the model, stopping and re-running fixes it.
+
+
+```python
+inference_device = (
+    'cuda' if torch.cuda.is_available()
+    else 'mps' if torch.backends.mps.is_available()
+    else 'cpu'
+)
+print(f'Inference device: {inference_device}')
+
+# Set the Hugging Face token if you have one. 
+# This speeds up the download of the model weights from Hugging Face Hub.
+HF_TOKEN = ''
+if HF_TOKEN:
+    os.environ['HF_TOKEN'] = HF_TOKEN
+
+# Run a test prediction 
+# This will download the model weights locally 
+# and warms up the model for inference.
+predict_from_array(
+    np.zeros((3, 50, 50), dtype=np.float32), inference_device=inference_device
+)
+
 ```
 
 Setup a local Dask cluster. This distributes the computation across multiple workers on your computer.
@@ -196,29 +224,7 @@ scene_masked_scl = scene[data_bands].where(~scl_mask)
 
 #### Apply OmniCloudMask
 
-[OmniCloudMask](https://omnicloudmask.readthedocs.io/en/latest/index.html) uses a pre-trained Deep Learning model to predict clouds from satellite imagery. It supports resolutions from 10 m to 50 m and works with any imagery that has Red, Green, and NIR bands.
-
-Using this method requires using a Neural Network to predict the mask and hence is it best run on a machine with a GPU. We first check and configure the backend available and download the model.
-
-
-```python
-%%time
-inference_device = (
-    'cuda' if torch.cuda.is_available()
-    else 'mps' if torch.backends.mps.is_available()
-    else 'cpu'
-)
-print(f'Inference device: {inference_device}')
-
-# Set the Hugging Face token if you have one. 
-# This speeds up the download of the model weights from Hugging Face Hub.
-HF_TOKEN = ''
-if HF_TOKEN:
-    os.environ['HF_TOKEN'] = HF_TOKEN
-
-```
-
-OmniCloudMask needs Red, Green, NIR bands. Select the required bands from our scene and convert to a DataArray to be passed on for prediction.
+[OmniCloudMask](https://omnicloudmask.readthedocs.io/en/latest/index.html) uses a pre-trained Deep Learning model to predict clouds from satellite imagery. It supports resolutions from 10 m to 50 m and works with any imagery that has Red, Green, and NIR bands. Select the required bands from our scene and convert to a DataArray to be passed on for prediction.
 
 
 ```python

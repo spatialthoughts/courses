@@ -7999,45 +7999,72 @@ runtimes are expected to have the packages already installed.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb488-1"><a href="#cb488-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb488-2"><a href="#cb488-2" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
 <span id="cb488-3"><a href="#cb488-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] <span class="op">\</span></span>
-<span id="cb488-4"><a href="#cb488-4" tabindex="-1"></a>        jupyter<span class="op">-</span>server<span class="op">-</span>proxy odc<span class="op">-</span>algo omnicloudmask</span></code></pre></div>
+<span id="cb488-4"><a href="#cb488-4" tabindex="-1"></a>        jupyter<span class="op">-</span>server<span class="op">-</span>proxy odc<span class="op">-</span>algo botocore omnicloudmask</span></code></pre></div>
 <p>Import all required libraries. Make sure to import everything at the
 beginning as certain Xarray extensions are activated on import and
 registers certain accesors, like <code>.rio</code> and <code>.odc</code>
 for Xarray objects.</p>
 <div class="sourceCode" id="cb489"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb489-1"><a href="#cb489-1" tabindex="-1"></a><span class="im">import</span> dask</span>
-<span id="cb489-2"><a href="#cb489-2" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb489-3"><a href="#cb489-3" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb489-2"><a href="#cb489-2" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb489-3"><a href="#cb489-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb489-4"><a href="#cb489-4" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb489-5"><a href="#cb489-5" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb489-6"><a href="#cb489-6" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb489-7"><a href="#cb489-7" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb489-8"><a href="#cb489-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb489-9"><a href="#cb489-9" tabindex="-1"></a><span class="im">import</span> torch</span>
-<span id="cb489-10"><a href="#cb489-10" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb489-11"><a href="#cb489-11" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb489-7"><a href="#cb489-7" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb489-8"><a href="#cb489-8" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb489-9"><a href="#cb489-9" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb489-10"><a href="#cb489-10" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb489-11"><a href="#cb489-11" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
 <span id="cb489-12"><a href="#cb489-12" tabindex="-1"></a><span class="im">from</span> matplotlib.colors <span class="im">import</span> ListedColormap</span>
 <span id="cb489-13"><a href="#cb489-13" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> configure_s3_access, load</span>
 <span id="cb489-14"><a href="#cb489-14" tabindex="-1"></a><span class="im">from</span> omnicloudmask <span class="im">import</span> predict_from_array</span></code></pre></div>
+<p>OmniCloudMask uses a pre-trained neural network to predict the mask
+and hence is it best run on a machine with a GPU. We first check and
+configure the backend available and download the model.</p>
+<blockquote>
+<p>If this cell gets stuck waiting to download the model, stopping and
+re-running fixes it.</p>
+</blockquote>
+<div class="sourceCode" id="cb490"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb490-1"><a href="#cb490-1" tabindex="-1"></a>inference_device <span class="op">=</span> (</span>
+<span id="cb490-2"><a href="#cb490-2" tabindex="-1"></a>    <span class="st">&#39;cuda&#39;</span> <span class="cf">if</span> torch.cuda.is_available()</span>
+<span id="cb490-3"><a href="#cb490-3" tabindex="-1"></a>    <span class="cf">else</span> <span class="st">&#39;mps&#39;</span> <span class="cf">if</span> torch.backends.mps.is_available()</span>
+<span id="cb490-4"><a href="#cb490-4" tabindex="-1"></a>    <span class="cf">else</span> <span class="st">&#39;cpu&#39;</span></span>
+<span id="cb490-5"><a href="#cb490-5" tabindex="-1"></a>)</span>
+<span id="cb490-6"><a href="#cb490-6" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Inference device: </span><span class="sc">{</span>inference_device<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb490-7"><a href="#cb490-7" tabindex="-1"></a></span>
+<span id="cb490-8"><a href="#cb490-8" tabindex="-1"></a><span class="co"># Set the Hugging Face token if you have one. </span></span>
+<span id="cb490-9"><a href="#cb490-9" tabindex="-1"></a><span class="co"># This speeds up the download of the model weights from Hugging Face Hub.</span></span>
+<span id="cb490-10"><a href="#cb490-10" tabindex="-1"></a>HF_TOKEN <span class="op">=</span> <span class="st">&#39;&#39;</span></span>
+<span id="cb490-11"><a href="#cb490-11" tabindex="-1"></a><span class="cf">if</span> HF_TOKEN:</span>
+<span id="cb490-12"><a href="#cb490-12" tabindex="-1"></a>    os.environ[<span class="st">&#39;HF_TOKEN&#39;</span>] <span class="op">=</span> HF_TOKEN</span>
+<span id="cb490-13"><a href="#cb490-13" tabindex="-1"></a></span>
+<span id="cb490-14"><a href="#cb490-14" tabindex="-1"></a><span class="co"># Run a test prediction </span></span>
+<span id="cb490-15"><a href="#cb490-15" tabindex="-1"></a><span class="co"># This will download the model weights locally </span></span>
+<span id="cb490-16"><a href="#cb490-16" tabindex="-1"></a><span class="co"># and warms up the model for inference.</span></span>
+<span id="cb490-17"><a href="#cb490-17" tabindex="-1"></a>predict_from_array(</span>
+<span id="cb490-18"><a href="#cb490-18" tabindex="-1"></a>    np.zeros((<span class="dv">3</span>, <span class="dv">50</span>, <span class="dv">50</span>), dtype<span class="op">=</span>np.float32), inference_device<span class="op">=</span>inference_device</span>
+<span id="cb490-19"><a href="#cb490-19" tabindex="-1"></a>)</span></code></pre></div>
 <p>Setup a local Dask cluster. This distributes the computation across
 multiple workers on your computer.</p>
-<div class="sourceCode" id="cb490"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb490-1"><a href="#cb490-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
-<span id="cb490-2"><a href="#cb490-2" tabindex="-1"></a></span>
-<span id="cb490-3"><a href="#cb490-3" tabindex="-1"></a><span class="co"># As we are using GPU inference, we use a single worker client</span></span>
-<span id="cb490-4"><a href="#cb490-4" tabindex="-1"></a>client <span class="op">=</span> Client(</span>
-<span id="cb490-5"><a href="#cb490-5" tabindex="-1"></a>    n_workers<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb490-6"><a href="#cb490-6" tabindex="-1"></a>    threads_per_worker<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="cb490-7"><a href="#cb490-7" tabindex="-1"></a>)</span>
-<span id="cb490-8"><a href="#cb490-8" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb491"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb491-1"><a href="#cb491-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb491-2"><a href="#cb491-2" tabindex="-1"></a></span>
+<span id="cb491-3"><a href="#cb491-3" tabindex="-1"></a><span class="co"># As we are using GPU inference, we use a single worker client</span></span>
+<span id="cb491-4"><a href="#cb491-4" tabindex="-1"></a>client <span class="op">=</span> Client(</span>
+<span id="cb491-5"><a href="#cb491-5" tabindex="-1"></a>    n_workers<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb491-6"><a href="#cb491-6" tabindex="-1"></a>    threads_per_worker<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb491-7"><a href="#cb491-7" tabindex="-1"></a>)</span>
+<span id="cb491-8"><a href="#cb491-8" tabindex="-1"></a>client</span></code></pre></div>
 <p>If you are running this notebook in Colab, you will need to create
 and use a proxy URL to see the dashboard running on the local
 server.</p>
-<div class="sourceCode" id="cb491"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb491-1"><a href="#cb491-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
-<span id="cb491-2"><a href="#cb491-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
-<span id="cb491-3"><a href="#cb491-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
-<span id="cb491-4"><a href="#cb491-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb492"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb492-1"><a href="#cb492-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
+<span id="cb492-2"><a href="#cb492-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb492-3"><a href="#cb492-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb492-4"><a href="#cb492-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
 </div>
 <div id="masking-a-single-scene" class="section level3">
 <h3>Masking a Single Scene</h3>
@@ -8046,72 +8073,72 @@ straightforward one. Let’s learn this approach first and then we will
 see how we can scale this to a time-series.</p>
 <p>We define a location and time of interest to get some satellite
 imagery.</p>
-<div class="sourceCode" id="cb492"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb492-1"><a href="#cb492-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
-<span id="cb492-2"><a href="#cb492-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
-<span id="cb492-3"><a href="#cb492-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
-<p>Get a single cloudy scene.</p>
 <div class="sourceCode" id="cb493"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb493-1"><a href="#cb493-1" tabindex="-1"></a><span class="co"># Define a GeoJSON geometry</span></span>
-<span id="cb493-2"><a href="#cb493-2" tabindex="-1"></a>geometry <span class="op">=</span> {</span>
-<span id="cb493-3"><a href="#cb493-3" tabindex="-1"></a>    <span class="st">&#39;type&#39;</span>: <span class="st">&#39;Point&#39;</span>,</span>
-<span id="cb493-4"><a href="#cb493-4" tabindex="-1"></a>    <span class="st">&#39;coordinates&#39;</span>: [longitude, latitude]</span>
-<span id="cb493-5"><a href="#cb493-5" tabindex="-1"></a>}</span>
-<span id="cb493-6"><a href="#cb493-6" tabindex="-1"></a></span>
-<span id="cb493-7"><a href="#cb493-7" tabindex="-1"></a><span class="co"># Query the STAC Catalog</span></span>
-<span id="cb493-8"><a href="#cb493-8" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
-<span id="cb493-9"><a href="#cb493-9" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
-<span id="cb493-10"><a href="#cb493-10" tabindex="-1"></a></span>
-<span id="cb493-11"><a href="#cb493-11" tabindex="-1"></a>configure_s3_access(</span>
-<span id="cb493-12"><a href="#cb493-12" tabindex="-1"></a>    aws_unsigned<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb493-13"><a href="#cb493-13" tabindex="-1"></a>)</span>
-<span id="cb493-14"><a href="#cb493-14" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
-<span id="cb493-15"><a href="#cb493-15" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
-<span id="cb493-16"><a href="#cb493-16" tabindex="-1"></a>    intersects<span class="op">=</span>geometry,</span>
-<span id="cb493-17"><a href="#cb493-17" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
-<span id="cb493-18"><a href="#cb493-18" tabindex="-1"></a>    query<span class="op">=</span>{</span>
-<span id="cb493-19"><a href="#cb493-19" tabindex="-1"></a>        <span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">50</span>},</span>
-<span id="cb493-20"><a href="#cb493-20" tabindex="-1"></a>        <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}},</span>
-<span id="cb493-21"><a href="#cb493-21" tabindex="-1"></a>    sortby<span class="op">=</span>[</span>
-<span id="cb493-22"><a href="#cb493-22" tabindex="-1"></a>        {<span class="st">&#39;field&#39;</span>: <span class="st">&#39;properties.eo:cloud_cover&#39;</span>,</span>
-<span id="cb493-23"><a href="#cb493-23" tabindex="-1"></a>         <span class="st">&#39;direction&#39;</span>: <span class="st">&#39;desc&#39;</span>}</span>
-<span id="cb493-24"><a href="#cb493-24" tabindex="-1"></a>        ]</span>
-<span id="cb493-25"><a href="#cb493-25" tabindex="-1"></a>)</span>
-<span id="cb493-26"><a href="#cb493-26" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
-<span id="cb493-27"><a href="#cb493-27" tabindex="-1"></a></span>
-<span id="cb493-28"><a href="#cb493-28" tabindex="-1"></a><span class="co"># Items were sorted in descending order of cloud cover,</span></span>
-<span id="cb493-29"><a href="#cb493-29" tabindex="-1"></a><span class="co"># so the first item is the most cloudy</span></span>
-<span id="cb493-30"><a href="#cb493-30" tabindex="-1"></a>most_cloudy <span class="op">=</span> items[<span class="dv">0</span>]</span>
-<span id="cb493-31"><a href="#cb493-31" tabindex="-1"></a></span>
-<span id="cb493-32"><a href="#cb493-32" tabindex="-1"></a>ds <span class="op">=</span> load(</span>
-<span id="cb493-33"><a href="#cb493-33" tabindex="-1"></a>    [most_cloudy],</span>
-<span id="cb493-34"><a href="#cb493-34" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
-<span id="cb493-35"><a href="#cb493-35" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">20</span>, <span class="co"># Load the data at lower resolution to speed up processing </span></span>
-<span id="cb493-36"><a href="#cb493-36" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
-<span id="cb493-37"><a href="#cb493-37" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
-<span id="cb493-38"><a href="#cb493-38" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb493-39"><a href="#cb493-39" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb493-40"><a href="#cb493-40" tabindex="-1"></a>)</span>
-<span id="cb493-41"><a href="#cb493-41" tabindex="-1"></a></span>
-<span id="cb493-42"><a href="#cb493-42" tabindex="-1"></a>scene <span class="op">=</span> ds.squeeze()</span>
-<span id="cb493-43"><a href="#cb493-43" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
-<span id="cb493-44"><a href="#cb493-44" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
-<span id="cb493-45"><a href="#cb493-45" tabindex="-1"></a></span>
-<span id="cb493-46"><a href="#cb493-46" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
-<span id="cb493-47"><a href="#cb493-47" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
-<span id="cb493-48"><a href="#cb493-48" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
-<span id="cb493-49"><a href="#cb493-49" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
-<span id="cb493-50"><a href="#cb493-50" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> scene.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
-<span id="cb493-51"><a href="#cb493-51" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
-<span id="cb493-52"><a href="#cb493-52" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span>
-<span id="cb493-53"><a href="#cb493-53" tabindex="-1"></a>scene</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb493-1"><a href="#cb493-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb493-2"><a href="#cb493-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
+<span id="cb493-3"><a href="#cb493-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<p>Get a single cloudy scene.</p>
+<div class="sourceCode" id="cb494"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb494-1"><a href="#cb494-1" tabindex="-1"></a><span class="co"># Define a GeoJSON geometry</span></span>
+<span id="cb494-2"><a href="#cb494-2" tabindex="-1"></a>geometry <span class="op">=</span> {</span>
+<span id="cb494-3"><a href="#cb494-3" tabindex="-1"></a>    <span class="st">&#39;type&#39;</span>: <span class="st">&#39;Point&#39;</span>,</span>
+<span id="cb494-4"><a href="#cb494-4" tabindex="-1"></a>    <span class="st">&#39;coordinates&#39;</span>: [longitude, latitude]</span>
+<span id="cb494-5"><a href="#cb494-5" tabindex="-1"></a>}</span>
+<span id="cb494-6"><a href="#cb494-6" tabindex="-1"></a></span>
+<span id="cb494-7"><a href="#cb494-7" tabindex="-1"></a><span class="co"># Query the STAC Catalog</span></span>
+<span id="cb494-8"><a href="#cb494-8" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb494-9"><a href="#cb494-9" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
+<span id="cb494-10"><a href="#cb494-10" tabindex="-1"></a></span>
+<span id="cb494-11"><a href="#cb494-11" tabindex="-1"></a>configure_s3_access(</span>
+<span id="cb494-12"><a href="#cb494-12" tabindex="-1"></a>    aws_unsigned<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb494-13"><a href="#cb494-13" tabindex="-1"></a>)</span>
+<span id="cb494-14"><a href="#cb494-14" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb494-15"><a href="#cb494-15" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
+<span id="cb494-16"><a href="#cb494-16" tabindex="-1"></a>    intersects<span class="op">=</span>geometry,</span>
+<span id="cb494-17"><a href="#cb494-17" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb494-18"><a href="#cb494-18" tabindex="-1"></a>    query<span class="op">=</span>{</span>
+<span id="cb494-19"><a href="#cb494-19" tabindex="-1"></a>        <span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">50</span>},</span>
+<span id="cb494-20"><a href="#cb494-20" tabindex="-1"></a>        <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}},</span>
+<span id="cb494-21"><a href="#cb494-21" tabindex="-1"></a>    sortby<span class="op">=</span>[</span>
+<span id="cb494-22"><a href="#cb494-22" tabindex="-1"></a>        {<span class="st">&#39;field&#39;</span>: <span class="st">&#39;properties.eo:cloud_cover&#39;</span>,</span>
+<span id="cb494-23"><a href="#cb494-23" tabindex="-1"></a>         <span class="st">&#39;direction&#39;</span>: <span class="st">&#39;desc&#39;</span>}</span>
+<span id="cb494-24"><a href="#cb494-24" tabindex="-1"></a>        ]</span>
+<span id="cb494-25"><a href="#cb494-25" tabindex="-1"></a>)</span>
+<span id="cb494-26"><a href="#cb494-26" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb494-27"><a href="#cb494-27" tabindex="-1"></a></span>
+<span id="cb494-28"><a href="#cb494-28" tabindex="-1"></a><span class="co"># Items were sorted in descending order of cloud cover,</span></span>
+<span id="cb494-29"><a href="#cb494-29" tabindex="-1"></a><span class="co"># so the first item is the most cloudy</span></span>
+<span id="cb494-30"><a href="#cb494-30" tabindex="-1"></a>most_cloudy <span class="op">=</span> items[<span class="dv">0</span>]</span>
+<span id="cb494-31"><a href="#cb494-31" tabindex="-1"></a></span>
+<span id="cb494-32"><a href="#cb494-32" tabindex="-1"></a>ds <span class="op">=</span> load(</span>
+<span id="cb494-33"><a href="#cb494-33" tabindex="-1"></a>    [most_cloudy],</span>
+<span id="cb494-34"><a href="#cb494-34" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
+<span id="cb494-35"><a href="#cb494-35" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">20</span>, <span class="co"># Load the data at lower resolution to speed up processing </span></span>
+<span id="cb494-36"><a href="#cb494-36" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb494-37"><a href="#cb494-37" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
+<span id="cb494-38"><a href="#cb494-38" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb494-39"><a href="#cb494-39" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb494-40"><a href="#cb494-40" tabindex="-1"></a>)</span>
+<span id="cb494-41"><a href="#cb494-41" tabindex="-1"></a></span>
+<span id="cb494-42"><a href="#cb494-42" tabindex="-1"></a>scene <span class="op">=</span> ds.squeeze()</span>
+<span id="cb494-43"><a href="#cb494-43" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb494-44"><a href="#cb494-44" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
+<span id="cb494-45"><a href="#cb494-45" tabindex="-1"></a></span>
+<span id="cb494-46"><a href="#cb494-46" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb494-47"><a href="#cb494-47" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb494-48"><a href="#cb494-48" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb494-49"><a href="#cb494-49" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
+<span id="cb494-50"><a href="#cb494-50" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> scene.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
+<span id="cb494-51"><a href="#cb494-51" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
+<span id="cb494-52"><a href="#cb494-52" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span>
+<span id="cb494-53"><a href="#cb494-53" tabindex="-1"></a>scene</span></code></pre></div>
 <p>Let’s call <code>compute()</code> to kick-off the dask graph. Dask
 will query the cloud-hosted dataset to fetch the required pixels. Once
 you run the cell, look at the Dask Diagnostic Dashboard to see the data
 processing in action.</p>
-<div class="sourceCode" id="cb494"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb494-1"><a href="#cb494-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb494-2"><a href="#cb494-2" tabindex="-1"></a>scene <span class="op">=</span> scene.compute()</span></code></pre></div>
+<div class="sourceCode" id="cb495"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb495-1"><a href="#cb495-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb495-2"><a href="#cb495-2" tabindex="-1"></a>scene <span class="op">=</span> scene.compute()</span></code></pre></div>
 <div id="apply-scl-mask" class="section level4">
 <h4>Apply SCL Mask</h4>
 <p>We use the bundled Scene Classification (SCL) band for masking cloudy
@@ -8120,11 +8147,11 @@ mask that will remove all pixels marked <code>Cloud shadows (3)</code>,
 <code>Cloud Medium Probability (8)</code>,
 <code>Cloud High Probability (9)</code> and
 <code>Thin Cirrus (10)</code>.</p>
-<div class="sourceCode" id="cb495"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb495-1"><a href="#cb495-1" tabindex="-1"></a>scl_mask <span class="op">=</span> scene[<span class="st">&#39;scl&#39;</span>].isin([<span class="dv">3</span>,<span class="dv">8</span>,<span class="dv">9</span>,<span class="dv">10</span>])</span></code></pre></div>
-<p>We apply mask to all the data bands.</p>
 <div class="sourceCode" id="cb496"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb496-1"><a href="#cb496-1" tabindex="-1"></a>scene_masked_scl <span class="op">=</span> scene[data_bands].where(<span class="op">~</span>scl_mask)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb496-1"><a href="#cb496-1" tabindex="-1"></a>scl_mask <span class="op">=</span> scene[<span class="st">&#39;scl&#39;</span>].isin([<span class="dv">3</span>,<span class="dv">8</span>,<span class="dv">9</span>,<span class="dv">10</span>])</span></code></pre></div>
+<p>We apply mask to all the data bands.</p>
+<div class="sourceCode" id="cb497"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb497-1"><a href="#cb497-1" tabindex="-1"></a>scene_masked_scl <span class="op">=</span> scene[data_bands].where(<span class="op">~</span>scl_mask)</span></code></pre></div>
 </div>
 <div id="apply-omnicloudmask" class="section level4">
 <h4>Apply OmniCloudMask</h4>
@@ -8132,25 +8159,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb496-1"><a 
 href="https://omnicloudmask.readthedocs.io/en/latest/index.html">OmniCloudMask</a>
 uses a pre-trained Deep Learning model to predict clouds from satellite
 imagery. It supports resolutions from 10 m to 50 m and works with any
-imagery that has Red, Green, and NIR bands.</p>
-<p>Using this method requires using a Neural Network to predict the mask
-and hence is it best run on a machine with a GPU. We first check and
-configure the backend available and download the model.</p>
-<div class="sourceCode" id="cb497"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb497-1"><a href="#cb497-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb497-2"><a href="#cb497-2" tabindex="-1"></a>inference_device <span class="op">=</span> (</span>
-<span id="cb497-3"><a href="#cb497-3" tabindex="-1"></a>    <span class="st">&#39;cuda&#39;</span> <span class="cf">if</span> torch.cuda.is_available()</span>
-<span id="cb497-4"><a href="#cb497-4" tabindex="-1"></a>    <span class="cf">else</span> <span class="st">&#39;mps&#39;</span> <span class="cf">if</span> torch.backends.mps.is_available()</span>
-<span id="cb497-5"><a href="#cb497-5" tabindex="-1"></a>    <span class="cf">else</span> <span class="st">&#39;cpu&#39;</span></span>
-<span id="cb497-6"><a href="#cb497-6" tabindex="-1"></a>)</span>
-<span id="cb497-7"><a href="#cb497-7" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Inference device: </span><span class="sc">{</span>inference_device<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb497-8"><a href="#cb497-8" tabindex="-1"></a></span>
-<span id="cb497-9"><a href="#cb497-9" tabindex="-1"></a><span class="co"># Set the Hugging Face token if you have one. </span></span>
-<span id="cb497-10"><a href="#cb497-10" tabindex="-1"></a><span class="co"># This speeds up the download of the model weights from Hugging Face Hub.</span></span>
-<span id="cb497-11"><a href="#cb497-11" tabindex="-1"></a>HF_TOKEN <span class="op">=</span> <span class="st">&#39;&#39;</span></span>
-<span id="cb497-12"><a href="#cb497-12" tabindex="-1"></a><span class="cf">if</span> HF_TOKEN:</span>
-<span id="cb497-13"><a href="#cb497-13" tabindex="-1"></a>    os.environ[<span class="st">&#39;HF_TOKEN&#39;</span>] <span class="op">=</span> HF_TOKEN</span></code></pre></div>
-<p>OmniCloudMask needs Red, Green, NIR bands. Select the required bands
+imagery that has Red, Green, and NIR bands. Select the required bands
 from our scene and convert to a DataArray to be passed on for
 prediction.</p>
 <div class="sourceCode" id="cb498"><pre
