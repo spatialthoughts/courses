@@ -547,6 +547,9 @@ Building Heights from GlobalBuildingAtlas</a></li>
 <li><a href="#cloud-masking-with-omnicloudmask"
 id="toc-cloud-masking-with-omnicloudmask">Cloud Masking with
 OmniCloudMask</a></li>
+<li><a href="#cloud-masking-with-cloud-score"
+id="toc-cloud-masking-with-cloud-score">Cloud Masking with Cloud
+Score+</a></li>
 <li><a href="#working-with-glc-fcs30-landcover-data"
 id="toc-working-with-glc-fcs30-landcover-data">Working with GLC-FCS30
 LandCover Data</a></li>
@@ -8431,22 +8434,22 @@ a local machine. Uncomment and run to shutdown the dask cluster.</p>
 class="sourceCode python"><code class="sourceCode python"><span id="cb514-1"><a href="#cb514-1" tabindex="-1"></a><span class="co">#client.shutdown()</span></span></code></pre></div>
 </div>
 </div>
-<div id="working-with-glc-fcs30-landcover-data" class="section level2">
-<h2>Working with GLC-FCS30 LandCover Data</h2>
+<div id="cloud-masking-with-cloud-score" class="section level2">
+<h2>Cloud Masking with Cloud Score+</h2>
 <p><a
-href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/supplement/glc_fcs30d_landcover.ipynb"><img
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/supplement/cloud_masking_with_cloudscoreplus.ipynb"><img
 src="https://colab.research.google.com/assets/colab-badge.svg"
 alt="Open In Colab" /></a></p>
-<p>The <a href="https://zenodo.org/records/8239305">Global Land Cover by
-Fine Classification System at 30m (GLC_FCS30D)</a> is a dynamic land
-cover product produced by the Chinese Academy of Sciences. It provides a
-high-resolution landcover time-series derived from the Landsat archive
-(1984-2022) at 30m resolution with 35 classes.</p>
-<p>This notebook shows how to access, visualize and reclassify
-GLC_FCS30D land cover data for a region of interest using
-cloud-optimized GeoTIFF data hosted on OpenLandMap.</p>
-<div id="setup-18" class="section level4">
-<h4>Setup</h4>
+<p>This notebook shows how to use Google’s <a
+href="https://medium.com/google-earth/all-clear-with-cloud-score-bd6ee2e2235e">Cloud
+Score+</a> mask for Sentinel-2 images. We use <a
+href="https://xee.readthedocs.io/en/latest/">XEE</a> extension to fetch
+the mask from Google Earth Engine’s <a
+href="https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_CLOUD_SCORE_PLUS_V1_S2_HARMONIZED">Cloud
+Score + Collection</a> and apply it on a Sentinel-2 scene using
+Xarray.</p>
+<div id="setup-18" class="section level3">
+<h3>Setup</h3>
 <p>Determine our runtime environment.</p>
 <div class="sourceCode" id="cb515"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb515-1"><a href="#cb515-1" tabindex="-1"></a><span class="im">import</span> os</span>
@@ -8459,7 +8462,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb515-1"><a 
 <span id="cb515-8"><a href="#cb515-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
 <span id="cb515-9"><a href="#cb515-9" tabindex="-1"></a></span>
 <span id="cb515-10"><a href="#cb515-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
-<span id="cb515-11"><a href="#cb515-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb515-11"><a href="#cb515-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">True</span></span>
 <span id="cb515-12"><a href="#cb515-12" tabindex="-1"></a></span>
 <span id="cb515-13"><a href="#cb515-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
 <span id="cb515-14"><a href="#cb515-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
@@ -8487,170 +8490,589 @@ runtimes are expected to have the packages already installed.</p>
 <div class="sourceCode" id="cb516"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb516-1"><a href="#cb516-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb516-2"><a href="#cb516-2" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
-<span id="cb516-3"><a href="#cb516-3" tabindex="-1"></a>  <span class="op">!</span>pip install rioxarray dask[distributed] odc<span class="op">-</span>stac <span class="op">\</span></span>
-<span id="cb516-4"><a href="#cb516-4" tabindex="-1"></a>    jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
-<p>Import all required libraries.</p>
+<span id="cb516-3"><a href="#cb516-3" tabindex="-1"></a>    <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[<span class="st">&#39;distributed&#39;</span>] <span class="op">\</span></span>
+<span id="cb516-4"><a href="#cb516-4" tabindex="-1"></a>        jupyter<span class="op">-</span>server<span class="op">-</span>proxy odc<span class="op">-</span>algo botocore xee</span></code></pre></div>
+<p>Import all required libraries. Make sure to import everything at the
+beginning as certain Xarray extensions are activated on import and
+registers certain accesors, like <code>.rio</code> and <code>.odc</code>
+for Xarray objects.</p>
 <div class="sourceCode" id="cb517"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb517-1"><a href="#cb517-1" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb517-2"><a href="#cb517-2" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb517-1"><a href="#cb517-1" tabindex="-1"></a><span class="im">import</span> dask</span>
+<span id="cb517-2"><a href="#cb517-2" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
 <span id="cb517-3"><a href="#cb517-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb517-4"><a href="#cb517-4" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb517-5"><a href="#cb517-5" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb517-6"><a href="#cb517-6" tabindex="-1"></a><span class="im">import</span> pyproj</span>
-<span id="cb517-7"><a href="#cb517-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb517-8"><a href="#cb517-8" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
-<span id="cb517-9"><a href="#cb517-9" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
+<span id="cb517-6"><a href="#cb517-6" tabindex="-1"></a><span class="im">import</span> ee</span>
+<span id="cb517-7"><a href="#cb517-7" tabindex="-1"></a><span class="im">from</span> xee <span class="im">import</span> helpers</span>
+<span id="cb517-8"><a href="#cb517-8" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb517-9"><a href="#cb517-9" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb517-10"><a href="#cb517-10" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb517-11"><a href="#cb517-11" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb517-12"><a href="#cb517-12" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb517-13"><a href="#cb517-13" tabindex="-1"></a><span class="im">from</span> matplotlib.colors <span class="im">import</span> ListedColormap</span>
+<span id="cb517-14"><a href="#cb517-14" tabindex="-1"></a><span class="im">from</span> odc.stac <span class="im">import</span> configure_s3_access, load</span></code></pre></div>
+<p>Initialize EE with the <a
+href="https://developers.google.com/earth-engine/guides/processing_environments#high-volume_endpoint">High-Volume
+EndPoint</a> which is recommended to be used with XEE for workflows that
+do not use a lot of server side processing and are primarily for
+extracting data from stored collections. Replace the value of the
+<code>cloud_project</code> variable with your own project id that is
+linked with GEE.</p>
+<div class="sourceCode" id="cb518"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb518-1"><a href="#cb518-1" tabindex="-1"></a>cloud_project <span class="op">=</span> <span class="st">&#39;spatialthoughts&#39;</span> <span class="co"># replace with your project id</span></span>
+<span id="cb518-2"><a href="#cb518-2" tabindex="-1"></a></span>
+<span id="cb518-3"><a href="#cb518-3" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb518-4"><a href="#cb518-4" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb518-5"><a href="#cb518-5" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb518-6"><a href="#cb518-6" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span>)</span>
+<span id="cb518-7"><a href="#cb518-7" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb518-8"><a href="#cb518-8" tabindex="-1"></a>    ee.Authenticate()</span>
+<span id="cb518-9"><a href="#cb518-9" tabindex="-1"></a>    ee.Initialize(</span>
+<span id="cb518-10"><a href="#cb518-10" tabindex="-1"></a>        project<span class="op">=</span>cloud_project,</span>
+<span id="cb518-11"><a href="#cb518-11" tabindex="-1"></a>        opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span>)</span></code></pre></div>
 <p>Setup a local Dask cluster. This distributes the computation across
 multiple workers on your computer.</p>
-<div class="sourceCode" id="cb518"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb518-1"><a href="#cb518-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
-<span id="cb518-2"><a href="#cb518-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
-<span id="cb518-3"><a href="#cb518-3" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb519"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb519-1"><a href="#cb519-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb519-2"><a href="#cb519-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb519-3"><a href="#cb519-3" tabindex="-1"></a>client</span></code></pre></div>
 <p>If you are running this notebook in Colab, you will need to create
 and use a proxy URL to see the dashboard running on the local
 server.</p>
-<div class="sourceCode" id="cb519"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb519-1"><a href="#cb519-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
-<span id="cb519-2"><a href="#cb519-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
-<span id="cb519-3"><a href="#cb519-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
-<span id="cb519-4"><a href="#cb519-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb520"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb520-1"><a href="#cb520-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
+<span id="cb520-2"><a href="#cb520-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb520-3"><a href="#cb520-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb520-4"><a href="#cb520-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<p>Each of our Dask workers need Earth Engine authentication. Initialize
+Dask workers using <code>ee.Initialize()</code>.</p>
+<div class="sourceCode" id="cb521"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb521-1"><a href="#cb521-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> WorkerPlugin</span>
+<span id="cb521-2"><a href="#cb521-2" tabindex="-1"></a></span>
+<span id="cb521-3"><a href="#cb521-3" tabindex="-1"></a><span class="kw">class</span> EEPlugin(WorkerPlugin):</span>
+<span id="cb521-4"><a href="#cb521-4" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb521-5"><a href="#cb521-5" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb521-6"><a href="#cb521-6" tabindex="-1"></a>    <span class="kw">def</span> setup(<span class="va">self</span>, worker):</span>
+<span id="cb521-7"><a href="#cb521-7" tabindex="-1"></a>        <span class="va">self</span>.worker <span class="op">=</span> worker</span>
+<span id="cb521-8"><a href="#cb521-8" tabindex="-1"></a>        <span class="cf">try</span>:</span>
+<span id="cb521-9"><a href="#cb521-9" tabindex="-1"></a>            ee.Initialize(</span>
+<span id="cb521-10"><a href="#cb521-10" tabindex="-1"></a>                project<span class="op">=</span>cloud_project,</span>
+<span id="cb521-11"><a href="#cb521-11" tabindex="-1"></a>                opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span>)</span>
+<span id="cb521-12"><a href="#cb521-12" tabindex="-1"></a>        <span class="cf">except</span>:</span>
+<span id="cb521-13"><a href="#cb521-13" tabindex="-1"></a>            ee.Authenticate()</span>
+<span id="cb521-14"><a href="#cb521-14" tabindex="-1"></a>            ee.Initialize(</span>
+<span id="cb521-15"><a href="#cb521-15" tabindex="-1"></a>                project<span class="op">=</span>cloud_project,</span>
+<span id="cb521-16"><a href="#cb521-16" tabindex="-1"></a>                opt_url<span class="op">=</span><span class="st">&#39;https://earthengine-highvolume.googleapis.com&#39;</span>)</span>
+<span id="cb521-17"><a href="#cb521-17" tabindex="-1"></a></span>
+<span id="cb521-18"><a href="#cb521-18" tabindex="-1"></a>ee_plugin <span class="op">=</span> EEPlugin()</span>
+<span id="cb521-19"><a href="#cb521-19" tabindex="-1"></a>client.register_plugin(ee_plugin)</span></code></pre></div>
+</div>
+<div id="masking-a-single-scene-1" class="section level3">
+<h3>Masking a Single Scene</h3>
+<p>If a scene fits into memory, this approach is the most
+straightforward one. Let’s learn this approach first and then we will
+see how we can scale this to a time-series.</p>
+<p>We define a location and time of interest to get some satellite
+imagery.</p>
+<div class="sourceCode" id="cb522"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb522-1"><a href="#cb522-1" tabindex="-1"></a>latitude <span class="op">=</span> <span class="fl">27.163</span></span>
+<span id="cb522-2"><a href="#cb522-2" tabindex="-1"></a>longitude <span class="op">=</span> <span class="fl">82.608</span></span>
+<span id="cb522-3"><a href="#cb522-3" tabindex="-1"></a>year <span class="op">=</span> <span class="dv">2023</span></span></code></pre></div>
+<p>Get a single cloudy scene.</p>
+<div class="sourceCode" id="cb523"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb523-1"><a href="#cb523-1" tabindex="-1"></a><span class="co"># Define a GeoJSON geometry</span></span>
+<span id="cb523-2"><a href="#cb523-2" tabindex="-1"></a>geometry <span class="op">=</span> {</span>
+<span id="cb523-3"><a href="#cb523-3" tabindex="-1"></a>    <span class="st">&#39;type&#39;</span>: <span class="st">&#39;Point&#39;</span>,</span>
+<span id="cb523-4"><a href="#cb523-4" tabindex="-1"></a>    <span class="st">&#39;coordinates&#39;</span>: [longitude, latitude]</span>
+<span id="cb523-5"><a href="#cb523-5" tabindex="-1"></a>}</span>
+<span id="cb523-6"><a href="#cb523-6" tabindex="-1"></a></span>
+<span id="cb523-7"><a href="#cb523-7" tabindex="-1"></a><span class="co"># Query the STAC Catalog</span></span>
+<span id="cb523-8"><a href="#cb523-8" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb523-9"><a href="#cb523-9" tabindex="-1"></a>    <span class="st">&#39;https://earth-search.aws.element84.com/v1&#39;</span>)</span>
+<span id="cb523-10"><a href="#cb523-10" tabindex="-1"></a></span>
+<span id="cb523-11"><a href="#cb523-11" tabindex="-1"></a>configure_s3_access(</span>
+<span id="cb523-12"><a href="#cb523-12" tabindex="-1"></a>    aws_unsigned<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb523-13"><a href="#cb523-13" tabindex="-1"></a>)</span>
+<span id="cb523-14"><a href="#cb523-14" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb523-15"><a href="#cb523-15" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;sentinel-2-c1-l2a&#39;</span>],</span>
+<span id="cb523-16"><a href="#cb523-16" tabindex="-1"></a>    intersects<span class="op">=</span>geometry,</span>
+<span id="cb523-17"><a href="#cb523-17" tabindex="-1"></a>    datetime<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>year<span class="sc">}</span><span class="ss">&#39;</span>,</span>
+<span id="cb523-18"><a href="#cb523-18" tabindex="-1"></a>    query<span class="op">=</span>{</span>
+<span id="cb523-19"><a href="#cb523-19" tabindex="-1"></a>        <span class="st">&#39;eo:cloud_cover&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">50</span>},</span>
+<span id="cb523-20"><a href="#cb523-20" tabindex="-1"></a>        <span class="st">&#39;s2:nodata_pixel_percentage&#39;</span>: {<span class="st">&#39;lt&#39;</span>: <span class="dv">10</span>}},</span>
+<span id="cb523-21"><a href="#cb523-21" tabindex="-1"></a>    sortby<span class="op">=</span>[</span>
+<span id="cb523-22"><a href="#cb523-22" tabindex="-1"></a>        {<span class="st">&#39;field&#39;</span>: <span class="st">&#39;properties.eo:cloud_cover&#39;</span>,</span>
+<span id="cb523-23"><a href="#cb523-23" tabindex="-1"></a>         <span class="st">&#39;direction&#39;</span>: <span class="st">&#39;desc&#39;</span>}</span>
+<span id="cb523-24"><a href="#cb523-24" tabindex="-1"></a>        ]</span>
+<span id="cb523-25"><a href="#cb523-25" tabindex="-1"></a>)</span>
+<span id="cb523-26"><a href="#cb523-26" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb523-27"><a href="#cb523-27" tabindex="-1"></a></span>
+<span id="cb523-28"><a href="#cb523-28" tabindex="-1"></a><span class="co"># Items were sorted in descending order of cloud cover,</span></span>
+<span id="cb523-29"><a href="#cb523-29" tabindex="-1"></a><span class="co"># so the first item is the most cloudy</span></span>
+<span id="cb523-30"><a href="#cb523-30" tabindex="-1"></a>most_cloudy <span class="op">=</span> items[<span class="dv">0</span>]</span>
+<span id="cb523-31"><a href="#cb523-31" tabindex="-1"></a></span>
+<span id="cb523-32"><a href="#cb523-32" tabindex="-1"></a>ds <span class="op">=</span> load(</span>
+<span id="cb523-33"><a href="#cb523-33" tabindex="-1"></a>    [most_cloudy],</span>
+<span id="cb523-34"><a href="#cb523-34" tabindex="-1"></a>    bands<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>, <span class="st">&#39;nir&#39;</span>, <span class="st">&#39;scl&#39;</span>],</span>
+<span id="cb523-35"><a href="#cb523-35" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">20</span>, <span class="co"># Load the data at lower resolution to speed up processing </span></span>
+<span id="cb523-36"><a href="#cb523-36" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb523-37"><a href="#cb523-37" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
+<span id="cb523-38"><a href="#cb523-38" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb523-39"><a href="#cb523-39" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb523-40"><a href="#cb523-40" tabindex="-1"></a>)</span>
+<span id="cb523-41"><a href="#cb523-41" tabindex="-1"></a></span>
+<span id="cb523-42"><a href="#cb523-42" tabindex="-1"></a>scene <span class="op">=</span> ds.squeeze()</span>
+<span id="cb523-43"><a href="#cb523-43" tabindex="-1"></a><span class="co"># Mask nodata values</span></span>
+<span id="cb523-44"><a href="#cb523-44" tabindex="-1"></a>scene <span class="op">=</span> scene.where(scene <span class="op">!=</span> <span class="dv">0</span>)</span>
+<span id="cb523-45"><a href="#cb523-45" tabindex="-1"></a></span>
+<span id="cb523-46"><a href="#cb523-46" tabindex="-1"></a><span class="co"># Apply scale/offset</span></span>
+<span id="cb523-47"><a href="#cb523-47" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">0.0001</span></span>
+<span id="cb523-48"><a href="#cb523-48" tabindex="-1"></a>offset <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span></span>
+<span id="cb523-49"><a href="#cb523-49" tabindex="-1"></a><span class="co"># Select spectral bands (all except &#39;scl&#39;)</span></span>
+<span id="cb523-50"><a href="#cb523-50" tabindex="-1"></a>data_bands <span class="op">=</span> [band <span class="cf">for</span> band <span class="kw">in</span> scene.data_vars <span class="cf">if</span> band <span class="op">!=</span> <span class="st">&#39;scl&#39;</span>]</span>
+<span id="cb523-51"><a href="#cb523-51" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> data_bands:</span>
+<span id="cb523-52"><a href="#cb523-52" tabindex="-1"></a>  scene[band] <span class="op">=</span> scene[band] <span class="op">*</span> scale <span class="op">+</span> offset</span>
+<span id="cb523-53"><a href="#cb523-53" tabindex="-1"></a>scene</span></code></pre></div>
+<p>Let’s call <code>compute()</code> to kick-off the dask graph. Dask
+will query the cloud-hosted dataset to fetch the required pixels. Once
+you run the cell, look at the Dask Diagnostic Dashboard to see the data
+processing in action.</p>
+<div class="sourceCode" id="cb524"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb524-1"><a href="#cb524-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb524-2"><a href="#cb524-2" tabindex="-1"></a>scene <span class="op">=</span> scene.compute()</span></code></pre></div>
+<div id="apply-cloud-score-mask" class="section level4">
+<h4>Apply Cloud Score+ Mask</h4>
+<p>Cloud Score+ masks are produced by Google for every Sentinel-2 scene
+and are available as a ready-to-use dataset <a
+href="https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_CLOUD_SCORE_PLUS_V1_S2_HARMONIZED">Cloud
+Score+ S2_HARMONIZED V1</a>. We find the equivalent Earth Engine id for
+our scene and find the matching cloud score+ mask scene.</p>
+<div class="sourceCode" id="cb525"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb525-1"><a href="#cb525-1" tabindex="-1"></a>gee_product_id <span class="op">=</span> most_cloudy.properties[<span class="st">&#39;s2:product_uri&#39;</span>].removesuffix(<span class="st">&#39;.SAFE&#39;</span>)</span>
+<span id="cb525-2"><a href="#cb525-2" tabindex="-1"></a></span>
+<span id="cb525-3"><a href="#cb525-3" tabindex="-1"></a>gee_s2_scene <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_SR_HARMONIZED&#39;</span>) <span class="op">\</span></span>
+<span id="cb525-4"><a href="#cb525-4" tabindex="-1"></a>    .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;PRODUCT_ID&#39;</span>, gee_product_id)) <span class="op">\</span></span>
+<span id="cb525-5"><a href="#cb525-5" tabindex="-1"></a>    .first()</span>
+<span id="cb525-6"><a href="#cb525-6" tabindex="-1"></a>gee_s2_id <span class="op">=</span> gee_s2_scene.get(<span class="st">&#39;system:index&#39;</span>).getInfo()</span>
+<span id="cb525-7"><a href="#cb525-7" tabindex="-1"></a>cs_plus_scene <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>) <span class="op">\</span></span>
+<span id="cb525-8"><a href="#cb525-8" tabindex="-1"></a>    .<span class="bu">filter</span>(ee.Filter.eq(<span class="st">&#39;system:index&#39;</span>, gee_s2_id))</span></code></pre></div>
+<p>We now read the filtered collecting using XEE. XEE requires explicit
+grid parameters. We extract these from scene metadata.</p>
+<div class="sourceCode" id="cb526"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb526-1"><a href="#cb526-1" tabindex="-1"></a>grid_params <span class="op">=</span> <span class="bu">dict</span>(</span>
+<span id="cb526-2"><a href="#cb526-2" tabindex="-1"></a>    crs<span class="op">=</span><span class="bu">str</span>(scene.rio.crs),</span>
+<span id="cb526-3"><a href="#cb526-3" tabindex="-1"></a>    crs_transform<span class="op">=</span><span class="bu">tuple</span>(scene.rio.transform())[:<span class="dv">6</span>],</span>
+<span id="cb526-4"><a href="#cb526-4" tabindex="-1"></a>    shape_2d<span class="op">=</span>(scene.rio.width, scene.rio.height),</span>
+<span id="cb526-5"><a href="#cb526-5" tabindex="-1"></a>)</span>
+<span id="cb526-6"><a href="#cb526-6" tabindex="-1"></a></span>
+<span id="cb526-7"><a href="#cb526-7" tabindex="-1"></a>ds <span class="op">=</span> xr.open_dataset(</span>
+<span id="cb526-8"><a href="#cb526-8" tabindex="-1"></a>    cs_plus_scene,</span>
+<span id="cb526-9"><a href="#cb526-9" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;ee&#39;</span>,</span>
+<span id="cb526-10"><a href="#cb526-10" tabindex="-1"></a>    <span class="op">**</span>grid_params</span>
+<span id="cb526-11"><a href="#cb526-11" tabindex="-1"></a>)</span>
+<span id="cb526-12"><a href="#cb526-12" tabindex="-1"></a>ds</span></code></pre></div>
+<p>Cloud Score+ comes with a <code>cs</code> band where each pixel is
+graded on continuous scale between 0 and 1.</p>
+<ul>
+<li><code>0</code> = <strong>not clear</strong> (occluded)</li>
+<li><code>1</code> = <strong>clear</strong> (unoccluded)</li>
+</ul>
+<p>Select the <code>cs</code> band and fetch the pixels.</p>
+<div class="sourceCode" id="cb527"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb527-1"><a href="#cb527-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb527-2"><a href="#cb527-2" tabindex="-1"></a>cs_band <span class="op">=</span> ds[<span class="st">&#39;cs&#39;</span>].squeeze()</span>
+<span id="cb527-3"><a href="#cb527-3" tabindex="-1"></a>cs_band <span class="op">=</span> cs_band.compute()</span></code></pre></div>
+<p>Apply the threshold to create a cloud mask. Values between 0.50 and
+0.65 generally work well. Lower values will keep more cloudy pixels in
+the image and higher values will remove thin clouds, haze &amp; cirrus
+shadows.</p>
+<div class="sourceCode" id="cb528"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb528-1"><a href="#cb528-1" tabindex="-1"></a>CLEAR_THRESHOLD <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb528-2"><a href="#cb528-2" tabindex="-1"></a>cs_mask <span class="op">=</span> cs_band <span class="op">&lt;</span> CLEAR_THRESHOLD</span></code></pre></div>
+<p>Apply the mask on our scene.</p>
+<div class="sourceCode" id="cb529"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb529-1"><a href="#cb529-1" tabindex="-1"></a>scene_masked_csplus <span class="op">=</span> scene[data_bands].where(<span class="op">~</span>cs_mask)</span>
+<span id="cb529-2"><a href="#cb529-2" tabindex="-1"></a>scene_masked_csplus</span></code></pre></div>
+</div>
+<div id="visualize-the-results-4" class="section level4">
+<h4>Visualize the Results</h4>
+<p>Let’s visualize and compare both the masks.</p>
+<div class="sourceCode" id="cb530"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb530-1"><a href="#cb530-1" tabindex="-1"></a>scene_preview <span class="op">=</span> scene[[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>]].to_array(<span class="st">&#39;band&#39;</span>)<span class="op">\</span></span>
+<span id="cb530-2"><a href="#cb530-2" tabindex="-1"></a>  .rio.reproject(</span>
+<span id="cb530-3"><a href="#cb530-3" tabindex="-1"></a>    scene.rio.crs, resolution<span class="op">=</span><span class="dv">100</span></span>
+<span id="cb530-4"><a href="#cb530-4" tabindex="-1"></a>)</span>
+<span id="cb530-5"><a href="#cb530-5" tabindex="-1"></a></span>
+<span id="cb530-6"><a href="#cb530-6" tabindex="-1"></a>cs_mask_preview <span class="op">=</span> cs_mask.astype(<span class="st">&#39;uint8&#39;</span>).rio.reproject(</span>
+<span id="cb530-7"><a href="#cb530-7" tabindex="-1"></a>    cs_mask.rio.crs, resolution<span class="op">=</span><span class="dv">100</span></span>
+<span id="cb530-8"><a href="#cb530-8" tabindex="-1"></a>)</span>
+<span id="cb530-9"><a href="#cb530-9" tabindex="-1"></a></span>
+<span id="cb530-10"><a href="#cb530-10" tabindex="-1"></a>fig, (ax0, ax1) <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb530-11"><a href="#cb530-11" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>,<span class="dv">5</span>)</span>
+<span id="cb530-12"><a href="#cb530-12" tabindex="-1"></a>scene_preview.sel(band<span class="op">=</span>[<span class="st">&#39;red&#39;</span>, <span class="st">&#39;green&#39;</span>, <span class="st">&#39;blue&#39;</span>]).plot.imshow(</span>
+<span id="cb530-13"><a href="#cb530-13" tabindex="-1"></a>    ax<span class="op">=</span>ax0,</span>
+<span id="cb530-14"><a href="#cb530-14" tabindex="-1"></a>    vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb530-15"><a href="#cb530-15" tabindex="-1"></a>ax0.set_title(<span class="st">&#39;RGB Visualization&#39;</span>)</span>
+<span id="cb530-16"><a href="#cb530-16" tabindex="-1"></a></span>
+<span id="cb530-17"><a href="#cb530-17" tabindex="-1"></a><span class="co"># RGBA: Transparent, Red</span></span>
+<span id="cb530-18"><a href="#cb530-18" tabindex="-1"></a>mask_colormap <span class="op">=</span> ListedColormap([<span class="st">&#39;#00000000&#39;</span>, <span class="st">&#39;#FF0000FF&#39;</span>])</span>
+<span id="cb530-19"><a href="#cb530-19" tabindex="-1"></a>cs_mask_preview.plot.imshow(</span>
+<span id="cb530-20"><a href="#cb530-20" tabindex="-1"></a>    ax<span class="op">=</span>ax1,</span>
+<span id="cb530-21"><a href="#cb530-21" tabindex="-1"></a>    cmap<span class="op">=</span>mask_colormap,</span>
+<span id="cb530-22"><a href="#cb530-22" tabindex="-1"></a>    add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb530-23"><a href="#cb530-23" tabindex="-1"></a></span>
+<span id="cb530-24"><a href="#cb530-24" tabindex="-1"></a>ax1.set_title(<span class="st">&#39;Cloud Score+ Mask&#39;</span>)</span>
+<span id="cb530-25"><a href="#cb530-25" tabindex="-1"></a></span>
+<span id="cb530-26"><a href="#cb530-26" tabindex="-1"></a></span>
+<span id="cb530-27"><a href="#cb530-27" tabindex="-1"></a><span class="cf">for</span> ax <span class="kw">in</span> (ax0, ax1):</span>
+<span id="cb530-28"><a href="#cb530-28" tabindex="-1"></a>  ax.set_axis_off()</span>
+<span id="cb530-29"><a href="#cb530-29" tabindex="-1"></a>  ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb530-30"><a href="#cb530-30" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/supplement/cloud_masking_with_cloudscoreplus_files/cloud_masking_with_cloudscoreplus_35_0.png" /></p>
+</div>
+<div id="save-the-masked-scene-1" class="section level4">
+<h4>Save the Masked Scene</h4>
+<div class="sourceCode" id="cb531"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb531-1"><a href="#cb531-1" tabindex="-1"></a>cs_mask_file <span class="op">=</span> <span class="ss">f&#39;scene_cs_masked.tif&#39;</span></span>
+<span id="cb531-2"><a href="#cb531-2" tabindex="-1"></a>cs_mask_path <span class="op">=</span> os.path.join(output_folder, cs_mask_file)</span>
+<span id="cb531-3"><a href="#cb531-3" tabindex="-1"></a>scene_masked_csplus.to_array(dim<span class="op">=</span><span class="st">&#39;band&#39;</span>).rio.to_raster(cs_mask_path, driver<span class="op">=</span><span class="st">&#39;COG&#39;</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="masking-a-time-series-1" class="section level3">
+<h3>Masking a Time-Series</h3>
+<p>If you’d like to apply the Cloud Score+ mask, it is most efficient to
+do the masking in GEE itself and open the resuling masked dataset using
+XEE. We use the Google Earth Engine Python API to load the Sentinel-2
+Level-2A collection, apply filters to select the scenes, and apply the
+Cloud Score+ mask.</p>
+<div class="sourceCode" id="cb532"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb532-1"><a href="#cb532-1" tabindex="-1"></a>geometry <span class="op">=</span> ee.Geometry.Point([longitude, latitude])</span></code></pre></div>
+<div class="sourceCode" id="cb533"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb533-1"><a href="#cb533-1" tabindex="-1"></a>s2 <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;COPERNICUS/S2_SR_HARMONIZED&#39;</span>)</span>
+<span id="cb533-2"><a href="#cb533-2" tabindex="-1"></a></span>
+<span id="cb533-3"><a href="#cb533-3" tabindex="-1"></a>startDate <span class="op">=</span> ee.Date.fromYMD(year, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb533-4"><a href="#cb533-4" tabindex="-1"></a>endDate <span class="op">=</span> ee.Date.fromYMD(year<span class="op">+</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb533-5"><a href="#cb533-5" tabindex="-1"></a></span>
+<span id="cb533-6"><a href="#cb533-6" tabindex="-1"></a>filtered <span class="op">=</span> s2 <span class="op">\</span></span>
+<span id="cb533-7"><a href="#cb533-7" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.date(startDate, endDate)) <span class="op">\</span></span>
+<span id="cb533-8"><a href="#cb533-8" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;CLOUDY_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">30</span>)) <span class="op">\</span></span>
+<span id="cb533-9"><a href="#cb533-9" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.lt(<span class="st">&#39;NODATA_PIXEL_PERCENTAGE&#39;</span>, <span class="dv">10</span>)) <span class="op">\</span></span>
+<span id="cb533-10"><a href="#cb533-10" tabindex="-1"></a>  .<span class="bu">filter</span>(ee.Filter.bounds(geometry))</span>
+<span id="cb533-11"><a href="#cb533-11" tabindex="-1"></a></span>
+<span id="cb533-12"><a href="#cb533-12" tabindex="-1"></a><span class="co"># Load the Cloud Score+ collection</span></span>
+<span id="cb533-13"><a href="#cb533-13" tabindex="-1"></a>csPlus <span class="op">=</span> ee.ImageCollection(<span class="st">&#39;GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED&#39;</span>)</span>
+<span id="cb533-14"><a href="#cb533-14" tabindex="-1"></a>csPlusBands <span class="op">=</span> csPlus.first().bandNames()</span>
+<span id="cb533-15"><a href="#cb533-15" tabindex="-1"></a></span>
+<span id="cb533-16"><a href="#cb533-16" tabindex="-1"></a><span class="co"># We need to add Cloud Score + bands to each Sentinel-2</span></span>
+<span id="cb533-17"><a href="#cb533-17" tabindex="-1"></a><span class="co"># image in the collection</span></span>
+<span id="cb533-18"><a href="#cb533-18" tabindex="-1"></a><span class="co"># This is done using the linkCollection() function</span></span>
+<span id="cb533-19"><a href="#cb533-19" tabindex="-1"></a>filteredS2WithCs <span class="op">=</span> filtered.linkCollection(csPlus, csPlusBands)</span>
+<span id="cb533-20"><a href="#cb533-20" tabindex="-1"></a></span>
+<span id="cb533-21"><a href="#cb533-21" tabindex="-1"></a><span class="co"># Function to mask pixels with low CS+ QA scores.</span></span>
+<span id="cb533-22"><a href="#cb533-22" tabindex="-1"></a><span class="kw">def</span> maskLowQA(image):</span>
+<span id="cb533-23"><a href="#cb533-23" tabindex="-1"></a>  qaBand <span class="op">=</span> <span class="st">&#39;cs&#39;</span></span>
+<span id="cb533-24"><a href="#cb533-24" tabindex="-1"></a>  clearThreshold <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb533-25"><a href="#cb533-25" tabindex="-1"></a>  mask <span class="op">=</span> image.select(qaBand).gte(clearThreshold)</span>
+<span id="cb533-26"><a href="#cb533-26" tabindex="-1"></a>  <span class="cf">return</span> image.updateMask(mask)</span>
+<span id="cb533-27"><a href="#cb533-27" tabindex="-1"></a></span>
+<span id="cb533-28"><a href="#cb533-28" tabindex="-1"></a>filteredMasked <span class="op">=</span> filteredS2WithCs <span class="op">\</span></span>
+<span id="cb533-29"><a href="#cb533-29" tabindex="-1"></a>  .<span class="bu">map</span>(maskLowQA)</span>
+<span id="cb533-30"><a href="#cb533-30" tabindex="-1"></a></span>
+<span id="cb533-31"><a href="#cb533-31" tabindex="-1"></a><span class="co"># Write a function that computes NDVI for an image and adds it as a band</span></span>
+<span id="cb533-32"><a href="#cb533-32" tabindex="-1"></a><span class="kw">def</span> addNDVI(image):</span>
+<span id="cb533-33"><a href="#cb533-33" tabindex="-1"></a>  ndvi <span class="op">=</span> image.normalizedDifference([<span class="st">&#39;B8&#39;</span>, <span class="st">&#39;B4&#39;</span>]).rename(<span class="st">&#39;ndvi&#39;</span>)</span>
+<span id="cb533-34"><a href="#cb533-34" tabindex="-1"></a>  <span class="cf">return</span> image.addBands(ndvi)</span>
+<span id="cb533-35"><a href="#cb533-35" tabindex="-1"></a></span>
+<span id="cb533-36"><a href="#cb533-36" tabindex="-1"></a><span class="co"># Map the function over the collection</span></span>
+<span id="cb533-37"><a href="#cb533-37" tabindex="-1"></a>ndviCol <span class="op">=</span> filteredMasked.<span class="bu">map</span>(addNDVI).select([<span class="st">&#39;ndvi&#39;</span>])</span></code></pre></div>
+<div class="sourceCode" id="cb534"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb534-1"><a href="#cb534-1" tabindex="-1"></a>grid_params <span class="op">=</span> helpers.extract_grid_params(ndviCol)</span>
+<span id="cb534-2"><a href="#cb534-2" tabindex="-1"></a>grid_params</span></code></pre></div>
+<div class="sourceCode" id="cb535"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb535-1"><a href="#cb535-1" tabindex="-1"></a>ds_masked_csplus <span class="op">=</span> xr.open_dataset(</span>
+<span id="cb535-2"><a href="#cb535-2" tabindex="-1"></a>    ndviCol,</span>
+<span id="cb535-3"><a href="#cb535-3" tabindex="-1"></a>    engine<span class="op">=</span><span class="st">&#39;ee&#39;</span>,</span>
+<span id="cb535-4"><a href="#cb535-4" tabindex="-1"></a>    <span class="op">**</span>grid_params,</span>
+<span id="cb535-5"><a href="#cb535-5" tabindex="-1"></a>    chunks<span class="op">=</span>{}</span>
+<span id="cb535-6"><a href="#cb535-6" tabindex="-1"></a>)</span>
+<span id="cb535-7"><a href="#cb535-7" tabindex="-1"></a>ds_masked_csplus</span></code></pre></div>
+</div>
+<div id="extract-a-cloud-masked-ndvi-time-series-1"
+class="section level3">
+<h3>Extract a Cloud-Masked NDVI Time Series</h3>
+<p>Following the course’s <a
+href="#extracting-and-processing-time-series">time-series workflow</a>,
+we extract an NDVI time series at a point of interest from the masked
+stack.</p>
+<p>Our location coordinates are in EPSG:4326 Lat/Lon. Convert it to the
+CRS of the dataset so we can query it.</p>
+<div class="sourceCode" id="cb536"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb536-1"><a href="#cb536-1" tabindex="-1"></a>crs <span class="op">=</span> ds_masked_csplus.rio.crs</span>
+<span id="cb536-2"><a href="#cb536-2" tabindex="-1"></a>transformer <span class="op">=</span> pyproj.Transformer.from_crs(<span class="st">&#39;EPSG:4326&#39;</span>, crs, always_xy<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb536-3"><a href="#cb536-3" tabindex="-1"></a>x, y <span class="op">=</span> transformer.transform(longitude, latitude)</span>
+<span id="cb536-4"><a href="#cb536-4" tabindex="-1"></a>x,y</span></code></pre></div>
+<p>Query NDVI values at the coordinates.</p>
+<div class="sourceCode" id="cb537"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb537-1"><a href="#cb537-1" tabindex="-1"></a>time_series <span class="op">=</span> ds_masked_csplus.ndvi <span class="op">\</span></span>
+<span id="cb537-2"><a href="#cb537-2" tabindex="-1"></a>  .interp(y<span class="op">=</span>y, x<span class="op">=</span>x, method<span class="op">=</span><span class="st">&#39;nearest&#39;</span>)</span>
+<span id="cb537-3"><a href="#cb537-3" tabindex="-1"></a>time_series</span></code></pre></div>
+<div class="sourceCode" id="cb538"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb538-1"><a href="#cb538-1" tabindex="-1"></a><span class="co"># As we are proceesing the time-series,</span></span>
+<span id="cb538-2"><a href="#cb538-2" tabindex="-1"></a><span class="co"># it needs to be in a single chunk along the time dimension</span></span>
+<span id="cb538-3"><a href="#cb538-3" tabindex="-1"></a>time_series <span class="op">=</span> time_series.chunk(<span class="bu">dict</span>(time<span class="op">=-</span><span class="dv">1</span>))</span>
+<span id="cb538-4"><a href="#cb538-4" tabindex="-1"></a>time_series</span></code></pre></div>
+<p>Run the calculation and load the results into memory.</p>
+<div class="sourceCode" id="cb539"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb539-1"><a href="#cb539-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb539-2"><a href="#cb539-2" tabindex="-1"></a>time_series <span class="op">=</span> time_series.compute()</span></code></pre></div>
+<p>Plot the time-series. The missing values are pixels where the
+OmniCloudMask predicted a cloud.</p>
+<div class="sourceCode" id="cb540"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb540-1"><a href="#cb540-1" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb540-2"><a href="#cb540-2" tabindex="-1"></a>fig.set_size_inches(<span class="dv">15</span>, <span class="dv">7</span>)</span>
+<span id="cb540-3"><a href="#cb540-3" tabindex="-1"></a></span>
+<span id="cb540-4"><a href="#cb540-4" tabindex="-1"></a>time_series.plot.line(</span>
+<span id="cb540-5"><a href="#cb540-5" tabindex="-1"></a>    ax<span class="op">=</span>ax, x<span class="op">=</span><span class="st">&#39;time&#39;</span>,</span>
+<span id="cb540-6"><a href="#cb540-6" tabindex="-1"></a>    marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, color<span class="op">=</span><span class="st">&#39;#238b45&#39;</span>,</span>
+<span id="cb540-7"><a href="#cb540-7" tabindex="-1"></a>    linestyle<span class="op">=</span><span class="st">&#39;-&#39;</span>, linewidth<span class="op">=</span><span class="dv">1</span>, markersize<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb540-8"><a href="#cb540-8" tabindex="-1"></a></span>
+<span id="cb540-9"><a href="#cb540-9" tabindex="-1"></a><span class="co"># Format the x-axis to display dates as YYYY-MM</span></span>
+<span id="cb540-10"><a href="#cb540-10" tabindex="-1"></a>ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">&#39;%Y-%m&#39;</span>))</span>
+<span id="cb540-11"><a href="#cb540-11" tabindex="-1"></a>ax.xaxis.set_major_locator(mdates.MonthLocator(interval<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb540-12"><a href="#cb540-12" tabindex="-1"></a></span>
+<span id="cb540-13"><a href="#cb540-13" tabindex="-1"></a>ax.set_title(<span class="st">&#39;NDVI Time-Series (Cloud Score+ Masked)&#39;</span>, fontsize<span class="op">=</span><span class="dv">16</span>)</span>
+<span id="cb540-14"><a href="#cb540-14" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p><img
+src="python-remote-sensing-output/supplement/cloud_masking_with_cloudscoreplus_files/cloud_masking_with_cloudscoreplus_52_0.png" /></p>
+<p>Close the dask client. This presents multiple clients being
+instantiated when running different notebooks on the same machine. This
+is not required on Colab but a good practice when you are running it on
+a local machine. Uncomment and run to shutdown the dask cluster.</p>
+<div class="sourceCode" id="cb541"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb541-1"><a href="#cb541-1" tabindex="-1"></a><span class="co">#client.shutdown()</span></span></code></pre></div>
+</div>
+</div>
+<div id="working-with-glc-fcs30-landcover-data" class="section level2">
+<h2>Working with GLC-FCS30 LandCover Data</h2>
+<p><a
+href="https://colab.research.google.com/github/spatialthoughts/courses/blob/master/code/python_remote_sensing/supplement/glc_fcs30d_landcover.ipynb"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab" /></a></p>
+<p>The <a href="https://zenodo.org/records/8239305">Global Land Cover by
+Fine Classification System at 30m (GLC_FCS30D)</a> is a dynamic land
+cover product produced by the Chinese Academy of Sciences. It provides a
+high-resolution landcover time-series derived from the Landsat archive
+(1984-2022) at 30m resolution with 35 classes.</p>
+<p>This notebook shows how to access, visualize and reclassify
+GLC_FCS30D land cover data for a region of interest using
+cloud-optimized GeoTIFF data hosted on OpenLandMap.</p>
+<div id="setup-19" class="section level4">
+<h4>Setup</h4>
+<p>Determine our runtime environment.</p>
+<div class="sourceCode" id="cb542"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb542-1"><a href="#cb542-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb542-2"><a href="#cb542-2" tabindex="-1"></a></span>
+<span id="cb542-3"><a href="#cb542-3" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;COLAB_RELEASE_TAG&#39;</span> <span class="kw">in</span> os.environ:</span>
+<span id="cb542-4"><a href="#cb542-4" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;colab&#39;</span></span>
+<span id="cb542-5"><a href="#cb542-5" tabindex="-1"></a>    <span class="cf">if</span> os.environ.get(<span class="st">&#39;VERTEX_PRODUCT&#39;</span>) <span class="op">==</span> <span class="st">&#39;COLAB_ENTERPRISE&#39;</span>:</span>
+<span id="cb542-6"><a href="#cb542-6" tabindex="-1"></a>        environment <span class="op">=</span> <span class="st">&#39;colab_enterprise&#39;</span></span>
+<span id="cb542-7"><a href="#cb542-7" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb542-8"><a href="#cb542-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
+<span id="cb542-9"><a href="#cb542-9" tabindex="-1"></a></span>
+<span id="cb542-10"><a href="#cb542-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
+<span id="cb542-11"><a href="#cb542-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb542-12"><a href="#cb542-12" tabindex="-1"></a></span>
+<span id="cb542-13"><a href="#cb542-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
+<span id="cb542-14"><a href="#cb542-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
+<span id="cb542-15"><a href="#cb542-15" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> drive</span>
+<span id="cb542-16"><a href="#cb542-16" tabindex="-1"></a>    drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span>
+<span id="cb542-17"><a href="#cb542-17" tabindex="-1"></a>    drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
+<span id="cb542-18"><a href="#cb542-18" tabindex="-1"></a>    drive_data_folder <span class="op">=</span> <span class="st">&#39;python-remote-sensing&#39;</span></span>
+<span id="cb542-19"><a href="#cb542-19" tabindex="-1"></a>    drive_folder_path <span class="op">=</span> os.path.join(<span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, drive_data_folder)</span>
+<span id="cb542-20"><a href="#cb542-20" tabindex="-1"></a>    data_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb542-21"><a href="#cb542-21" tabindex="-1"></a>    output_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb542-22"><a href="#cb542-22" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb542-23"><a href="#cb542-23" tabindex="-1"></a>    data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb542-24"><a href="#cb542-24" tabindex="-1"></a>    output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb542-25"><a href="#cb542-25" tabindex="-1"></a></span>
+<span id="cb542-26"><a href="#cb542-26" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb542-27"><a href="#cb542-27" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb542-28"><a href="#cb542-28" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb542-29"><a href="#cb542-29" tabindex="-1"></a>    os.mkdir(output_folder)</span>
+<span id="cb542-30"><a href="#cb542-30" tabindex="-1"></a></span>
+<span id="cb542-31"><a href="#cb542-31" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Environment: </span><span class="sc">{</span>environment<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb542-32"><a href="#cb542-32" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Data folder: </span><span class="sc">{</span>data_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb542-33"><a href="#cb542-33" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Output folder: </span><span class="sc">{</span>output_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<p>If we are on Google Colab, install the required packages. Local
+runtimes are expected to have the packages already installed.</p>
+<div class="sourceCode" id="cb543"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb543-1"><a href="#cb543-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb543-2"><a href="#cb543-2" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
+<span id="cb543-3"><a href="#cb543-3" tabindex="-1"></a>  <span class="op">!</span>pip install rioxarray dask[distributed] odc<span class="op">-</span>stac <span class="op">\</span></span>
+<span id="cb543-4"><a href="#cb543-4" tabindex="-1"></a>    jupyter<span class="op">-</span>server<span class="op">-</span>proxy</span></code></pre></div>
+<p>Import all required libraries.</p>
+<div class="sourceCode" id="cb544"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb544-1"><a href="#cb544-1" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb544-2"><a href="#cb544-2" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb544-3"><a href="#cb544-3" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb544-4"><a href="#cb544-4" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb544-5"><a href="#cb544-5" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb544-6"><a href="#cb544-6" tabindex="-1"></a><span class="im">import</span> pyproj</span>
+<span id="cb544-7"><a href="#cb544-7" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb544-8"><a href="#cb544-8" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
+<span id="cb544-9"><a href="#cb544-9" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span></code></pre></div>
+<p>Setup a local Dask cluster. This distributes the computation across
+multiple workers on your computer.</p>
+<div class="sourceCode" id="cb545"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb545-1"><a href="#cb545-1" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb545-2"><a href="#cb545-2" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb545-3"><a href="#cb545-3" tabindex="-1"></a>client</span></code></pre></div>
+<p>If you are running this notebook in Colab, you will need to create
+and use a proxy URL to see the dashboard running on the local
+server.</p>
+<div class="sourceCode" id="cb546"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb546-1"><a href="#cb546-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
+<span id="cb546-2"><a href="#cb546-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb546-3"><a href="#cb546-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb546-4"><a href="#cb546-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
 </div>
 <div id="load-area-of-interest-10" class="section level4">
 <h4>Load Area of Interest</h4>
 <p>Read the file containing the city boundary.</p>
-<div class="sourceCode" id="cb520"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb520-1"><a href="#cb520-1" tabindex="-1"></a>aoi_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;aoi.geojson&#39;</span>)</span>
-<span id="cb520-2"><a href="#cb520-2" tabindex="-1"></a></span>
-<span id="cb520-3"><a href="#cb520-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(aoi_filepath):</span>
-<span id="cb520-4"><a href="#cb520-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;AOI file not found at </span><span class="sc">{</span>aoi_filepath<span class="sc">}</span><span class="ss">. Using default AOI.&#39;</span>)</span>
-<span id="cb520-5"><a href="#cb520-5" tabindex="-1"></a>    aoi_filepath <span class="op">=</span> (<span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
-<span id="cb520-6"><a href="#cb520-6" tabindex="-1"></a>                    <span class="st">&#39;/python-remote-sensing/aoi.geojson&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb547"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb547-1"><a href="#cb547-1" tabindex="-1"></a>aoi_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;aoi.geojson&#39;</span>)</span>
+<span id="cb547-2"><a href="#cb547-2" tabindex="-1"></a></span>
+<span id="cb547-3"><a href="#cb547-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(aoi_filepath):</span>
+<span id="cb547-4"><a href="#cb547-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;AOI file not found at </span><span class="sc">{</span>aoi_filepath<span class="sc">}</span><span class="ss">. Using default AOI.&#39;</span>)</span>
+<span id="cb547-5"><a href="#cb547-5" tabindex="-1"></a>    aoi_filepath <span class="op">=</span> (<span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
+<span id="cb547-6"><a href="#cb547-6" tabindex="-1"></a>                    <span class="st">&#39;/python-remote-sensing/aoi.geojson&#39;</span>)</span></code></pre></div>
 <p>Read the GeoJSON.</p>
-<div class="sourceCode" id="cb521"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb521-1"><a href="#cb521-1" tabindex="-1"></a>aoi_gdf <span class="op">=</span> gpd.read_file(aoi_filepath)</span></code></pre></div>
+<div class="sourceCode" id="cb548"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb548-1"><a href="#cb548-1" tabindex="-1"></a>aoi_gdf <span class="op">=</span> gpd.read_file(aoi_filepath)</span></code></pre></div>
 <p>Extract the geometry.</p>
-<div class="sourceCode" id="cb522"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb522-1"><a href="#cb522-1" tabindex="-1"></a>geometry <span class="op">=</span> aoi_gdf.geometry.union_all()</span>
-<span id="cb522-2"><a href="#cb522-2" tabindex="-1"></a>geometry</span></code></pre></div>
+<div class="sourceCode" id="cb549"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb549-1"><a href="#cb549-1" tabindex="-1"></a>geometry <span class="op">=</span> aoi_gdf.geometry.union_all()</span>
+<span id="cb549-2"><a href="#cb549-2" tabindex="-1"></a>geometry</span></code></pre></div>
 </div>
 <div id="load-glc-fcs30-data" class="section level4">
 <h4>Load GLC-FCS30 Data</h4>
-<div class="sourceCode" id="cb523"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb523-1"><a href="#cb523-1" tabindex="-1"></a>data_url <span class="op">=</span> (</span>
-<span id="cb523-2"><a href="#cb523-2" tabindex="-1"></a>    <span class="st">&#39;https://s3.openlandmap.org/arco/&#39;</span></span>
-<span id="cb523-3"><a href="#cb523-3" tabindex="-1"></a>    <span class="st">&#39;lc_glc.fcs30d_c_30m_s_20210101_20211231_go_epsg.4326_v20231026.tif&#39;</span>)</span>
-<span id="cb523-4"><a href="#cb523-4" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> rxr.open_rasterio(</span>
-<span id="cb523-5"><a href="#cb523-5" tabindex="-1"></a>    data_url,</span>
-<span id="cb523-6"><a href="#cb523-6" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
-<span id="cb523-7"><a href="#cb523-7" tabindex="-1"></a>)</span>
-<span id="cb523-8"><a href="#cb523-8" tabindex="-1"></a>glc_fcs_ds</span></code></pre></div>
+<div class="sourceCode" id="cb550"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb550-1"><a href="#cb550-1" tabindex="-1"></a>data_url <span class="op">=</span> (</span>
+<span id="cb550-2"><a href="#cb550-2" tabindex="-1"></a>    <span class="st">&#39;https://s3.openlandmap.org/arco/&#39;</span></span>
+<span id="cb550-3"><a href="#cb550-3" tabindex="-1"></a>    <span class="st">&#39;lc_glc.fcs30d_c_30m_s_20210101_20211231_go_epsg.4326_v20231026.tif&#39;</span>)</span>
+<span id="cb550-4"><a href="#cb550-4" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> rxr.open_rasterio(</span>
+<span id="cb550-5"><a href="#cb550-5" tabindex="-1"></a>    data_url,</span>
+<span id="cb550-6"><a href="#cb550-6" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
+<span id="cb550-7"><a href="#cb550-7" tabindex="-1"></a>)</span>
+<span id="cb550-8"><a href="#cb550-8" tabindex="-1"></a>glc_fcs_ds</span></code></pre></div>
 <p>This is a global raster at 30m resolution available as a single COG.
 We can clip and reproject the data to get the subset for our region of
 interest.</p>
-<div class="sourceCode" id="cb524"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb524-1"><a href="#cb524-1" tabindex="-1"></a>bbox <span class="op">=</span> aoi_gdf.geometry.total_bounds</span>
-<span id="cb524-2"><a href="#cb524-2" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> glc_fcs_ds.rio.clip_box(<span class="op">*</span>bbox)</span>
-<span id="cb524-3"><a href="#cb524-3" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> glc_fcs_ds.odc.reproject(<span class="st">&#39;utm&#39;</span>)</span>
-<span id="cb524-4"><a href="#cb524-4" tabindex="-1"></a>glc_fcs_ds</span></code></pre></div>
-<div class="sourceCode" id="cb525"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb525-1"><a href="#cb525-1" tabindex="-1"></a>glc_fcs_da <span class="op">=</span> glc_fcs_ds.squeeze()</span>
-<span id="cb525-2"><a href="#cb525-2" tabindex="-1"></a>glc_fcs_da</span></code></pre></div>
-<div class="sourceCode" id="cb526"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb526-1"><a href="#cb526-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb526-2"><a href="#cb526-2" tabindex="-1"></a>glc_fcs_da <span class="op">=</span> glc_fcs_da.compute()</span></code></pre></div>
+<div class="sourceCode" id="cb551"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb551-1"><a href="#cb551-1" tabindex="-1"></a>bbox <span class="op">=</span> aoi_gdf.geometry.total_bounds</span>
+<span id="cb551-2"><a href="#cb551-2" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> glc_fcs_ds.rio.clip_box(<span class="op">*</span>bbox)</span>
+<span id="cb551-3"><a href="#cb551-3" tabindex="-1"></a>glc_fcs_ds <span class="op">=</span> glc_fcs_ds.odc.reproject(<span class="st">&#39;utm&#39;</span>)</span>
+<span id="cb551-4"><a href="#cb551-4" tabindex="-1"></a>glc_fcs_ds</span></code></pre></div>
+<div class="sourceCode" id="cb552"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb552-1"><a href="#cb552-1" tabindex="-1"></a>glc_fcs_da <span class="op">=</span> glc_fcs_ds.squeeze()</span>
+<span id="cb552-2"><a href="#cb552-2" tabindex="-1"></a>glc_fcs_da</span></code></pre></div>
+<div class="sourceCode" id="cb553"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb553-1"><a href="#cb553-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb553-2"><a href="#cb553-2" tabindex="-1"></a>glc_fcs_da <span class="op">=</span> glc_fcs_da.compute()</span></code></pre></div>
 <p>Clip the data to geometry. Before we clip, we need to reproject the
 <code>aoi_gdf</code> to the same CRS as the data.</p>
-<div class="sourceCode" id="cb527"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb527-1"><a href="#cb527-1" tabindex="-1"></a>aoi_gdf_reprojected <span class="op">=</span> aoi_gdf.to_crs(glc_fcs_da.rio.crs)</span>
-<span id="cb527-2"><a href="#cb527-2" tabindex="-1"></a>glc_fcs_da_clipped <span class="op">=</span> glc_fcs_da.rio.clip(aoi_gdf_reprojected.geometry)</span></code></pre></div>
+<div class="sourceCode" id="cb554"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb554-1"><a href="#cb554-1" tabindex="-1"></a>aoi_gdf_reprojected <span class="op">=</span> aoi_gdf.to_crs(glc_fcs_da.rio.crs)</span>
+<span id="cb554-2"><a href="#cb554-2" tabindex="-1"></a>glc_fcs_da_clipped <span class="op">=</span> glc_fcs_da.rio.clip(aoi_gdf_reprojected.geometry)</span></code></pre></div>
 </div>
 <div id="visualize-the-data" class="section level4">
 <h4>Visualize the Data</h4>
 <p>To create a meaningful legend, we create a dictionary of class names
 and colors for the landcover classes.</p>
-<div class="sourceCode" id="cb528"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb528-1"><a href="#cb528-1" tabindex="-1"></a>glc_fcs_class_dict <span class="op">=</span> {</span>
-<span id="cb528-2"><a href="#cb528-2" tabindex="-1"></a>    <span class="dv">10</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Rainfed cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff64&#39;</span>},</span>
-<span id="cb528-3"><a href="#cb528-3" tabindex="-1"></a>    <span class="dv">11</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Herbaceous cover cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff64&#39;</span>},</span>
-<span id="cb528-4"><a href="#cb528-4" tabindex="-1"></a>    <span class="dv">12</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Tree/shrub cover (Orchard) cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff00&#39;</span>},</span>
-<span id="cb528-5"><a href="#cb528-5" tabindex="-1"></a>    <span class="dv">20</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Irrigated cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;aaf0f0&#39;</span>},</span>
-<span id="cb528-6"><a href="#cb528-6" tabindex="-1"></a>    <span class="dv">51</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open evergreen broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;4c7300&#39;</span>},</span>
-<span id="cb528-7"><a href="#cb528-7" tabindex="-1"></a>    <span class="dv">52</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed evergreen broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;006400&#39;</span>},</span>
-<span id="cb528-8"><a href="#cb528-8" tabindex="-1"></a>    <span class="dv">61</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open deciduous broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;aac800&#39;</span>},</span>
-<span id="cb528-9"><a href="#cb528-9" tabindex="-1"></a>    <span class="dv">62</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed deciduous broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;00a000&#39;</span>},</span>
-<span id="cb528-10"><a href="#cb528-10" tabindex="-1"></a>    <span class="dv">71</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open evergreen needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;005000&#39;</span>},</span>
-<span id="cb528-11"><a href="#cb528-11" tabindex="-1"></a>    <span class="dv">72</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed evergreen needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;003c00&#39;</span>},</span>
-<span id="cb528-12"><a href="#cb528-12" tabindex="-1"></a>    <span class="dv">81</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open deciduous needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;286400&#39;</span>},</span>
-<span id="cb528-13"><a href="#cb528-13" tabindex="-1"></a>    <span class="dv">82</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed deciduous needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;285000&#39;</span>},</span>
-<span id="cb528-14"><a href="#cb528-14" tabindex="-1"></a>    <span class="dv">91</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open mixed leaf forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;a0b432&#39;</span>},</span>
-<span id="cb528-15"><a href="#cb528-15" tabindex="-1"></a>    <span class="dv">92</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed mixed leaf forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;788200&#39;</span>},</span>
-<span id="cb528-16"><a href="#cb528-16" tabindex="-1"></a>    <span class="dv">120</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;966400&#39;</span>},</span>
-<span id="cb528-17"><a href="#cb528-17" tabindex="-1"></a>    <span class="dv">121</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Evergreen shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;964b00&#39;</span>},</span>
-<span id="cb528-18"><a href="#cb528-18" tabindex="-1"></a>    <span class="dv">122</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Deciduous shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;966400&#39;</span>},</span>
-<span id="cb528-19"><a href="#cb528-19" tabindex="-1"></a>    <span class="dv">130</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Grassland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffb432&#39;</span>},</span>
-<span id="cb528-20"><a href="#cb528-20" tabindex="-1"></a>    <span class="dv">140</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Lichens and mosses&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffdcd2&#39;</span>},</span>
-<span id="cb528-21"><a href="#cb528-21" tabindex="-1"></a>    <span class="dv">150</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse vegetation&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffebaf&#39;</span>},</span>
-<span id="cb528-22"><a href="#cb528-22" tabindex="-1"></a>    <span class="dv">152</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffd278&#39;</span>},</span>
-<span id="cb528-23"><a href="#cb528-23" tabindex="-1"></a>    <span class="dv">153</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse herbaceous&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffebaf&#39;</span>},</span>
-<span id="cb528-24"><a href="#cb528-24" tabindex="-1"></a>    <span class="dv">181</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Swamp&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;00a884&#39;</span>},</span>
-<span id="cb528-25"><a href="#cb528-25" tabindex="-1"></a>    <span class="dv">182</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Marsh&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;73ffdf&#39;</span>},</span>
-<span id="cb528-26"><a href="#cb528-26" tabindex="-1"></a>    <span class="dv">183</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Flooded flat&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;9ebbd7&#39;</span>},</span>
-<span id="cb528-27"><a href="#cb528-27" tabindex="-1"></a>    <span class="dv">184</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Saline&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;828282&#39;</span>},</span>
-<span id="cb528-28"><a href="#cb528-28" tabindex="-1"></a>    <span class="dv">185</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Mangrove&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;f57ab6&#39;</span>},</span>
-<span id="cb528-29"><a href="#cb528-29" tabindex="-1"></a>    <span class="dv">186</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Salt marsh&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;66cdab&#39;</span>},</span>
-<span id="cb528-30"><a href="#cb528-30" tabindex="-1"></a>    <span class="dv">187</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Tidal flat&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;444f89&#39;</span>},</span>
-<span id="cb528-31"><a href="#cb528-31" tabindex="-1"></a>    <span class="dv">190</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Impervious surfaces&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;c31400&#39;</span>},</span>
-<span id="cb528-32"><a href="#cb528-32" tabindex="-1"></a>    <span class="dv">200</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;fff5d7&#39;</span>},</span>
-<span id="cb528-33"><a href="#cb528-33" tabindex="-1"></a>    <span class="dv">201</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Consolidated bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;dcdcdc&#39;</span>},</span>
-<span id="cb528-34"><a href="#cb528-34" tabindex="-1"></a>    <span class="dv">202</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Unconsolidated bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;fff5d7&#39;</span>},</span>
-<span id="cb528-35"><a href="#cb528-35" tabindex="-1"></a>    <span class="dv">210</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Water body&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;0046c8&#39;</span>},</span>
-<span id="cb528-36"><a href="#cb528-36" tabindex="-1"></a>    <span class="dv">220</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Permanent ice and snow&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffffff&#39;</span>},</span>
-<span id="cb528-37"><a href="#cb528-37" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb555"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb555-1"><a href="#cb555-1" tabindex="-1"></a>glc_fcs_class_dict <span class="op">=</span> {</span>
+<span id="cb555-2"><a href="#cb555-2" tabindex="-1"></a>    <span class="dv">10</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Rainfed cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff64&#39;</span>},</span>
+<span id="cb555-3"><a href="#cb555-3" tabindex="-1"></a>    <span class="dv">11</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Herbaceous cover cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff64&#39;</span>},</span>
+<span id="cb555-4"><a href="#cb555-4" tabindex="-1"></a>    <span class="dv">12</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Tree/shrub cover (Orchard) cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffff00&#39;</span>},</span>
+<span id="cb555-5"><a href="#cb555-5" tabindex="-1"></a>    <span class="dv">20</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Irrigated cropland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;aaf0f0&#39;</span>},</span>
+<span id="cb555-6"><a href="#cb555-6" tabindex="-1"></a>    <span class="dv">51</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open evergreen broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;4c7300&#39;</span>},</span>
+<span id="cb555-7"><a href="#cb555-7" tabindex="-1"></a>    <span class="dv">52</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed evergreen broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;006400&#39;</span>},</span>
+<span id="cb555-8"><a href="#cb555-8" tabindex="-1"></a>    <span class="dv">61</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open deciduous broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;aac800&#39;</span>},</span>
+<span id="cb555-9"><a href="#cb555-9" tabindex="-1"></a>    <span class="dv">62</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed deciduous broadleaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;00a000&#39;</span>},</span>
+<span id="cb555-10"><a href="#cb555-10" tabindex="-1"></a>    <span class="dv">71</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open evergreen needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;005000&#39;</span>},</span>
+<span id="cb555-11"><a href="#cb555-11" tabindex="-1"></a>    <span class="dv">72</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed evergreen needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;003c00&#39;</span>},</span>
+<span id="cb555-12"><a href="#cb555-12" tabindex="-1"></a>    <span class="dv">81</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open deciduous needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;286400&#39;</span>},</span>
+<span id="cb555-13"><a href="#cb555-13" tabindex="-1"></a>    <span class="dv">82</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed deciduous needle-leaved forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;285000&#39;</span>},</span>
+<span id="cb555-14"><a href="#cb555-14" tabindex="-1"></a>    <span class="dv">91</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Open mixed leaf forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;a0b432&#39;</span>},</span>
+<span id="cb555-15"><a href="#cb555-15" tabindex="-1"></a>    <span class="dv">92</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Closed mixed leaf forest&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;788200&#39;</span>},</span>
+<span id="cb555-16"><a href="#cb555-16" tabindex="-1"></a>    <span class="dv">120</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;966400&#39;</span>},</span>
+<span id="cb555-17"><a href="#cb555-17" tabindex="-1"></a>    <span class="dv">121</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Evergreen shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;964b00&#39;</span>},</span>
+<span id="cb555-18"><a href="#cb555-18" tabindex="-1"></a>    <span class="dv">122</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Deciduous shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;966400&#39;</span>},</span>
+<span id="cb555-19"><a href="#cb555-19" tabindex="-1"></a>    <span class="dv">130</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Grassland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffb432&#39;</span>},</span>
+<span id="cb555-20"><a href="#cb555-20" tabindex="-1"></a>    <span class="dv">140</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Lichens and mosses&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffdcd2&#39;</span>},</span>
+<span id="cb555-21"><a href="#cb555-21" tabindex="-1"></a>    <span class="dv">150</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse vegetation&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffebaf&#39;</span>},</span>
+<span id="cb555-22"><a href="#cb555-22" tabindex="-1"></a>    <span class="dv">152</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse shrubland&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffd278&#39;</span>},</span>
+<span id="cb555-23"><a href="#cb555-23" tabindex="-1"></a>    <span class="dv">153</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Sparse herbaceous&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffebaf&#39;</span>},</span>
+<span id="cb555-24"><a href="#cb555-24" tabindex="-1"></a>    <span class="dv">181</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Swamp&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;00a884&#39;</span>},</span>
+<span id="cb555-25"><a href="#cb555-25" tabindex="-1"></a>    <span class="dv">182</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Marsh&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;73ffdf&#39;</span>},</span>
+<span id="cb555-26"><a href="#cb555-26" tabindex="-1"></a>    <span class="dv">183</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Flooded flat&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;9ebbd7&#39;</span>},</span>
+<span id="cb555-27"><a href="#cb555-27" tabindex="-1"></a>    <span class="dv">184</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Saline&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;828282&#39;</span>},</span>
+<span id="cb555-28"><a href="#cb555-28" tabindex="-1"></a>    <span class="dv">185</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Mangrove&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;f57ab6&#39;</span>},</span>
+<span id="cb555-29"><a href="#cb555-29" tabindex="-1"></a>    <span class="dv">186</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Salt marsh&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;66cdab&#39;</span>},</span>
+<span id="cb555-30"><a href="#cb555-30" tabindex="-1"></a>    <span class="dv">187</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Tidal flat&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;444f89&#39;</span>},</span>
+<span id="cb555-31"><a href="#cb555-31" tabindex="-1"></a>    <span class="dv">190</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Impervious surfaces&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;c31400&#39;</span>},</span>
+<span id="cb555-32"><a href="#cb555-32" tabindex="-1"></a>    <span class="dv">200</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;fff5d7&#39;</span>},</span>
+<span id="cb555-33"><a href="#cb555-33" tabindex="-1"></a>    <span class="dv">201</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Consolidated bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;dcdcdc&#39;</span>},</span>
+<span id="cb555-34"><a href="#cb555-34" tabindex="-1"></a>    <span class="dv">202</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Unconsolidated bare areas&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;fff5d7&#39;</span>},</span>
+<span id="cb555-35"><a href="#cb555-35" tabindex="-1"></a>    <span class="dv">210</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Water body&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;0046c8&#39;</span>},</span>
+<span id="cb555-36"><a href="#cb555-36" tabindex="-1"></a>    <span class="dv">220</span>: {<span class="st">&#39;description&#39;</span>: <span class="st">&#39;Permanent ice and snow&#39;</span>, <span class="st">&#39;hex&#39;</span>: <span class="st">&#39;ffffff&#39;</span>},</span>
+<span id="cb555-37"><a href="#cb555-37" tabindex="-1"></a>}</span></code></pre></div>
 <p>Create a preview and plot.</p>
-<div class="sourceCode" id="cb529"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb529-1"><a href="#cb529-1" tabindex="-1"></a><span class="im">import</span> matplotlib.patches <span class="im">as</span> mpatches</span>
-<span id="cb529-2"><a href="#cb529-2" tabindex="-1"></a></span>
-<span id="cb529-3"><a href="#cb529-3" tabindex="-1"></a><span class="co"># Create a preview</span></span>
-<span id="cb529-4"><a href="#cb529-4" tabindex="-1"></a>glc_fcs_da_preview <span class="op">=</span> glc_fcs_da_clipped.rio.reproject(</span>
-<span id="cb529-5"><a href="#cb529-5" tabindex="-1"></a>    glc_fcs_da_clipped.rio.crs, resolution<span class="op">=</span><span class="dv">100</span></span>
-<span id="cb529-6"><a href="#cb529-6" tabindex="-1"></a>)</span>
-<span id="cb529-7"><a href="#cb529-7" tabindex="-1"></a></span>
-<span id="cb529-8"><a href="#cb529-8" tabindex="-1"></a>colors_map <span class="op">=</span> [<span class="st">&#39;#000000&#39;</span>] <span class="op">*</span> <span class="dv">256</span></span>
-<span id="cb529-9"><a href="#cb529-9" tabindex="-1"></a><span class="cf">for</span> key, value <span class="kw">in</span> glc_fcs_class_dict.items():</span>
-<span id="cb529-10"><a href="#cb529-10" tabindex="-1"></a>    colors_map[key] <span class="op">=</span> <span class="ss">f&#39;#</span><span class="sc">{</span>value[<span class="st">&quot;hex&quot;</span>]<span class="sc">}</span><span class="ss">&#39;</span></span>
-<span id="cb529-11"><a href="#cb529-11" tabindex="-1"></a>colors_map[<span class="dv">0</span>] <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)  <span class="co"># transparent for nodata</span></span>
-<span id="cb529-12"><a href="#cb529-12" tabindex="-1"></a>glc_cmap <span class="op">=</span> matplotlib.colors.ListedColormap(colors_map)</span>
-<span id="cb529-13"><a href="#cb529-13" tabindex="-1"></a>normalizer <span class="op">=</span> matplotlib.colors.Normalize(vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">255</span>)</span>
-<span id="cb529-14"><a href="#cb529-14" tabindex="-1"></a></span>
-<span id="cb529-15"><a href="#cb529-15" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb529-16"><a href="#cb529-16" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">10</span>) <span class="co"># Increased width to accommodate 2-column legend</span></span>
-<span id="cb529-17"><a href="#cb529-17" tabindex="-1"></a></span>
-<span id="cb529-18"><a href="#cb529-18" tabindex="-1"></a>glc_fcs_da_preview.plot(ax<span class="op">=</span>ax, cmap<span class="op">=</span>glc_cmap,</span>
-<span id="cb529-19"><a href="#cb529-19" tabindex="-1"></a>                        norm<span class="op">=</span>normalizer, add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb529-20"><a href="#cb529-20" tabindex="-1"></a></span>
-<span id="cb529-21"><a href="#cb529-21" tabindex="-1"></a><span class="co"># # Create custom legend handles</span></span>
-<span id="cb529-22"><a href="#cb529-22" tabindex="-1"></a>legend_handles <span class="op">=</span> []</span>
-<span id="cb529-23"><a href="#cb529-23" tabindex="-1"></a><span class="cf">for</span> class_id <span class="kw">in</span> <span class="bu">sorted</span>(glc_fcs_class_dict.keys()): <span class="co"># Ensure consistent order</span></span>
-<span id="cb529-24"><a href="#cb529-24" tabindex="-1"></a>    class_info <span class="op">=</span> glc_fcs_class_dict[class_id]</span>
-<span id="cb529-25"><a href="#cb529-25" tabindex="-1"></a>    hex_color <span class="op">=</span> <span class="ss">f&#39;#</span><span class="sc">{</span>class_info[<span class="st">&quot;hex&quot;</span>]<span class="sc">}</span><span class="ss">&#39;</span></span>
-<span id="cb529-26"><a href="#cb529-26" tabindex="-1"></a>    description <span class="op">=</span> class_info[<span class="st">&quot;description&quot;</span>]</span>
-<span id="cb529-27"><a href="#cb529-27" tabindex="-1"></a>    handle <span class="op">=</span> mpatches.Patch(color<span class="op">=</span>hex_color, label<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>description<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>class_id<span class="sc">}</span><span class="ss">)&#39;</span>)</span>
-<span id="cb529-28"><a href="#cb529-28" tabindex="-1"></a>    legend_handles.append(handle)</span>
-<span id="cb529-29"><a href="#cb529-29" tabindex="-1"></a></span>
-<span id="cb529-30"><a href="#cb529-30" tabindex="-1"></a><span class="co"># Add the legend with 2 columns</span></span>
-<span id="cb529-31"><a href="#cb529-31" tabindex="-1"></a>ax.legend(handles<span class="op">=</span>legend_handles,</span>
-<span id="cb529-32"><a href="#cb529-32" tabindex="-1"></a>          loc<span class="op">=</span><span class="st">&#39;center left&#39;</span>,</span>
-<span id="cb529-33"><a href="#cb529-33" tabindex="-1"></a>          bbox_to_anchor<span class="op">=</span>(<span class="fl">1.05</span>, <span class="fl">0.5</span>),</span>
-<span id="cb529-34"><a href="#cb529-34" tabindex="-1"></a>          ncol<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb529-35"><a href="#cb529-35" tabindex="-1"></a>          fontsize<span class="op">=</span><span class="st">&#39;small&#39;</span>,</span>
-<span id="cb529-36"><a href="#cb529-36" tabindex="-1"></a>          )</span>
-<span id="cb529-37"><a href="#cb529-37" tabindex="-1"></a></span>
-<span id="cb529-38"><a href="#cb529-38" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb529-39"><a href="#cb529-39" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
-<span id="cb529-40"><a href="#cb529-40" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Landcover Classes from GLC_FCS30D&#39;</span>)</span>
-<span id="cb529-41"><a href="#cb529-41" tabindex="-1"></a></span>
-<span id="cb529-42"><a href="#cb529-42" tabindex="-1"></a>fig.tight_layout() <span class="co"># Adjust layout to prevent labels from being cut off</span></span>
-<span id="cb529-43"><a href="#cb529-43" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<div class="sourceCode" id="cb556"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb556-1"><a href="#cb556-1" tabindex="-1"></a><span class="im">import</span> matplotlib.patches <span class="im">as</span> mpatches</span>
+<span id="cb556-2"><a href="#cb556-2" tabindex="-1"></a></span>
+<span id="cb556-3"><a href="#cb556-3" tabindex="-1"></a><span class="co"># Create a preview</span></span>
+<span id="cb556-4"><a href="#cb556-4" tabindex="-1"></a>glc_fcs_da_preview <span class="op">=</span> glc_fcs_da_clipped.rio.reproject(</span>
+<span id="cb556-5"><a href="#cb556-5" tabindex="-1"></a>    glc_fcs_da_clipped.rio.crs, resolution<span class="op">=</span><span class="dv">100</span></span>
+<span id="cb556-6"><a href="#cb556-6" tabindex="-1"></a>)</span>
+<span id="cb556-7"><a href="#cb556-7" tabindex="-1"></a></span>
+<span id="cb556-8"><a href="#cb556-8" tabindex="-1"></a>colors_map <span class="op">=</span> [<span class="st">&#39;#000000&#39;</span>] <span class="op">*</span> <span class="dv">256</span></span>
+<span id="cb556-9"><a href="#cb556-9" tabindex="-1"></a><span class="cf">for</span> key, value <span class="kw">in</span> glc_fcs_class_dict.items():</span>
+<span id="cb556-10"><a href="#cb556-10" tabindex="-1"></a>    colors_map[key] <span class="op">=</span> <span class="ss">f&#39;#</span><span class="sc">{</span>value[<span class="st">&quot;hex&quot;</span>]<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb556-11"><a href="#cb556-11" tabindex="-1"></a>colors_map[<span class="dv">0</span>] <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)  <span class="co"># transparent for nodata</span></span>
+<span id="cb556-12"><a href="#cb556-12" tabindex="-1"></a>glc_cmap <span class="op">=</span> matplotlib.colors.ListedColormap(colors_map)</span>
+<span id="cb556-13"><a href="#cb556-13" tabindex="-1"></a>normalizer <span class="op">=</span> matplotlib.colors.Normalize(vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">255</span>)</span>
+<span id="cb556-14"><a href="#cb556-14" tabindex="-1"></a></span>
+<span id="cb556-15"><a href="#cb556-15" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb556-16"><a href="#cb556-16" tabindex="-1"></a>fig.set_size_inches(<span class="dv">10</span>, <span class="dv">10</span>) <span class="co"># Increased width to accommodate 2-column legend</span></span>
+<span id="cb556-17"><a href="#cb556-17" tabindex="-1"></a></span>
+<span id="cb556-18"><a href="#cb556-18" tabindex="-1"></a>glc_fcs_da_preview.plot(ax<span class="op">=</span>ax, cmap<span class="op">=</span>glc_cmap,</span>
+<span id="cb556-19"><a href="#cb556-19" tabindex="-1"></a>                        norm<span class="op">=</span>normalizer, add_colorbar<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb556-20"><a href="#cb556-20" tabindex="-1"></a></span>
+<span id="cb556-21"><a href="#cb556-21" tabindex="-1"></a><span class="co"># # Create custom legend handles</span></span>
+<span id="cb556-22"><a href="#cb556-22" tabindex="-1"></a>legend_handles <span class="op">=</span> []</span>
+<span id="cb556-23"><a href="#cb556-23" tabindex="-1"></a><span class="cf">for</span> class_id <span class="kw">in</span> <span class="bu">sorted</span>(glc_fcs_class_dict.keys()): <span class="co"># Ensure consistent order</span></span>
+<span id="cb556-24"><a href="#cb556-24" tabindex="-1"></a>    class_info <span class="op">=</span> glc_fcs_class_dict[class_id]</span>
+<span id="cb556-25"><a href="#cb556-25" tabindex="-1"></a>    hex_color <span class="op">=</span> <span class="ss">f&#39;#</span><span class="sc">{</span>class_info[<span class="st">&quot;hex&quot;</span>]<span class="sc">}</span><span class="ss">&#39;</span></span>
+<span id="cb556-26"><a href="#cb556-26" tabindex="-1"></a>    description <span class="op">=</span> class_info[<span class="st">&quot;description&quot;</span>]</span>
+<span id="cb556-27"><a href="#cb556-27" tabindex="-1"></a>    handle <span class="op">=</span> mpatches.Patch(color<span class="op">=</span>hex_color, label<span class="op">=</span><span class="ss">f&#39;</span><span class="sc">{</span>description<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>class_id<span class="sc">}</span><span class="ss">)&#39;</span>)</span>
+<span id="cb556-28"><a href="#cb556-28" tabindex="-1"></a>    legend_handles.append(handle)</span>
+<span id="cb556-29"><a href="#cb556-29" tabindex="-1"></a></span>
+<span id="cb556-30"><a href="#cb556-30" tabindex="-1"></a><span class="co"># Add the legend with 2 columns</span></span>
+<span id="cb556-31"><a href="#cb556-31" tabindex="-1"></a>ax.legend(handles<span class="op">=</span>legend_handles,</span>
+<span id="cb556-32"><a href="#cb556-32" tabindex="-1"></a>          loc<span class="op">=</span><span class="st">&#39;center left&#39;</span>,</span>
+<span id="cb556-33"><a href="#cb556-33" tabindex="-1"></a>          bbox_to_anchor<span class="op">=</span>(<span class="fl">1.05</span>, <span class="fl">0.5</span>),</span>
+<span id="cb556-34"><a href="#cb556-34" tabindex="-1"></a>          ncol<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb556-35"><a href="#cb556-35" tabindex="-1"></a>          fontsize<span class="op">=</span><span class="st">&#39;small&#39;</span>,</span>
+<span id="cb556-36"><a href="#cb556-36" tabindex="-1"></a>          )</span>
+<span id="cb556-37"><a href="#cb556-37" tabindex="-1"></a></span>
+<span id="cb556-38"><a href="#cb556-38" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb556-39"><a href="#cb556-39" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb556-40"><a href="#cb556-40" tabindex="-1"></a>ax.set_title(<span class="st">&#39;Landcover Classes from GLC_FCS30D&#39;</span>)</span>
+<span id="cb556-41"><a href="#cb556-41" tabindex="-1"></a></span>
+<span id="cb556-42"><a href="#cb556-42" tabindex="-1"></a>fig.tight_layout() <span class="co"># Adjust layout to prevent labels from being cut off</span></span>
+<span id="cb556-43"><a href="#cb556-43" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p><img
 src="python-remote-sensing-output/supplement/glc_fcs30d_landcover_files/glc_fcs30d_landcover_31_0.png" /></p>
 </div>
@@ -8674,102 +9096,102 @@ within each polygon. Multiplied by the pixel count and pixel area, this
 gives the absolute area per class per polygon. This method does lazy
 dask-computation and scales to large regions.</p>
 </div>
-<div id="setup-19" class="section level3">
+<div id="setup-20" class="section level3">
 <h3>Setup</h3>
 <p>Determine our runtime environment.</p>
-<div class="sourceCode" id="cb530"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb530-1"><a href="#cb530-1" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb530-2"><a href="#cb530-2" tabindex="-1"></a></span>
-<span id="cb530-3"><a href="#cb530-3" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;COLAB_RELEASE_TAG&#39;</span> <span class="kw">in</span> os.environ:</span>
-<span id="cb530-4"><a href="#cb530-4" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;colab&#39;</span></span>
-<span id="cb530-5"><a href="#cb530-5" tabindex="-1"></a>    <span class="cf">if</span> os.environ.get(<span class="st">&#39;VERTEX_PRODUCT&#39;</span>) <span class="op">==</span> <span class="st">&#39;COLAB_ENTERPRISE&#39;</span>:</span>
-<span id="cb530-6"><a href="#cb530-6" tabindex="-1"></a>        environment <span class="op">=</span> <span class="st">&#39;colab_enterprise&#39;</span></span>
-<span id="cb530-7"><a href="#cb530-7" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb530-8"><a href="#cb530-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
-<span id="cb530-9"><a href="#cb530-9" tabindex="-1"></a></span>
-<span id="cb530-10"><a href="#cb530-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
-<span id="cb530-11"><a href="#cb530-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">True</span></span>
-<span id="cb530-12"><a href="#cb530-12" tabindex="-1"></a></span>
-<span id="cb530-13"><a href="#cb530-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
-<span id="cb530-14"><a href="#cb530-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
-<span id="cb530-15"><a href="#cb530-15" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> drive</span>
-<span id="cb530-16"><a href="#cb530-16" tabindex="-1"></a>    drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span>
-<span id="cb530-17"><a href="#cb530-17" tabindex="-1"></a>    drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
-<span id="cb530-18"><a href="#cb530-18" tabindex="-1"></a>    drive_data_folder <span class="op">=</span> <span class="st">&#39;python-remote-sensing&#39;</span></span>
-<span id="cb530-19"><a href="#cb530-19" tabindex="-1"></a>    drive_folder_path <span class="op">=</span> os.path.join(<span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, drive_data_folder)</span>
-<span id="cb530-20"><a href="#cb530-20" tabindex="-1"></a>    data_folder <span class="op">=</span> drive_folder_path</span>
-<span id="cb530-21"><a href="#cb530-21" tabindex="-1"></a>    output_folder <span class="op">=</span> drive_folder_path</span>
-<span id="cb530-22"><a href="#cb530-22" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb530-23"><a href="#cb530-23" tabindex="-1"></a>    data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
-<span id="cb530-24"><a href="#cb530-24" tabindex="-1"></a>    output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
-<span id="cb530-25"><a href="#cb530-25" tabindex="-1"></a></span>
-<span id="cb530-26"><a href="#cb530-26" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
-<span id="cb530-27"><a href="#cb530-27" tabindex="-1"></a>    os.mkdir(data_folder)</span>
-<span id="cb530-28"><a href="#cb530-28" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
-<span id="cb530-29"><a href="#cb530-29" tabindex="-1"></a>    os.mkdir(output_folder)</span>
-<span id="cb530-30"><a href="#cb530-30" tabindex="-1"></a></span>
-<span id="cb530-31"><a href="#cb530-31" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Environment: </span><span class="sc">{</span>environment<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb530-32"><a href="#cb530-32" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Data folder: </span><span class="sc">{</span>data_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb530-33"><a href="#cb530-33" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Output folder: </span><span class="sc">{</span>output_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb557"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb557-1"><a href="#cb557-1" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb557-2"><a href="#cb557-2" tabindex="-1"></a></span>
+<span id="cb557-3"><a href="#cb557-3" tabindex="-1"></a><span class="cf">if</span> <span class="st">&#39;COLAB_RELEASE_TAG&#39;</span> <span class="kw">in</span> os.environ:</span>
+<span id="cb557-4"><a href="#cb557-4" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;colab&#39;</span></span>
+<span id="cb557-5"><a href="#cb557-5" tabindex="-1"></a>    <span class="cf">if</span> os.environ.get(<span class="st">&#39;VERTEX_PRODUCT&#39;</span>) <span class="op">==</span> <span class="st">&#39;COLAB_ENTERPRISE&#39;</span>:</span>
+<span id="cb557-6"><a href="#cb557-6" tabindex="-1"></a>        environment <span class="op">=</span> <span class="st">&#39;colab_enterprise&#39;</span></span>
+<span id="cb557-7"><a href="#cb557-7" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb557-8"><a href="#cb557-8" tabindex="-1"></a>    environment <span class="op">=</span> <span class="st">&#39;local&#39;</span></span>
+<span id="cb557-9"><a href="#cb557-9" tabindex="-1"></a></span>
+<span id="cb557-10"><a href="#cb557-10" tabindex="-1"></a><span class="co"># Set to True to use Google Drive for data storage in Colab</span></span>
+<span id="cb557-11"><a href="#cb557-11" tabindex="-1"></a>use_google_drive <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb557-12"><a href="#cb557-12" tabindex="-1"></a></span>
+<span id="cb557-13"><a href="#cb557-13" tabindex="-1"></a><span class="co"># Google Drive is available only in &#39;colab&#39; environment</span></span>
+<span id="cb557-14"><a href="#cb557-14" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span> <span class="kw">and</span> use_google_drive:</span>
+<span id="cb557-15"><a href="#cb557-15" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> drive</span>
+<span id="cb557-16"><a href="#cb557-16" tabindex="-1"></a>    drive.mount(<span class="st">&#39;/content/drive&#39;</span>)</span>
+<span id="cb557-17"><a href="#cb557-17" tabindex="-1"></a>    drive_folder_root <span class="op">=</span> <span class="st">&#39;MyDrive&#39;</span></span>
+<span id="cb557-18"><a href="#cb557-18" tabindex="-1"></a>    drive_data_folder <span class="op">=</span> <span class="st">&#39;python-remote-sensing&#39;</span></span>
+<span id="cb557-19"><a href="#cb557-19" tabindex="-1"></a>    drive_folder_path <span class="op">=</span> os.path.join(<span class="st">&#39;/content/drive&#39;</span>, drive_folder_root, drive_data_folder)</span>
+<span id="cb557-20"><a href="#cb557-20" tabindex="-1"></a>    data_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb557-21"><a href="#cb557-21" tabindex="-1"></a>    output_folder <span class="op">=</span> drive_folder_path</span>
+<span id="cb557-22"><a href="#cb557-22" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb557-23"><a href="#cb557-23" tabindex="-1"></a>    data_folder <span class="op">=</span> <span class="st">&#39;data&#39;</span></span>
+<span id="cb557-24"><a href="#cb557-24" tabindex="-1"></a>    output_folder <span class="op">=</span> <span class="st">&#39;output&#39;</span></span>
+<span id="cb557-25"><a href="#cb557-25" tabindex="-1"></a></span>
+<span id="cb557-26"><a href="#cb557-26" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(data_folder):</span>
+<span id="cb557-27"><a href="#cb557-27" tabindex="-1"></a>    os.mkdir(data_folder)</span>
+<span id="cb557-28"><a href="#cb557-28" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(output_folder):</span>
+<span id="cb557-29"><a href="#cb557-29" tabindex="-1"></a>    os.mkdir(output_folder)</span>
+<span id="cb557-30"><a href="#cb557-30" tabindex="-1"></a></span>
+<span id="cb557-31"><a href="#cb557-31" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Environment: </span><span class="sc">{</span>environment<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb557-32"><a href="#cb557-32" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Data folder: </span><span class="sc">{</span>data_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb557-33"><a href="#cb557-33" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Output folder: </span><span class="sc">{</span>output_folder<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 <p>If we are on Google Colab, install the required packages. Local
 runtimes are expected to have the packages already installed.</p>
-<div class="sourceCode" id="cb531"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb531-1"><a href="#cb531-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
-<span id="cb531-2"><a href="#cb531-2" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
-<span id="cb531-3"><a href="#cb531-3" tabindex="-1"></a>  <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[distributed] <span class="op">\</span></span>
-<span id="cb531-4"><a href="#cb531-4" tabindex="-1"></a>      jupyter<span class="op">-</span>server<span class="op">-</span>proxy planetary_computer xvec exactextract</span></code></pre></div>
+<div class="sourceCode" id="cb558"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb558-1"><a href="#cb558-1" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb558-2"><a href="#cb558-2" tabindex="-1"></a><span class="cf">if</span> environment <span class="kw">in</span> [<span class="st">&#39;colab&#39;</span>, <span class="st">&#39;colab_enterprise&#39;</span>]:</span>
+<span id="cb558-3"><a href="#cb558-3" tabindex="-1"></a>  <span class="op">!</span>pip install pystac<span class="op">-</span>client odc<span class="op">-</span>stac rioxarray dask[distributed] <span class="op">\</span></span>
+<span id="cb558-4"><a href="#cb558-4" tabindex="-1"></a>      jupyter<span class="op">-</span>server<span class="op">-</span>proxy planetary_computer xvec exactextract</span></code></pre></div>
 <p>Import all required libraries. Make sure to import everything at the
 beginning as certain Xarray extensions are activated on import and
 registers certain accessors, like <code>.rio</code> and
 <code>.odc</code> for Xarray objects.</p>
-<div class="sourceCode" id="cb532"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb532-1"><a href="#cb532-1" tabindex="-1"></a><span class="im">import</span> exactextract</span>
-<span id="cb532-2"><a href="#cb532-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
-<span id="cb532-3"><a href="#cb532-3" tabindex="-1"></a><span class="im">import</span> odc.geo.xr</span>
-<span id="cb532-4"><a href="#cb532-4" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb532-5"><a href="#cb532-5" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb532-6"><a href="#cb532-6" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
-<span id="cb532-7"><a href="#cb532-7" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
-<span id="cb532-8"><a href="#cb532-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
-<span id="cb532-9"><a href="#cb532-9" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
-<span id="cb532-10"><a href="#cb532-10" tabindex="-1"></a><span class="im">import</span> xvec</span>
-<span id="cb532-11"><a href="#cb532-11" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
-<span id="cb532-12"><a href="#cb532-12" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
-<span id="cb532-13"><a href="#cb532-13" tabindex="-1"></a><span class="im">from</span> odc.geo.geobox <span class="im">import</span> GeoBox</span></code></pre></div>
+<div class="sourceCode" id="cb559"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb559-1"><a href="#cb559-1" tabindex="-1"></a><span class="im">import</span> exactextract</span>
+<span id="cb559-2"><a href="#cb559-2" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb559-3"><a href="#cb559-3" tabindex="-1"></a><span class="im">import</span> odc.geo.xr</span>
+<span id="cb559-4"><a href="#cb559-4" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb559-5"><a href="#cb559-5" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb559-6"><a href="#cb559-6" tabindex="-1"></a><span class="im">import</span> planetary_computer <span class="im">as</span> pc</span>
+<span id="cb559-7"><a href="#cb559-7" tabindex="-1"></a><span class="im">import</span> pystac_client</span>
+<span id="cb559-8"><a href="#cb559-8" tabindex="-1"></a><span class="im">import</span> rioxarray <span class="im">as</span> rxr</span>
+<span id="cb559-9"><a href="#cb559-9" tabindex="-1"></a><span class="im">import</span> xarray <span class="im">as</span> xr</span>
+<span id="cb559-10"><a href="#cb559-10" tabindex="-1"></a><span class="im">import</span> xvec</span>
+<span id="cb559-11"><a href="#cb559-11" tabindex="-1"></a><span class="im">from</span> dask.distributed <span class="im">import</span> Client</span>
+<span id="cb559-12"><a href="#cb559-12" tabindex="-1"></a><span class="im">from</span> odc <span class="im">import</span> stac</span>
+<span id="cb559-13"><a href="#cb559-13" tabindex="-1"></a><span class="im">from</span> odc.geo.geobox <span class="im">import</span> GeoBox</span></code></pre></div>
 <p>Setup a local Dask cluster. This distributes the computation across
 multiple workers on your computer.</p>
-<div class="sourceCode" id="cb533"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb533-1"><a href="#cb533-1" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
-<span id="cb533-2"><a href="#cb533-2" tabindex="-1"></a>client</span></code></pre></div>
+<div class="sourceCode" id="cb560"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb560-1"><a href="#cb560-1" tabindex="-1"></a>client <span class="op">=</span> Client()  <span class="co"># set up local cluster on the machine</span></span>
+<span id="cb560-2"><a href="#cb560-2" tabindex="-1"></a>client</span></code></pre></div>
 <p>If you are running this notebook in Colab, you will need to create
 and use a proxy URL to see the dashboard running on the local
 server.</p>
-<div class="sourceCode" id="cb534"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb534-1"><a href="#cb534-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
-<span id="cb534-2"><a href="#cb534-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
-<span id="cb534-3"><a href="#cb534-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
-<span id="cb534-4"><a href="#cb534-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb561"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb561-1"><a href="#cb561-1" tabindex="-1"></a><span class="cf">if</span> environment <span class="op">==</span> <span class="st">&#39;colab&#39;</span>:</span>
+<span id="cb561-2"><a href="#cb561-2" tabindex="-1"></a>    <span class="im">from</span> google.colab <span class="im">import</span> output</span>
+<span id="cb561-3"><a href="#cb561-3" tabindex="-1"></a>    port_to_expose <span class="op">=</span> <span class="dv">8787</span>  <span class="co"># This is the default port for Dask dashboard</span></span>
+<span id="cb561-4"><a href="#cb561-4" tabindex="-1"></a>    <span class="bu">print</span>(output.eval_js(<span class="ss">f&#39;google.colab.kernel.proxyPort(</span><span class="sc">{</span>port_to_expose<span class="sc">}</span><span class="ss">)&#39;</span>))</span></code></pre></div>
 </div>
 <div id="load-admin2-polygons" class="section level3">
 <h3>Load Admin2 Polygons</h3>
 <p>Read the file containing the Admin2 boundaries exported in Module
 1.</p>
-<div class="sourceCode" id="cb535"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb535-1"><a href="#cb535-1" tabindex="-1"></a>admin2_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;admin2.gpkg&#39;</span>)</span>
-<span id="cb535-2"><a href="#cb535-2" tabindex="-1"></a></span>
-<span id="cb535-3"><a href="#cb535-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(admin2_filepath):</span>
-<span id="cb535-4"><a href="#cb535-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Admin2 file not found at </span><span class="sc">{</span>admin2_filepath<span class="sc">}</span><span class="ss">. Using default Admin2 regions.&#39;</span>)</span>
-<span id="cb535-5"><a href="#cb535-5" tabindex="-1"></a>    admin2_filepath <span class="op">=</span> (</span>
-<span id="cb535-6"><a href="#cb535-6" tabindex="-1"></a>        <span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
-<span id="cb535-7"><a href="#cb535-7" tabindex="-1"></a>        <span class="st">&#39;/python-remote-sensing/admin2.gpkg&#39;</span></span>
-<span id="cb535-8"><a href="#cb535-8" tabindex="-1"></a>    )</span></code></pre></div>
+<div class="sourceCode" id="cb562"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb562-1"><a href="#cb562-1" tabindex="-1"></a>admin2_filepath <span class="op">=</span> os.path.join(data_folder, <span class="st">&#39;admin2.gpkg&#39;</span>)</span>
+<span id="cb562-2"><a href="#cb562-2" tabindex="-1"></a></span>
+<span id="cb562-3"><a href="#cb562-3" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.exists(admin2_filepath):</span>
+<span id="cb562-4"><a href="#cb562-4" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Admin2 file not found at </span><span class="sc">{</span>admin2_filepath<span class="sc">}</span><span class="ss">. Using default Admin2 regions.&#39;</span>)</span>
+<span id="cb562-5"><a href="#cb562-5" tabindex="-1"></a>    admin2_filepath <span class="op">=</span> (</span>
+<span id="cb562-6"><a href="#cb562-6" tabindex="-1"></a>        <span class="st">&#39;https://storage.googleapis.com/spatialthoughts-public-data&#39;</span></span>
+<span id="cb562-7"><a href="#cb562-7" tabindex="-1"></a>        <span class="st">&#39;/python-remote-sensing/admin2.gpkg&#39;</span></span>
+<span id="cb562-8"><a href="#cb562-8" tabindex="-1"></a>    )</span></code></pre></div>
 <p>Read the Admin2 GeoPackage.</p>
-<div class="sourceCode" id="cb536"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb536-1"><a href="#cb536-1" tabindex="-1"></a>admin2_gdf <span class="op">=</span> gpd.read_file(admin2_filepath)</span>
-<span id="cb536-2"><a href="#cb536-2" tabindex="-1"></a>admin2_gdf</span></code></pre></div>
+<div class="sourceCode" id="cb563"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb563-1"><a href="#cb563-1" tabindex="-1"></a>admin2_gdf <span class="op">=</span> gpd.read_file(admin2_filepath)</span>
+<span id="cb563-2"><a href="#cb563-2" tabindex="-1"></a>admin2_gdf</span></code></pre></div>
 <p>Extract the geometry.</p>
-<div class="sourceCode" id="cb537"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb537-1"><a href="#cb537-1" tabindex="-1"></a>geometry <span class="op">=</span> admin2_gdf.geometry.union_all()</span></code></pre></div>
+<div class="sourceCode" id="cb564"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb564-1"><a href="#cb564-1" tabindex="-1"></a>geometry <span class="op">=</span> admin2_gdf.geometry.union_all()</span></code></pre></div>
 </div>
 <div id="get-esa-worldcover-data-1" class="section level3">
 <h3>Get ESA WorldCover Data</h3>
@@ -8777,57 +9199,57 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb537-1"><a 
 href="https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/">Planetary
 Computer STAC API</a> for ESA WorldCover 2021 tiles that intersect the
 Admin2 region.</p>
-<div class="sourceCode" id="cb538"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb538-1"><a href="#cb538-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
-<span id="cb538-2"><a href="#cb538-2" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
-<span id="cb538-3"><a href="#cb538-3" tabindex="-1"></a></span>
-<span id="cb538-4"><a href="#cb538-4" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
-<span id="cb538-5"><a href="#cb538-5" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;esa-worldcover&#39;</span>],</span>
-<span id="cb538-6"><a href="#cb538-6" tabindex="-1"></a>    intersects<span class="op">=</span>admin2_gdf.geometry.union_all(),</span>
-<span id="cb538-7"><a href="#cb538-7" tabindex="-1"></a>    datetime<span class="op">=</span><span class="st">&#39;2021&#39;</span>,</span>
-<span id="cb538-8"><a href="#cb538-8" tabindex="-1"></a>)</span>
-<span id="cb538-9"><a href="#cb538-9" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
-<span id="cb538-10"><a href="#cb538-10" tabindex="-1"></a>items</span></code></pre></div>
+<div class="sourceCode" id="cb565"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb565-1"><a href="#cb565-1" tabindex="-1"></a>catalog <span class="op">=</span> pystac_client.Client.<span class="bu">open</span>(</span>
+<span id="cb565-2"><a href="#cb565-2" tabindex="-1"></a>    <span class="st">&#39;https://planetarycomputer.microsoft.com/api/stac/v1&#39;</span>)</span>
+<span id="cb565-3"><a href="#cb565-3" tabindex="-1"></a></span>
+<span id="cb565-4"><a href="#cb565-4" tabindex="-1"></a>search <span class="op">=</span> catalog.search(</span>
+<span id="cb565-5"><a href="#cb565-5" tabindex="-1"></a>    collections<span class="op">=</span>[<span class="st">&#39;esa-worldcover&#39;</span>],</span>
+<span id="cb565-6"><a href="#cb565-6" tabindex="-1"></a>    intersects<span class="op">=</span>admin2_gdf.geometry.union_all(),</span>
+<span id="cb565-7"><a href="#cb565-7" tabindex="-1"></a>    datetime<span class="op">=</span><span class="st">&#39;2021&#39;</span>,</span>
+<span id="cb565-8"><a href="#cb565-8" tabindex="-1"></a>)</span>
+<span id="cb565-9"><a href="#cb565-9" tabindex="-1"></a>items <span class="op">=</span> search.item_collection()</span>
+<span id="cb565-10"><a href="#cb565-10" tabindex="-1"></a>items</span></code></pre></div>
 <p>Each STAC item carries the class names, legend colors, and pixel
 values in its metadata. Extract them now so we can label the results
 later.</p>
-<div class="sourceCode" id="cb539"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb539-1"><a href="#cb539-1" tabindex="-1"></a>class_list <span class="op">=</span> items[<span class="dv">0</span>].assets[<span class="st">&#39;map&#39;</span>].extra_fields[<span class="st">&#39;classification:classes&#39;</span>]</span>
-<span id="cb539-2"><a href="#cb539-2" tabindex="-1"></a>class_dict <span class="op">=</span> {</span>
-<span id="cb539-3"><a href="#cb539-3" tabindex="-1"></a>    c[<span class="st">&#39;value&#39;</span>]: {<span class="st">&#39;description&#39;</span>: c[<span class="st">&#39;description&#39;</span>], <span class="st">&#39;hex&#39;</span>: c[<span class="st">&#39;color_hint&#39;</span>]}</span>
-<span id="cb539-4"><a href="#cb539-4" tabindex="-1"></a>    <span class="cf">for</span> c <span class="kw">in</span> class_list</span>
-<span id="cb539-5"><a href="#cb539-5" tabindex="-1"></a>}</span>
-<span id="cb539-6"><a href="#cb539-6" tabindex="-1"></a>class_dict</span></code></pre></div>
+<div class="sourceCode" id="cb566"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb566-1"><a href="#cb566-1" tabindex="-1"></a>class_list <span class="op">=</span> items[<span class="dv">0</span>].assets[<span class="st">&#39;map&#39;</span>].extra_fields[<span class="st">&#39;classification:classes&#39;</span>]</span>
+<span id="cb566-2"><a href="#cb566-2" tabindex="-1"></a>class_dict <span class="op">=</span> {</span>
+<span id="cb566-3"><a href="#cb566-3" tabindex="-1"></a>    c[<span class="st">&#39;value&#39;</span>]: {<span class="st">&#39;description&#39;</span>: c[<span class="st">&#39;description&#39;</span>], <span class="st">&#39;hex&#39;</span>: c[<span class="st">&#39;color_hint&#39;</span>]}</span>
+<span id="cb566-4"><a href="#cb566-4" tabindex="-1"></a>    <span class="cf">for</span> c <span class="kw">in</span> class_list</span>
+<span id="cb566-5"><a href="#cb566-5" tabindex="-1"></a>}</span>
+<span id="cb566-6"><a href="#cb566-6" tabindex="-1"></a>class_dict</span></code></pre></div>
 <p>Load the matching images as a XArray Dataset. Accessing data from
 Planetary Computer is free but requires getting a Shared Access
 Signature (SAS) token and sign the URLs. The planetary_computer Python
 package provides a simple mechanism for signing the URLs using sign()
 function.</p>
-<div class="sourceCode" id="cb540"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb540-1"><a href="#cb540-1" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
-<span id="cb540-2"><a href="#cb540-2" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
-<span id="cb540-3"><a href="#cb540-3" tabindex="-1"></a>    items,</span>
-<span id="cb540-4"><a href="#cb540-4" tabindex="-1"></a>    bbox<span class="op">=</span>geometry.bounds, <span class="co"># &lt;-- load data only for the bbox</span></span>
-<span id="cb540-5"><a href="#cb540-5" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb540-6"><a href="#cb540-6" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
-<span id="cb540-7"><a href="#cb540-7" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
-<span id="cb540-8"><a href="#cb540-8" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
-<span id="cb540-9"><a href="#cb540-9" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
-<span id="cb540-10"><a href="#cb540-10" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
-<span id="cb540-11"><a href="#cb540-11" tabindex="-1"></a>)</span>
-<span id="cb540-12"><a href="#cb540-12" tabindex="-1"></a>ds</span></code></pre></div>
+<div class="sourceCode" id="cb567"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb567-1"><a href="#cb567-1" tabindex="-1"></a><span class="co"># Load to XArray</span></span>
+<span id="cb567-2"><a href="#cb567-2" tabindex="-1"></a>ds <span class="op">=</span> stac.load(</span>
+<span id="cb567-3"><a href="#cb567-3" tabindex="-1"></a>    items,</span>
+<span id="cb567-4"><a href="#cb567-4" tabindex="-1"></a>    bbox<span class="op">=</span>geometry.bounds, <span class="co"># &lt;-- load data only for the bbox</span></span>
+<span id="cb567-5"><a href="#cb567-5" tabindex="-1"></a>    resolution<span class="op">=</span><span class="dv">10</span>,</span>
+<span id="cb567-6"><a href="#cb567-6" tabindex="-1"></a>    crs<span class="op">=</span><span class="st">&#39;utm&#39;</span>,</span>
+<span id="cb567-7"><a href="#cb567-7" tabindex="-1"></a>    chunks<span class="op">=</span>{<span class="st">&#39;x&#39;</span>: <span class="dv">1024</span>, <span class="st">&#39;y&#39;</span>: <span class="dv">1024</span>},  <span class="co"># Explicitly define chunk sizes</span></span>
+<span id="cb567-8"><a href="#cb567-8" tabindex="-1"></a>    patch_url<span class="op">=</span>pc.sign,</span>
+<span id="cb567-9"><a href="#cb567-9" tabindex="-1"></a>    groupby<span class="op">=</span><span class="st">&#39;solar_day&#39;</span>,</span>
+<span id="cb567-10"><a href="#cb567-10" tabindex="-1"></a>    preserve_original_order<span class="op">=</span><span class="va">True</span></span>
+<span id="cb567-11"><a href="#cb567-11" tabindex="-1"></a>)</span>
+<span id="cb567-12"><a href="#cb567-12" tabindex="-1"></a>ds</span></code></pre></div>
 <p>The landcover classification data is in the map variable. Select it
 and remove the empty time dimension.</p>
-<div class="sourceCode" id="cb541"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb541-1"><a href="#cb541-1" tabindex="-1"></a>map_data <span class="op">=</span> ds[<span class="st">&#39;map&#39;</span>].squeeze()</span>
-<span id="cb541-2"><a href="#cb541-2" tabindex="-1"></a>map_data</span></code></pre></div>
+<div class="sourceCode" id="cb568"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb568-1"><a href="#cb568-1" tabindex="-1"></a>map_data <span class="op">=</span> ds[<span class="st">&#39;map&#39;</span>].squeeze()</span>
+<span id="cb568-2"><a href="#cb568-2" tabindex="-1"></a>map_data</span></code></pre></div>
 </div>
 <div id="calculate-per-polygon-landcover-area" class="section level3">
 <h3>Calculate Per-Polygon Landcover Area</h3>
 <p>Reproject the Admin2 polygons to match the CRS of the raster.
 <code>xvec.zonal_stats()</code> requires both to share the same CRS.</p>
-<div class="sourceCode" id="cb542"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb542-1"><a href="#cb542-1" tabindex="-1"></a>admin2_reprojected <span class="op">=</span> admin2_gdf.to_crs(map_data.rio.crs)</span></code></pre></div>
+<div class="sourceCode" id="cb569"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb569-1"><a href="#cb569-1" tabindex="-1"></a>admin2_reprojected <span class="op">=</span> admin2_gdf.to_crs(map_data.rio.crs)</span></code></pre></div>
 <p>Compute zonal statistics using <a
 href="https://xvec.readthedocs.io/en/stable/zonal_stats.html"><code>xvec.zonal_stats()</code></a>
 with the <code>exactextract</code> backend.</p>
@@ -8840,69 +9262,69 @@ covered by each unique class value.</li>
 polygon.</li>
 </ul>
 <p>This call triggers Dask computation.</p>
-<div class="sourceCode" id="cb543"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb543-1"><a href="#cb543-1" tabindex="-1"></a><span class="op">%%</span>time</span>
-<span id="cb543-2"><a href="#cb543-2" tabindex="-1"></a>aggregated <span class="op">=</span> map_data.xvec.zonal_stats(</span>
-<span id="cb543-3"><a href="#cb543-3" tabindex="-1"></a>    admin2_reproj.geometry,</span>
-<span id="cb543-4"><a href="#cb543-4" tabindex="-1"></a>    x_coords<span class="op">=</span><span class="st">&#39;x&#39;</span>,</span>
-<span id="cb543-5"><a href="#cb543-5" tabindex="-1"></a>    y_coords<span class="op">=</span><span class="st">&#39;y&#39;</span>,</span>
-<span id="cb543-6"><a href="#cb543-6" tabindex="-1"></a>    stats<span class="op">=</span>[<span class="st">&#39;frac&#39;</span>, <span class="st">&#39;unique&#39;</span>, <span class="st">&#39;count&#39;</span>],</span>
-<span id="cb543-7"><a href="#cb543-7" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&#39;exactextract&#39;</span></span>
-<span id="cb543-8"><a href="#cb543-8" tabindex="-1"></a>)</span>
-<span id="cb543-9"><a href="#cb543-9" tabindex="-1"></a>aggregated</span></code></pre></div>
+<div class="sourceCode" id="cb570"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb570-1"><a href="#cb570-1" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb570-2"><a href="#cb570-2" tabindex="-1"></a>aggregated <span class="op">=</span> map_data.xvec.zonal_stats(</span>
+<span id="cb570-3"><a href="#cb570-3" tabindex="-1"></a>    admin2_reproj.geometry,</span>
+<span id="cb570-4"><a href="#cb570-4" tabindex="-1"></a>    x_coords<span class="op">=</span><span class="st">&#39;x&#39;</span>,</span>
+<span id="cb570-5"><a href="#cb570-5" tabindex="-1"></a>    y_coords<span class="op">=</span><span class="st">&#39;y&#39;</span>,</span>
+<span id="cb570-6"><a href="#cb570-6" tabindex="-1"></a>    stats<span class="op">=</span>[<span class="st">&#39;frac&#39;</span>, <span class="st">&#39;unique&#39;</span>, <span class="st">&#39;count&#39;</span>],</span>
+<span id="cb570-7"><a href="#cb570-7" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&#39;exactextract&#39;</span></span>
+<span id="cb570-8"><a href="#cb570-8" tabindex="-1"></a>)</span>
+<span id="cb570-9"><a href="#cb570-9" tabindex="-1"></a>aggregated</span></code></pre></div>
 <p>Add the <code>adm2_name</code> attribute as a coordinate so it is
 carried through to the GeoDataFrame.</p>
-<div class="sourceCode" id="cb544"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb544-1"><a href="#cb544-1" tabindex="-1"></a>aggregated[<span class="st">&#39;adm2_name&#39;</span>] <span class="op">=</span> (<span class="st">&#39;geometry&#39;</span>, admin2_reprojected[<span class="st">&#39;adm2_name&#39;</span>].values)</span>
-<span id="cb544-2"><a href="#cb544-2" tabindex="-1"></a>aggregated <span class="op">=</span> aggregated.assign_coords({<span class="st">&#39;adm2_name&#39;</span>: aggregated[<span class="st">&#39;adm2_name&#39;</span>]})</span>
-<span id="cb544-3"><a href="#cb544-3" tabindex="-1"></a>aggregated</span></code></pre></div>
-<div class="sourceCode" id="cb545"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb545-1"><a href="#cb545-1" tabindex="-1"></a>aggregated_df <span class="op">=</span> aggregated.to_dataframe(<span class="st">&#39;values&#39;</span>).reset_index()</span>
-<span id="cb545-2"><a href="#cb545-2" tabindex="-1"></a>aggregated_df</span></code></pre></div>
+<div class="sourceCode" id="cb571"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb571-1"><a href="#cb571-1" tabindex="-1"></a>aggregated[<span class="st">&#39;adm2_name&#39;</span>] <span class="op">=</span> (<span class="st">&#39;geometry&#39;</span>, admin2_reprojected[<span class="st">&#39;adm2_name&#39;</span>].values)</span>
+<span id="cb571-2"><a href="#cb571-2" tabindex="-1"></a>aggregated <span class="op">=</span> aggregated.assign_coords({<span class="st">&#39;adm2_name&#39;</span>: aggregated[<span class="st">&#39;adm2_name&#39;</span>]})</span>
+<span id="cb571-3"><a href="#cb571-3" tabindex="-1"></a>aggregated</span></code></pre></div>
+<div class="sourceCode" id="cb572"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb572-1"><a href="#cb572-1" tabindex="-1"></a>aggregated_df <span class="op">=</span> aggregated.to_dataframe(<span class="st">&#39;values&#39;</span>).reset_index()</span>
+<span id="cb572-2"><a href="#cb572-2" tabindex="-1"></a>aggregated_df</span></code></pre></div>
 <p>Convert to a GeoDataFrame and expand the <code>frac</code> dict
 column into one row per polygon per class. The <code>frac</code> values
 for each polygon sum to 1.0, so
 <code>frac[c] × count × pixel_area_m2</code> gives the area in m² for
 class <code>c</code>.</p>
-<div class="sourceCode" id="cb546"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb546-1"><a href="#cb546-1" tabindex="-1"></a>pixel_area_m2 <span class="op">=</span> <span class="fl">100.0</span>  <span class="co"># 10 m × 10 m</span></span>
-<span id="cb546-2"><a href="#cb546-2" tabindex="-1"></a></span>
-<span id="cb546-3"><a href="#cb546-3" tabindex="-1"></a>pivoted <span class="op">=</span> (</span>
-<span id="cb546-4"><a href="#cb546-4" tabindex="-1"></a>    aggregated_df.pivot(index<span class="op">=</span>[<span class="st">&#39;geometry&#39;</span>, <span class="st">&#39;adm2_name&#39;</span>],</span>
-<span id="cb546-5"><a href="#cb546-5" tabindex="-1"></a>                        columns<span class="op">=</span><span class="st">&#39;zonal_statistics&#39;</span>, </span>
-<span id="cb546-6"><a href="#cb546-6" tabindex="-1"></a>                        values<span class="op">=</span><span class="st">&#39;values&#39;</span>)</span>
-<span id="cb546-7"><a href="#cb546-7" tabindex="-1"></a>    .rename_axis(<span class="va">None</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb546-8"><a href="#cb546-8" tabindex="-1"></a>    .reset_index()</span>
-<span id="cb546-9"><a href="#cb546-9" tabindex="-1"></a>)</span>
-<span id="cb546-10"><a href="#cb546-10" tabindex="-1"></a></span>
-<span id="cb546-11"><a href="#cb546-11" tabindex="-1"></a>exploded <span class="op">=</span> pivoted.explode([<span class="st">&#39;frac&#39;</span>, <span class="st">&#39;unique&#39;</span>])</span>
-<span id="cb546-12"><a href="#cb546-12" tabindex="-1"></a>exploded[<span class="st">&#39;class_value&#39;</span>] <span class="op">=</span> exploded[<span class="st">&#39;unique&#39;</span>].astype(<span class="bu">int</span>)</span>
-<span id="cb546-13"><a href="#cb546-13" tabindex="-1"></a>exploded <span class="op">=</span> exploded[exploded[<span class="st">&#39;class_value&#39;</span>].isin(class_dict)].copy()</span>
-<span id="cb546-14"><a href="#cb546-14" tabindex="-1"></a>exploded[<span class="st">&#39;class_name&#39;</span>] <span class="op">=</span> exploded[<span class="st">&#39;class_value&#39;</span>].<span class="bu">map</span>(</span>
-<span id="cb546-15"><a href="#cb546-15" tabindex="-1"></a>    {k: v[<span class="st">&#39;description&#39;</span>] <span class="cf">for</span> k, v <span class="kw">in</span> class_dict.items()})</span>
-<span id="cb546-16"><a href="#cb546-16" tabindex="-1"></a>exploded[<span class="st">&#39;area_km2&#39;</span>] <span class="op">=</span> (</span>
-<span id="cb546-17"><a href="#cb546-17" tabindex="-1"></a>    exploded[<span class="st">&#39;frac&#39;</span>].astype(<span class="bu">float</span>) <span class="op">*</span> exploded[<span class="st">&#39;count&#39;</span>].astype(<span class="bu">float</span>)</span>
-<span id="cb546-18"><a href="#cb546-18" tabindex="-1"></a>    <span class="op">*</span> pixel_area_m2 <span class="op">/</span> <span class="fl">1e6</span></span>
-<span id="cb546-19"><a href="#cb546-19" tabindex="-1"></a>)</span>
-<span id="cb546-20"><a href="#cb546-20" tabindex="-1"></a></span>
-<span id="cb546-21"><a href="#cb546-21" tabindex="-1"></a>all_class_names <span class="op">=</span> [v[<span class="st">&#39;description&#39;</span>] <span class="cf">for</span> v <span class="kw">in</span> class_dict.values()]</span>
-<span id="cb546-22"><a href="#cb546-22" tabindex="-1"></a></span>
-<span id="cb546-23"><a href="#cb546-23" tabindex="-1"></a><span class="co"># Convert to a wide table with one column per class, filling missing values with 0</span></span>
-<span id="cb546-24"><a href="#cb546-24" tabindex="-1"></a>wide <span class="op">=</span> (</span>
-<span id="cb546-25"><a href="#cb546-25" tabindex="-1"></a>    exploded.pivot_table(index<span class="op">=</span>[<span class="st">&#39;adm2_name&#39;</span>, <span class="st">&#39;geometry&#39;</span>], </span>
-<span id="cb546-26"><a href="#cb546-26" tabindex="-1"></a>                        columns<span class="op">=</span><span class="st">&#39;class_name&#39;</span>, </span>
-<span id="cb546-27"><a href="#cb546-27" tabindex="-1"></a>                        values<span class="op">=</span><span class="st">&#39;area_km2&#39;</span>, aggfunc<span class="op">=</span><span class="st">&#39;sum&#39;</span>)</span>
-<span id="cb546-28"><a href="#cb546-28" tabindex="-1"></a>    .rename_axis(<span class="va">None</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb546-29"><a href="#cb546-29" tabindex="-1"></a>    .reindex(columns<span class="op">=</span>all_class_names, fill_value<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb546-30"><a href="#cb546-30" tabindex="-1"></a>    .reset_index()</span>
-<span id="cb546-31"><a href="#cb546-31" tabindex="-1"></a>)</span>
-<span id="cb546-32"><a href="#cb546-32" tabindex="-1"></a></span>
-<span id="cb546-33"><a href="#cb546-33" tabindex="-1"></a>result_gdf <span class="op">=</span> gpd.GeoDataFrame(wide, crs<span class="op">=</span>admin2_reproj.crs)</span>
-<span id="cb546-34"><a href="#cb546-34" tabindex="-1"></a>result_gdf</span></code></pre></div>
+<div class="sourceCode" id="cb573"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb573-1"><a href="#cb573-1" tabindex="-1"></a>pixel_area_m2 <span class="op">=</span> <span class="fl">100.0</span>  <span class="co"># 10 m × 10 m</span></span>
+<span id="cb573-2"><a href="#cb573-2" tabindex="-1"></a></span>
+<span id="cb573-3"><a href="#cb573-3" tabindex="-1"></a>pivoted <span class="op">=</span> (</span>
+<span id="cb573-4"><a href="#cb573-4" tabindex="-1"></a>    aggregated_df.pivot(index<span class="op">=</span>[<span class="st">&#39;geometry&#39;</span>, <span class="st">&#39;adm2_name&#39;</span>],</span>
+<span id="cb573-5"><a href="#cb573-5" tabindex="-1"></a>                        columns<span class="op">=</span><span class="st">&#39;zonal_statistics&#39;</span>, </span>
+<span id="cb573-6"><a href="#cb573-6" tabindex="-1"></a>                        values<span class="op">=</span><span class="st">&#39;values&#39;</span>)</span>
+<span id="cb573-7"><a href="#cb573-7" tabindex="-1"></a>    .rename_axis(<span class="va">None</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb573-8"><a href="#cb573-8" tabindex="-1"></a>    .reset_index()</span>
+<span id="cb573-9"><a href="#cb573-9" tabindex="-1"></a>)</span>
+<span id="cb573-10"><a href="#cb573-10" tabindex="-1"></a></span>
+<span id="cb573-11"><a href="#cb573-11" tabindex="-1"></a>exploded <span class="op">=</span> pivoted.explode([<span class="st">&#39;frac&#39;</span>, <span class="st">&#39;unique&#39;</span>])</span>
+<span id="cb573-12"><a href="#cb573-12" tabindex="-1"></a>exploded[<span class="st">&#39;class_value&#39;</span>] <span class="op">=</span> exploded[<span class="st">&#39;unique&#39;</span>].astype(<span class="bu">int</span>)</span>
+<span id="cb573-13"><a href="#cb573-13" tabindex="-1"></a>exploded <span class="op">=</span> exploded[exploded[<span class="st">&#39;class_value&#39;</span>].isin(class_dict)].copy()</span>
+<span id="cb573-14"><a href="#cb573-14" tabindex="-1"></a>exploded[<span class="st">&#39;class_name&#39;</span>] <span class="op">=</span> exploded[<span class="st">&#39;class_value&#39;</span>].<span class="bu">map</span>(</span>
+<span id="cb573-15"><a href="#cb573-15" tabindex="-1"></a>    {k: v[<span class="st">&#39;description&#39;</span>] <span class="cf">for</span> k, v <span class="kw">in</span> class_dict.items()})</span>
+<span id="cb573-16"><a href="#cb573-16" tabindex="-1"></a>exploded[<span class="st">&#39;area_km2&#39;</span>] <span class="op">=</span> (</span>
+<span id="cb573-17"><a href="#cb573-17" tabindex="-1"></a>    exploded[<span class="st">&#39;frac&#39;</span>].astype(<span class="bu">float</span>) <span class="op">*</span> exploded[<span class="st">&#39;count&#39;</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb573-18"><a href="#cb573-18" tabindex="-1"></a>    <span class="op">*</span> pixel_area_m2 <span class="op">/</span> <span class="fl">1e6</span></span>
+<span id="cb573-19"><a href="#cb573-19" tabindex="-1"></a>)</span>
+<span id="cb573-20"><a href="#cb573-20" tabindex="-1"></a></span>
+<span id="cb573-21"><a href="#cb573-21" tabindex="-1"></a>all_class_names <span class="op">=</span> [v[<span class="st">&#39;description&#39;</span>] <span class="cf">for</span> v <span class="kw">in</span> class_dict.values()]</span>
+<span id="cb573-22"><a href="#cb573-22" tabindex="-1"></a></span>
+<span id="cb573-23"><a href="#cb573-23" tabindex="-1"></a><span class="co"># Convert to a wide table with one column per class, filling missing values with 0</span></span>
+<span id="cb573-24"><a href="#cb573-24" tabindex="-1"></a>wide <span class="op">=</span> (</span>
+<span id="cb573-25"><a href="#cb573-25" tabindex="-1"></a>    exploded.pivot_table(index<span class="op">=</span>[<span class="st">&#39;adm2_name&#39;</span>, <span class="st">&#39;geometry&#39;</span>], </span>
+<span id="cb573-26"><a href="#cb573-26" tabindex="-1"></a>                        columns<span class="op">=</span><span class="st">&#39;class_name&#39;</span>, </span>
+<span id="cb573-27"><a href="#cb573-27" tabindex="-1"></a>                        values<span class="op">=</span><span class="st">&#39;area_km2&#39;</span>, aggfunc<span class="op">=</span><span class="st">&#39;sum&#39;</span>)</span>
+<span id="cb573-28"><a href="#cb573-28" tabindex="-1"></a>    .rename_axis(<span class="va">None</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb573-29"><a href="#cb573-29" tabindex="-1"></a>    .reindex(columns<span class="op">=</span>all_class_names, fill_value<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb573-30"><a href="#cb573-30" tabindex="-1"></a>    .reset_index()</span>
+<span id="cb573-31"><a href="#cb573-31" tabindex="-1"></a>)</span>
+<span id="cb573-32"><a href="#cb573-32" tabindex="-1"></a></span>
+<span id="cb573-33"><a href="#cb573-33" tabindex="-1"></a>result_gdf <span class="op">=</span> gpd.GeoDataFrame(wide, crs<span class="op">=</span>admin2_reproj.crs)</span>
+<span id="cb573-34"><a href="#cb573-34" tabindex="-1"></a>result_gdf</span></code></pre></div>
 <p>Save the results as a GeoPackage file.</p>
-<div class="sourceCode" id="cb547"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb547-1"><a href="#cb547-1" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;admin2_landcover_area.gpkg&#39;</span>)</span>
-<span id="cb547-2"><a href="#cb547-2" tabindex="-1"></a>result_gdf.to_file(output_path, driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb574"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb574-1"><a href="#cb574-1" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;admin2_landcover_area.gpkg&#39;</span>)</span>
+<span id="cb574-2"><a href="#cb574-2" tabindex="-1"></a>result_gdf.to_file(output_path, driver<span class="op">=</span><span class="st">&#39;GPKG&#39;</span>)</span></code></pre></div>
 <hr />
 </div>
 </div>
