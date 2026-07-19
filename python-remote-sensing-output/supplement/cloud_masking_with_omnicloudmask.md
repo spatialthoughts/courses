@@ -86,14 +86,14 @@ inference_device = (
 )
 print(f'Inference device: {inference_device}')
 
-# Set the Hugging Face token if you have one. 
+# Set the Hugging Face token if you have one.
 # This speeds up the download of the model weights from Hugging Face Hub.
 HF_TOKEN = ''
 if HF_TOKEN:
     os.environ['HF_TOKEN'] = HF_TOKEN
 
-# Run a test prediction 
-# This will download the model weights locally 
+# Run a test prediction
+# This will download the model weights locally
 # and warms up the model for inference.
 predict_from_array(
     np.zeros((3, 50, 50), dtype=np.float32), inference_device=inference_device
@@ -139,7 +139,7 @@ longitude = 82.608
 year = 2023
 ```
 
-Get a single cloudy scene.
+Get a single cloudy scene. We load the Sentinel-2 data at 20m resolution instead of 10m. This performs better and faster. See [Choosing a Resolution](https://omnicloudmask.readthedocs.io/en/latest/resolution.html) for more guidance.
 
 
 ```python
@@ -177,7 +177,7 @@ most_cloudy = items[0]
 ds = load(
     [most_cloudy],
     bands=['red', 'green', 'blue', 'nir', 'scl'],
-    resolution=20, # Load the data at lower resolution to speed up processing 
+    resolution=20, # Load the data at lower resolution to speed up processing
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
@@ -371,7 +371,7 @@ items = search.item_collection()
 ds = load(
     items,
     bands=['red', 'green', 'blue', 'nir', 'scl'],
-    resolution=10, # Load the data at lower resolution to speed up processing 
+    resolution=20, # Load the data at lower resolution to speed up processing
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
@@ -405,7 +405,7 @@ ocm_input = ds[['red', 'green', 'nir']] \
 def ocm_predict_block(block):
   # block arrives as (band=3, time=1, y, x)
   # drop the time dimension to get (band=3, y, x)
-  ocm_input =  block[:, 0] 
+  ocm_input =  block[:, 0]
   ocm_prediction = predict_from_array(ocm_input,  inference_device=inference_device)
   return ocm_prediction
 
@@ -417,13 +417,13 @@ ocm_mask_data = ocm_input.data.map_blocks(
 )
 
 # Reconstruct the DataArray with the same coordinates
-# and dimensions as the original input 
+# and dimensions as the original input
 ocm_prediction_ts = xr.DataArray(
     ocm_mask_data,
     dims=('time', 'y', 'x'),
     coords={'time': ocm_input.time,
-             'y': ocm_input.y, 
-             'x': ocm_input.x, 
+             'y': ocm_input.y,
+             'x': ocm_input.x,
              'spatial_ref': ocm_input.spatial_ref
             },
 )

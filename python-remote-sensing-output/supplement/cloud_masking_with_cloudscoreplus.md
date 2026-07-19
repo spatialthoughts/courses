@@ -1,4 +1,4 @@
-This notebook shows how to use Google's [Cloud Score+](https://medium.com/google-earth/all-clear-with-cloud-score-bd6ee2e2235e) mask for Sentinel-2 images. We use [XEE](https://xee.readthedocs.io/en/latest/) extension to fetch the mask from Google Earth Engine's [Cloud Score + Collection](https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_CLOUD_SCORE_PLUS_V1_S2_HARMONIZED) and apply it on a Sentinel-2 scene using Xarray.
+This notebook shows how to use Google's [Cloud Score+](https://medium.com/google-earth/all-clear-with-cloud-score-bd6ee2e2235e) mask for Sentinel-2 images. We use [XEE](https://xee.readthedocs.io/en/latest/) extension to fetch the mask from Google Earth Engine's [Cloud Score + Collection](https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_CLOUD_SCORE_PLUS_V1_S2_HARMONIZED) and apply it on a Sentinel-2 scene using Xarray. The notebook also shows how to scale this workflow for a large number of scenes and obtain a time-series of cloud-masked NDVI.
 
 ### Setup
 
@@ -187,7 +187,7 @@ most_cloudy = items[0]
 ds = load(
     [most_cloudy],
     bands=['red', 'green', 'blue', 'nir', 'scl'],
-    resolution=20, # Load the data at lower resolution to speed up processing 
+    resolution=20, # Load the data at lower resolution to speed up processing
     crs='utm',
     chunks={'x': 1024, 'y': 1024},  # Explicitly define chunk sizes
     groupby='solar_day',
