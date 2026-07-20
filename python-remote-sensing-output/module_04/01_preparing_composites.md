@@ -59,6 +59,7 @@ Import all required libraries. Make sure to import everything at the beginning a
 
 
 ```python
+import dask.array as da
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -252,7 +253,7 @@ geobox
 
 
 ```python
-chunks = dict(zip(ds['red'].dims, ds['red'].data.chunksize))
+chunks = dict(zip(composite['red'].dims, composite['red'].data.chunksize))
 chunks
 ```
 
@@ -292,6 +293,36 @@ Add the data to the composite.
 
 ```python
 composite[['elevation', 'slope']] = elevation_da, slope_da
+composite
+```
+
+### Add Coordinate as Bands
+
+We can also add X and Y coordinates as input parameters - which helps the machine learning model learn spatial patterns. We use [`dask.array.broadcast_to()`](https://docs.dask.org/en/latest/generated/dask.array.broadcast_to.html) function to get a Dask array of X and Y coordinates and assign them as variables. We get 2 new variables `x_coord` and `y_coord` in the composite.
+
+
+```python
+# Get the chunk sizes for x and y dimensions
+y_chunks, x_chunks = composite['red'].data.chunks
+
+x_vals = composite.x.values
+y_vals = composite.y.values
+
+# Create Dask arrays for x and y coordinates
+x_1d = da.from_array(x_vals, chunks=x_chunks)
+y_1d = da.from_array(y_vals, chunks=y_chunks)
+
+# Turn the 1D coordinate arrays into 2D arrays
+# that match the shape of the composite
+xx_da = da.broadcast_to(
+    x_1d[None, :], (composite.sizes['y'], composite.sizes['x']))
+yy_da = da.broadcast_to(
+    y_1d[:, None], (composite.sizes['y'], composite.sizes['x']))
+
+composite = composite.assign(
+    x_coord=(('y', 'x'), xx_da),
+    y_coord=(('y', 'x'), yy_da),
+
 composite
 ```
 
