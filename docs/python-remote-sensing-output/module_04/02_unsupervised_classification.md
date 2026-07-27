@@ -106,7 +106,7 @@ if not os.path.exists(multiband_composite_path):
         '/python-remote-sensing/multiband_composite.tif')
 
 band_names = ['red', 'green', 'blue', 'nir', 'swir16', 'swir22',
-              'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope'
+              'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope',
               'x_coord', 'y_coord']
 composite_da = rxr.open_rasterio(
     multiband_composite_path,

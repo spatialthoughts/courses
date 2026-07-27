@@ -144,9 +144,9 @@ viz(admin2_gdf)
 
 ### Save the Results
 
-We can save the selected subset as a GeoPackage. We can now save it as a file. 
+We can save the selected subset as a GeoPackage. We can now save it as a file.
 
-On Google Colab, data saved to the local filesystem will be deleted when the runtime is disconnected. It is recommended to save it to permanent cloud storage so you will have access to it later. 
+On Google Colab, data saved to the local filesystem will be deleted when the runtime is disconnected. It is recommended to save it to permanent cloud storage so you will have access to it later.
 
 Google Colab has a built-in integration with Google Drive and provides the easiest solution for storing persistent data. The following cell mounts your Google Drive in the Colab runtime. If you do not want to use Google Drive, set `use_google_drive=False` and it will be saved on the local filesystem that you can download.
 
@@ -208,8 +208,20 @@ region = 'IN-KA'
 
 ```python
 # Overture does monthly releases of their dataset
-# Find the latest release at https://stac.overturemaps.org/
-OVERTURE_RELEASE = '2026-05-20.0'
+# We find the latest release at https://stac.overturemaps.org/
+OVERTURE_RELEASE = con.sql('''
+    SELECT latest FROM read_json('https://stac.overturemaps.org/catalog.json')
+''').fetchone()[0]
+OVERTURE_RELEASE
+```
+
+
+```python
+s3_path = (
+    f's3://overturemaps-us-west-2/release/{OVERTURE_RELEASE}/'
+    'theme=divisions/type=division_area/*'
+)
+
 
 s3_path = (
         f's3://overturemaps-us-west-2/release/{OVERTURE_RELEASE}/'

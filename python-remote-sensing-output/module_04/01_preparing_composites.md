@@ -322,7 +322,7 @@ yy_da = da.broadcast_to(
 composite = composite.assign(
     x_coord=(('y', 'x'), xx_da),
     y_coord=(('y', 'x'), yy_da),
-
+)
 composite
 ```
 
@@ -430,3 +430,8 @@ else:
 
 print(f'Wrote {local_output_path}')
 ```
+
+    Exporting composite as tiled COGs
+    3 tiles intersect the AOI
+    Processing tile tile_01_01
+
