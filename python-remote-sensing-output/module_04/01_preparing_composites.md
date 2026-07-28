@@ -348,7 +348,7 @@ Writing a large multi-band composite in one shot can exceed available memory, si
 
 
 ```python
-TILE_SIZE = 5000  # pixels
+TILE_SIZE = 2500  # pixels
 
 x_size = composite_da.sizes['x']
 y_size = composite_da.sizes['y']
@@ -430,8 +430,3 @@ else:
 
 print(f'Wrote {local_output_path}')
 ```
-
-    Exporting composite as tiled COGs
-    3 tiles intersect the AOI
-    Processing tile tile_01_01
-

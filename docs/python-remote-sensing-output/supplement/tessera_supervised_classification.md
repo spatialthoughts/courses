@@ -25,7 +25,7 @@ else:
     environment = 'local'
 
 # Set to True to use Google Drive for data storage in Colab
-use_google_drive = False
+use_google_drive = True
 
 # Google Drive is available only in 'colab' environment
 if environment == 'colab' and use_google_drive:
