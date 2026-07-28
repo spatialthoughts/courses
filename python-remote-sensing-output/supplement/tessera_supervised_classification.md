@@ -2,7 +2,7 @@
 
 Embeddings are a way to compress large amounts of information into a smaller set of features that represent meaningful semantics. Instead of raw pixel values, each location is represented by a dense vector that captures the semantic content of the landscape.
 
-[TESSERA](https://github.com/ucam-eo/geotessera) is an open foundation model for Earth observation that learns such embeddings from satellite yearly time-series of Sentinel-1 and Sentinel-2 satellite imagery. The resulting embeddings are produced at 10m resolution have 128-dimensions. They represent the pixel's full annual history and can be directly. Here we use the precomputed embeddings as input features for supervised land cover classification with a set of labeled Ground Control Points (GCPs).
+[TESSERA](https://github.com/ucam-eo/geotessera) is an open foundation model for Earth observation that learns such embeddings from satellite yearly time-series of Sentinel-1 and Sentinel-2 satellite imagery. The resulting embeddings are produced at 10m resolution have 128-dimensions. They represent the pixel's full annual history and can be directly used for downstream tasks. Here we use the precomputed embeddings as input features for supervised land cover classification with a set of labeled Ground Control Points (GCPs).
 
 This notebook uses the [`geotessera`](https://geotessera.readthedocs.io/en/latest/index.html) package for querying and fetching the embeddings. 
 
