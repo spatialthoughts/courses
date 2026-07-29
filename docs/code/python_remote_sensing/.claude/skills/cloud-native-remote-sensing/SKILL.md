@@ -458,13 +458,49 @@ rgba.odc.write_cog('visualized.tif')
 
 ## Auto-select UTM Zone
 
-```python
-import pyproj
+Use `.odc.reproject('utm')` to reproject to the local UTM zone.
 
-bbox = gdf.geometry.total_bounds   # (minx, miny, maxx, maxy)
-aoi = pyproj.aoi.AreaOfInterest(*bbox)
-utm_crs_list = pyproj.database.query_utm_crs_info(datum_name='WGS 84', area_of_interest=aoi)
-utm_crs = pyproj.CRS.from_epsg(utm_crs_list[0].code)
+Use `.rio.estimate_utm_crs()` to get the EPSG code for the UTM zone.
+
+---
+
+## Writing Standalone Python Scripts
+
+When converting a notebook to a script meant to run outside Jupyter (e.g. batch processing on a local machine):
+
+- Structure as `main()` that creates the Dask client, calls a separate processing function, and shuts the client down in a `finally` block — so the cluster closes even if processing fails.
+- Import `rioxarray` even if never referenced by name — the import has the side effect of registering the `.rio` accessor on XArray objects.
+- Drop all environment-detection, cloud-drive-mounting, and plotting code that only applies to notebook/Colab use.
+
+```python
+from dask.distributed import Client
+
+def process(...):
+    ...
+
+def main():
+    client = Client()
+    try:
+        process(...)
+    finally:
+        client.retire_workers()
+        time.sleep(1)  # let workers finish reporting before the scheduler closes
+        client.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Progress Bar
+
+ Use `distributed.progress` instead, which requires `.persist()` before `.compute()`:
+
+```python
+from dask.distributed import progress
+
+result = result.persist()   # starts computation in the background
+progress(result)            # attaches a text progress bar
+result = result.compute()   # blocks until done, returns the in-memory result
 ```
 
 ---
