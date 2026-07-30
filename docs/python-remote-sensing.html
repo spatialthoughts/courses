@@ -6770,7 +6770,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb399-1"><a 
 <span id="cb399-9"><a href="#cb399-9" tabindex="-1"></a>classified_clipped <span class="op">=</span> classified_clipped.fillna(<span class="dv">255</span>).astype(np.uint8)<span class="op">\</span></span>
 <span id="cb399-10"><a href="#cb399-10" tabindex="-1"></a>    .rio.write_nodata(<span class="dv">255</span>)</span>
 <span id="cb399-11"><a href="#cb399-11" tabindex="-1"></a></span>
-<span id="cb399-12"><a href="#cb399-12" tabindex="-1"></a>output_file <span class="op">=</span> <span class="ss">f&#39;classification_embeddings.tif&#39;</span></span>
+<span id="cb399-12"><a href="#cb399-12" tabindex="-1"></a>output_file <span class="op">=</span> <span class="ss">f&#39;classification_embeddings_aef.tif&#39;</span></span>
 <span id="cb399-13"><a href="#cb399-13" tabindex="-1"></a>output_path <span class="op">=</span> os.path.join(output_folder, output_file)</span>
 <span id="cb399-14"><a href="#cb399-14" tabindex="-1"></a>write_cog_with_colormap(classified_clipped, output_path, color_table)</span>
 <span id="cb399-15"><a href="#cb399-15" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
@@ -10203,168 +10203,166 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb610-1"><a 
 <span id="cb610-2"><a href="#cb610-2" tabindex="-1"></a>sample_reduced <span class="op">=</span> reducer.fit_transform(sample_scaled)</span>
 <span id="cb610-3"><a href="#cb610-3" tabindex="-1"></a>sample_reduced</span></code></pre></div>
 </div>
-<div id="train-a-clusterer" class="section level3">
-<h3>Train a Clusterer</h3>
-<p>Here we use scikit-learn’s <code>KMeans</code> with a fixed
-<code>n_clusters</code>. Adjust this value if water bodies are split
-across multiple clusters or merged with other land cover types.</p>
-<div class="sourceCode" id="cb611"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb611-1"><a href="#cb611-1" tabindex="-1"></a>n_clusters <span class="op">=</span> <span class="dv">6</span></span>
-<span id="cb611-2"><a href="#cb611-2" tabindex="-1"></a></span>
-<span id="cb611-3"><a href="#cb611-3" tabindex="-1"></a>model <span class="op">=</span> KMeans(n_clusters<span class="op">=</span>n_clusters, random_state<span class="op">=</span><span class="dv">42</span>, n_init<span class="op">=</span><span class="st">&#39;auto&#39;</span>)</span>
-<span id="cb611-4"><a href="#cb611-4" tabindex="-1"></a>model.fit(sample_reduced)</span>
-<span id="cb611-5"><a href="#cb611-5" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Trained KMeans with </span><span class="sc">{</span>n_clusters<span class="sc">}</span><span class="ss"> clusters&#39;</span>)</span></code></pre></div>
-</div>
 <div id="fetch-tiles-and-apply-umap-projection" class="section level3">
 <h3>Fetch Tiles and Apply UMAP Projection</h3>
 <p>For every TESSERA tile covering the AOI, fetch the raw embeddings and
 apply the trained scaler and Parametric UMAP model to reduce each tile
 to 3 bands, writing the result straight to disk as we go. At any point
 in the loop only a single tile’s embeddings are in memory.</p>
-<div class="sourceCode" id="cb612"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb612-1"><a href="#cb612-1" tabindex="-1"></a>umap_bands_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;umap_bands.tif&#39;</span>)</span>
-<span id="cb612-2"><a href="#cb612-2" tabindex="-1"></a></span>
-<span id="cb612-3"><a href="#cb612-3" tabindex="-1"></a><span class="cf">with</span> tempfile.TemporaryDirectory() <span class="im">as</span> tile_dir:</span>
-<span id="cb612-4"><a href="#cb612-4" tabindex="-1"></a>    tile_paths <span class="op">=</span> []</span>
-<span id="cb612-5"><a href="#cb612-5" tabindex="-1"></a></span>
-<span id="cb612-6"><a href="#cb612-6" tabindex="-1"></a>    <span class="cf">for</span> year_val, tile_lon, tile_lat <span class="kw">in</span> tiles_to_fetch:</span>
-<span id="cb612-7"><a href="#cb612-7" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Fetching </span><span class="sc">{</span>tile_lon<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>tile_lat<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb612-8"><a href="#cb612-8" tabindex="-1"></a>        embedding_tile, tile_crs, tile_transform <span class="op">=</span> gt.fetch_embedding(tile_lon, tile_lat, year_val)</span>
-<span id="cb612-9"><a href="#cb612-9" tabindex="-1"></a></span>
-<span id="cb612-10"><a href="#cb612-10" tabindex="-1"></a>        <span class="co"># embedding shape: (height, width, 128)</span></span>
-<span id="cb612-11"><a href="#cb612-11" tabindex="-1"></a>        height, width, channels <span class="op">=</span> embedding_tile.shape</span>
-<span id="cb612-12"><a href="#cb612-12" tabindex="-1"></a>        data_reshaped <span class="op">=</span> embedding_tile.reshape(<span class="op">-</span><span class="dv">1</span>, channels)</span>
-<span id="cb612-13"><a href="#cb612-13" tabindex="-1"></a></span>
-<span id="cb612-14"><a href="#cb612-14" tabindex="-1"></a>        <span class="co"># Remove NaN/invalid values</span></span>
-<span id="cb612-15"><a href="#cb612-15" tabindex="-1"></a>        valid_mask <span class="op">=</span> <span class="op">~</span>np.isnan(data_reshaped).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb612-16"><a href="#cb612-16" tabindex="-1"></a>        valid_data <span class="op">=</span> data_reshaped[valid_mask]</span>
-<span id="cb612-17"><a href="#cb612-17" tabindex="-1"></a></span>
-<span id="cb612-18"><a href="#cb612-18" tabindex="-1"></a>        reduced <span class="op">=</span> np.full((height <span class="op">*</span> width, umap_n_components), np.nan, dtype<span class="op">=</span><span class="st">&#39;float32&#39;</span>)</span>
-<span id="cb612-19"><a href="#cb612-19" tabindex="-1"></a>        <span class="cf">if</span> valid_data.size <span class="op">&gt;</span> <span class="dv">0</span>:</span>
-<span id="cb612-20"><a href="#cb612-20" tabindex="-1"></a>            <span class="co"># UMAP-reduce once; the mosaicked result is reused later for both</span></span>
-<span id="cb612-21"><a href="#cb612-21" tabindex="-1"></a>            <span class="co"># the RGB visualization and the clustering step</span></span>
-<span id="cb612-22"><a href="#cb612-22" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&#39;Transforming </span><span class="sc">{</span>tile_lon<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>tile_lat<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb612-23"><a href="#cb612-23" tabindex="-1"></a></span>
-<span id="cb612-24"><a href="#cb612-24" tabindex="-1"></a>            reduced[valid_mask] <span class="op">=</span> reducer.transform(scaler.transform(valid_data))</span>
-<span id="cb612-25"><a href="#cb612-25" tabindex="-1"></a></span>
-<span id="cb612-26"><a href="#cb612-26" tabindex="-1"></a>        <span class="co"># Reshape back to the tile&#39;s spatial grid, bands first</span></span>
-<span id="cb612-27"><a href="#cb612-27" tabindex="-1"></a>        reduced <span class="op">=</span> reduced.reshape(height, width, umap_n_components).transpose(<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
-<span id="cb612-28"><a href="#cb612-28" tabindex="-1"></a></span>
-<span id="cb612-29"><a href="#cb612-29" tabindex="-1"></a>        tile_path <span class="op">=</span> os.path.join(tile_dir, <span class="ss">f&#39;tile_</span><span class="sc">{</span>tile_lon<span class="sc">:.2f}</span><span class="ss">_</span><span class="sc">{</span>tile_lat<span class="sc">:.2f}</span><span class="ss">.tif&#39;</span>)</span>
-<span id="cb612-30"><a href="#cb612-30" tabindex="-1"></a>        tile_profile <span class="op">=</span> {</span>
-<span id="cb612-31"><a href="#cb612-31" tabindex="-1"></a>            <span class="st">&#39;driver&#39;</span>: <span class="st">&#39;GTiff&#39;</span>, <span class="st">&#39;height&#39;</span>: height, <span class="st">&#39;width&#39;</span>: width, <span class="st">&#39;count&#39;</span>: umap_n_components,</span>
-<span id="cb612-32"><a href="#cb612-32" tabindex="-1"></a>            <span class="st">&#39;dtype&#39;</span>: <span class="st">&#39;float32&#39;</span>, <span class="st">&#39;crs&#39;</span>: tile_crs, <span class="st">&#39;transform&#39;</span>: tile_transform,</span>
-<span id="cb612-33"><a href="#cb612-33" tabindex="-1"></a>            <span class="st">&#39;nodata&#39;</span>: np.nan, <span class="st">&#39;compress&#39;</span>: <span class="st">&#39;deflate&#39;</span>,</span>
-<span id="cb612-34"><a href="#cb612-34" tabindex="-1"></a>        }</span>
-<span id="cb612-35"><a href="#cb612-35" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(tile_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>tile_profile) <span class="im">as</span> dst:</span>
-<span id="cb612-36"><a href="#cb612-36" tabindex="-1"></a>            dst.write(reduced)</span>
-<span id="cb612-37"><a href="#cb612-37" tabindex="-1"></a>        tile_paths.append(tile_path)</span>
-<span id="cb612-38"><a href="#cb612-38" tabindex="-1"></a></span>
-<span id="cb612-39"><a href="#cb612-39" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span><span class="bu">len</span>(tile_paths)<span class="sc">}</span><span class="ss"> UMAP-transformed tiles&#39;</span>)</span>
-<span id="cb612-40"><a href="#cb612-40" tabindex="-1"></a></span>
-<span id="cb612-41"><a href="#cb612-41" tabindex="-1"></a>    <span class="co"># rasterio.merge() assumes every input shares one CRS — it does not reproject.</span></span>
-<span id="cb612-42"><a href="#cb612-42" tabindex="-1"></a>    <span class="co"># TESSERA tiles for a small AOI are normally all in the same UTM zone, but if</span></span>
-<span id="cb612-43"><a href="#cb612-43" tabindex="-1"></a>    <span class="co"># the AOI happened to straddle a zone boundary, merging mismatched-CRS tiles</span></span>
-<span id="cb612-44"><a href="#cb612-44" tabindex="-1"></a>    <span class="co"># directly would silently misalign the mosaic. Before merging, we check each</span></span>
-<span id="cb612-45"><a href="#cb612-45" tabindex="-1"></a>    <span class="co"># tile&#39;s CRS and reproject only the ones that don&#39;t match the majority CRS.</span></span>
-<span id="cb612-46"><a href="#cb612-46" tabindex="-1"></a>    tile_crs_list <span class="op">=</span> [rasterio.<span class="bu">open</span>(p).crs <span class="cf">for</span> p <span class="kw">in</span> tile_paths]</span>
-<span id="cb612-47"><a href="#cb612-47" tabindex="-1"></a>    target_crs <span class="op">=</span> <span class="bu">max</span>(<span class="bu">set</span>(tile_crs_list), key<span class="op">=</span>tile_crs_list.count)</span>
-<span id="cb612-48"><a href="#cb612-48" tabindex="-1"></a></span>
-<span id="cb612-49"><a href="#cb612-49" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(<span class="bu">set</span>(tile_crs_list)) <span class="op">&gt;</span> <span class="dv">1</span>:</span>
-<span id="cb612-50"><a href="#cb612-50" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Tiles span </span><span class="sc">{</span><span class="bu">len</span>(<span class="bu">set</span>(tile_crs_list))<span class="sc">}</span><span class="ss"> distinct CRS; reprojecting outliers to </span><span class="sc">{</span>target_crs<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb612-51"><a href="#cb612-51" tabindex="-1"></a></span>
-<span id="cb612-52"><a href="#cb612-52" tabindex="-1"></a>    normalized_paths <span class="op">=</span> []</span>
-<span id="cb612-53"><a href="#cb612-53" tabindex="-1"></a>    <span class="cf">for</span> path, crs <span class="kw">in</span> <span class="bu">zip</span>(tile_paths, tile_crs_list):</span>
-<span id="cb612-54"><a href="#cb612-54" tabindex="-1"></a>        <span class="cf">if</span> crs <span class="op">==</span> target_crs:</span>
-<span id="cb612-55"><a href="#cb612-55" tabindex="-1"></a>            normalized_paths.append(path)</span>
-<span id="cb612-56"><a href="#cb612-56" tabindex="-1"></a>            <span class="cf">continue</span></span>
-<span id="cb612-57"><a href="#cb612-57" tabindex="-1"></a>        reproj_path <span class="op">=</span> path.replace(<span class="st">&#39;.tif&#39;</span>, <span class="st">&#39;_reproj.tif&#39;</span>)</span>
-<span id="cb612-58"><a href="#cb612-58" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(path) <span class="im">as</span> src:</span>
-<span id="cb612-59"><a href="#cb612-59" tabindex="-1"></a>            transform, dst_width, dst_height <span class="op">=</span> calculate_default_transform(</span>
-<span id="cb612-60"><a href="#cb612-60" tabindex="-1"></a>                src.crs, target_crs, src.width, src.height, <span class="op">*</span>src.bounds)</span>
-<span id="cb612-61"><a href="#cb612-61" tabindex="-1"></a>            profile <span class="op">=</span> src.profile.copy()</span>
-<span id="cb612-62"><a href="#cb612-62" tabindex="-1"></a>            profile.update(crs<span class="op">=</span>target_crs, transform<span class="op">=</span>transform, width<span class="op">=</span>dst_width, height<span class="op">=</span>dst_height)</span>
-<span id="cb612-63"><a href="#cb612-63" tabindex="-1"></a>            <span class="cf">with</span> rasterio.<span class="bu">open</span>(reproj_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>profile) <span class="im">as</span> dst:</span>
-<span id="cb612-64"><a href="#cb612-64" tabindex="-1"></a>                <span class="cf">for</span> band <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, src.count <span class="op">+</span> <span class="dv">1</span>):</span>
-<span id="cb612-65"><a href="#cb612-65" tabindex="-1"></a>                    reproject(</span>
-<span id="cb612-66"><a href="#cb612-66" tabindex="-1"></a>                        source<span class="op">=</span>rasterio.band(src, band),</span>
-<span id="cb612-67"><a href="#cb612-67" tabindex="-1"></a>                        destination<span class="op">=</span>rasterio.band(dst, band),</span>
-<span id="cb612-68"><a href="#cb612-68" tabindex="-1"></a>                        src_transform<span class="op">=</span>src.transform, src_crs<span class="op">=</span>src.crs,</span>
-<span id="cb612-69"><a href="#cb612-69" tabindex="-1"></a>                        dst_transform<span class="op">=</span>transform, dst_crs<span class="op">=</span>target_crs,</span>
-<span id="cb612-70"><a href="#cb612-70" tabindex="-1"></a>                        <span class="co"># bilinear since these are continuous UMAP components,</span></span>
-<span id="cb612-71"><a href="#cb612-71" tabindex="-1"></a>                        <span class="co"># not class labels</span></span>
-<span id="cb612-72"><a href="#cb612-72" tabindex="-1"></a>                        resampling<span class="op">=</span>Resampling.bilinear)</span>
-<span id="cb612-73"><a href="#cb612-73" tabindex="-1"></a>        normalized_paths.append(reproj_path)</span>
-<span id="cb612-74"><a href="#cb612-74" tabindex="-1"></a></span>
-<span id="cb612-75"><a href="#cb612-75" tabindex="-1"></a>    src_files <span class="op">=</span> [rasterio.<span class="bu">open</span>(p) <span class="cf">for</span> p <span class="kw">in</span> normalized_paths]</span>
-<span id="cb612-76"><a href="#cb612-76" tabindex="-1"></a>    mosaic, out_transform <span class="op">=</span> merge(src_files)</span>
-<span id="cb612-77"><a href="#cb612-77" tabindex="-1"></a></span>
-<span id="cb612-78"><a href="#cb612-78" tabindex="-1"></a>    out_profile <span class="op">=</span> src_files[<span class="dv">0</span>].profile.copy()</span>
-<span id="cb612-79"><a href="#cb612-79" tabindex="-1"></a>    out_profile.update({</span>
-<span id="cb612-80"><a href="#cb612-80" tabindex="-1"></a>        <span class="st">&#39;height&#39;</span>: mosaic.shape[<span class="dv">1</span>],</span>
-<span id="cb612-81"><a href="#cb612-81" tabindex="-1"></a>        <span class="st">&#39;width&#39;</span>: mosaic.shape[<span class="dv">2</span>],</span>
-<span id="cb612-82"><a href="#cb612-82" tabindex="-1"></a>        <span class="st">&#39;transform&#39;</span>: out_transform,</span>
-<span id="cb612-83"><a href="#cb612-83" tabindex="-1"></a>    })</span>
-<span id="cb612-84"><a href="#cb612-84" tabindex="-1"></a></span>
-<span id="cb612-85"><a href="#cb612-85" tabindex="-1"></a>    <span class="cf">with</span> rasterio.<span class="bu">open</span>(umap_bands_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>out_profile) <span class="im">as</span> dst:</span>
-<span id="cb612-86"><a href="#cb612-86" tabindex="-1"></a>        dst.write(mosaic)</span>
-<span id="cb612-87"><a href="#cb612-87" tabindex="-1"></a></span>
-<span id="cb612-88"><a href="#cb612-88" tabindex="-1"></a>    <span class="cf">for</span> src <span class="kw">in</span> src_files:</span>
-<span id="cb612-89"><a href="#cb612-89" tabindex="-1"></a>        src.close()</span>
-<span id="cb612-90"><a href="#cb612-90" tabindex="-1"></a></span>
-<span id="cb612-91"><a href="#cb612-91" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>umap_bands_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb611"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb611-1"><a href="#cb611-1" tabindex="-1"></a>umap_bands_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;umap_bands.tif&#39;</span>)</span>
+<span id="cb611-2"><a href="#cb611-2" tabindex="-1"></a></span>
+<span id="cb611-3"><a href="#cb611-3" tabindex="-1"></a><span class="cf">with</span> tempfile.TemporaryDirectory() <span class="im">as</span> tile_dir:</span>
+<span id="cb611-4"><a href="#cb611-4" tabindex="-1"></a>    tile_paths <span class="op">=</span> []</span>
+<span id="cb611-5"><a href="#cb611-5" tabindex="-1"></a></span>
+<span id="cb611-6"><a href="#cb611-6" tabindex="-1"></a>    <span class="cf">for</span> year_val, tile_lon, tile_lat <span class="kw">in</span> tiles_to_fetch:</span>
+<span id="cb611-7"><a href="#cb611-7" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Fetching </span><span class="sc">{</span>tile_lon<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>tile_lat<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb611-8"><a href="#cb611-8" tabindex="-1"></a>        embedding_tile, tile_crs, tile_transform <span class="op">=</span> gt.fetch_embedding(tile_lon, tile_lat, year_val)</span>
+<span id="cb611-9"><a href="#cb611-9" tabindex="-1"></a></span>
+<span id="cb611-10"><a href="#cb611-10" tabindex="-1"></a>        <span class="co"># embedding shape: (height, width, 128)</span></span>
+<span id="cb611-11"><a href="#cb611-11" tabindex="-1"></a>        height, width, channels <span class="op">=</span> embedding_tile.shape</span>
+<span id="cb611-12"><a href="#cb611-12" tabindex="-1"></a>        data_reshaped <span class="op">=</span> embedding_tile.reshape(<span class="op">-</span><span class="dv">1</span>, channels)</span>
+<span id="cb611-13"><a href="#cb611-13" tabindex="-1"></a></span>
+<span id="cb611-14"><a href="#cb611-14" tabindex="-1"></a>        <span class="co"># Remove NaN/invalid values</span></span>
+<span id="cb611-15"><a href="#cb611-15" tabindex="-1"></a>        valid_mask <span class="op">=</span> <span class="op">~</span>np.isnan(data_reshaped).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb611-16"><a href="#cb611-16" tabindex="-1"></a>        valid_data <span class="op">=</span> data_reshaped[valid_mask]</span>
+<span id="cb611-17"><a href="#cb611-17" tabindex="-1"></a></span>
+<span id="cb611-18"><a href="#cb611-18" tabindex="-1"></a>        reduced <span class="op">=</span> np.full((height <span class="op">*</span> width, umap_n_components), np.nan, dtype<span class="op">=</span><span class="st">&#39;float32&#39;</span>)</span>
+<span id="cb611-19"><a href="#cb611-19" tabindex="-1"></a>        <span class="cf">if</span> valid_data.size <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb611-20"><a href="#cb611-20" tabindex="-1"></a>            <span class="co"># UMAP-reduce once; the mosaicked result is reused later for both</span></span>
+<span id="cb611-21"><a href="#cb611-21" tabindex="-1"></a>            <span class="co"># the RGB visualization and the clustering step</span></span>
+<span id="cb611-22"><a href="#cb611-22" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&#39;Transforming </span><span class="sc">{</span>tile_lon<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>tile_lat<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb611-23"><a href="#cb611-23" tabindex="-1"></a></span>
+<span id="cb611-24"><a href="#cb611-24" tabindex="-1"></a>            reduced[valid_mask] <span class="op">=</span> reducer.transform(scaler.transform(valid_data))</span>
+<span id="cb611-25"><a href="#cb611-25" tabindex="-1"></a></span>
+<span id="cb611-26"><a href="#cb611-26" tabindex="-1"></a>        <span class="co"># Reshape back to the tile&#39;s spatial grid, bands first</span></span>
+<span id="cb611-27"><a href="#cb611-27" tabindex="-1"></a>        reduced <span class="op">=</span> reduced.reshape(height, width, umap_n_components).transpose(<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb611-28"><a href="#cb611-28" tabindex="-1"></a></span>
+<span id="cb611-29"><a href="#cb611-29" tabindex="-1"></a>        tile_path <span class="op">=</span> os.path.join(tile_dir, <span class="ss">f&#39;tile_</span><span class="sc">{</span>tile_lon<span class="sc">:.2f}</span><span class="ss">_</span><span class="sc">{</span>tile_lat<span class="sc">:.2f}</span><span class="ss">.tif&#39;</span>)</span>
+<span id="cb611-30"><a href="#cb611-30" tabindex="-1"></a>        tile_profile <span class="op">=</span> {</span>
+<span id="cb611-31"><a href="#cb611-31" tabindex="-1"></a>            <span class="st">&#39;driver&#39;</span>: <span class="st">&#39;GTiff&#39;</span>, <span class="st">&#39;height&#39;</span>: height, <span class="st">&#39;width&#39;</span>: width, <span class="st">&#39;count&#39;</span>: umap_n_components,</span>
+<span id="cb611-32"><a href="#cb611-32" tabindex="-1"></a>            <span class="st">&#39;dtype&#39;</span>: <span class="st">&#39;float32&#39;</span>, <span class="st">&#39;crs&#39;</span>: tile_crs, <span class="st">&#39;transform&#39;</span>: tile_transform,</span>
+<span id="cb611-33"><a href="#cb611-33" tabindex="-1"></a>            <span class="st">&#39;nodata&#39;</span>: np.nan, <span class="st">&#39;compress&#39;</span>: <span class="st">&#39;deflate&#39;</span>,</span>
+<span id="cb611-34"><a href="#cb611-34" tabindex="-1"></a>        }</span>
+<span id="cb611-35"><a href="#cb611-35" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(tile_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>tile_profile) <span class="im">as</span> dst:</span>
+<span id="cb611-36"><a href="#cb611-36" tabindex="-1"></a>            dst.write(reduced)</span>
+<span id="cb611-37"><a href="#cb611-37" tabindex="-1"></a>        tile_paths.append(tile_path)</span>
+<span id="cb611-38"><a href="#cb611-38" tabindex="-1"></a></span>
+<span id="cb611-39"><a href="#cb611-39" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span><span class="bu">len</span>(tile_paths)<span class="sc">}</span><span class="ss"> UMAP-transformed tiles&#39;</span>)</span>
+<span id="cb611-40"><a href="#cb611-40" tabindex="-1"></a></span>
+<span id="cb611-41"><a href="#cb611-41" tabindex="-1"></a>    <span class="co"># rasterio.merge() assumes every input shares one CRS — it does not reproject.</span></span>
+<span id="cb611-42"><a href="#cb611-42" tabindex="-1"></a>    <span class="co"># TESSERA tiles for a small AOI are normally all in the same UTM zone, but if</span></span>
+<span id="cb611-43"><a href="#cb611-43" tabindex="-1"></a>    <span class="co"># the AOI happened to straddle a zone boundary, merging mismatched-CRS tiles</span></span>
+<span id="cb611-44"><a href="#cb611-44" tabindex="-1"></a>    <span class="co"># directly would silently misalign the mosaic. Before merging, we check each</span></span>
+<span id="cb611-45"><a href="#cb611-45" tabindex="-1"></a>    <span class="co"># tile&#39;s CRS and reproject only the ones that don&#39;t match the majority CRS.</span></span>
+<span id="cb611-46"><a href="#cb611-46" tabindex="-1"></a>    tile_crs_list <span class="op">=</span> [rasterio.<span class="bu">open</span>(p).crs <span class="cf">for</span> p <span class="kw">in</span> tile_paths]</span>
+<span id="cb611-47"><a href="#cb611-47" tabindex="-1"></a>    target_crs <span class="op">=</span> <span class="bu">max</span>(<span class="bu">set</span>(tile_crs_list), key<span class="op">=</span>tile_crs_list.count)</span>
+<span id="cb611-48"><a href="#cb611-48" tabindex="-1"></a></span>
+<span id="cb611-49"><a href="#cb611-49" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(<span class="bu">set</span>(tile_crs_list)) <span class="op">&gt;</span> <span class="dv">1</span>:</span>
+<span id="cb611-50"><a href="#cb611-50" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&#39;Tiles span </span><span class="sc">{</span><span class="bu">len</span>(<span class="bu">set</span>(tile_crs_list))<span class="sc">}</span><span class="ss"> distinct CRS; reprojecting outliers to </span><span class="sc">{</span>target_crs<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb611-51"><a href="#cb611-51" tabindex="-1"></a></span>
+<span id="cb611-52"><a href="#cb611-52" tabindex="-1"></a>    normalized_paths <span class="op">=</span> []</span>
+<span id="cb611-53"><a href="#cb611-53" tabindex="-1"></a>    <span class="cf">for</span> path, crs <span class="kw">in</span> <span class="bu">zip</span>(tile_paths, tile_crs_list):</span>
+<span id="cb611-54"><a href="#cb611-54" tabindex="-1"></a>        <span class="cf">if</span> crs <span class="op">==</span> target_crs:</span>
+<span id="cb611-55"><a href="#cb611-55" tabindex="-1"></a>            normalized_paths.append(path)</span>
+<span id="cb611-56"><a href="#cb611-56" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb611-57"><a href="#cb611-57" tabindex="-1"></a>        reproj_path <span class="op">=</span> path.replace(<span class="st">&#39;.tif&#39;</span>, <span class="st">&#39;_reproj.tif&#39;</span>)</span>
+<span id="cb611-58"><a href="#cb611-58" tabindex="-1"></a>        <span class="cf">with</span> rasterio.<span class="bu">open</span>(path) <span class="im">as</span> src:</span>
+<span id="cb611-59"><a href="#cb611-59" tabindex="-1"></a>            transform, dst_width, dst_height <span class="op">=</span> calculate_default_transform(</span>
+<span id="cb611-60"><a href="#cb611-60" tabindex="-1"></a>                src.crs, target_crs, src.width, src.height, <span class="op">*</span>src.bounds)</span>
+<span id="cb611-61"><a href="#cb611-61" tabindex="-1"></a>            profile <span class="op">=</span> src.profile.copy()</span>
+<span id="cb611-62"><a href="#cb611-62" tabindex="-1"></a>            profile.update(crs<span class="op">=</span>target_crs, transform<span class="op">=</span>transform, width<span class="op">=</span>dst_width, height<span class="op">=</span>dst_height)</span>
+<span id="cb611-63"><a href="#cb611-63" tabindex="-1"></a>            <span class="cf">with</span> rasterio.<span class="bu">open</span>(reproj_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>profile) <span class="im">as</span> dst:</span>
+<span id="cb611-64"><a href="#cb611-64" tabindex="-1"></a>                <span class="cf">for</span> band <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, src.count <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb611-65"><a href="#cb611-65" tabindex="-1"></a>                    reproject(</span>
+<span id="cb611-66"><a href="#cb611-66" tabindex="-1"></a>                        source<span class="op">=</span>rasterio.band(src, band),</span>
+<span id="cb611-67"><a href="#cb611-67" tabindex="-1"></a>                        destination<span class="op">=</span>rasterio.band(dst, band),</span>
+<span id="cb611-68"><a href="#cb611-68" tabindex="-1"></a>                        src_transform<span class="op">=</span>src.transform, src_crs<span class="op">=</span>src.crs,</span>
+<span id="cb611-69"><a href="#cb611-69" tabindex="-1"></a>                        dst_transform<span class="op">=</span>transform, dst_crs<span class="op">=</span>target_crs,</span>
+<span id="cb611-70"><a href="#cb611-70" tabindex="-1"></a>                        <span class="co"># bilinear since these are continuous UMAP components,</span></span>
+<span id="cb611-71"><a href="#cb611-71" tabindex="-1"></a>                        <span class="co"># not class labels</span></span>
+<span id="cb611-72"><a href="#cb611-72" tabindex="-1"></a>                        resampling<span class="op">=</span>Resampling.bilinear)</span>
+<span id="cb611-73"><a href="#cb611-73" tabindex="-1"></a>        normalized_paths.append(reproj_path)</span>
+<span id="cb611-74"><a href="#cb611-74" tabindex="-1"></a></span>
+<span id="cb611-75"><a href="#cb611-75" tabindex="-1"></a>    src_files <span class="op">=</span> [rasterio.<span class="bu">open</span>(p) <span class="cf">for</span> p <span class="kw">in</span> normalized_paths]</span>
+<span id="cb611-76"><a href="#cb611-76" tabindex="-1"></a>    mosaic, out_transform <span class="op">=</span> merge(src_files)</span>
+<span id="cb611-77"><a href="#cb611-77" tabindex="-1"></a></span>
+<span id="cb611-78"><a href="#cb611-78" tabindex="-1"></a>    out_profile <span class="op">=</span> src_files[<span class="dv">0</span>].profile.copy()</span>
+<span id="cb611-79"><a href="#cb611-79" tabindex="-1"></a>    out_profile.update({</span>
+<span id="cb611-80"><a href="#cb611-80" tabindex="-1"></a>        <span class="st">&#39;driver&#39;</span>: <span class="st">&#39;COG&#39;</span>,</span>
+<span id="cb611-81"><a href="#cb611-81" tabindex="-1"></a>        <span class="st">&#39;height&#39;</span>: mosaic.shape[<span class="dv">1</span>],</span>
+<span id="cb611-82"><a href="#cb611-82" tabindex="-1"></a>        <span class="st">&#39;width&#39;</span>: mosaic.shape[<span class="dv">2</span>],</span>
+<span id="cb611-83"><a href="#cb611-83" tabindex="-1"></a>        <span class="st">&#39;transform&#39;</span>: out_transform,</span>
+<span id="cb611-84"><a href="#cb611-84" tabindex="-1"></a>    })</span>
+<span id="cb611-85"><a href="#cb611-85" tabindex="-1"></a></span>
+<span id="cb611-86"><a href="#cb611-86" tabindex="-1"></a>    <span class="cf">with</span> rasterio.<span class="bu">open</span>(umap_bands_path, <span class="st">&#39;w&#39;</span>, <span class="op">**</span>out_profile) <span class="im">as</span> dst:</span>
+<span id="cb611-87"><a href="#cb611-87" tabindex="-1"></a>        dst.write(mosaic)</span>
+<span id="cb611-88"><a href="#cb611-88" tabindex="-1"></a></span>
+<span id="cb611-89"><a href="#cb611-89" tabindex="-1"></a>    <span class="cf">for</span> src <span class="kw">in</span> src_files:</span>
+<span id="cb611-90"><a href="#cb611-90" tabindex="-1"></a>        src.close()</span>
+<span id="cb611-91"><a href="#cb611-91" tabindex="-1"></a></span>
+<span id="cb611-92"><a href="#cb611-92" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>umap_bands_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 </div>
 <div id="visualize-the-umap-rgb-composite" class="section level3">
 <h3>Visualize the UMAP RGB Composite</h3>
 <p>Load the mosaicked UMAP bands and clip to the AOI.</p>
-<div class="sourceCode" id="cb613"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb613-1"><a href="#cb613-1" tabindex="-1"></a>umap_ds <span class="op">=</span> rxr.open_rasterio(umap_bands_path)</span>
-<span id="cb613-2"><a href="#cb613-2" tabindex="-1"></a>aoi_gdf_reprojected <span class="op">=</span> aoi_gdf.to_crs(umap_ds.rio.crs)</span>
-<span id="cb613-3"><a href="#cb613-3" tabindex="-1"></a>umap_clipped <span class="op">=</span> umap_ds.rio.clip(aoi_gdf_reprojected.geometry)</span></code></pre></div>
+<div class="sourceCode" id="cb612"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb612-1"><a href="#cb612-1" tabindex="-1"></a>umap_ds <span class="op">=</span> rxr.open_rasterio(umap_bands_path)</span>
+<span id="cb612-2"><a href="#cb612-2" tabindex="-1"></a>aoi_gdf_reprojected <span class="op">=</span> aoi_gdf.to_crs(umap_ds.rio.crs)</span>
+<span id="cb612-3"><a href="#cb612-3" tabindex="-1"></a>umap_clipped <span class="op">=</span> umap_ds.rio.clip(aoi_gdf_reprojected.geometry)</span></code></pre></div>
 <p>Display as a false-color RGB image using the percentile stretch
 computed from the training sample.</p>
+<div class="sourceCode" id="cb613"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb613-1"><a href="#cb613-1" tabindex="-1"></a><span class="kw">def</span> normalize_to_rgb(values, p_low, p_high):</span>
+<span id="cb613-2"><a href="#cb613-2" tabindex="-1"></a>    clipped <span class="op">=</span> np.clip(values, p_low, p_high)</span>
+<span id="cb613-3"><a href="#cb613-3" tabindex="-1"></a>    scaled <span class="op">=</span> (clipped <span class="op">-</span> p_low) <span class="op">/</span> (p_high <span class="op">-</span> p_low)</span>
+<span id="cb613-4"><a href="#cb613-4" tabindex="-1"></a>    <span class="cf">return</span> (scaled <span class="op">*</span> <span class="dv">255</span>).astype(<span class="st">&#39;uint8&#39;</span>)</span>
+<span id="cb613-5"><a href="#cb613-5" tabindex="-1"></a></span>
+<span id="cb613-6"><a href="#cb613-6" tabindex="-1"></a>rgb_p_low <span class="op">=</span> np.percentile(sample_reduced, <span class="dv">2</span>, axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb613-7"><a href="#cb613-7" tabindex="-1"></a>rgb_p_high <span class="op">=</span> np.percentile(sample_reduced, <span class="dv">98</span>, axis<span class="op">=</span><span class="dv">0</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb614"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb614-1"><a href="#cb614-1" tabindex="-1"></a><span class="kw">def</span> normalize_to_rgb(values, p_low, p_high):</span>
-<span id="cb614-2"><a href="#cb614-2" tabindex="-1"></a>    clipped <span class="op">=</span> np.clip(values, p_low, p_high)</span>
-<span id="cb614-3"><a href="#cb614-3" tabindex="-1"></a>    scaled <span class="op">=</span> (clipped <span class="op">-</span> p_low) <span class="op">/</span> (p_high <span class="op">-</span> p_low)</span>
-<span id="cb614-4"><a href="#cb614-4" tabindex="-1"></a>    <span class="cf">return</span> (scaled <span class="op">*</span> <span class="dv">255</span>).astype(<span class="st">&#39;uint8&#39;</span>)</span>
-<span id="cb614-5"><a href="#cb614-5" tabindex="-1"></a></span>
-<span id="cb614-6"><a href="#cb614-6" tabindex="-1"></a>rgb_p_low <span class="op">=</span> np.percentile(sample_reduced, <span class="dv">2</span>, axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb614-7"><a href="#cb614-7" tabindex="-1"></a>rgb_p_high <span class="op">=</span> np.percentile(sample_reduced, <span class="dv">98</span>, axis<span class="op">=</span><span class="dv">0</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb615"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb615-1"><a href="#cb615-1" tabindex="-1"></a>preview_umap <span class="op">=</span> umap_clipped.rio.reproject(umap_clipped.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>).compute()</span>
-<span id="cb615-2"><a href="#cb615-2" tabindex="-1"></a></span>
-<span id="cb615-3"><a href="#cb615-3" tabindex="-1"></a><span class="co"># Pixels outside the AOI are NaN after clipping. normalize_to_rgb() cannot</span></span>
-<span id="cb615-4"><a href="#cb615-4" tabindex="-1"></a><span class="co"># represent NaN in uint8, so add an alpha band and make those pixels</span></span>
-<span id="cb615-5"><a href="#cb615-5" tabindex="-1"></a><span class="co"># transparent instead of opaque black.</span></span>
-<span id="cb615-6"><a href="#cb615-6" tabindex="-1"></a>valid <span class="op">=</span> <span class="op">~</span>np.isnan(preview_umap.values).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb615-7"><a href="#cb615-7" tabindex="-1"></a>rgb <span class="op">=</span> normalize_to_rgb(preview_umap.values.transpose(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">0</span>), rgb_p_low, rgb_p_high)</span>
-<span id="cb615-8"><a href="#cb615-8" tabindex="-1"></a>alpha <span class="op">=</span> np.where(valid, <span class="dv">255</span>, <span class="dv">0</span>).astype(<span class="st">&#39;uint8&#39;</span>)</span>
-<span id="cb615-9"><a href="#cb615-9" tabindex="-1"></a>rgba <span class="op">=</span> np.dstack([rgb, alpha])</span>
-<span id="cb615-10"><a href="#cb615-10" tabindex="-1"></a></span>
-<span id="cb615-11"><a href="#cb615-11" tabindex="-1"></a>preview_rgb_umap <span class="op">=</span> xr.DataArray(</span>
-<span id="cb615-12"><a href="#cb615-12" tabindex="-1"></a>    rgba,</span>
-<span id="cb615-13"><a href="#cb615-13" tabindex="-1"></a>    dims<span class="op">=</span>(<span class="st">&#39;y&#39;</span>, <span class="st">&#39;x&#39;</span>, <span class="st">&#39;band&#39;</span>),</span>
-<span id="cb615-14"><a href="#cb615-14" tabindex="-1"></a>    coords<span class="op">=</span>{<span class="st">&#39;y&#39;</span>: preview_umap.y, <span class="st">&#39;x&#39;</span>: preview_umap.x, <span class="st">&#39;band&#39;</span>: [<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]},</span>
-<span id="cb615-15"><a href="#cb615-15" tabindex="-1"></a>)</span>
-<span id="cb615-16"><a href="#cb615-16" tabindex="-1"></a></span>
-<span id="cb615-17"><a href="#cb615-17" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb615-18"><a href="#cb615-18" tabindex="-1"></a>fig.set_size_inches(<span class="dv">6</span>, <span class="dv">6</span>)</span>
-<span id="cb615-19"><a href="#cb615-19" tabindex="-1"></a>preview_rgb_umap.plot.imshow(ax<span class="op">=</span>ax, rgb<span class="op">=</span><span class="st">&#39;band&#39;</span>)</span>
-<span id="cb615-20"><a href="#cb615-20" tabindex="-1"></a>ax.set_title(<span class="st">&#39;UMAP RGB Mosaic&#39;</span>)</span>
-<span id="cb615-21"><a href="#cb615-21" tabindex="-1"></a>ax.set_axis_off()</span>
-<span id="cb615-22"><a href="#cb615-22" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
-<span id="cb615-23"><a href="#cb615-23" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb615-24"><a href="#cb615-24" tabindex="-1"></a>plt.show()</span></code></pre></div>
-<pre><code>/var/folders/19/9zfvytrj1gbc3sgt0xnm_sdr0000gn/T/ipykernel_21298/2725346385.py:4: RuntimeWarning: invalid value encountered in cast
+class="sourceCode python"><code class="sourceCode python"><span id="cb614-1"><a href="#cb614-1" tabindex="-1"></a>preview_umap <span class="op">=</span> umap_clipped.rio.reproject(umap_clipped.rio.crs, resolution<span class="op">=</span><span class="dv">100</span>).compute()</span>
+<span id="cb614-2"><a href="#cb614-2" tabindex="-1"></a></span>
+<span id="cb614-3"><a href="#cb614-3" tabindex="-1"></a><span class="co"># Pixels outside the AOI are NaN after clipping. normalize_to_rgb() cannot</span></span>
+<span id="cb614-4"><a href="#cb614-4" tabindex="-1"></a><span class="co"># represent NaN in uint8, so add an alpha band and make those pixels</span></span>
+<span id="cb614-5"><a href="#cb614-5" tabindex="-1"></a><span class="co"># transparent instead of opaque black.</span></span>
+<span id="cb614-6"><a href="#cb614-6" tabindex="-1"></a>valid <span class="op">=</span> <span class="op">~</span>np.isnan(preview_umap.values).<span class="bu">any</span>(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb614-7"><a href="#cb614-7" tabindex="-1"></a>rgb <span class="op">=</span> normalize_to_rgb(preview_umap.values.transpose(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">0</span>), rgb_p_low, rgb_p_high)</span>
+<span id="cb614-8"><a href="#cb614-8" tabindex="-1"></a>alpha <span class="op">=</span> np.where(valid, <span class="dv">255</span>, <span class="dv">0</span>).astype(<span class="st">&#39;uint8&#39;</span>)</span>
+<span id="cb614-9"><a href="#cb614-9" tabindex="-1"></a>rgba <span class="op">=</span> np.dstack([rgb, alpha])</span>
+<span id="cb614-10"><a href="#cb614-10" tabindex="-1"></a></span>
+<span id="cb614-11"><a href="#cb614-11" tabindex="-1"></a>preview_rgb_umap <span class="op">=</span> xr.DataArray(</span>
+<span id="cb614-12"><a href="#cb614-12" tabindex="-1"></a>    rgba,</span>
+<span id="cb614-13"><a href="#cb614-13" tabindex="-1"></a>    dims<span class="op">=</span>(<span class="st">&#39;y&#39;</span>, <span class="st">&#39;x&#39;</span>, <span class="st">&#39;band&#39;</span>),</span>
+<span id="cb614-14"><a href="#cb614-14" tabindex="-1"></a>    coords<span class="op">=</span>{<span class="st">&#39;y&#39;</span>: preview_umap.y, <span class="st">&#39;x&#39;</span>: preview_umap.x, <span class="st">&#39;band&#39;</span>: [<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]},</span>
+<span id="cb614-15"><a href="#cb614-15" tabindex="-1"></a>)</span>
+<span id="cb614-16"><a href="#cb614-16" tabindex="-1"></a></span>
+<span id="cb614-17"><a href="#cb614-17" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb614-18"><a href="#cb614-18" tabindex="-1"></a>fig.set_size_inches(<span class="dv">6</span>, <span class="dv">6</span>)</span>
+<span id="cb614-19"><a href="#cb614-19" tabindex="-1"></a>preview_rgb_umap.plot.imshow(ax<span class="op">=</span>ax, rgb<span class="op">=</span><span class="st">&#39;band&#39;</span>)</span>
+<span id="cb614-20"><a href="#cb614-20" tabindex="-1"></a>ax.set_title(<span class="st">&#39;UMAP RGB Mosaic&#39;</span>)</span>
+<span id="cb614-21"><a href="#cb614-21" tabindex="-1"></a>ax.set_axis_off()</span>
+<span id="cb614-22"><a href="#cb614-22" tabindex="-1"></a>ax.set_aspect(<span class="st">&#39;equal&#39;</span>)</span>
+<span id="cb614-23"><a href="#cb614-23" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb614-24"><a href="#cb614-24" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<pre><code>/var/folders/19/9zfvytrj1gbc3sgt0xnm_sdr0000gn/T/ipykernel_53336/2725346385.py:4: RuntimeWarning: invalid value encountered in cast
   return (scaled * 255).astype(&#39;uint8&#39;)</code></pre>
 <p><img
-src="python-remote-sensing-output/supplement/tessera_unsupervised_classification_files/tessera_unsupervised_classification_33_1.png" /></p>
+src="python-remote-sensing-output/supplement/tessera_unsupervised_classification_files/tessera_unsupervised_classification_31_1.png" /></p>
 </div>
-<div id="cluster-the-umap-bands" class="section level3">
-<h3>Cluster the UMAP Bands</h3>
-<p>Run the KMeans model trained earlier on the mosaiced UMAP bands to
-assign every pixel a cluster label, and write the result to disk.</p>
+<div id="train-a-clusterer" class="section level3">
+<h3>Train a Clusterer</h3>
+<p>Here we use scikit-learn’s <code>KMeans</code> with a fixed
+<code>n_clusters</code>. Adjust this value if water bodies are split
+across multiple clusters or merged with other land cover types.</p>
+<div class="sourceCode" id="cb616"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb616-1"><a href="#cb616-1" tabindex="-1"></a>n_clusters <span class="op">=</span> <span class="dv">6</span></span>
+<span id="cb616-2"><a href="#cb616-2" tabindex="-1"></a></span>
+<span id="cb616-3"><a href="#cb616-3" tabindex="-1"></a>model <span class="op">=</span> KMeans(n_clusters<span class="op">=</span>n_clusters, random_state<span class="op">=</span><span class="dv">42</span>, n_init<span class="op">=</span><span class="st">&#39;auto&#39;</span>)</span>
+<span id="cb616-4"><a href="#cb616-4" tabindex="-1"></a>model.fit(sample_reduced)</span>
+<span id="cb616-5"><a href="#cb616-5" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Trained KMeans with </span><span class="sc">{</span>n_clusters<span class="sc">}</span><span class="ss"> clusters&#39;</span>)</span></code></pre></div>
+<p>Run the KMeans model on the mosaiced UMAP bands to assign every pixel
+a cluster label, and write the result to disk.</p>
 <div class="sourceCode" id="cb617"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb617-1"><a href="#cb617-1" tabindex="-1"></a>umap_arr <span class="op">=</span> umap_clipped.compute()</span>
 <span id="cb617-2"><a href="#cb617-2" tabindex="-1"></a>channels, height, width <span class="op">=</span> umap_arr.shape</span>
@@ -10474,9 +10472,10 @@ src="python-remote-sensing-output/supplement/tessera_unsupervised_classification
 <p>Save the result as a paletted Cloud-Optimized GeoTIFF to the
 configured output folder.</p>
 <div class="sourceCode" id="cb624"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb624-1"><a href="#cb624-1" tabindex="-1"></a>clusters_path <span class="op">=</span> os.path.join(output_folder, <span class="st">&#39;clusters.tif&#39;</span>)</span>
-<span id="cb624-2"><a href="#cb624-2" tabindex="-1"></a>clusters_da.rio.to_raster(clusters_path)</span>
-<span id="cb624-3"><a href="#cb624-3" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>clusters_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb624-1"><a href="#cb624-1" tabindex="-1"></a>clusters_file <span class="op">=</span> <span class="ss">f&#39;clusters_</span><span class="sc">{</span>n_clusters<span class="sc">}</span><span class="ss">.tif&#39;</span></span>
+<span id="cb624-2"><a href="#cb624-2" tabindex="-1"></a>clusters_path <span class="op">=</span> os.path.join(output_folder, clusters_file)</span>
+<span id="cb624-3"><a href="#cb624-3" tabindex="-1"></a>clusters_da.rio.to_raster(clusters_path, driver<span class="op">=</span><span class="st">&#39;COG&#39;</span>)</span>
+<span id="cb624-4"><a href="#cb624-4" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Wrote </span><span class="sc">{</span>clusters_path<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb625"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb625-1"><a href="#cb625-1" tabindex="-1"></a><span class="kw">def</span> write_cog_with_colormap(data_array, output_path, color_table):</span>
 <span id="cb625-2"><a href="#cb625-2" tabindex="-1"></a>    <span class="cf">if</span> data_array.dtype <span class="op">!=</span> np.dtype(<span class="st">&#39;uint8&#39;</span>):</span>

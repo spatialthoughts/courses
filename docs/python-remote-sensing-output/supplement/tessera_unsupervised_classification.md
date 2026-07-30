@@ -211,19 +211,6 @@ sample_reduced = reducer.fit_transform(sample_scaled)
 sample_reduced
 ```
 
-### Train a Clusterer
-
-Here we use scikit-learn's `KMeans` with a fixed `n_clusters`. Adjust this value if water bodies are split across multiple clusters or merged with other land cover types.
-
-
-```python
-n_clusters = 6
-
-model = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
-model.fit(sample_reduced)
-print(f'Trained KMeans with {n_clusters} clusters')
-```
-
 ### Fetch Tiles and Apply UMAP Projection
 
 For every TESSERA tile covering the AOI, fetch the raw embeddings and apply the trained scaler and Parametric UMAP model to reduce each tile to 3 bands, writing the result straight to disk as we go. At any point in the loop only a single tile's embeddings are in memory.
@@ -309,6 +296,7 @@ with tempfile.TemporaryDirectory() as tile_dir:
 
     out_profile = src_files[0].profile.copy()
     out_profile.update({
+        'driver': 'COG',
         'height': mosaic.shape[1],
         'width': mosaic.shape[2],
         'transform': out_transform,
@@ -375,19 +363,30 @@ plt.tight_layout()
 plt.show()
 ```
 
-    /var/folders/19/9zfvytrj1gbc3sgt0xnm_sdr0000gn/T/ipykernel_21298/2725346385.py:4: RuntimeWarning: invalid value encountered in cast
+    /var/folders/19/9zfvytrj1gbc3sgt0xnm_sdr0000gn/T/ipykernel_53336/2725346385.py:4: RuntimeWarning: invalid value encountered in cast
       return (scaled * 255).astype('uint8')
 
 
 
     
-![](python-remote-sensing-output/supplement/tessera_unsupervised_classification_files/tessera_unsupervised_classification_33_1.png)
+![](python-remote-sensing-output/supplement/tessera_unsupervised_classification_files/tessera_unsupervised_classification_31_1.png)
     
 
 
-### Cluster the UMAP Bands
+### Train a Clusterer
 
-Run the KMeans model trained earlier on the mosaiced UMAP bands to assign every pixel a cluster label, and write the result to disk.
+Here we use scikit-learn's `KMeans` with a fixed `n_clusters`. Adjust this value if water bodies are split across multiple clusters or merged with other land cover types.
+
+
+```python
+n_clusters = 6
+
+model = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto')
+model.fit(sample_reduced)
+print(f'Trained KMeans with {n_clusters} clusters')
+```
+
+Run the KMeans model on the mosaiced UMAP bands to assign every pixel a cluster label, and write the result to disk.
 
 
 ```python
@@ -529,8 +528,9 @@ Save the result as a paletted Cloud-Optimized GeoTIFF to the configured output f
 
 
 ```python
-clusters_path = os.path.join(output_folder, 'clusters.tif')
-clusters_da.rio.to_raster(clusters_path)
+clusters_file = f'clusters_{n_clusters}.tif'
+clusters_path = os.path.join(output_folder, clusters_file)
+clusters_da.rio.to_raster(clusters_path, driver='COG')
 print(f'Wrote {clusters_path}')
 ```
 
