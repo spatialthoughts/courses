@@ -186,6 +186,12 @@ ax.set_title('STAC Query Results')
 plt.show()
 ```
 
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_23_0.png)
+    
+
+
 Load the matching images as a XArray Dataset.
 
 
@@ -288,6 +294,12 @@ ax.set_axis_off()
 ax.set_aspect('equal')
 plt.show()
 ```
+
+
+    
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
+    
+
 
 We can manually apply a contrast stretch as well.
 
