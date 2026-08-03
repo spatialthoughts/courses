@@ -288,7 +288,8 @@ Instead of monthly composites, we can create seasonal composites suitable for mo
 ```python
 ds_seasonal = ds.copy()
 months = ds_seasonal.time.dt.month
-seasons = xr.full_like(months, fill_value="none", dtype="U18") # Increased dtype to accommodate longer season names
+# Increased dtype to accommodate longer season names
+seasons = xr.full_like(months, fill_value="none", dtype="U18") 
 seasons.name = 'season'
 # Jan-March = Winter (Rabi) Crops
 seasons[months.isin([1, 2, 3])] = 'rabi'
