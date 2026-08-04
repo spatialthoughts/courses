@@ -94,17 +94,13 @@ Let's ask the assistant to write the code to filter our `places` DataFrame. You 
 Select all the places from `places` Dataframe which are country capitals and save to a new variable `capitals`.
 ```
 
-The coding agent will add a new cell in the notebook like below.
-
-
-```python
-capitals = places[places['adm0cap'] == 1]
-display(capitals)
-```
+The coding agent will add a new cell in the notebook below.
 
 ### Saving Outputs
 
 We can write the results to the disk as a GeoPackage file. After running the cell, open the **Files** tab from the left-hand panel in Colab and browse to the `output` folder. Locate the `capitals.gpkg` file and click the **⋮** button and select *Download* to download the file locally.
+
+> Make sure you have added a cell using the AI assistant which defines the variable `capitals` before running the cell below.
 
 
 ```python
