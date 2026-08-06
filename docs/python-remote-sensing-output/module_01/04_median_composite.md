@@ -252,6 +252,15 @@ So far all the operations that we have created a computation graph. To run this 
 rgb_composite = rgb_composite.compute()
 ```
 
+Alternatively, if you do not have access to the Dask dashboard, or want a simple progress-bar to track the computation you can use the Dask progress bar. Replace the cell above with the following code. Monitoring the computation with the progress bar requires us to start the computation using `.persist()` and later load the result into memory using `.compute()`. We use `notebook=False` for a simple progress bar widget compatible with Colab.
+
+```
+from dask.distributed import progress
+rgb_composite = rgb_composite.persist()
+progress(rgb_composite, notebook=False)
+rgb_composite = rgb_composite.compute()
+```
+
 ### Visualize the Results
 
 The composite is creating from all the pixels within the bounding box of the geometry. We can use `rioxarray` to clip the image to the city boundary to remove pixels outside the polygon.
@@ -297,7 +306,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_43_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_44_0.png)
     
 
 
@@ -326,7 +335,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_46_0.png)
+![](python-remote-sensing-output/module_01/04_median_composite_files/04_median_composite_47_0.png)
     
 
 
