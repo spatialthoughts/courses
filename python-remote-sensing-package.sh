@@ -1,6 +1,14 @@
 # Packaging script to build python-remote-sensing course
 # Should be run after changing any *.ipynb files
 # Tested on MacOS only
+# Use --update-release to also upload the downloaded presentations to the GitHub release
+UPDATE_RELEASE=false
+for arg in "$@"; do
+    if [ "$arg" = "--update-release" ]; then
+        UPDATE_RELEASE=true
+    fi
+done
+
 OUTPUT_DIR=~/Downloads/
 PACKAGE_DIR=~/Downloads/python_remote_sensing
 SOLUTIONS_DIR=~/Downloads/python_remote_sensing_solutions
@@ -47,7 +55,37 @@ mkdir -p "$SKILLS_REPO/skills/cloud-native-remote-sensing"
 cp code/python_remote_sensing/.claude/skills/cloud-native-remote-sensing/SKILL.md \
     "$SKILLS_REPO/skills/cloud-native-remote-sensing/SKILL.md"
 
-# Update python-remote-sensing-web repository
-#cp code/python_remote_sensing/*.ipynb $WEB_DIR/
-#cp code/python_remote_sensing/*.py $WEB_DIR/
-#cp -R code/python_remote_sensing/streamlit $WEB_DIR/
+# Update the presentations and upload to releases
+SLIDE_IDS=(
+    "1YhT8OdrOm0JkkoTJ-eyQC89V2q6QiFXpA_57QW6caec"
+    "1FPQ4ZQVqTXW5hQ2FVZG9knwZNDnR3aUoeJvpUOoRC6Y"
+    "1_LlMfxZ54QESEb0iKpclYWLqruzGXVW_d3w9q5epenA"
+    "1rC3wh7hqZzWRmb5AP7hlteCJf3KbS5fL7csndGE7bNo"
+    "1AHlQq75wm3G5H-KRDhnaAdjtfmVW1Gbm3tBQLCBx2Uk"
+)
+SLIDE_NAMES=(
+    "Cloud_Native_Remote_Sensing_with_Python_Introduction_and_Course_Overview.pdf"
+    "Cloud_Native_Remote_Sensing_with_Python_Cloud_Native_Geospatial_Basics.pdf"
+    "Cloud_Native_Remote_Sensing_with_Python_Remote_Sensing_Fundamentals.pdf"
+    "Cloud_Native_Remote_Sensing_with_Python_Computation_and_Data_Processing.pdf"
+    "Cloud_Native_Remote_Sensing_with_Python_Machine_Learning_and_AI.pdf"
+)
+
+FILES=()
+for i in "${!SLIDE_IDS[@]}"; do
+    id="${SLIDE_IDS[$i]}"
+    name="${SLIDE_NAMES[$i]}"
+    out="${OUTPUT_DIR}${name}"
+    wget -O "$out" "https://docs.google.com/presentation/d/${id}/export/pdf"
+    FILES+=("$out")
+done
+
+if [ "$UPDATE_RELEASE" = true ]; then
+    # --clobber can 404 on a stale asset id, so delete each asset by name first instead.
+    for i in "${!SLIDE_NAMES[@]}"; do
+        name="${SLIDE_NAMES[$i]}"
+        gh release delete-asset presentations "$name" --repo spatialthoughts/courses --yes 2>/dev/null
+        gh release upload presentations "${FILES[$i]}" --repo spatialthoughts/courses
+    done
+fi
+
