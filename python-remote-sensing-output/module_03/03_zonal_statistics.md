@@ -115,7 +115,7 @@ admin2_gdf
 
 ### Load Raster Data
 
-We load the [Global Human Settlement Layer (GHSL)](https://ghsl.jrc.ec.europa.eu/) population raster for 2025. The file is a Cloud Optimized GeoTIFF (COG) so we can read only the portion we need. We use `chunks='auto'` to load it lazily as a Dask array.
+We load the [Global Human Settlement Layer (GHSL)](https://ghsl.jrc.ec.europa.eu/) population raster for 2025. The file was downloaded from the source and converted to a Cloud Optimized GeoTIFF (COG). We read it using `rioxarray` and speify the `chunks` parameter to load it lazily as a Dask array.
 
 
 ```python

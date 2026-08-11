@@ -137,7 +137,7 @@ geometry
 
 Let's use [Planetary Computer STAC API](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) search endpoint to look for items from the ESA WorldCover collection on Azure Blob Storage.
 
-ESA WorldCover has data for year 2020 and 2021. We will use the 2021 data.
+ESA WorldCover has data for year 2020 and 2021. We will use the 2020 data.
 
 
 ```python
