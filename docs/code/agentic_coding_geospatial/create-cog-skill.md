@@ -69,6 +69,8 @@ every GeoTIFF client.
 
     gdal raster convert -f COG --co COMPRESS=DEFLATE --co PREDICTOR=YES <input> <output>
 
+Only exception - If the input data is JPEG compressed - typically used in
+aerial/drone imagery), retain the same with COMPRESS=JPEG
 
 ## File Naming Convention
 
