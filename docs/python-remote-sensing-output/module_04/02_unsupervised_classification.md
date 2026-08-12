@@ -451,36 +451,38 @@ print(f'Saved {output_path}')
 
 ### Exercise
 
-Instead of manually specifying the number of clusters used, we can determine the optimal number clusters. There are variety of methods available for selecting clusters. See all available metrics at [Clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation).
+Instead of manually specifying the number of clusters used, we can use an algorithm to determine the optimal number clusters. There are variety of methods available to compute cluster metrics that aid in selecting the optimal number of clusters.
 
-The cells below have an implementation of one of the metrics named **Silhouette Score**. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). The Silhouette score ranges from -1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters. If most objects have a high value, then the clustering configuration is appropriate. The optimal number of clusters is typically the one that maximizes the average Silhouette score.
+The cells below have an implementation of one of the metrics named [`calinski_harabasz_score`](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.calinski_harabasz_score.html). The optimal number of clusters is the one that **maximizes** the score.
 
-Select the optimal number of clusters and export the resulting water mask. Evaluate and compare the results.
+Use the optimal number of clusters and and re-train the clustering model. Export the resulting water mask and compare the results. You may also implement other metrics for cluster evaluation from [Clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation).
 
 
 ```python
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score
 
-silhouette_scores = []
-
-min_clusters = 2 # need a minimum of 2 clusters
+min_clusters = 3
 max_clusters = 10
+
+calinski_harabasz_scores = []
+
 for i in range(min_clusters, max_clusters + 1):
     kmeans = KMeans(n_clusters=i, random_state=42, n_init='auto')
     cluster_labels = kmeans.fit_predict(sample)
-    score = silhouette_score(sample, cluster_labels)
-    silhouette_scores.append(score)
+    score = calinski_harabasz_score(sample, cluster_labels)
+    calinski_harabasz_scores.append(score)
 
-silhouette_scores
+plt.figure(figsize=(10, 6))
+plt.plot(range(min_clusters, max_clusters + 1), calinski_harabasz_scores, marker='o', linestyle='--')
+plt.title('Calinski-Harabasz Score for Optimal K')
+plt.xlabel('Number of Clusters (K)')
+plt.ylabel('Calinski-Harabasz Score')
+plt.grid(True)
+plt.show()
 ```
 
 
 ```python
-plt.figure(figsize=(10, 6))
-plt.plot(range(min_clusters, max_clusters + 1), silhouette_scores, marker='o', linestyle='--')
-plt.title('Silhouette Score for Optimal K')
-plt.xlabel('Number of Clusters (K)')
-plt.ylabel('Silhouette Score')
-plt.grid(True)
-plt.show()
+optimal_k = min_clusters + int(np.argmax(calinski_harabasz_scores))
+print(f'Optimal number of clusters (Calinski-Harabasz): {optimal_k}')
 ```

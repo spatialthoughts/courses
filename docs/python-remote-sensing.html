@@ -2253,7 +2253,7 @@ parts of the world, the data is consistently available from 1990-
 onwards. Explore the data and create annual RGB composites for multiple
 time periods to see how your region of interest has changed.</p>
 <p>The entire Landsat archive is available on Microsoft’s <a
-href="(https://planetarycomputer.microsoft.com/catalog)">Planetary
+href="https://planetarycomputer.microsoft.com/catalog">Planetary
 Computer Data Catalog</a> and can be accessed freely. Your task is to
 access the <a
 href="https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2">Landsat
@@ -4362,9 +4362,9 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb249-1"><a 
 edges. These are not suitable for use in mapping. <a
 href="https://github.com/DPIRD-DMA/Smoothify">Smoothify</a> is a
 Python-package designed to convert these jagged features to smooth
-natural looking polygnos. Apply the <code>smoothify</code> function to
-your change polygons and create a smoothed version. You can review the
-<a
+natural looking polygons while preserving the area. Apply the
+<code>smoothify</code> function to your change polygons and create a
+smoothed version. You can review the <a
 href="https://github.com/DPIRD-DMA/Smoothify/blob/main/examples/usage_examples.ipynb">Usage
 Examples</a> for explanations of parameters and advanced usage.</p>
 <p>Save the results as <code>landcover_change_smoothed.gpkg</code>.</p>
@@ -4375,9 +4375,10 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb250-1"><a 
 class="sourceCode python"><code class="sourceCode python"><span id="cb251-1"><a href="#cb251-1" tabindex="-1"></a><span class="im">from</span> smoothify <span class="im">import</span> smoothify</span>
 <span id="cb251-2"><a href="#cb251-2" tabindex="-1"></a>smoothed_gdf <span class="op">=</span> smoothify(</span>
 <span id="cb251-3"><a href="#cb251-3" tabindex="-1"></a>    geom<span class="op">=</span>change_gdf,</span>
-<span id="cb251-4"><a href="#cb251-4" tabindex="-1"></a>    smooth_iterations<span class="op">=</span><span class="dv">3</span>,  <span class="co"># More iterations = smoother result</span></span>
-<span id="cb251-5"><a href="#cb251-5" tabindex="-1"></a>    num_cores<span class="op">=</span><span class="dv">4</span>  <span class="co"># Use parallel processing for large datasets</span></span>
-<span id="cb251-6"><a href="#cb251-6" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb251-4"><a href="#cb251-4" tabindex="-1"></a>    segment_length<span class="op">=</span><span class="dv">10</span>, <span class="co"># Higher segment_length = more aggressive simplification</span></span>
+<span id="cb251-5"><a href="#cb251-5" tabindex="-1"></a>    smooth_iterations<span class="op">=</span><span class="dv">3</span>,  <span class="co"># More iterations = smoother curves</span></span>
+<span id="cb251-6"><a href="#cb251-6" tabindex="-1"></a>    num_cores<span class="op">=</span><span class="dv">4</span>  <span class="co"># Use parallel processing for large datasets</span></span>
+<span id="cb251-7"><a href="#cb251-7" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 </div>
 <div id="computing-zonal-statistics" class="section level2">
@@ -5790,42 +5791,42 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb347-1"><a 
 <div id="exercise-11" class="section level3">
 <h3>Exercise</h3>
 <p>Instead of manually specifying the number of clusters used, we can
-determine the optimal number clusters. There are variety of methods
-available for selecting clusters. See all available metrics at <a
+use an algorithm to determine the optimal number clusters. There are
+variety of methods available to compute cluster metrics that aid in
+selecting the optimal number of clusters.</p>
+<p>The cells below have an implementation of one of the metrics named <a
+href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.calinski_harabasz_score.html"><code>calinski_harabasz_score</code></a>.
+The optimal number of clusters is the one that
+<strong>maximizes</strong> the score.</p>
+<p>Use the optimal number of clusters and and re-train the clustering
+model. Export the resulting water mask and compare the results. You may
+also implement other metrics for cluster evaluation from <a
 href="https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation">Clustering
 performance evaluation</a>.</p>
-<p>The cells below have an implementation of one of the metrics named
-<strong>Silhouette Score</strong>. It measures how similar an object is
-to its own cluster (cohesion) compared to other clusters (separation).
-The Silhouette score ranges from -1 to +1, where a high value indicates
-that the object is well matched to its own cluster and poorly matched to
-neighboring clusters. If most objects have a high value, then the
-clustering configuration is appropriate. The optimal number of clusters
-is typically the one that maximizes the average Silhouette score.</p>
-<p>Select the optimal number of clusters and export the resulting water
-mask. Evaluate and compare the results.</p>
 <div class="sourceCode" id="cb348"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb348-1"><a href="#cb348-1" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> silhouette_score</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb348-1"><a href="#cb348-1" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> calinski_harabasz_score</span>
 <span id="cb348-2"><a href="#cb348-2" tabindex="-1"></a></span>
-<span id="cb348-3"><a href="#cb348-3" tabindex="-1"></a>silhouette_scores <span class="op">=</span> []</span>
-<span id="cb348-4"><a href="#cb348-4" tabindex="-1"></a></span>
-<span id="cb348-5"><a href="#cb348-5" tabindex="-1"></a>min_clusters <span class="op">=</span> <span class="dv">2</span> <span class="co"># need a minimum of 2 clusters</span></span>
-<span id="cb348-6"><a href="#cb348-6" tabindex="-1"></a>max_clusters <span class="op">=</span> <span class="dv">10</span></span>
-<span id="cb348-7"><a href="#cb348-7" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(min_clusters, max_clusters <span class="op">+</span> <span class="dv">1</span>):</span>
-<span id="cb348-8"><a href="#cb348-8" tabindex="-1"></a>    kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span>i, random_state<span class="op">=</span><span class="dv">42</span>, n_init<span class="op">=</span><span class="st">&#39;auto&#39;</span>)</span>
-<span id="cb348-9"><a href="#cb348-9" tabindex="-1"></a>    cluster_labels <span class="op">=</span> kmeans.fit_predict(sample)</span>
-<span id="cb348-10"><a href="#cb348-10" tabindex="-1"></a>    score <span class="op">=</span> silhouette_score(sample, cluster_labels)</span>
-<span id="cb348-11"><a href="#cb348-11" tabindex="-1"></a>    silhouette_scores.append(score)</span>
-<span id="cb348-12"><a href="#cb348-12" tabindex="-1"></a></span>
-<span id="cb348-13"><a href="#cb348-13" tabindex="-1"></a>silhouette_scores</span></code></pre></div>
+<span id="cb348-3"><a href="#cb348-3" tabindex="-1"></a>min_clusters <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb348-4"><a href="#cb348-4" tabindex="-1"></a>max_clusters <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb348-5"><a href="#cb348-5" tabindex="-1"></a></span>
+<span id="cb348-6"><a href="#cb348-6" tabindex="-1"></a>calinski_harabasz_scores <span class="op">=</span> []</span>
+<span id="cb348-7"><a href="#cb348-7" tabindex="-1"></a></span>
+<span id="cb348-8"><a href="#cb348-8" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(min_clusters, max_clusters <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb348-9"><a href="#cb348-9" tabindex="-1"></a>    kmeans <span class="op">=</span> KMeans(n_clusters<span class="op">=</span>i, random_state<span class="op">=</span><span class="dv">42</span>, n_init<span class="op">=</span><span class="st">&#39;auto&#39;</span>)</span>
+<span id="cb348-10"><a href="#cb348-10" tabindex="-1"></a>    cluster_labels <span class="op">=</span> kmeans.fit_predict(sample)</span>
+<span id="cb348-11"><a href="#cb348-11" tabindex="-1"></a>    score <span class="op">=</span> calinski_harabasz_score(sample, cluster_labels)</span>
+<span id="cb348-12"><a href="#cb348-12" tabindex="-1"></a>    calinski_harabasz_scores.append(score)</span>
+<span id="cb348-13"><a href="#cb348-13" tabindex="-1"></a></span>
+<span id="cb348-14"><a href="#cb348-14" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
+<span id="cb348-15"><a href="#cb348-15" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(min_clusters, max_clusters <span class="op">+</span> <span class="dv">1</span>), calinski_harabasz_scores, marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>)</span>
+<span id="cb348-16"><a href="#cb348-16" tabindex="-1"></a>plt.title(<span class="st">&#39;Calinski-Harabasz Score for Optimal K&#39;</span>)</span>
+<span id="cb348-17"><a href="#cb348-17" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Number of Clusters (K)&#39;</span>)</span>
+<span id="cb348-18"><a href="#cb348-18" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Calinski-Harabasz Score&#39;</span>)</span>
+<span id="cb348-19"><a href="#cb348-19" tabindex="-1"></a>plt.grid(<span class="va">True</span>)</span>
+<span id="cb348-20"><a href="#cb348-20" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <div class="sourceCode" id="cb349"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb349-1"><a href="#cb349-1" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
-<span id="cb349-2"><a href="#cb349-2" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(min_clusters, max_clusters <span class="op">+</span> <span class="dv">1</span>), silhouette_scores, marker<span class="op">=</span><span class="st">&#39;o&#39;</span>, linestyle<span class="op">=</span><span class="st">&#39;--&#39;</span>)</span>
-<span id="cb349-3"><a href="#cb349-3" tabindex="-1"></a>plt.title(<span class="st">&#39;Silhouette Score for Optimal K&#39;</span>)</span>
-<span id="cb349-4"><a href="#cb349-4" tabindex="-1"></a>plt.xlabel(<span class="st">&#39;Number of Clusters (K)&#39;</span>)</span>
-<span id="cb349-5"><a href="#cb349-5" tabindex="-1"></a>plt.ylabel(<span class="st">&#39;Silhouette Score&#39;</span>)</span>
-<span id="cb349-6"><a href="#cb349-6" tabindex="-1"></a>plt.grid(<span class="va">True</span>)</span>
-<span id="cb349-7"><a href="#cb349-7" tabindex="-1"></a>plt.show()</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb349-1"><a href="#cb349-1" tabindex="-1"></a>optimal_k <span class="op">=</span> min_clusters <span class="op">+</span> <span class="bu">int</span>(np.argmax(calinski_harabasz_scores))</span>
+<span id="cb349-2"><a href="#cb349-2" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;Optimal number of clusters (Calinski-Harabasz): </span><span class="sc">{</span>optimal_k<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="collecting-training-samples" class="section level2">
