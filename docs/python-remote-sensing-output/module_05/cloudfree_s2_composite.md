@@ -86,7 +86,7 @@ client
 
 If you are running this notebook in Colab, you will need to create and use a proxy URL to see the dashboard running on the local server.
 
-Colab Enterprise restricts the reverse proxy. So we need to use a service like [ngrok](https://ngrok.com/) to create a secure tunnel from the localhost and get a public URL. You will need to sign-up for a free account and get an auth token. 
+Colab Enterprise restricts the reverse proxy. So we need to use a service like [ngrok](https://ngrok.com/) to create a secure tunnel from the localhost and get a public URL. You will need to sign-up for a free account and get an auth token.
 
 > You can skip this step without affecting rest of the notebook. You will not be able to see the Dask dashboad.
 
@@ -103,7 +103,7 @@ if environment == 'colab_enterprise':
         from pyngrok import ngrok
         from pyngrok import conf
 
-        ngrok.set_auth_token(YOUR_AUTH_TOKEN)  
+        ngrok.set_auth_token(YOUR_AUTH_TOKEN)
 
         # Expose the Dask dashboard port
         port_to_expose = 8787  # This is the default port for Dask dashboard
@@ -328,6 +328,13 @@ output_file = f'cloudfree_composite_{time_range}.tif'
 output_path = os.path.join(output_folder, output_file)
 rgb_composite_clipped.rio.to_raster(output_path, driver='COG')
 print(f'Wrote {output_path}')
+```
+
+[Optional] If you are running this in Colab Enterprise, you can copy the output to a Google Cloud Storage Bucket. This requires first authenticating your account and specifying a cloud bucket with write access. Following are sample commands that you would run in a new Code cell.
+
+```
+!gcloud auth login
+!gcloud storage cp {output_path} gs://spatialthoughts-public-data/
 ```
 
 Close the Dask client. This prevents multiple clients being instantiated when running different notebooks on the same machine.

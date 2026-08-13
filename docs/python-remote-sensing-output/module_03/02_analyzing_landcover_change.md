@@ -306,8 +306,8 @@ You can pick any landcover of your interest and build an expression for the type
 
 ```python
 change = ((before == 1) & (after != 1)) # Lost waterbodies
-#change = change | ((before == 2) & (after != 2)) # Loss of tree cover
-#change = change | ((before != 7) & (after == 7)) # Urban growth
+#change = ((before == 2) & (after != 2)) # Loss of tree cover
+#change = ((before != 7) & (after == 7)) # Urban growth
 
 # Convert the boolean array to int
 change = change.astype('uint8')
