@@ -137,6 +137,18 @@ geometry = aoi_gdf.geometry.union_all()
 geometry
 ```
 
+    AOI file not found at data/aoi.geojson. Using default AOI.
+
+
+
+
+
+    
+![](python-remote-sensing-output/module_04/03_supervised_classification_files/03_supervised_classification_15_1.svg)
+    
+
+
+
 ### Load Training Data
 
 The training data is a set of Ground Control Points (GCPs) — point features, each labeled with a land cover class. We load the GeoJSON file with GeoPandas.
@@ -210,17 +222,26 @@ plt.show()
     
 
 
-### Normalize the Composite
+### Select Features
 
-Before we use the composit for building the classification model, we must normalize the values. Some bands such has elevation has very large values while others such as indices have small values. To ensure our model does not get biased, we must normalize the bands so they all have the values in the same range.
-
-First we chunk the input so all the bands are in the same chunk.
+We select which of the input bands we want to use for the training the classification model.
 
 
 ```python
-feature_da = composite_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
+feature_bands = [
+    'red', 'green', 'blue', 'nir', 'swir16', 'swir22',
+    'ndvi', 'ndbi', 'bsi', 'mndwi', 'ndwi', 'elevation', 'slope',
+    'x_coord', 'y_coord'
+]
+features_da = composite_da.sel(band=feature_bands)
+# we chunk the input so all the bands are in the same chunk.
+feature_da = features_da.chunk({'band': -1, 'y': 1024, 'x': 1024})
 feature_da
 ```
+
+### Normalize the Composite
+
+Before we use the composit for building the classification model, we must normalize the values. Some bands such has elevation has very large values while others such as indices have small values. To ensure our model does not get biased, we must normalize the bands so they all have the values in the same range.
 
 Scale the values so they are between 0 and 1. The scaling is done independently for each band by computing the minimum and maximum values in each band.
 
@@ -279,7 +300,7 @@ We train a [Random Forest](https://scikit-learn.org/stable/modules/generated/skl
 X = gcp_features.values.T.astype(np.float64)  # (n_samples, n_bands)
 y = gcp_features['landcover'].values
 
-model = RandomForestClassifier(n_estimators=10, random_state=42)
+model = RandomForestClassifier(n_estimators=30, random_state=42)
 model.fit(X, y)
 ```
 
@@ -287,7 +308,7 @@ model.fit(X, y)
 ```python
 # Feature importances
 importances = model.feature_importances_
-for band, importance in sorted(zip(band_names, importances), key=lambda t: -t[1]):
+for band, importance in sorted(zip(feature_bands, importances), key=lambda t: -t[1]):
     print(f'  {band:10s}: {importance:.3f}')
 ```
 
@@ -330,6 +351,10 @@ classified
 %%time
 classified = classified.compute()
 ```
+
+    CPU times: user 1.73 s, sys: 312 ms, total: 2.05 s
+    Wall time: 31 s
+
 
 ### Visualize the Classification
 
