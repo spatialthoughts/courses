@@ -1,14 +1,6 @@
 ### Overview
 
-This notebook demonstrates how the same processing can be done in different computing environments. We will run the same notebook on different computing platforms.
-
-1. Run on your own local machine.
-2. Run on a Google Cloud Runtime with Google Colab
-3. Run on a Cloud VM with Coiled
-
-### Overview of the Task
-
-We will query a STAC catalog for Sentinel-2 imagery, apply pixel-level cloud masking using the Scene Classification Layer (SCL) band, and create a cloud-free median composite image using distributed processing.
+We will query a STAC catalog for Sentinel-2 imagery, apply pixel-level cloud masking using the Scene Classification Layer (SCL) band, and create an annual cloud-free median composite image using distributed processing.
 
 ### Setup
 
