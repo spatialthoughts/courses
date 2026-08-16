@@ -1,0 +1,31 @@
+# Packaging script to download Agentic Coding for Geospatial presentations as PDF
+# and upload them to the GitHub release
+# Tested on MacOS only
+
+OUTPUT_DIR=~/Downloads/
+
+# Update the presentations and upload to releases
+SLIDE_IDS=(
+    "1gQV_YIBTE_o8ziY0Oza-BX8BOmvATfPq6vHaC4_cNKI"
+    "18zyVBK70rY-mv0tiZwKQqRO6pY1A4762HAYrJCVKCjk"
+)
+SLIDE_NAMES=(
+    "Agentic_Coding_for_Geospatial_Introduction.pdf"
+    "Agentic_Coding_for_Geospatial_Using_Skills.pdf"
+)
+
+FILES=()
+for i in "${!SLIDE_IDS[@]}"; do
+    id="${SLIDE_IDS[$i]}"
+    name="${SLIDE_NAMES[$i]}"
+    out="${OUTPUT_DIR}${name}"
+    wget -O "$out" "https://docs.google.com/presentation/d/${id}/export/pdf"
+    FILES+=("$out")
+done
+
+# --clobber can 404 on a stale asset id, so delete each asset by name first instead.
+for i in "${!SLIDE_NAMES[@]}"; do
+    name="${SLIDE_NAMES[$i]}"
+    gh release delete-asset presentations "$name" --repo spatialthoughts/courses --yes 2>/dev/null
+    gh release upload presentations "${FILES[$i]}" --repo spatialthoughts/courses
+done
