@@ -7,10 +7,12 @@ OUTPUT_DIR=~/Downloads/
 # Update the presentations and upload to releases
 SLIDE_IDS=(
     "1gQV_YIBTE_o8ziY0Oza-BX8BOmvATfPq6vHaC4_cNKI"
+    "1iRaSLeWlBHvqVOyt5BSy2gkpDyhYlCQi-7P1XgN1p7M"
     "18zyVBK70rY-mv0tiZwKQqRO6pY1A4762HAYrJCVKCjk"
 )
 SLIDE_NAMES=(
     "Agentic_Coding_for_Geospatial_Introduction.pdf"
+    "Agentic_Coding_for_Geospatial_Introduction_to_Agentic_Coding.pdf"
     "Agentic_Coding_for_Geospatial_Using_Skills.pdf"
 )
 
