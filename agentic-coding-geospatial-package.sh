@@ -9,11 +9,13 @@ SLIDE_IDS=(
     "1gQV_YIBTE_o8ziY0Oza-BX8BOmvATfPq6vHaC4_cNKI"
     "1iRaSLeWlBHvqVOyt5BSy2gkpDyhYlCQi-7P1XgN1p7M"
     "18zyVBK70rY-mv0tiZwKQqRO6pY1A4762HAYrJCVKCjk"
+    "1qF0D-697kSUbosBGBZkNYfQ7sn4pxcvGI53OpWs9dGE"
 )
 SLIDE_NAMES=(
     "Agentic_Coding_for_Geospatial_Introduction.pdf"
     "Agentic_Coding_for_Geospatial_Introduction_to_Agentic_Coding.pdf"
     "Agentic_Coding_for_Geospatial_Using_Skills.pdf"
+    "Agentic_Coding_for_Geospatial_Network_Analysis_and_Route_Optimization.pdf"
 )
 
 FILES=()
