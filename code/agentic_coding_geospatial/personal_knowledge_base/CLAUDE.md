@@ -14,8 +14,8 @@ A personal notes organizer maintained by Claude Code.
 
 ## Workflow
 
-- Read the unprocessed notes in the `raw/` folder.
-- Process each document and all notes inside using the processing instructions below.
+- Read the unprocessed notes in the `raw/` folder. Look at all files inside the `raw/` folder.
+- Process each document and all notes inside using the processing instructions below. 
 - Once processed, move it to the `processed/` folder.
 - Add an empty file `New_Notes.md` in the `raw/` file to collect new notes.
 
@@ -24,7 +24,10 @@ A personal notes organizer maintained by Claude Code.
 
 When the user adds a new note to `raw/` and asks you to ingest it
 
-* If the note has one or more URLs,  visit them and generate an accurate short description.
+* Read the New_Notes.md and process all notes from it.
+	* If the note has one or more URLs,  visit them and generate an accurate short description.
+	* For notes with text upto 100 characters, add it verbatim. For longer notes, summarize it up to 100 characters.
+* Read any other files added to the `raw/` folder and process each file as a separate note.
 * Identify the core concepts/topic of the resource. 
 * Identify the main topic and related topics.
 * Read `notes/index.md` first to find relevant topic pages.
@@ -59,7 +62,6 @@ Thematic Topics
 
 Every note topic page should follow this structure:
 
-
 ```markdown
 # Page Title
 
@@ -77,12 +79,11 @@ Main content goes here.
 - Use Markdown format for each note.
 - Use a bullet point for each note.
 - For notes with URLs: 
-	  - Follow the format [title](url]): <description> <keywords>
-	  - If there is text accompanying the URL, Add it verbatim. 
-	  - Add a 1-2 line description from the URLs
+      - Follow the format [title](url]): <description> <keywords>
+      - Add a 1-2 line description from the URLs
 - For notes with just text:
-	  - Follow the format *Title*: note text <keywords>
-	  - Do not summarize notes with just text. Add it verbatim.
+      - Follow the format *Title*: <description> <keywords>
+      - For notes with text upto 100 characters, add it verbatim. For longer notes, summarize it up to 100 characters.
 - Add 3-6 keywords that best describe the note and will aid in recalling them later.
 - Link to related topics using [[wiki-links]] throughout the text.
 
