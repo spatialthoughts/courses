@@ -29,7 +29,7 @@ When the user adds a new note to `raw/` and asks you to ingest it
 	* For notes with text upto 100 characters, add it verbatim. For longer notes, summarize it up to 100 characters.
 * Read any other files added to the `raw/` folder and process each file as a separate note.
 * Identify the core concepts/topic of the resource. 
-* Identify the main topic and related topics.
+* Identify the main topic and related topics. If the resource neatly fits into a single main topic - you do not have to have a related topic.
 * Read `notes/index.md` first to find relevant topic pages.
 * If there is no match, a new topic page can be added. See the list of topics below for additional topics of interest.
 * Add a new item to the main topic page. Keeping the newer notes at the top.
@@ -81,7 +81,7 @@ Main content goes here.
 - For notes with URLs: 
       - Follow the format [title](url]): <description> <keywords>
       - Add a 1-2 line description from the URLs
-- For notes with just text:
+   - For notes with just text:
       - Follow the format *Title*: <description> <keywords>
       - For notes with text upto 100 characters, add it verbatim. For longer notes, summarize it up to 100 characters.
 - Add 3-6 keywords that best describe the note and will aid in recalling them later.
