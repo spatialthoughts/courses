@@ -11,6 +11,7 @@ SLIDE_IDS=(
     "18zyVBK70rY-mv0tiZwKQqRO6pY1A4762HAYrJCVKCjk"
     "1qF0D-697kSUbosBGBZkNYfQ7sn4pxcvGI53OpWs9dGE"
     "1w2N_7FtX4v9nHJoX-se3rLw-KcbfKepEhr9b6Lk7wPI"
+    "15vWZLJmcAAc_66IkVfVuh31NmpzwxhV7s33coDDM-B4"
 )
 SLIDE_NAMES=(
     "Agentic_Coding_for_Geospatial_Introduction.pdf"
@@ -18,6 +19,7 @@ SLIDE_NAMES=(
     "Agentic_Coding_for_Geospatial_Using_Skills.pdf"
     "Agentic_Coding_for_Geospatial_Network_Analysis_and_Route_Optimization.pdf"
     "Agentic_Coding_for_Geospatial_Personal_Knowledge_Base.pdf"
+    "Agentic_Coding_for_Geospatial_GeoAI_Basics.pdf"
 )
 
 FILES=()
