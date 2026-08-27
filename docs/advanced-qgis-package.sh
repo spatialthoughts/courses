@@ -11,6 +11,7 @@ SLIDE_IDS=(
     "1K1lR1JfonxGbmj8rCIVln_WkbWv6-tOYTYHAEJKAiw4"
     "1F-gH729oWv4zcCecXd9BYoNdqHr7KaahgMPm_4XCgBY"
     "1T02HeNaCHdWD7TuDdy1IrcYycVshd4kDik1WR_11-58"
+    "17jpGWy48saj-CXX0mDzCf_exyK-fxgd45MFqjXhIsqo"
 )
 SLIDE_NAMES=(
     "Advanced_QGIS_Introduction_and_Course_Overview.pdf"
@@ -18,6 +19,7 @@ SLIDE_NAMES=(
     "Advanced_QGIS_Spatial_Indexing.pdf"
     "Advanced_QGIS_Summary_Aggregate_Expressions.pdf"
     "Advanced_QGIS_Useful_Plugins.pdf"
+    "Advanced_QGIS_Agentic_AI.pdf"
 )
 
 FILES=()
