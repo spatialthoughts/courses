@@ -70,6 +70,7 @@ import os
 import pandas as pd
 import pystac_client
 import rioxarray as rxr
+import shutil
 import xarray as xr
 import xvec
 from odc.stac import configure_s3_access, load
@@ -289,18 +290,33 @@ plt.show()
 
 ### Full Computation: Process All Tiles
 
-Loop over every grid tile, skipping any with no fields, and merge the per-tile results into a single DataFrame.
+Loop over every grid tile, skipping any with no fields, and merge the per-tile results into a single DataFrame. Each tile's result is saved to `tile_results/<tile_id>.csv` as it's computed. If this cell is interrupted and re-run, any tile whose output file already exists is loaded from disk instead of being recomputed, so the computation can resume where it left off.
 
 
 ```python
 %%time
+tile_results_folder = os.path.join(output_folder, 'tile_results')
+if not os.path.exists(tile_results_folder):
+    os.mkdir(tile_results_folder)
+
 results = []
 for _, tile in grid_gdf.iterrows():
+    tile_id = tile['tile_id']
+    tile_output_path = os.path.join(tile_results_folder, f'{tile_id}.csv')
+
+    if os.path.exists(tile_output_path):
+        print(f'{tile_id}: already processed, loading from disk')
+        tile_df = pd.read_csv(tile_output_path, parse_dates=['time'])
+        results.append(tile_df)
+        continue
+
     tile_df = process_tile(tile, fields_gdf, ndvi_cube)
     if tile_df is None:
-        print(f"{tile['tile_id']}: skipped (no fields)")
+        print(f"{tile_id}: skipped (no fields)")
         continue
-    print(f"{tile['tile_id']}: {tile_df['field_id'].nunique()} fields")
+
+    tile_df.to_csv(tile_output_path, index=False)
+    print(f"{tile_id}: {tile_df['field_id'].nunique()} fields, saved to {tile_output_path}")
     results.append(tile_df)
 
 ndvi_timeseries = pd.concat(results, ignore_index=True)
@@ -341,4 +357,19 @@ output_filename = 'ndvi_timeseries.csv'
 output_path = os.path.join(output_folder, output_filename)
 ndvi_wide.to_csv(output_path, index=False)
 print(f'Saved to {output_path}')
+```
+
+Delete the per-tile cache now that the final merged results are saved, so a future run starts fresh instead of resuming from these intermediate files.
+
+
+```python
+shutil.rmtree(tile_results_folder)
+print(f'Deleted {tile_results_folder}')
+```
+
+Close the Dask client. This prevents multiple clients being instantiated when running different notebooks on the same machine. This is not required on Colab but a good practice when you are running it on a local machine. Uncomment and run to shut down the Dask cluster.
+
+
+```python
+#client.shutdown()
 ```
