@@ -29,7 +29,7 @@ if environment == 'colab' and use_google_drive:
     from google.colab import drive
     drive.mount('/content/drive')
     drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing/projects/ndvi_time_series'
+    drive_data_folder = 'python-remote-sensing'
     drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
     data_folder = drive_folder_path
     output_folder = drive_folder_path

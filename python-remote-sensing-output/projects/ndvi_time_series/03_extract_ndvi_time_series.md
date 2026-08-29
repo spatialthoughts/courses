@@ -29,7 +29,7 @@ if environment == 'colab' and use_google_drive:
     from google.colab import drive
     drive.mount('/content/drive')
     drive_folder_root = 'MyDrive'
-    drive_data_folder = 'python-remote-sensing/projects/ndvi_time_series'
+    drive_data_folder = 'python-remote-sensing'
     drive_folder_path = os.path.join('/content/drive', drive_folder_root, drive_data_folder)
     data_folder = drive_folder_path
     output_folder = drive_folder_path
@@ -54,7 +54,7 @@ If we are on Google Colab, install the required packages. Local runtimes are exp
 %%capture
 if environment in ['colab', 'colab_enterprise']:
   !pip install pystac-client odc-stac rioxarray dask['distributed'] \
-      xvec exactextract jupyter-server-proxy
+      xvec exactextract jupyter-server-proxy botocore
 ```
 
 Import all required libraries.
@@ -228,7 +228,7 @@ def process_tile(tile, fields_gdf, ndvi_cube):
     if fields_in_tile.empty:
         return None
 
-    # Clip to the fields' bounds, so we don't process pixels 
+    # Clip to the fields' bounds, so we don't process pixels
     # the tile contains but no field touches.
     fields_bounds = fields_in_tile.to_crs(ndvi_cube.rio.crs).total_bounds
     tile_cube = ndvi_cube.rio.clip_box(*fields_bounds).compute()
