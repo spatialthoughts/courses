@@ -180,6 +180,8 @@ red = ds['red']
 nir = ds['nir']
 
 ndvi = (nir - red)/(nir + red)
+ndvi = ndvi.where(np.isfinite(ndvi))  # guard against divide-by-zero producing inf
+ndvi = ndvi.clip(-1, 1)               # enforce the valid NDVI range
 ds['ndvi'] = ndvi
 ds
 ```

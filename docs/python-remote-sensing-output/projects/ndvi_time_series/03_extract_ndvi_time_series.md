@@ -324,6 +324,11 @@ print(f'{len(ndvi_timeseries)} field-date records across '
       f'{ndvi_timeseries["field_id"].nunique()} fields')
 ```
 
+
+```python
+ndvi_timeseries.head()
+```
+
 ### Post-Processing
 
 Before saving, we clean up the raw tall table: we drop observations where a field was only partially covered by valid pixels (so its NDVI isn't representative of the whole field), and reshape the result into a wide table with one row per field and one column per date.

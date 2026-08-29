@@ -202,6 +202,15 @@ ndvi = (nir - red)/(nir + red)
 ndvi
 ```
 
+Any pixel where `nir + red` equals zero produces `inf`, which is problematic for any downstream statistical calculations. Also in some cases, pixels end up with negative reflectances due to atmospheric correction - resulting in values outside of the valid range. We guard against the divide-by-zero case and enforce the valid range.
+
+
+```python
+ndvi = ndvi.where(np.isfinite(ndvi))  # guard against divide-by-zero producing inf
+ndvi = ndvi.clip(-1, 1)               # enforce the valid NDVI range
+ndvi
+```
+
 Let's plot a histogram of the NDVI values.
 
 
@@ -231,7 +240,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_30_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_32_0.png)
     
 
 
@@ -261,7 +270,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_32_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_34_0.png)
     
 
 
@@ -279,6 +288,14 @@ Where:
 green = scene_da.sel(band='green')
 swir16 = scene_da.sel(band='swir16')
 mndwi = (green - swir16)/(green + swir16)
+```
+
+Add the guard against outliers.
+
+
+```python
+mndwi = mndwi.where(np.isfinite(mndwi))  # guard against divide-by-zero producing inf
+mndwi = mndwi.clip(-1, 1)                # enforce the valid MNDWI range
 ```
 
 Let's plot a histogram of the MNDWI values.
@@ -310,7 +327,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_36_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_40_0.png)
     
 
 
@@ -340,7 +357,7 @@ plt.show()
 
 
     
-![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_38_0.png)
+![](python-remote-sensing-output/module_02/01_calculating_indices_files/01_calculating_indices_42_0.png)
     
 
 
