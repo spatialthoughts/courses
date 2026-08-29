@@ -1,6 +1,9 @@
+#!/bin/zsh
 # Packaging script to build python-remote-sensing course
 # Should be run after changing any *.ipynb files
 # Tested on MacOS only
+# Relies on zsh's recursive ** globbing to pick up notebooks in nested
+# subfolders (module_XX, solutions/module_XX, projects/*) - do not run with bash.
 # Use --update-release to also upload the downloaded presentations to the GitHub release
 UPDATE_RELEASE=false
 for arg in "$@"; do
