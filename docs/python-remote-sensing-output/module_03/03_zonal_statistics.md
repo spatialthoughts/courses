@@ -164,7 +164,9 @@ pop_da
 
 We will now use the [`xvec.zonal_stats()`](https://xvec.readthedocs.io/en/stable/zonal_stats.html) method to aggregates raster pixel values within each polygon.
 
-Computing zonal stats efficiently requires rasterizing the vector data to the Xarray data structure first. XVec has support for several methods to rasterize the polygons. The preferred method is provided by the [`exactextract`](https://isciences.github.io/exactextract/) package - which calulates fast and accurate statistcs by determining the fraction of each pixel that is covered by the polygon. Read our post on [Understanding Pixel Weights in Zonal Statistics](https://spatialthoughts.com/2023/07/13/pixel-weights-zonal-stats/) to understand why this is an important considertation.
+Computing zonal statistics efficiently requires first converting vector data into an Xarray data structure. XVec converts the vector data to a [Vector Data Cube](https://xvec.readthedocs.io/en/stable/intro.html) - an XArray Dataset indexed by geometry. 
+
+Once converted, we can aggregate the raster pixels within each geometry. XVec has support for several methods for aggregation. The preferred method is provided by the [`exactextract`](https://isciences.github.io/exactextract/) package - which calulates fast and accurate statistcs by determining the fraction of each pixel that is covered by the polygon. Read our post on [Understanding Pixel Weights in Zonal Statistics](https://spatialthoughts.com/2023/07/13/pixel-weights-zonal-stats/) to understand why this is an important considertation.
 
 We request the `sum` statistic, which gives us total population per county. Running this cell triggers the dask computation on the cluster.
 
@@ -181,7 +183,7 @@ aggregated = pop_da.xvec.zonal_stats(
 )
 ```
 
-The result is an [Vector Data Cube](https://xvec.readthedocs.io/en/stable/intro.html) - an XArray Dataset indexed by geometry.
+The result is an Vector Data Cube.
 
 
 ```python

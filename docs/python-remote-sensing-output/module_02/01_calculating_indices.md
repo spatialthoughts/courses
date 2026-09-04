@@ -202,7 +202,7 @@ ndvi = (nir - red)/(nir + red)
 ndvi
 ```
 
-Any pixel where `nir + red` equals zero produces `inf`, which is problematic for any downstream statistical calculations. Also in some cases, pixels end up with negative reflectances due to atmospheric correction - resulting in values outside of the valid range. We guard against the divide-by-zero case and enforce the valid range.
+Any pixel where `nir + red` equals zero produces `inf`, which is problematic for any downstream statistical calculations. Also in some cases, pixels end up with negative reflectances due to atmospheric correction - resulting in index values outside of the valid range. We guard against the divide-by-zero case and enforce the valid range.
 
 
 ```python
