@@ -19,7 +19,7 @@ SLIDE_NAMES=(
     "Advanced_QGIS_Spatial_Indexing.pdf"
     "Advanced_QGIS_Summary_Aggregate_Expressions.pdf"
     "Advanced_QGIS_Useful_Plugins.pdf"
-    "Advanced_QGIS_Agentic_AI.pdf"
+    "Advanced_QGIS_AI.pdf"
 )
 
 FILES=()
