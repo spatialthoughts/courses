@@ -120,28 +120,28 @@ We will work with roads extracted from OpenStreetMap for the state of Karnataka 
 
 We will learn about some useful processing algorithms for basic data processing operations such as Extract, Transform and Load (ETL). Our goal for this section is to read a road layer and a boundary layer from a GeoPackage and calculate what is the total length of the national highways in a state. We will also see how to append the resulting layer to same GeoPackage.
 
-1. Browse to the data directory and expand ``karnataka.gpkg``. Drag and drop the ``karnataka``, ``karnataka_districts`` and ``karnataka_major_roads`` layers to the canvas.
+1. Browse to the data directory and expand ``karnataka.gpkg``. Drag and drop the ``karnataka_major_roads`` layer to the canvas.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka1.png')
+knitr::include_graphics('images/advanced_qgis/etl1.png')
 ```
 
 2. The layer ``karnataka_major_roads`` contain all major roads, including national highways, state highways, major arterial roads etc. Select the layer and use the keyboard shortcut **F6** to open the attribute table.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka2.png')
+knitr::include_graphics('images/advanced_qgis/etl2.png')
 ```
 
 3. You will notice that the ``ref`` column has information about road designation. As we are interested in only national highways, we can use the information in this column to extract relevant road segments.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka3.png')
+knitr::include_graphics('images/advanced_qgis/etl3.png')
 ```
 
 4. You can use tools such as *Select by expression*, export the selected features as a new layer and continue to work. But the processing toolbox providers a much seamless workflow. Search for the algorithm **Extract by expression**.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka4.png')
+knitr::include_graphics('images/advanced_qgis/etl4.png')
 ```
 
 5. Enter the following expression to extract the features where the value of the ``ref`` field starts with the letters ``NH``.
@@ -153,61 +153,81 @@ regexp_match("ref", '^NH')
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka5.png')
+knitr::include_graphics('images/advanced_qgis/etl5.png')
 ```
 
-
-6. You will get a new layer ``Matching Features`` in the Layers Panel. Next, we want to calculate the length of each segment. You can use the built-in algorithm **Add geometry attributes**
+6. You will get a new layer ``Matching Features`` in the Layers Panel. Next, we want to calculate the length of each segment. Search for the keyword *length* in the Processing Toolbox and launch the **Add geometry attributes** algorithm.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka6.png')
+knitr::include_graphics('images/advanced_qgis/etl6.png')
 ```
 
-7. The source layer is in the Geographic CRS EPSG:4326. But for the analysis, we want the lengths to be measured in meters/kilometers. The algorithm provides us with a handy option to calculate the distances in **Elliposidal** math - which is ideal for layers in the geographic CRS.
+7. The source layer is in the Geographic CRS EPSG:4326. But for the analysis, we want the lengths to be measured in meters/kilometers. The algorithm provides us with a handy option to calculate the distances in elliposidal math - which is ideal for layers in the geographic CRS. Select ``Matching features`` as the *Input layer* and *Calculate using* **Ellipsoidal Calculations**. Click *Run*.
+
+```{r echo=FALSE, fig.align='center', out.width='60%'}
+knitr::include_graphics('images/advanced_qgis/etl7.png')
+```
+
+8. A new layer named ``Added geometry info`` with an additional field called ``length`` will be added to the Layers panel. The distances in this field are in meters. Let's convert them to kilometers. You may reach out to the trusty QGIS field calculator to add a new field. That's a perfectly valid way - but as mentioned earlier, there is a *processing* way to do things which is the preferred way. Search and open the **Vector table &rarr; Field Calculator** processing algorithm instead.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka7.png')
+knitr::include_graphics('images/advanced_qgis/etl8.png')
 ```
 
-8. A new layer with an additional field called ``length`` will be added to the Layers panel. The distances in this field are in meters. Let's convert them to kilometers. You may reach out to the trusty QGIS field calculator to add a new field. That's a perfectly valid way - but as mentioned earlier, there is a *processing* way to do things which is the preferred way. Search and open the **Field Calculator** processing algorithm instead and enter the following expression.
+9. Select ``Added geometry info`` layer as *Input layer* and **length_km** as the *Field name*. Enter the following expression and click *Run*.
 
 ```
 "length"/1000
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka8.png')
+knitr::include_graphics('images/advanced_qgis/etl9.png')
 ```
 
-9. A new layer with the field ``length_km`` will be added to the Layers panel. Now we are ready to find out the answer. We just need to sum up the values in the ``length_km`` field. Use the **Basic Statistics for Fields** algorithm.
+10. A new layer ``Calculated`` with the field ``length_km`` will be added to the Layers panel. Now we are ready to find out the answer. We just need to sum up the values in the ``length_km`` field. Use the **Vector analysis &rarr; Basic Statistics for Fields** algorithm.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka9.png')
+knitr::include_graphics('images/advanced_qgis/etl10.png')
 ```
 
-10. In the *Basic Statistics for Fields* dialog, select ``Calculated`` as the *Input layer* and ``length_km`` as the *Field to calculate statistics on*. Click *Run*. 
+11. In the *Basic Statistics for Fields* dialog, select ``Calculated`` as the *Input layer* and ``length_km`` as the *Field to calculate statistics on*. Click *Run*. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka10.png')
+knitr::include_graphics('images/advanced_qgis/etl11.png')
 ```
 
-11. It will generate a new temporary layer ``Statistics``. You can view the *Attribute Table* of the layer to view the statistics in a table format. The result will also be displayed in the *Results Viewer*. The panel will contain the link to an HTML file containing the statistics. The **Sum** contains the total length of national highways in the state. 
+12. It will generate a new temporary layer ``Statistics``. You can view the *Attribute Table* of the layer to view the statistics in a table format. The result will also be displayed in the *Results Viewer*. The panel will contain the link to an HTML file containing the statistics. The **Sum** contains the total length of national highways in the state. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka11.png')
+knitr::include_graphics('images/advanced_qgis/etl12.png')
 ```
 
-12. The final layer is called ``Calculated`` and is a temporary memory layer. Let's save it to the disk so we can use it later. The layer contains many fields which are not relevant to us, so let's delete some columns before saving them. The *classic* way to do this is to toggle editing and use the *Delete Column* button from the Attribute Table. If you wanted to rename/reorder certain fields, that needed a plugin. But now, we have a really easy processing algorithm called **Refactor Fields** that can add, delete, rename, re-order and change the field types all at once. Delete fields that are not required and save the result as the layer ``national_highways`` in the source ``karnataka.gpkg``.
+13. The final layer is called ``Calculated`` and is a temporary memory layer. Let's save it to the disk so we can use it later. The layer contains many fields which are not relevant to us, so let's delete some columns before saving them. The *classic* way to do this is to toggle editing and use the *Delete Column* button from the Attribute Table. If you wanted to rename/reorder certain fields, that needed a plugin. But now, we have a really easy processing algorithm for just that. Search and launch the **Vector table &rarr; Refactor Fields** algorithm. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka12.png')
+knitr::include_graphics('images/advanced_qgis/etl13.png')
 ```
 
-13. The layer ``national_highways`` will be added to the Layers panel. 
+14. Select ``Calculated`` as the *Input layer*. In the *Field mapping* widget, select rows for the fields you want to delete and click the *Delete sected field* button to delete them. Next, click the *...* button next to *Refactored* and select *Save to GeoPackage...*. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/karnataka13.png')
+knitr::include_graphics('images/advanced_qgis/etl14.png')
 ```
+
+15. Browse to the data package and select the ``karnataka.gpgkg`` as the source. Enter ``national_highways`` as the *Layer name*. Click *Run*.
+
+> On MacOS, when you select an existing geopackage, there is an incorrect prompt that warns that the geopackage will be overwritten. You can ignore it. See more details in [this bug report](https://github.com/qgis/QGIS/issues/49351).
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/etl15.png')
+```
+
+16. The layer ``national_highways`` will created with the clean attribute table and will get saved as a new layer in the the existing geopackage ``karnataka.gpkg``.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/etl16.png')
+```
+
 
 We have now finished the first part of this exercise. Your output should match the contents of the `Processing_Tools_Checkpoint1.qgz` file in the `solutions` folder.
 
@@ -217,7 +237,7 @@ We have now finished the first part of this exercise. Your output should match t
 There are many features in the ``national_highways`` layer where the `"name"` attribute is **NULL**. Find an appropriate algorithm from the Processing Toolbox to create a new layer with the features having NULL values removed.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/1_1_1_challenge.png')
+knitr::include_graphics('images/advanced_qgis/challenge_1_1_1.png')
 ```
 
 **Bonus Challenge**
@@ -227,8 +247,10 @@ Can you extract roads with names like *1st Main Road*, *23rd Main Road*, *2nd Ma
 * You can extract the features by matching the pattern in the `"name"` attribute. Prompt your favorite LLM to help you build a regular expression.
 * Regular expressions can have the `\` character - which is a reserved character in QGIS expression engine. You can escape it be prefixing it by another `\`. i.e. `\d+` should be written as `\\d+`.
 
-```{r echo=FALSE, fig.align='center', out.width='50%'}
-knitr::include_graphics('images/advanced_qgis/1_1_1_bonus_challenge.png')
+> Make sure to run the query on the ``karnataka_major_roads`` layer
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/advanced_qgis/challenge_1_1_1_bonus.png')
 ```
 
 ## 1.2 Spatial Overlay and Summary Statistics
