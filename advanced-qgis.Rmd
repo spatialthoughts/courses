@@ -478,139 +478,123 @@ knitr::include_graphics('images/advanced_qgis/modeler3.png')
 knitr::include_graphics('images/advanced_qgis/modeler4.png')
 ```
 
-5. Now, we can start building a graphical model of our processing pipeline. The Processing modeler dialog contains a left-hand panel and the main canvas. On the left-hand panel, locate the Inputs panel listing various types of input data types. Scroll down and select the **+ Vector Layer** input. Drag it to the canvas. 
+5. Now, we can start building a graphical model of our processing pipeline. The Processing modeler dialog contains a left-hand panel and the main canvas. On the left-hand panel, locate the Inputs panel listing various types of input data types. Scroll down and select the **+ Vector Layer** input. Double-click it add it to the model. Enter **Input Points** as the *Description* and **Point** as the *Geometry type*. This input represents the piracy incidents point layer.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler5.png')
 ```
 
-6. Enter **Input Points** as the *Description* and **Point** as the *Geometry type*. This input represents the piracy incidents point layer.
 
-```{r echo=FALSE, fig.align='center', out.width='50%'}
+6. Next, add another **+ Vector Layer** input to the model. Enter **Base Layer** as the *Description* and **Polygon** as the *Geometry type*. This input represents the natural earth global land layer in which we will use as the extent of the grid layer.
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler6.png')
 ```
 
-7. Next, drag another **+ Vector Layer** input to the canvas. Enter **Base Layer** as the *Description* and **Polygon** as the *Geometry type*. This input represents the natural earth global land layer in which we will use as the extent of the grid layer.
+7. As we are generating a global hexagonal grid, we can ask the user to supply us with the grid size as an input instead of hard-coding it as part of our model. This way, the user can quickly experiment with different grid sizes without changing the model at all. Select a **+ Number** input and add it to the model. Enter **Grid Size** as the Parameter name, **Integer** as the Number Type, **200000** as Default Value, and click OK.
 
-```{r echo=FALSE, fig.align='center', out.width='50%'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler7.png')
 ```
 
-8. As we are generating a global hexagonal grid, we can ask the user to supply us with the grid size as an input instead of hard-coding it as part of our model. This way, the user can quickly experiment with different grid sizes without changing the model at all. Select a **+ Number** input and drag it to the canvas. Enter **Grid Size** as the Parameter name, **Integer** as the Number Type, **200000** as Default Value, and click OK.
+8. Now that we have our user inputs defined, we are ready to add processing steps. All of the processing algorithms are available to you under the *Toolbox* tab. The first step in our pipeline will be to reproject the base layer to the Project CRS. Search for the **Reproject layer** algorithm and double-click to add it to the model.
 
-```{r echo=FALSE, fig.align='center', out.width='50%'}
+```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler8.png')
 ```
 
-9. Now that we have our user inputs defined, we are ready to add processing steps. All of the processing algorithms are available to you under the *Toolbox* tab. The first step in our pipeline will be to reproject the base layer to the Project CRS. Search for the **Reproject layer** algorithm and drag it to the canvas.
+9. Select the *Reproject layer* box to open the configuration panel.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler9.png')
 ```
 
-10. In the *Reproject layer* dialog, select **Base Layer**, by clicking the button under the *Input Layer* and select **Model Input** as the *Input layer*. Check the Use **project CRS** as the *Target CRS*. Click OK.
+
+10. In the configuration dialog, change the input type to  **Model Input** for the *Input layer* and select **Base Layer**. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler10.png')
 ```
 
-11. In the Processing Modeler canvas, you will notice a connection appear between the ```Base Layer``` input and the ```Reproject layer``` algorithm. This connection indicates the flow of our processing pipeline. The next step is to create a hexagonal grid. Search for the **Create grid** algorithm and drag it to the canvas.
+11. Check the Use **project CRS** as the *Target CRS*. In the Processing Modeler canvas, you will notice a connection appear between the ```Base Layer``` input and the ```Reproject layer``` algorithm. This connection indicates the flow of our processing pipeline. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler11.png')
 ```
 
-12. In the *Create grid* dialog, choose **Hexagon (polygon)** as the *Grid type*. Click the button under *Grid extent* and select **Algorithm Output**. Choose **'Reprojected' from algorithm 'Reproject layer'** as the grid extent.
+12. The next step is to create a hexagonal grid. Search for the **Create grid** algorithm and drag it to the canvas. In the *Create grid* dialog, choose **Hexagon (polygon)** as the *Grid type*. Click the button under *Grid extent* and select **Algorithm Output**. Choose **'Reprojected' from algorithm 'Reproject layer'** as the grid extent.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler12.png')
 ```
 
-13. Select **Model input** by clicking the button under *Horizontal Spacing* and choose **Grid Size** as the *Horizontal Spacing*. Click OK. 
+13. Select **Model input** by clicking the button under *Horizontal Spacing* and *Vertical Spacing* choose **Grid Size**. Make sure the **Use project CRS** button is checked under *Grid CRS*.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler13.png')
 ```
 
-14. Select **Model input** by clicking the button under *Vertical Spacing* and choose **Grid Size** as the *Vertical Spacing*. Click OK. 
+14. At this point, we have a global hexagonal grid. The grid spans the full extent of the base layer, including land areas and places where there are no points. Let us filter out those grid polygons where there are no input points. Search for the **Extract by location** algorithm under the *Toolbox* tab and add it to the model.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler14.png')
 ```
 
-15. At this point, we have a global hexagonal grid. The grid spans the full extent of the base layer, including land areas and places where there are no points. Let us filter out those grid polygons where there are no input points. Search for the **Extract by location** algorithm under the *Toolbox* tab and drag it to the canvas.
+15. Select **Algorithm Output** from the icon below *Extract features from*. Now choose **'Grid' from the algorithm 'Create Grid'**. For *Where the features(geometric predicate)*, leave the default value of **Intersect**. Finally, for *By comparing to the features from*, select **Model input** and choose **Input Points**.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler15.png')
 ```
 
-16. Select **Algorithm Output** from the icon below *Extract features from*. Now choose **'Grid' from the algorithm 'Generate Grid'**. Click **...** at the right end.
+16. Now, we have only those grid polygons that contain some input points. To aggregate these points, we will use the **Count points in polygon** algorithm. Search for it under the *Toolbox* tab and add it to the model. For *Polygons*, select **Algorithm Output** by clicking the button under *Polygons* and choose **'Extracted (location)' from algorithm 'Extract by location'**. For *Points*, Select **Model Input** by clicking the button under *Points* and choose **Input Points**. As this will be our output layer, enter the name of *Count* as **Aggregated**.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler16.png')
 ```
 
-17. Select **Intersect** by clicking the button, as Where the features(geometric predicate). And click the triangle button to go back to the previous window. Now click OK. 
+17. The model is now complete. Click the *Save* button. You can click the **-** button for any boxes to hide their inputs or outputs. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler17.png')
 ```
 
-18. Select **Model input** by clicking the button under *By comparing to the features from* and choose **Input Points** as *By comparing to the features from*. Click OK.
+18. We can run the model to execute our workflow. Click the *Run model* button.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler18.png')
 ```
 
-19. Now, we have only those grid polygons that contain some input points. To aggregate these points, we will use the **Count points in polygon** algorithm. Search for it under the *Toolbox* tab and drag it to the canvas.
+19. Our *Base Layer* is the ``ne_10m_land`` and the *Input Points* layer is ``ASAM_events``. The Grid Size needs to be specified in the units of the selected CRS. Enter ``100000`` as the Grid Size. Grid size is in the unit of the current CRS, which is meters. Click Run to start the processing pipeline.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler19.png')
 ```
 
-20. Select **Algorithm Output** by clicking the button under *Polygons* and choose **'Extracted (location)' from algorithm 'Extract by location'** for *Polygons*. Now, Select **Model Input** by clicking the button under *Points* and choose **Input Points** for *Points*. Type **NUMPOINTS** in **Count field name**. At the bottom, name the Count output layer as **Aggregated**. Click OK. 
+20. Once the process finishes, you will see the model connections will get updated with the number of features passed through each step. click Close.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler20.png')
 ```
 
-21. The model is now complete. Click the *Save* button.
+21. Switch to the main QGIS window. You will see a new layer ``Aggregated`` loaded as the result of the model. As you explore, you will notice the layer contains an attribute called *NUMPOINTS* containing the number of piracy incidents points contained within that grid feature. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler21.png')
 ```
 
-22. Switch to the main QGIS window. You can find your newly created model in the *Processing Toolbox* under **Models &rarr;piracy_hexbin**. Double-click to run the model. 
+22. To ensure that you are always able to reproduce your results, it is recommended to bundle the model in your project. The modeler interface has a button **Save model in project**. Click on it to embed the model in your QGIS project file.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler22.png')
 ```
 
-23. Our *Base Layer* is the ``ne_10m_land`` and the *Input Points* layer is ``ASAM_events``. The Grid Size needs to be specified in the units of the selected CRS. Enter ``100000`` as the Grid Size. Grid size is in the unit of the current CRS, which is meters. Click Run to start the processing pipeline. Once the process finishes, click Close.
+23. Once the model is embedded, Whenever you open the project, the model will be available to the user under the **Project models** in the Processing Toolbox.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/advanced_qgis/modeler23.png')
 ```
 
-24. You will see a new layer ``Aggregated`` loaded as the result of the model. As you explore, you will notice the layer contains an attribute called *NUMPOINTS* containing the number of piracy incidents points contained within that grid feature. 
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler24.png')
-```
-
-25. To ensure that you are always able to reproduce your results, it is recommended to bundle the model in your project. The modeler interface has a button **Save model in project**. Click on it to embed the model in your QGIS project file.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler25.png')
-```
-
-26. Once the model is embedded, Whenever you open the project, the model will be available to the user under the **Project models** in the Processing Toolbox.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/modeler26.png')
-```
-
-Your output should match the contents of the `Modeler_Checkpoint1.qgz` file in the `solutions` folder.
+Your output should match the contents of the `Modeler_Checkpoint1.qgz` file in the `solutions` folder. You can right-click the ``piracy_hexbin`` model and select *Edit Model...* to open model in the Model Designer.
 
 
 ### 3.1.1 Challenge
@@ -620,7 +604,7 @@ Add a step to extract the grid with the highest piracy incidents.
 Hint: The expression ``maximum("NUMPOINTS")`` will give you the highest value contained in the ``"NUMPOINTS"`` field. Use it to build your complete expression.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/advanced_qgis/3_1_1_challenge.png')
+knitr::include_graphics('images/advanced_qgis/challenge_3_1_1.png')
 ```
 
 ## Concept: Spatial Indexing
