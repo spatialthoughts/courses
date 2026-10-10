@@ -14,8 +14,8 @@
 
 <title>Satellite Embedding Deep Dive (Full Workshop)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -53,6 +53,7 @@
     </style>
 
 
+
 <style type="text/css">
   code {
     white-space: pre;
@@ -62,8 +63,9 @@
   }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -74,7 +76,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -134,13 +136,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -175,6 +184,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -232,11 +244,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -265,8 +281,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -274,16 +290,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -327,7 +336,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -427,15 +436,15 @@ id="toc-citing-and-referencing">Citing and Referencing</a></li>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>Google <a
-href="https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL">Satellite
-Embedding Dataset</a> is a global dataset of pre-computed,
-analysis-ready geospatial embeddings for each year from 2017 onwards.
-This dataset was produced by Google DeepMind’s AlphaEarth Foundations
-model and presents a big leap in making remote sensing and climate
-datasets useful. Along with making existing remote sensing workflows
-more efficient, this dataset unlocks a range of new use cases. This
-workshop is designed to help you get started with the dataset in GEE and
-use it for a variety of applications.</p>
+href="https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL"
+target="_blank">Satellite Embedding Dataset</a> is a global dataset of
+pre-computed, analysis-ready geospatial embeddings for each year from
+2017 onwards. This dataset was produced by Google DeepMind’s AlphaEarth
+Foundations model and presents a big leap in making remote sensing and
+climate datasets useful. Along with making existing remote sensing
+workflows more efficient, this dataset unlocks a range of new use cases.
+This workshop is designed to help you get started with the dataset in
+GEE and use it for a variety of applications.</p>
 <p><a href="https://www.youtube.com/watch?v=vDWjfW7pylM"
 target="_blank"><img
 src="https://img.youtube.com/vi/vDWjfW7pylM/mqdefault.jpg"
@@ -461,9 +470,9 @@ step-by-step instructions.</p>
 scripts shared via a code repository.</p>
 <ol style="list-style-type: decimal">
 <li><a
-href="https://code.earthengine.google.co.in/?accept_repo=users/ujavalgandhi/GEE-Satellite-Embedding">Click
-this link</a> to open Google Earth Engine code editor and add the
-repository to your account.</li>
+href="https://code.earthengine.google.co.in/?accept_repo=users/ujavalgandhi/GEE-Satellite-Embedding"
+target="_blank">Click this link</a> to open Google Earth Engine code
+editor and add the repository to your account.</li>
 <li>If successful, you will have a new repository named
 <code>users/ujavalgandhi/GEE-Satellite-Embedding</code> in the
 <em>Scripts</em> tab in the <em>Reader</em> section.</li>
@@ -1985,7 +1994,7 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb11-1"><a h
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">// Satellite Embedding dataset</span></span>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a></span>
 <span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">// Reference: https://github.com/cordmaur/WaterDetect</span></span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">// Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. </span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">// Cordeiro, M. C. R.; Martinez, J.-M.; Pe&lt;c3&gt;&lt;b1&gt;a-Luque, S. </span></span>
 <span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">// Automatic Water Detection from Multidimensional Hierarchical Clustering for Sentinel-2 Images</span></span>
 <span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">// and a Comparison with Level 2A Processors. </span></span>
 <span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">// Remote Sensing of Environment 2021, 253, 112209. https://doi.org/10.1016/j.rse.2020.112209.</span></span>
@@ -2451,20 +2460,23 @@ class="sourceCode js"><code class="sourceCode javascript"><span id="cb13-1"><a h
 <li>Official Tutorials in Google Earth Engine User Guide
 <ul>
 <li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-01-introduction">Introduction
-to the Satellite Embedding Dataset</a></li>
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-01-introduction"
+target="_blank">Introduction to the Satellite Embedding Dataset</a></li>
 <li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-02-unsupervised-classification">Unsupervised
-Classification with Satellite Embedding Dataset</a></li>
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-02-unsupervised-classification"
+target="_blank">Unsupervised Classification with Satellite Embedding
+Dataset</a></li>
 <li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-03-supervised-classification">Supervised
-Classification with Satellite Embedding Dataset</a></li>
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-03-supervised-classification"
+target="_blank">Supervised Classification with Satellite Embedding
+Dataset</a></li>
 <li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-04-regression">Regression
-with Satellite Embedding Dataset</a></li>
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-04-regression"
+target="_blank">Regression with Satellite Embedding Dataset</a></li>
 <li><a
-href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-05-similarity-search">Similarity
-Search with Satellite Embedding Dataset</a></li>
+href="https://developers.google.com/earth-engine/tutorials/community/satellite-embedding-05-similarity-search"
+target="_blank">Similarity Search with Satellite Embedding
+Dataset</a></li>
 </ul></li>
 </ul>
 </div>
@@ -2493,38 +2505,39 @@ Askay, S., Guinan, O., Moore, R., Boukouvalas, A., &amp; Kohli,
 P.(2025). AlphaEarth Foundations: An embedding field model for accurate
 and efficient global mapping from sparse label data. arXiv preprint
 arXiv.2507.22291. <a href="https://arxiv.org/abs/2507.22291"
-class="uri">https://arxiv.org/abs/2507.22291</a></li>
+target="_blank">https://arxiv.org/abs/2507.22291</a></li>
 <li>Sherrie Wang, George Azzari, David B. Lobell, Crop type mapping
 without field-level labels: Random forest transfer and unsupervised
 clustering techniques, Remote Sensing of Environment, Volume 222, 2019,
 Pages 303-317, ISSN 0034-4257, <a
 href="https://doi.org/10.1016/j.rse.2018.12.026"
-class="uri">https://doi.org/10.1016/j.rse.2018.12.026</a>.</li>
+target="_blank">https://doi.org/10.1016/j.rse.2018.12.026</a>.</li>
 <li>Houriez, L., Pilarski, S., Vahedi, B., Ahmadalipour, A., Scully, T.
 H., Aflitto, N., Andre, D., Jaffe, C., Wedner, M., Mazzola, R., Jeffery,
 J., Messinger, B., McGinley-Smith, S., &amp; Russell, S. (2025, August).
 Scalable geospatial data generation using AlphaEarth foundations model
 (arXiv:2508.11739). arXiv. <a href="https://arxiv.org/abs/2508.11739"
-class="uri">https://arxiv.org/abs/2508.11739</a></li>
+target="_blank">https://arxiv.org/abs/2508.11739</a></li>
 <li>Cordeiro, M. C. R.; Martinez, J.-M.; Peña-Luque, S. Automatic Water
 Detection from Multidimensional Hierarchical Clustering for Sentinel-2
 Images and a Comparison with Level 2A Processors.Remote Sensing of
 Environment 2021, 253, 112209. <a
 href="https://doi.org/10.1016/j.rse.2020.112209"
-class="uri">https://doi.org/10.1016/j.rse.2020.112209</a>.</li>
+target="_blank">https://doi.org/10.1016/j.rse.2020.112209</a>.</li>
 </ul>
 </div>
 <div id="license" class="section level1">
 <h1>License</h1>
 <p>The course material (text, images, presentation, videos) is licensed
-under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative
-Commons Attribution 4.0 International License</a>.</p>
+under a <a href="https://creativecommons.org/licenses/by/4.0/"
+target="_blank">Creative Commons Attribution 4.0 International
+License</a>.</p>
 <p>The code (scripts, Jupyter notebooks etc.) is licensed under the MIT
 License. For a copy, see <a href="https://opensource.org/licenses/MIT"
-class="uri">https://opensource.org/licenses/MIT</a></p>
+target="_blank">https://opensource.org/licenses/MIT</a></p>
 <p>Kindly give appropriate credit to the original author as below:</p>
-<p>Copyright © 2025 Ujaval Gandhi <a
-href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
+<p>Copyright © 2025 Ujaval Gandhi <a href="https://spatialthoughts.com"
+target="_blank">www.spatialthoughts.com</a></p>
 </div>
 <div id="citing-and-referencing" class="section level1">
 <h1>Citing and Referencing</h1>
@@ -2533,7 +2546,7 @@ href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
 <li>Gandhi, Ujaval, 2025. <em>Satellite Embedding Deep Dive</em>
 workshop. Spatial Thoughts. <a
 href="https://courses.spatialthoughts.com/gee-satellite-embedding.html"
-class="uri">https://courses.spatialthoughts.com/gee-satellite-embedding.html</a></li>
+target="_blank">https://courses.spatialthoughts.com/gee-satellite-embedding.html</a></li>
 </ul>
 <hr />
 </div>

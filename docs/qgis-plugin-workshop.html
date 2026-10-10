@@ -14,8 +14,8 @@
 
 <title>Building Your First QGIS Plugin (Full workshop)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -121,6 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </style>
 
 
+
 <style type="text/css">
   code {
     white-space: pre;
@@ -130,8 +131,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -142,7 +144,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -202,13 +204,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -243,6 +252,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -300,11 +312,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -333,8 +349,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -342,16 +358,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -395,7 +404,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -506,23 +515,25 @@ the one that fits your needs.</p>
 <p>Below are my recommendations editors that are simple to use for
 beginners.</p>
 <ul>
-<li>Windows: <a
-href="https://notepad-plus-plus.org/downloads/">Notepad++</a> is a good
-free editor for windows. Download and install the Notepad++ editor. Tip:
-Before writing Python code in Notepad+++, make sure to go to Settings →
-Preferences → Language and enable <code>Replace by space</code>. Python
-is very sensitive about whitespace and this setting will ensure tabs and
-spaces are treated properly.</li>
-<li>Mac: <a href="https://macromates.com/">TextMate</a> is an
-open-source editor for Mac that is currently available for free.</li>
+<li>Windows: <a href="https://notepad-plus-plus.org/downloads/"
+target="_blank">Notepad++</a> is a good free editor for windows.
+Download and install the Notepad++ editor. Tip: Before writing Python
+code in Notepad+++, make sure to go to Settings → Preferences → Language
+and enable <code>Replace by space</code>. Python is very sensitive about
+whitespace and this setting will ensure tabs and spaces are treated
+properly.</li>
+<li>Mac: <a href="https://macromates.com/" target="_blank">TextMate</a>
+is an open-source editor for Mac that is currently available for
+free.</li>
 </ul>
 </div>
 <div id="get-the-data-package" class="section level2">
 <h2>Get the Data Package</h2>
 <p>We have created a data package containing ready-to-use plugin files
 for each section. You can download the data package from <a
-href="https://github.com/spatialthoughts/courses/releases/download/data/qgis_plugin_workshop.zip">qgis_plugin_workshop.zip</a>.
-Once downloaded, unzip the contents to a folder on your computer.</p>
+href="https://github.com/spatialthoughts/courses/releases/download/data/qgis_plugin_workshop.zip"
+target="_blank">qgis_plugin_workshop.zip</a>. Once downloaded, unzip the
+contents to a folder on your computer.</p>
 </div>
 </div>
 <div id="get-the-workshop-video" class="section level1">
@@ -565,8 +576,8 @@ Loader</strong> that adds a button in the <em>Plugin Toolbar</em> that
 loads a basemap from OpenStreetMap to the current project. To understand
 the required structure, let’s see what a minimal plugin looks like. You
 can learn more about this structure at <a
-href="https://github.com/wonder-sk/qgis-minimal-plugin">QGIS Minimalist
-Plugin Skeleton</a>.</p>
+href="https://github.com/wonder-sk/qgis-minimal-plugin"
+target="_blank">QGIS Minimalist Plugin Skeleton</a>.</p>
 <ol style="list-style-type: decimal">
 <li>The first requirement for plugins is a file called
 <code>metadata.txt</code>. This file contains general info, version,
@@ -671,11 +682,11 @@ the workshop.</p>
 <p>Now let’s build on the basic plugin structure and add the
 functionality to load a XYZ Tile Layer when the button is clicked. We
 will be using the <a
-href="https://wiki.openstreetmap.org/wiki/Raster_tile_providers#Base_maps">OpenStreetMap
-Standard</a> XYZ layer. The PyQGIS code to load a XYZ tile layer is
-adapted from the <a
-href="https://docs.qgis.org/3.44/en/docs/pyqgis_developer_cookbook/cheat_sheet.html">PyQGIS
-Cookbook</a>.</p>
+href="https://wiki.openstreetmap.org/wiki/Raster_tile_providers#Base_maps"
+target="_blank">OpenStreetMap Standard</a> XYZ layer. The PyQGIS code to
+load a XYZ tile layer is adapted from the <a
+href="https://docs.qgis.org/3.44/en/docs/pyqgis_developer_cookbook/cheat_sheet.html"
+target="_blank">PyQGIS Cookbook</a>.</p>
 <ol style="list-style-type: decimal">
 <li>Modify the <code>main.py</code> file with the content from
 below.</li>
@@ -753,8 +764,8 @@ drop-down menu of many options that the user can pick from and load the
 basemap.</p>
 <p>For a comprehensive list of basemap tile-services and their URLs, you
 can see the <a
-href="https://contextily.readthedocs.io/en/latest/providers_deepdive.html">Contextily
-Providers</a> page.</p>
+href="https://contextily.readthedocs.io/en/latest/providers_deepdive.html"
+target="_blank">Contextily Providers</a> page.</p>
 <ol style="list-style-type: decimal">
 <li>Modify the <code>main.py</code> file with the content from
 below.</li>
@@ -772,7 +783,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a hr
 <span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>osm <span class="op">=</span> <span class="st">&#39;https://tile.openstreetmap.org/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
 <span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>cartodb_darkmatter <span class="op">=</span> <span class="st">&#39;https://a.basemaps.cartocdn.com/dark_all/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
 <span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>cartodb_positron <span class="op">=</span> <span class="st">&#39;https://a.basemaps.cartocdn.com/light_all/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">.png&#39;</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>esri_shaded_relief <span class="op">=</span> <span class="st">&#39;https://server.arcgisonline.com/ArcGIS/rest/services/&#39;</span> \</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>esri_shaded_relief <span class="op">=</span> <span class="st">&#39;https://server.arcgisonline.com/ArcGIS/rest/services/&#39;</span> <span class="op">\</span></span>
 <span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>    <span class="st">&#39;World_Street_Map/MapServer/tile/</span><span class="sc">{z}</span><span class="st">/</span><span class="sc">{y}</span><span class="st">/</span><span class="sc">{x}</span><span class="st">&#39;</span> </span>
 <span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a></span>
 <span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>BASEMAPS <span class="op">=</span> {</span>
@@ -853,10 +864,11 @@ a ZIP file. Right-click the plugin directory and create a zip file.</li>
 other users. You may also host this file and share the link with other
 users. For example, the final plugin can be downloaded from this link →
 <a
-href="https://drive.google.com/uc?export=download&amp;id=1_0liBiBP18x4y2CVNswtkt_lK0e-qiCu">basemap_loader.zip</a>.
-Once downloaded, the plugin can be installed from <strong>Plugins →
-Manage and Install plugins… → Install from ZIP</strong>. Click
-<em>Install Plugin</em> to install the plugin.</li>
+href="https://drive.google.com/uc?export=download&amp;id=1_0liBiBP18x4y2CVNswtkt_lK0e-qiCu"
+target="_blank">basemap_loader.zip</a>. Once downloaded, the plugin can
+be installed from <strong>Plugins → Manage and Install plugins… →
+Install from ZIP</strong>. Click <em>Install Plugin</em> to install the
+plugin.</li>
 </ol>
 <blockquote>
 <p>You will get a warning <em>Installing a plugin from an untrusted
@@ -888,14 +900,15 @@ entire PyQGIS API in a structured manner.</p>
 <div id="license" class="section level1">
 <h1>License</h1>
 <p>This workshop material is licensed under a <a
-href="https://creativecommons.org/licenses/by/4.0/">Creative Commons
-Attribution 4.0 International (CC BY 4.0)</a>. You are free to re-use
-and adapt the material but are required to give appropriate credit to
-the original author as below:</p>
+href="https://creativecommons.org/licenses/by/4.0/"
+target="_blank">Creative Commons Attribution 4.0 International (CC BY
+4.0)</a>. You are free to re-use and adapt the material but are required
+to give appropriate credit to the original author as below:</p>
 <p><em>Building Your First QGIS Plugin Workshop</em> by Ujaval Gandhi <a
-href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
-<p>© 2024 Spatial Thoughts <a
-href="https://spatialthoughts.com">www.spatialthoughts.com</a></p>
+href="https://spatialthoughts.com"
+target="_blank">www.spatialthoughts.com</a></p>
+<p>© 2024 Spatial Thoughts <a href="https://spatialthoughts.com"
+target="_blank">www.spatialthoughts.com</a></p>
 </div>
 
 <!-- Comment Section Powered by utterances -->

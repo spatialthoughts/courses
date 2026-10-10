@@ -14,8 +14,8 @@
 
 <title>Mastering GDAL Tools (Full Course)</title>
 
-<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -121,6 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </style>
 
 
+
 <style type="text/css">
   code {
     white-space: pre;
@@ -130,8 +131,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -142,7 +144,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -202,13 +204,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -243,6 +252,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -300,11 +312,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -333,8 +349,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -342,16 +358,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -395,7 +404,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -677,13 +686,13 @@ Files</a></li>
 <div style="page-break-after: always;"></div>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p><a href="https://gdal.org/">GDAL</a> is an open-source library for
-raster and vector geospatial data formats. The library comes with a vast
-collection of utility programs that can perform many geoprocessing
-tasks. This class introduces GDAL and OGR utilities with example
-workflows for processing raster and vector data. The class also shows
-how to use these utility programs to build Spatial ETL pipelines and do
-batch processing.</p>
+<p><a href="https://gdal.org/" target="_blank">GDAL</a> is an
+open-source library for raster and vector geospatial data formats. The
+library comes with a vast collection of utility programs that can
+perform many geoprocessing tasks. This class introduces GDAL and OGR
+utilities with example workflows for processing raster and vector data.
+The class also shows how to use these utility programs to build Spatial
+ETL pipelines and do batch processing.</p>
 <p><a
 href="https://www.youtube.com/watch?v=72WVyc8Jtz4&amp;list=PLppGmFLhQ1HLVaHVf4TsnJ4HXZBSfxLOK&amp;index=2"
 target="_blank"><img
@@ -706,10 +715,10 @@ software below.</p>
 <h2>Install GDAL</h2>
 <p>The preferred method for installing the GDAL Tools is via Anaconda.
 Follow these steps to install Anaconda and the GDAL library.</p>
-<p><a href="https://www.anaconda.com/products/individual">Download the
-Anaconda Installer</a> for Python 3.7 (or a higher version) for your
-operating system. Once downloaded, double click the installer and
-install it into the default suggested directory.</p>
+<p><a href="https://www.anaconda.com/products/individual"
+target="_blank">Download the Anaconda Installer</a> for Python 3.7 (or a
+higher version) for your operating system. Once downloaded, double click
+the installer and install it into the default suggested directory.</p>
 <p><em>Note: If your username has spaces, or non-English characters, it
 causes problems. In that case, you can install it to a path such as
 <code>C:\anaconda</code>.</em></p>
@@ -810,7 +819,8 @@ file. Unzip this file to the <code>Downloads</code> directory. All
 commands below assume the data is available in the
 <code>&lt;home folder&gt;/Downloads/gdal_tools/</code> directory.</p>
 <p>Download <a
-href="https://storage.googleapis.com/spatialthoughts-public-data/course_data_packages/gdal-tools.zip">gdal-tools.zip</a>.</p>
+href="https://storage.googleapis.com/spatialthoughts-public-data/course_data_packages/gdal-tools.zip"
+target="_blank">gdal-tools.zip</a>.</p>
 <blockquote>
 <p>Note: Certification and Support are only available for participants
 in our paid instructor-led classes.</p>
@@ -853,54 +863,54 @@ get comfortable with the environment</p>
 <col width="28%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th align="left"><strong>Command</strong></th>
 <th align="left"><strong>Description</strong></th>
 <th align="left"><strong>Example</strong></th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td align="left"><code>cd</code></td>
 <td align="left">Change directory</td>
 <td align="left"><code>cd Downloads\gdal-tools</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>cd ..</code></td>
 <td align="left">Change to the parent directory</td>
 <td align="left"><code>cd ..</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>dir</code></td>
 <td align="left">List files in the current directory</td>
 <td align="left"><code>dir</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>del</code></td>
 <td align="left">Delete a file</td>
 <td align="left"><code>del test.txt</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>rmdir</code></td>
 <td align="left">Delete a directory</td>
 <td align="left"><code>rmdir /s test</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>mkdir</code></td>
 <td align="left">Create a directory</td>
 <td align="left"><code>mkdir test</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>type</code></td>
 <td align="left">Print the contents of a file</td>
 <td align="left"><code>type test.txt</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>&gt; output.txt</code></td>
 <td align="left">Redirect the output to a file</td>
 <td align="left"><code>dir /b  &gt; test.txt</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>cls</code></td>
 <td align="left">Clear screen</td>
 <td align="left"><code>cls</code></td>
@@ -917,54 +927,54 @@ get comfortable with the environment</p>
 <col width="28%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th align="left"><strong>Command</strong></th>
 <th align="left"><strong>Description</strong></th>
 <th align="left"><strong>Example</strong></th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td align="left"><code>cd</code></td>
 <td align="left">Change directory</td>
 <td align="left"><code>cd Downloads/gdal-tools</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>cd ..</code></td>
 <td align="left">Change to the parent directory</td>
 <td align="left"><code>cd ..</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>ls</code></td>
 <td align="left">List files in the current directory</td>
 <td align="left"><code>ls</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>rm</code></td>
 <td align="left">Delete a file</td>
 <td align="left"><code>rm test.txt</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>rm -R</code></td>
 <td align="left">Delete a directory</td>
 <td align="left"><code>rm -R test</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>mkdir</code></td>
 <td align="left">Create a directory</td>
 <td align="left"><code>mkdir test</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>cat</code></td>
 <td align="left">Print the contents of a file</td>
 <td align="left"><code>cat test.txt</code></td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left"><code>&gt; output.txt</code></td>
 <td align="left">Redirect the output to a file</td>
 <td align="left"><code>ls &gt; test.txt</code></td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left"><code>clear</code></td>
 <td align="left">Clear screen</td>
 <td align="left"><code>clear</code></td>
@@ -1003,10 +1013,10 @@ values in the image.</p>
 <h3>1.1.1 Merging Tiles</h3>
 <p>We will now merge the 4 neighboring SRTM tiles into 1 raster so we
 can work with them together. GDAL provides a useful format called <a
-href="https://gdal.org/drivers/raster/vrt.html">Virtual Raster</a> that
-allows us to create a <em>Virtual</em> file with <code>.vrt</code>
-extension that is a pointer to multiple source files. A
-<code>.vrt</code> file is just a text file, so it doesn’t consume any
+href="https://gdal.org/drivers/raster/vrt.html" target="_blank">Virtual
+Raster</a> that allows us to create a <em>Virtual</em> file with
+<code>.vrt</code> extension that is a pointer to multiple source files.
+A <code>.vrt</code> file is just a text file, so it doesn’t consume any
 disk space but allows us to run any GDAL command as if it was a raster
 file.</p>
 <p>First we need to create a text file containing all the files we want
@@ -1034,8 +1044,8 @@ command <code>gdalbuildvrt merged.vrt *.hgt</code>. However, some
 versions of GDAL on Windows do not expand the <code>*</code> wildcard
 correctly and the command results in an error. It is recommended to use
 a file list instead of wildcards with GDAL commands on Windows to avoid
-unexpected results.[<a
-href="https://github.com/OSGeo/gdal/issues/1749">reference</a>]</p>
+unexpected results.[<a href="https://github.com/OSGeo/gdal/issues/1749"
+target="_blank">reference</a>]</p>
 </blockquote>
 </div>
 <div id="exercise-1" class="section level3">
@@ -1052,8 +1062,8 @@ raster? Since these rasters are around the Mt.Everest region, the
 the hundreds of data formats supported by GDAL. The format is recognized
 from the file extension. Alternatively, you can also specify it using
 the <code>-of</code> option with the <a
-href="https://gdal.org/drivers/raster/index.html">short name of the
-format</a> such a <strong>GTiff</strong>.</p>
+href="https://gdal.org/drivers/raster/index.html" target="_blank">short
+name of the format</a> such a <strong>GTiff</strong>.</p>
 <pre><code>gdal_translate -of GTiff merged.vrt merged.tif</code></pre>
 <p><img src="images/gdal/compression1.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
@@ -1104,9 +1114,9 @@ continuation.</p>
 <p><img src="images/gdal/compression3.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>The resulting file now comes out much smaller at
 <strong>39MB</strong>. Check this article <a
-href="https://kokoalberti.com/articles/geotiff-compression-optimization-guide/">GeoTIFF
-compression and optimization with GDAL</a> to learn more about various
-options and compression algorithms.</p>
+href="https://kokoalberti.com/articles/geotiff-compression-optimization-guide/"
+target="_blank">GeoTIFF compression and optimization with GDAL</a> to
+learn more about various options and compression algorithms.</p>
 </div>
 <div id="setting-nodata-values" class="section level3">
 <h3>1.1.4 Setting NoData Values</h3>
@@ -1136,21 +1146,21 @@ target="_blank">Watch the Video ↗</a></p>
 <p><a
 href="https://docs.google.com/presentation/d/1Wbx3ru3lQM5h_vw53OpPx5192IX3cwwXkyszfT2ZeO8/edit?usp=sharing"
 target="_blank">Access the Presentation ↗</a></p>
-<p>A new format called <a href="https://www.cogeo.org/">Cloud-Optimized
-GeoTIFF (COG)</a> is making access to such a vast amount of imagery
-easier to access and analyze. A <em>Cloud-optimized</em> GeoTIFF is
-behaving just like a regular GeoTIFF imagery, but instead of downloading
-the entire image locally, you can access <em>portions</em> of imagery
-hosted on a cloud server streamed to clients like QGIS. This makes it
-very efficient to access this data and even analyze it - without
-downloading large files. GDAL makes it very easy to create COG files by
-specifying the <code>-of COG</code> option. Specifying the
-<code>-co NUM_THREADS=ALL_CPUS</code> helps speed up the creation
-process by using all available CPUs for compression and creating
-internal overviews.</p>
-<p>The <a href="https://gdal.org/drivers/raster/cog.html">GDAL COG
-Driver</a> has the following creation options <code>-co</code> enabled
-by default.</p>
+<p>A new format called <a href="https://www.cogeo.org/"
+target="_blank">Cloud-Optimized GeoTIFF (COG)</a> is making access to
+such a vast amount of imagery easier to access and analyze. A
+<em>Cloud-optimized</em> GeoTIFF is behaving just like a regular GeoTIFF
+imagery, but instead of downloading the entire image locally, you can
+access <em>portions</em> of imagery hosted on a cloud server streamed to
+clients like QGIS. This makes it very efficient to access this data and
+even analyze it - without downloading large files. GDAL makes it very
+easy to create COG files by specifying the <code>-of COG</code> option.
+Specifying the <code>-co NUM_THREADS=ALL_CPUS</code> helps speed up the
+creation process by using all available CPUs for compression and
+creating internal overviews.</p>
+<p>The <a href="https://gdal.org/drivers/raster/cog.html"
+target="_blank">GDAL COG Driver</a> has the following creation options
+<code>-co</code> enabled by default.</p>
 <ul>
 <li>Has internal tiling (i.e. <code>-co TILED=YES</code>)</li>
 <li>LZW Compression (i.e. <code>-co COMPRESS=LZW</code>)</li>
@@ -1313,12 +1323,13 @@ the <code>-cutline</code> option.</p>
 <pre><code>gdalwarp -cutline aoi.shp  -crop_to_cutline naip.vrt aoi_cut.tif -co COMPRESS=DEFLATE -co TILED=YES</code></pre>
 <p>We can also add JPEG compression to the output file to reduce the
 file size. Refer to the post <a
-href="https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html">GeoTiff
-Compression for Dummies</a> by Paul Ramsey that gives more insights into
-compression imagery. Note that JPEG is a lossy compression method and
-can cause edge artifacts for image mosaics. To prevent this, we specify
-the <code>--config GDAL_TIFF_INTERNAL_MASK YES</code> option that uses
-the mask from the alpha band.</p>
+href="https://blog.cleverelephant.ca/2015/02/geotiff-compression-for-dummies.html"
+target="_blank">GeoTiff Compression for Dummies</a> by Paul Ramsey that
+gives more insights into compression imagery. Note that JPEG is a lossy
+compression method and can cause edge artifacts for image mosaics. To
+prevent this, we specify the
+<code>--config GDAL_TIFF_INTERNAL_MASK YES</code> option that uses the
+mask from the alpha band.</p>
 <p><strong>Windows</strong></p>
 <pre><code>gdal_translate aoi_cut.tif aoi.tif ^
   -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR -co JPEG_QUALITY=75 ^
@@ -1369,29 +1380,29 @@ imagery. This directory has 5 individual GeoTIFF files for 5 different
 bands from a single landsat-8 scene.</p>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th align="left"><strong>Band Number</strong></th>
 <th align="left"><strong>Band Name</strong></th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td align="left">B2</td>
 <td align="left">Blue</td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left">B3</td>
 <td align="left">Green</td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left">B4</td>
 <td align="left">Red</td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left">B5</td>
 <td align="left">Near Infrared</td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left">B8</td>
 <td align="left">Panchromatic</td>
 </tr>
@@ -1463,8 +1474,8 @@ RGB Composite with Linear Stretch
 has a <code>-exponent</code> option that scales the input values using
 the following formula. Choosing an exponent value between 0 and 1 will
 enhance low intensity values - resulting in a brighter image. <a
-href="https://homepages.inf.ed.ac.uk/rbf/HIPR2/pixexp.htm">Learn
-more</a></p>
+href="https://homepages.inf.ed.ac.uk/rbf/HIPR2/pixexp.htm"
+target="_blank">Learn more</a></p>
 <p>Let’s try exponent value of <strong>0.5</strong>. The result is a
 much better looking output.</p>
 <pre><code>gdal_translate -scale 0 0.3 0 255 -exponent 0.5 -ot Byte rgb.tif rgb_stretch.tif</code></pre>
@@ -1493,7 +1504,8 @@ program <code>gdal_calc.py</code>. The input rasters are specified using
 any letters from A-Z. These letters can be then referenced in the
 expression. The expression is specified using the <code>--calc</code>
 option and it supports NumPy syntax and <a
-href="https://numpy.org/doc/stable/reference/routines.math.html#">functions</a>.</p>
+href="https://numpy.org/doc/stable/reference/routines.math.html#"
+target="_blank">functions</a>.</p>
 <pre><code>gdalinfo -stats RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B4.tif</code></pre>
 <p>It is important to set NoData value. As seen from the output above,
 NoData is set to <strong>-999</strong>.</p>
@@ -1558,10 +1570,10 @@ bands, resulting in a sharper image with more details. This process is
 called <em>Pan-Sharpening</em>.</p>
 <p>GDAL comes with a script <code>gdal_pansharpen.py</code> that
 implements the <a
-href="https://gdal.org/drivers/raster/vrt.html#gdal-vrttut-pansharpen">Brovey
-algorithm</a> to compute the pansharpened output. In the example below
-we fuse the 15m resolution panchromatic band (B8) with the RGB composite
-created in the previous step.</p>
+href="https://gdal.org/drivers/raster/vrt.html#gdal-vrttut-pansharpen"
+target="_blank">Brovey algorithm</a> to compute the pansharpened output.
+In the example below we fuse the 15m resolution panchromatic band (B8)
+with the RGB composite created in the previous step.</p>
 <p><strong>Windows</strong></p>
 <pre><code>python %CONDA_PREFIX%\Scripts\gdal_pansharpen.py RT_LC08_L1TP_137042_20190920_20190926_01_T1_2019-09-20_B8.tif ^
   rgb.tif pansharpened.tif -r bilinear -co COMPRESS=DEFLATE -co PHOTOMETRIC=RGB</code></pre>
@@ -1584,21 +1596,22 @@ can resolve the details in the scene much better.</p>
 <div id="processing-wms-layers" class="section level2">
 <h2>1.5 Processing WMS Layers</h2>
 <p>GDAL supports reading from a variety of web services, including <a
-href="https://gdal.org/drivers/raster/wms.html">Web Map Services
-(WMS)</a> layers.</p>
+href="https://gdal.org/drivers/raster/wms.html" target="_blank">Web Map
+Services (WMS)</a> layers.</p>
 <div id="listing-wms-layers" class="section level3">
 <h3>1.5.1 Listing WMS Layers</h3>
 <p>NASA’s Socioeconomic Data and Applications Center (SEDAC) provides
 many useful data layers though <a
-href="https://sedac.ciesin.columbia.edu/maps/services">WMS Services</a>.
-We can pick the URL for the appropriate service and list all available
-layers using <code>gdalinfo</code>.</p>
+href="https://sedac.ciesin.columbia.edu/maps/services"
+target="_blank">WMS Services</a>. We can pick the URL for the
+appropriate service and list all available layers using
+<code>gdalinfo</code>.</p>
 <pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/ows?version=1.3.0&quot;</code></pre>
 <p><img src="images/gdal/wms1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p>We can get more information about a particular layer by specifying
 the output from the command above. Let’s get more info about the <a
-href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01">Global
-Reservoir and Dam (GRanD), v1</a> layer.</p>
+href="https://sedac.ciesin.columbia.edu/data/set/grand-v1-reservoirs-rev01"
+target="_blank">Global Reservoir and Dam (GRanD), v1</a> layer.</p>
 <pre><code>gdalinfo &quot;WMS:https://sedac.ciesin.columbia.edu/geoserver/ows?SERVICE=WMS&amp;VERSION=1.3.0&amp;REQUEST=GetMap&amp;LAYERS=grand-v1%3Agrand-v1-reservoirs-rev01&amp;CRS=CRS:84&amp;BBOX=-153.037,-45.881,176.825,70.398&quot;</code></pre>
 </div>
 <div id="creating-a-service-description-file" class="section level3">
@@ -1630,8 +1643,9 @@ by specifying the extent using the <code>-te</code> option.</p>
 <p><img src="images/gdal/wms5.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>Learn more about offline WMS and comparison between different formats
 in this article <a
-href="https://www.opengis.ch/2020/06/09/offline-wms-benchmarking-raster-formats-for-qfield/">Offline
-WMS – Benchmarking raster formats for QField</a> by OpenGIS.ch.</p>
+href="https://www.opengis.ch/2020/06/09/offline-wms-benchmarking-raster-formats-for-qfield/"
+target="_blank">Offline WMS – Benchmarking raster formats for QField</a>
+by OpenGIS.ch.</p>
 </div>
 <div id="exercise-4" class="section level3">
 <h3>Exercise 4</h3>
@@ -1722,7 +1736,7 @@ like below.</p>
 <col width="26%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th align="left"><strong>pixel (column)</strong></th>
 <th align="left"><strong>line (row)</strong></th>
 <th align="left"><strong>X (Longitude)</strong></th>
@@ -1730,31 +1744,31 @@ like below.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td align="left">418</td>
 <td align="left">893</td>
 <td align="left">70</td>
 <td align="left">15</td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left">380</td>
 <td align="left">2432</td>
 <td align="left">70</td>
 <td align="left">5</td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left">3453</td>
 <td align="left">2434</td>
 <td align="left">90</td>
 <td align="left">5</td>
 </tr>
-<tr>
+<tr class="even">
 <td align="left">3407</td>
 <td align="left">895</td>
 <td align="left">90</td>
 <td align="left">15</td>
 </tr>
-<tr>
+<tr class="odd">
 <td align="left">2662</td>
 <td align="left">911</td>
 <td align="left">85</td>
@@ -1807,17 +1821,19 @@ command.</p>
 <h2>Assignment</h2>
 <p>UK’s Department of Environment Food &amp; Rural Affairs (DEFRA)
 provides country-wide LiDAR data and products via the <a
-href="https://environment.data.gov.uk/DefraDataDownload/?Mode=survey">Defra
-Data Services Platform</a> under an open license.</p>
+href="https://environment.data.gov.uk/DefraDataDownload/?Mode=survey"
+target="_blank">Defra Data Services Platform</a> under an open
+license.</p>
 <p>Your data package contains a folder <code>london_1m_dsm</code>. This
 folder contains 1m resolution Digital Surface Model (DSM) tiles for
 central London generated from a LIDAR survey. The tiles are in the <a
-href="https://gdal.org/drivers/raster/aaigrid.html">Arc/Info ASCII
-Grid</a> format with the <code>.asc</code> extension. The tiles do not
-contain any projection information but the <a
-href="https://environment.data.gov.uk/dataset/6f51a299-351f-4e30-a5a3-2511da9688f7">metadata</a>
-contains the information that the CRS for the dataset is
-<strong>EPSG:27700 British National Grid</strong>.</p>
+href="https://gdal.org/drivers/raster/aaigrid.html"
+target="_blank">Arc/Info ASCII Grid</a> format with the
+<code>.asc</code> extension. The tiles do not contain any projection
+information but the <a
+href="https://environment.data.gov.uk/dataset/6f51a299-351f-4e30-a5a3-2511da9688f7"
+target="_blank">metadata</a> contains the information that the CRS for
+the dataset is <strong>EPSG:27700 British National Grid</strong>.</p>
 <p>Apply the skills you learnt in this module to create an output
 product suitable for analysis. The result should be a single
 georeferenced mosaic in the GeoTIFF format with appropriate
@@ -1879,9 +1895,9 @@ along with columns and their types. This is a plain CSV file. Let’s turn
 it into a spatial data layer using the X and Y coordinates supplied in
 the <code>lng</code> and <code>lat</code> fields. The <code>-oo</code>
 option allows us to specify format-specific options. The <a
-href="https://gdal.org/drivers/vector/csv.html#reading-csv-containing-spatial-information">OGR
-CSV Driver</a> allows specifying a list of column names or a name
-pattern (such as <code>Lat*</code>) s using the
+href="https://gdal.org/drivers/vector/csv.html#reading-csv-containing-spatial-information"
+target="_blank">OGR CSV Driver</a> allows specifying a list of column
+names or a name pattern (such as <code>Lat*</code>) s using the
 <code>X_POSSIBLE_NAMES</code> and <code>Y_POSSIBLE_NAMES</code> options
 to specify which columns contain geometry information.</p>
 <pre><code>ogrinfo -so -al worldcities.csv -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat</code></pre>
@@ -1917,12 +1933,12 @@ layer.</p>
 <h3>2.1.4 Extract a subset</h3>
 <p>OGR tools allow executing SQL queries against the data source. It
 supports a subset of the SQL capability that is described in the <a
-href="https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect">OGR
-SQL Syntax</a>. A simple way to select a subset of features is using the
-<code>-where</code> option. This allows you to specify an attribute
-query to filter the results. Here we modify our command to extract only
-the cities where the <code>country</code> column has the value
-<strong>India</strong>.</p>
+href="https://gdal.org/user/ogr_sql_dialect.html#ogr-sql-dialect"
+target="_blank">OGR SQL Syntax</a>. A simple way to select a subset of
+features is using the <code>-where</code> option. This allows you to
+specify an attribute query to filter the results. Here we modify our
+command to extract only the cities where the <code>country</code> column
+has the value <strong>India</strong>.</p>
 <p><strong>Windows</strong></p>
 <pre><code>ogr2ogr -f GPKG mycities.gpkg worldcities.csv ^
   -oo X_POSSIBLE_NAMES=lng -oo Y_POSSIBLE_NAMES=lat -a_srs EPSG:4326 ^
@@ -1996,9 +2012,9 @@ Shapefile format is <em>ISO-8859-1</em> - which doesn’t support
 non-latin characters. You can specify the encoding to
 <strong>UTF-8</strong> using the <code>-lco</code> option in
 <code>ogr2ogr</code> command. <em>Hint: Review the <a
-href="https://gdal.org/drivers/vector/shapefile.html#layer-creation-options">Layer
-Creation Options</a> for the shapefile driver to see the correct
-syntax</em>.</p></li>
+href="https://gdal.org/drivers/vector/shapefile.html#layer-creation-options"
+target="_blank">Layer Creation Options</a> for the shapefile driver to
+see the correct syntax</em>.</p></li>
 <li><p>Challenge 2: While you are exploring the Layer Creation Options,
 add an option to create a spatial index on the output shapefile.
 <em>Hint: You can specify the <code>-lco</code> option multiple times in
@@ -2009,10 +2025,11 @@ the command.</em></p></li>
 <div id="merging-vector-files" class="section level2">
 <h2>2.2 Merging Vector Files</h2>
 <p>Another useful utility provided by OGR is <a
-href="https://gdal.org/programs/ogrmerge.html">ogrmerge.py</a>. This
-command can merge several vector layers into a single data layer. It
-also has several options to control how the datasets are merged - making
-it a very handy tool for data processing tasks.</p>
+href="https://gdal.org/programs/ogrmerge.html"
+target="_blank">ogrmerge.py</a>. This command can merge several vector
+layers into a single data layer. It also has several options to control
+how the datasets are merged - making it a very handy tool for data
+processing tasks.</p>
 <p>We will work with several GeoJSON files containing locations of
 earthquakes. Your data package contains several GEOJSON files in the
 <code>earthquakes/</code> directory. We will merge these 12 files into a
@@ -2071,14 +2088,14 @@ layer name.</em></p>
 <h2>2.3 Geoprocessing and Spatial Queries</h2>
 <p>We have seen examples of using SQL queries in OGR commands. So far we
 have used the queries that adhere to the OGR SQL Dialect. OGR Tools also
-have support <a
-href="https://gdal.org/user/sql_sqlite_dialect.html">SQLite dialect</a>.
-The major advantage of using the SQLite dialect is that you can use
-Spatial SQL functions provided by <a
-href="http://www.gaia-gis.it/spatialite/">Spatialite</a>. This enables a
-wide range of applications where you can do spatial queries using OGR
-tools. A major difference when using the SQLite dialect is that you must
-specify the geometry column explicitly.</p>
+have support <a href="https://gdal.org/user/sql_sqlite_dialect.html"
+target="_blank">SQLite dialect</a>. The major advantage of using the
+SQLite dialect is that you can use Spatial SQL functions provided by <a
+href="http://www.gaia-gis.it/spatialite/"
+target="_blank">Spatialite</a>. This enables a wide range of
+applications where you can do spatial queries using OGR tools. A major
+difference when using the SQLite dialect is that you must specify the
+geometry column explicitly.</p>
 <p>Let’s do some geoprocessing and see how we can use spatial queries
 with OGR Tools. Your data package as a geopackage file
 <code>spatial_query.gpkg</code>. This geopackage contains 2 layers.</p>
@@ -2162,12 +2179,13 @@ Dissolved Buffers
 <h3>2.3.3 Performing Spatial Queries</h3>
 <p>Now that we have a polygon layer with the buffer region around the
 metro stations, we can use the <a
-href="https://gdal.org/programs/ogr_layer_algebra.html"><code>ogr_layer_algebra.py</code></a>
-tool to select the metro stations falling within the buffer region. This
-tool can perform various types of spatial queries, including
-Intersection, Difference (Erase), Union etc. We will use the
-<em>Clip</em> mode to select features from the input layer clipped to
-the features from the secondary layer.</p>
+href="https://gdal.org/programs/ogr_layer_algebra.html"
+target="_blank"><code>ogr_layer_algebra.py</code></a> tool to select the
+metro stations falling within the buffer region. This tool can perform
+various types of spatial queries, including Intersection, Difference
+(Erase), Union etc. We will use the <em>Clip</em> mode to select
+features from the input layer clipped to the features from the secondary
+layer.</p>
 <p><strong>Windows</strong></p>
 <pre><code>python %CONDA_PREFIX%\Scripts\ogr_layer_algebra.py Clip ^
   -input_ds spatial_query.gpkg -input_lyr bars_and_pubs_reprojected ^
@@ -2275,8 +2293,8 @@ prints the time taken by each of them.</p>
 <h1>4. Automating and Scheduling GDAL/OGR Jobs</h1>
 <p>The easiest way to run commands on a schedule on a Linux-based server
 is using a <a
-href="https://towardsdatascience.com/create-your-first-cronjob-on-the-linux-server-74e2fdc76e78">Cron
-Job</a>.</p>
+href="https://towardsdatascience.com/create-your-first-cronjob-on-the-linux-server-74e2fdc76e78"
+target="_blank">Cron Job</a>.</p>
 <p>You will have to edit your <code>crontab</code> and schedule the
 execution of your script (either Shell Script or Python Script). The key
 is to activate the conda environment before execution of the script.</p>
@@ -2287,8 +2305,8 @@ crontab entry that executes it every morning at 6am.</p>
 <p>If you get an error while execution, you may have to include some
 environment variables in the crontab file so it can find
 <code>conda</code> correctly. <a
-href="https://unix.stackexchange.com/questions/454957/cron-job-to-run-under-conda-virtual-environment">Learn
-more</a>.</p>
+href="https://unix.stackexchange.com/questions/454957/cron-job-to-run-under-conda-virtual-environment"
+target="_blank">Learn more</a>.</p>
 <pre><code>SHELL=/bin/bash
 BASH_ENV=~/.bashrc
 0 6 * * * conda activate gdal;python batch-parallel.py; conda deactivate</code></pre>
@@ -2297,9 +2315,9 @@ BASH_ENV=~/.bashrc
 <h1>Tips for Improving Performance</h1>
 <div id="configuration-options" class="section level2">
 <h2>Configuration Options</h2>
-<p>GDAL has several <a
-href="https://gdal.org/user/configoptions.html">configuration
-options</a> that can be tweaked to help with faster processing.</p>
+<p>GDAL has several <a href="https://gdal.org/user/configoptions.html"
+target="_blank">configuration options</a> that can be tweaked to help
+with faster processing.</p>
 <ul>
 <li><code>--config GDAL_CACHEMAX 512</code>: This option is the one that
 helps speed up most GDAL commands by allowing them to use larger amount
@@ -2349,33 +2367,33 @@ vector or raster data along with abbreviations indicating the
 capabilities.</p>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>Abbreviation</th>
 <th>Capabilities</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td>r</td>
 <td>read</td>
 </tr>
-<tr>
+<tr class="even">
 <td>ro</td>
 <td>read only</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>w</td>
 <td>write (create dataset)</td>
 </tr>
-<tr>
+<tr class="even">
 <td>w+</td>
 <td>write with (support to update)</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>s</td>
 <td>supports subdatasets</td>
 </tr>
-<tr>
+<tr class="even">
 <td>v</td>
 <td>supports virtual access - eg. /vsimem/</td>
 </tr>
@@ -2413,10 +2431,10 @@ supplying the <code>-json</code> option.</p>
 <p>Next, we need a way to parse the JSON and extract the fields we are
 interested in. There are many other command-line utilities designed to
 do just that. Here we use the popular JSON processing utility <a
-href="https://stedolan.github.io/jq/">jq</a>. You can download and
-install the <code>jq CLI</code> for your operating system and make sure
-it is in the system path. Then we can extract the required data using
-the <code>jq</code> query like below.</p>
+href="https://stedolan.github.io/jq/" target="_blank">jq</a>. You can
+download and install the <code>jq CLI</code> for your operating system
+and make sure it is in the system path. Then we can extract the required
+data using the <code>jq</code> query like below.</p>
 <pre><code>gdalinfo -stats -json merged.vrt | jq &quot;.bands[0].maximum&quot;</code></pre>
 <p><img src="images/gdal/jq.png" width="60%" style="display: block; margin: auto;" /></p>
 <p>Alternatively, you can also run the command via Python and use the
@@ -2471,8 +2489,9 @@ conda install -c conda-forge rasterio rio-cogeo</code></pre>
 <li>Using Python</li>
 </ol>
 <p>You can use the <a
-href="https://github.com/rouault/cog_validator/blob/master/validate_cloud_optimized_geotiff.py">validate_cloud_optimized_geotiff.py</a>
-script to check whether a file is a valid COG.</p>
+href="https://github.com/rouault/cog_validator/blob/master/validate_cloud_optimized_geotiff.py"
+target="_blank">validate_cloud_optimized_geotiff.py</a> script to check
+whether a file is a valid COG.</p>
 <pre><code>python validate_cloud_optimized_geotiff.py merged_cog.tif</code></pre>
 <p>You can also use it in your Python script as follows</p>
 <pre><code>import validate_cloud_optimized_geotiff.py
@@ -2572,17 +2591,16 @@ results to have edge artifacts. Since JPEG is a lossy compression
 algorithm, it causes no-data values (typically 0) being converted to
 non-zero values. This causes problems when you want to mosaic different
 tiles, or mask the black pixels. Fortunately, GDAL comes with a handy
-tool called <a
-href="https://gdal.org/programs/nearblack.html">nearblack</a> that is
-designed to solve this problem. You can specify a tolerance value to
-remove edge pixels that may not be exactly 0. It scans the image inwards
-till it finds these near-black pixel values and masks them. Let’s say we
-have a mosaic of JPEG compressed imagery without an alpha band and we
-want to set a mask. If we simply set 0 as nodata value, you will end up
-with edge artifacts, along with many dark pixels within the mosaic
-(building shadows/water etc.) being masked. Instead we use the
-<code>nearblack</code> program to set edge pixels with value 0-5 being
-considered nodata.</p>
+tool called <a href="https://gdal.org/programs/nearblack.html"
+target="_blank">nearblack</a> that is designed to solve this problem.
+You can specify a tolerance value to remove edge pixels that may not be
+exactly 0. It scans the image inwards till it finds these near-black
+pixel values and masks them. Let’s say we have a mosaic of JPEG
+compressed imagery without an alpha band and we want to set a mask. If
+we simply set 0 as nodata value, you will end up with edge artifacts,
+along with many dark pixels within the mosaic (building shadows/water
+etc.) being masked. Instead we use the <code>nearblack</code> program to
+set edge pixels with value 0-5 being considered nodata.</p>
 <pre><code>nearblack -near 5 -setmask -o aoi_masked.tif aoi.tif \
   -co COMPRESS=JPEG -co TILED=YES -co PHOTOMETRIC=YCBCR</code></pre>
 <div class="figure" style="text-align: center">
@@ -2644,19 +2662,17 @@ training dataset as a non-georeferenced tile
 file using the projection and extent of the GeoTIFF file.</p>
 <p><img src="images/gdal/extract_projection.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>We can extract the extent and resolution of the original GeoTIFF
-using the <a
-href="http://geotiff.maptools.org/listgeo.html"><code>listgeo</code></a>
-tool. This tool is already part of the standard GDAL conda distribution.
-We will extract the world file using the <code>-tfw</code> flag that
-generates an ESRI world file.</p>
+using the <a href="http://geotiff.maptools.org/listgeo.html"
+target="_blank"><code>listgeo</code></a> tool. This tool is already part
+of the standard GDAL conda distribution. We will extract the world file
+using the <code>-tfw</code> flag that generates an ESRI world file.</p>
 <pre><code>listgeo -tfw tile_1_1.tif</code></pre>
 <p>You will see that a new file named <code>tile_1_1.tfw</code> is
 generated alongside the original GeoTIFF. Next we extract the projecton
-information using <a
-href="https://gdal.org/programs/gdalsrsinfo.html"><code>gdalsrsinfo</code></a>
-command. This command prints the projection information in a variety of
-supported formats. We save the output to a file with a <code>.prj</code>
-extension.</p>
+information using <a href="https://gdal.org/programs/gdalsrsinfo.html"
+target="_blank"><code>gdalsrsinfo</code></a> command. This command
+prints the projection information in a variety of supported formats. We
+save the output to a file with a <code>.prj</code> extension.</p>
 <pre><code>gdalsrsinfo tile_1_1.tif &gt; tile_1_1.prj</code></pre>
 <p>The <code>tile_1_1.tfw</code> and <code>tile_1_1.prj</code> contain
 all the information we need to georeference the PNG tile.</p>
@@ -2665,9 +2681,10 @@ the original tile.</p>
 <pre><code>gdal_translate -a_srs tile_1_1.prj tile_1_1_annotated.png tile_1_1_annotated.tif</code></pre>
 <p>The resulting file contains the projection but the extents are not
 correct. We can use the <a
-href="http://geotiff.maptools.org/geotifcp.html"><code>geotifcp</code></a>
-tool to apply the extents from the world file to the GeoTIFF. This tool
-is also part of the standard GDAL conda distribution.</p>
+href="http://geotiff.maptools.org/geotifcp.html"
+target="_blank"><code>geotifcp</code></a> tool to apply the extents from
+the world file to the GeoTIFF. This tool is also part of the standard
+GDAL conda distribution.</p>
 <pre><code>geotifcp -e tile_1_1.tfw tile_1_1_annotated.tif tile_1_1_annotated_georeferenced.tif</code></pre>
 </div>
 <div id="merging-files-with-different-resolutions"
@@ -2734,13 +2751,15 @@ follows.</p>
 <div id="extracting-values-from-a-raster" class="section level2">
 <h2>Extracting Values from a Raster</h2>
 <p>A useful tool called <a
-href="https://gdal.org/programs/gdallocationinfo.html"><code>gdallocationinfo</code></a>
-comes with the GDAL suite that can do point lookups from the raster at
-one or more pairs of coordinates. Combined with GDAL’s capabilities to
-stream data from cloud datasets with the <a
-href="https://gdal.org/user/virtual_file_systems.html">Virtual File
-System</a>, you can efficiently lookup pixel values from without having
-to load the entire raster into memory.</p>
+href="https://gdal.org/programs/gdallocationinfo.html"
+target="_blank"><code>gdallocationinfo</code></a> comes with the GDAL
+suite that can do point lookups from the raster at one or more pairs of
+coordinates. Combined with GDAL’s capabilities to stream data from cloud
+datasets with the <a
+href="https://gdal.org/user/virtual_file_systems.html"
+target="_blank">Virtual File System</a>, you can efficiently lookup
+pixel values from without having to load the entire raster into
+memory.</p>
 <p>For example, we have a large (8GB) single-band Cloud-Optimized
 GeoTiff (COG) file on a Google Cloud Storage bucket. This file is a
 global mosaic of VIIRS Nighttime Lights for the year 2021 and the pixel
@@ -2828,11 +2847,12 @@ applications including urban planning and telecommunications. We can
 take the London 1m DSM dataset and carry out the visibility analysis
 from a location.</p>
 <p>We will determine all the areas of London that are visible from the
-top of the <a href="https://en.wikipedia.org/wiki/Tower_42">Tower 42</a>
-building. This is a skyscraper located in the city of London.</p>
+top of the <a href="https://en.wikipedia.org/wiki/Tower_42"
+target="_blank">Tower 42</a> building. This is a skyscraper located in
+the city of London.</p>
 <p>We take the merged DSM created for <a
-href="https://courses.spatialthoughts.com/gdal-tools.html#assignment">Assignment
-1</a> and generate a viewshed.</p>
+href="https://courses.spatialthoughts.com/gdal-tools.html#assignment"
+target="_blank">Assignment 1</a> and generate a viewshed.</p>
 <p>The CRS of the dataset is EPSG:27700 so we need to get the observer
 location coordinates in this CRS. We can use the
 <code>gdaltransform</code> command to convert the Lat/Lon coordinates to
@@ -2865,9 +2885,9 @@ Results of Viewshed Analysis
 used by Google Earth. Often time, GIS users want to export their data to
 KML for visualizing it in Google Earth. You may also want to extract
 data from KML files or convert them into other spatial formats used in
-GIS. The <a href="https://gdal.org/drivers/vector/kml.html">GDAL KML
-Driver</a> can both read and write KML files and provides many options
-to make the conversion compatible.</p>
+GIS. The <a href="https://gdal.org/drivers/vector/kml.html"
+target="_blank">GDAL KML Driver</a> can both read and write KML files
+and provides many options to make the conversion compatible.</p>
 <div id="exporting-data-to-kml-files" class="section level3">
 <h3>Exporting Data to KML files</h3>
 <p>Let’s take the <code>metro_stations</code> layer from the
@@ -2901,10 +2921,9 @@ KML Export with NameField
 <p>The KML file format supports having multiple data layers within the
 same KML file. We will now learn how to extract a specific data layer
 and convert it to a shapefile. GDAL supports reading data from a URL
-using the <a
-href="https://gdal.org/user/virtual_file_systems.html">Virtual File
-System</a>. We can read a KML file from the internet using the
-<code>vsicurl/</code> prefix.</p>
+using the <a href="https://gdal.org/user/virtual_file_systems.html"
+target="_blank">Virtual File System</a>. We can read a KML file from the
+internet using the <code>vsicurl/</code> prefix.</p>
 <pre><code>ogrinfo /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml</code></pre>
 <p><img src="images/gdal/kml3.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>Let’s read the <code>Paths</code> layer</p>
@@ -2917,22 +2936,22 @@ fields using the <code>-select</code> option.</p>
 <pre><code>ogr2ogr -f &quot;ESRI Shapefile&quot; paths.shp /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Paths -select &quot;NAME,Description&quot;</code></pre>
 <p><img src="images/gdal/kml5.png" width="75%" style="display: block; margin: auto;" /></p>
 <p>You can also convert a KML layer to a CSV file. The <a
-href="https://gdal.org/drivers/vector/csv.html">GDAL CSV Driver</a> is
-able to extract the geometry of features using the <code>GEOMETRY</code>
-layer creation option. Let’s convert the <code>Placemark</code> layer
-from the <code>KML_Samples.kml</code> to a CSV file with
-<strong>X</strong>, <strong>Y</strong> and <strong>Z</strong> columns
-extracted from the geometry.</p>
+href="https://gdal.org/drivers/vector/csv.html" target="_blank">GDAL CSV
+Driver</a> is able to extract the geometry of features using the
+<code>GEOMETRY</code> layer creation option. Let’s convert the
+<code>Placemark</code> layer from the <code>KML_Samples.kml</code> to a
+CSV file with <strong>X</strong>, <strong>Y</strong> and
+<strong>Z</strong> columns extracted from the geometry.</p>
 <pre><code>ogr2ogr -f CSV points.csv /vsicurl/https://developers.google.com/kml/documentation/KML_Samples.kml Placemarks -lco GEOMETRY=AS_XYZ</code></pre>
 <p><img src="images/gdal/kml6.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="kml-vs.-libkml-drivers" class="section level3">
 <h3>KML vs. LIBKML Drivers</h3>
 <p>If your GDAL binaries are compiled with support for the <a
-href="https://gdal.org/drivers/vector/libkml.html#vector-libkml">LIBKML
-Driver</a>, it is preferable to use it over the <strong>KML</strong>
-driver. The <strong>LIBKML</strong> driver supports many more options
-and allows you to create fully featured KMLs.</p>
+href="https://gdal.org/drivers/vector/libkml.html#vector-libkml"
+target="_blank">LIBKML Driver</a>, it is preferable to use it over the
+<strong>KML</strong> driver. The <strong>LIBKML</strong> driver supports
+many more options and allows you to create fully featured KMLs.</p>
 <p>Below is an example of data conversion using the LIBKML driver. To
 specify the name field, the LIBKML driver uses an environment variable
 called <code>LIBKML_NAME_FIELD</code> that can be specified with the
@@ -2961,13 +2980,13 @@ statistics as an Excel sheet.</p>
 <div id="using-virtual-layers" class="section level2">
 <h2>Using Virtual Layers</h2>
 <p>Similar to GDAL, OGR also supports <a
-href="https://gdal.org/drivers/vector/vrt.html">Virtual File Format
-(VRT)</a>. Compared to the raster version, the OGR Virtual Driver is
-much more capable and can be used for on-the-fly data transformations.
-Multiple data layers can be combined into a single <em>virtual</em>
-layer using the XML-based <code>.vrt</code> format files. VRT files are
-also used to configure reading tabular data into spatial data
-formats.</p>
+href="https://gdal.org/drivers/vector/vrt.html" target="_blank">Virtual
+File Format (VRT)</a>. Compared to the raster version, the OGR Virtual
+Driver is much more capable and can be used for on-the-fly data
+transformations. Multiple data layers can be combined into a single
+<em>virtual</em> layer using the XML-based <code>.vrt</code> format
+files. VRT files are also used to configure reading tabular data into
+spatial data formats.</p>
 <div id="read-geonames-files" class="section level3">
 <h3>Read Geonames Files</h3>
 <p>Your data package contains 3 large text files from Geonames in the
@@ -3072,25 +3091,27 @@ mountains in North America.</p>
 <div id="resources" class="section level1">
 <h1>Resources</h1>
 <ul>
-<li><a href="https://twitter.com/gdaltips">GDAL Tips</a>
+<li><a href="https://twitter.com/gdaltips" target="_blank">GDAL Tips</a>
 <code>@gdaltips</code> on Twitter</li>
 <li>A Gentle Introduction to GDAL by Robert Simmon <a
-href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-1-a3253eb96082">Part-1</a>,
-<a
-href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-2-map-projections-gdalwarp-e05173bd710a">Part-2</a>,
-<a
-href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-3-geodesy-local-map-projections-794c6ff675ca">Part-3</a>,
-<a
-href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-4-working-with-satellite-data-d3835b5e2971">Part-4</a>,
-<a
-href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-5-shaded-relief-ec29601db654">Part-5</a>,
-<a
-href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-6-1-visualizing-data-8e6e7d6ef641">Part-6</a>,
-<a
-href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-7-transforming-data-178df8640dd2">Part-7</a></li>
+href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-1-a3253eb96082"
+target="_blank">Part-1</a>, <a
+href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-2-map-projections-gdalwarp-e05173bd710a"
+target="_blank">Part-2</a>, <a
+href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-3-geodesy-local-map-projections-794c6ff675ca"
+target="_blank">Part-3</a>, <a
+href="https://medium.com/planet-stories/a-gentle-introduction-to-gdal-part-4-working-with-satellite-data-d3835b5e2971"
+target="_blank">Part-4</a>, <a
+href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-5-shaded-relief-ec29601db654"
+target="_blank">Part-5</a>, <a
+href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-6-1-visualizing-data-8e6e7d6ef641"
+target="_blank">Part-6</a>, <a
+href="https://medium.com/@robsimmon/a-gentle-introduction-to-gdal-part-7-transforming-data-178df8640dd2"
+target="_blank">Part-7</a></li>
 <li><a
-href="https://datascienceatthecommandline.com/2e/chapter-1-introduction.html">Data
-Science at the Command Line</a> by Jeroen Janssens</li>
+href="https://datascienceatthecommandline.com/2e/chapter-1-introduction.html"
+target="_blank">Data Science at the Command Line</a> by Jeroen
+Janssens</li>
 </ul>
 </div>
 <div id="data-credits" class="section level1">
@@ -3098,32 +3119,34 @@ Science at the Command Line</a> by Jeroen Janssens</li>
 <ul>
 <li>Landsat: Landsat-8 image courtesy of the U.S. Geological Survey.
 Image downloaded from <a
-href="https://console.cloud.google.com/marketplace/details/usgs-public-data/landast">Google
-Cloud Platform</a> and pre-processed using <a
-href="https://fromgistors.blogspot.com/p/semi-automatic-classification-plugin.html">Semi
-Automatic Classification Plugin from QGIS</a></li>
+href="https://console.cloud.google.com/marketplace/details/usgs-public-data/landast"
+target="_blank">Google Cloud Platform</a> and pre-processed using <a
+href="https://fromgistors.blogspot.com/p/semi-automatic-classification-plugin.html"
+target="_blank">Semi Automatic Classification Plugin from QGIS</a></li>
 <li>Earth at Night image: Credit: NASA Earth Observatory/NOAA NGDC.
 Earth at Night flat hi-resolution map downloaded from <a
-href="https://earthobservatory.nasa.gov/features/NightLights/page3.php">NASA
-earth observatory</a></li>
+href="https://earthobservatory.nasa.gov/features/NightLights/page3.php"
+target="_blank">NASA earth observatory</a></li>
 <li>William Mackenzie 1870 map of Southern India: out-of-copyright
 scanned map downloaded from <a
-href="http://www.hipkiss.org/data/maps.html">Hipkiss’s Scanned Old
-Maps</a></li>
+href="http://www.hipkiss.org/data/maps.html" target="_blank">Hipkiss’s
+Scanned Old Maps</a></li>
 <li>NAIP 2016 Aerial Imagery for California: The National Agriculture
 Imagery Program (NAIP). USDA-FSA-APFO Aerial Photography Field Office.
 Downloaded from <a
-href="https://nrcs.app.box.com/v/naip/folder/18144379349">NRCS</a></li>
+href="https://nrcs.app.box.com/v/naip/folder/18144379349"
+target="_blank">NRCS</a></li>
 <li>London 1m DSM. Downloaded from Defra Data Services Platform. ©
 Environment Agency copyright and/or database right 2019. All rights
 reserved.</li>
 <li>Melbourne Metro Stations: © 2019 <a
-href="https://data.melbourne.vic.gov.au/">The City of Melbourne Open
-Data Portal</a>. Data provided by Metro Trains Melbourne</li>
+href="https://data.melbourne.vic.gov.au/" target="_blank">The City of
+Melbourne Open Data Portal</a>. Data provided by Metro Trains
+Melbourne</li>
 <li>Melbourne Bars and Pubs: © 2019 <a
-href="https://data.melbourne.vic.gov.au/">The City of Melbourne Open
-Data Portal</a>. Data provided by Census of Land Use and Employment
-(CLUE)</li>
+href="https://data.melbourne.vic.gov.au/" target="_blank">The City of
+Melbourne Open Data Portal</a>. Data provided by Census of Land Use and
+Employment (CLUE)</li>
 <li>VIIRS Annual VNL V2 for 2021. C. D. Elvidge, M. Zhizhin, T. Ghosh,
 F-C. Hsu, “Annual time series of global VIIRS nighttime lights derived
 from monthly averages: 2012 to 2019”, Remote Sensing (In press)</li>
@@ -3132,28 +3155,30 @@ from monthly averages: 2012 to 2019”, Remote Sensing (In press)</li>
 <div id="license" class="section level1">
 <h1>License</h1>
 <p>This course material is licensed under a <a
-href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons
-Attribution-NonCommercial 4.0 International License</a>. You are free to
-use the material for any non-commercial purpose. Kindly give appropriate
-credit to the original author.</p>
+href="https://creativecommons.org/licenses/by-nc/4.0/"
+target="_blank">Creative Commons Attribution-NonCommercial 4.0
+International License</a>. You are free to use the material for any
+non-commercial purpose. Kindly give appropriate credit to the original
+author.</p>
 <p>If you would like to utilize these materials as part of a commercial
 offering, you can purchase a <em>Trainer License</em> for a small
 fee.</p>
-<p>Please <a href="https://spatialthoughts.com/contact/">contact us</a>
-for pricing and terms.</p>
-<p>© 2020 Ujaval Gandhi <a
-href="http://spatialthoughts.com">www.spatialthoughts.com</a></p>
+<p>Please <a href="https://spatialthoughts.com/contact/"
+target="_blank">contact us</a> for pricing and terms.</p>
+<p>© 2020 Ujaval Gandhi <a href="http://spatialthoughts.com"
+target="_blank">www.spatialthoughts.com</a></p>
 <hr />
 <p><strong>This course is offered as an instructor-led online class.
-Visit <a href="https://spatialthoughts.com/events/">Spatial Thoughts</a>
-to know details of upcoming sessions.</strong></p>
+Visit <a href="https://spatialthoughts.com/events/"
+target="_blank">Spatial Thoughts</a> to know details of upcoming
+sessions.</strong></p>
 </div>
 <div class="footnotes footnotes-end-of-document">
 <hr />
 <ol>
 <li id="fn1"><p>Code reference <a
 href="https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal"
-class="uri">https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal</a><a
+target="_blank">https://gis.stackexchange.com/questions/255537/merging-hillshade-dem-data-into-color-relief-single-geotiff-with-qgis-and-gdal</a><a
 href="#fnref1" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
