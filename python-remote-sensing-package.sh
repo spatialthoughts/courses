@@ -76,7 +76,7 @@ if [ "$UPDATE_RELEASE" = true ]; then
     )
 
     FILES=()
-    for i in "${!SLIDE_IDS[@]}"; do
+    for i in {1..${#SLIDE_IDS[@]}}; do
         id="${SLIDE_IDS[$i]}"
         name="${SLIDE_NAMES[$i]}"
         out="${OUTPUT_DIR}${name}"
@@ -85,7 +85,7 @@ if [ "$UPDATE_RELEASE" = true ]; then
     done
 
     # --clobber can 404 on a stale asset id, so delete each asset by name first instead.
-    for i in "${!SLIDE_NAMES[@]}"; do
+    for i in {1..${#SLIDE_NAMES[@]}}; do
         name="${SLIDE_NAMES[$i]}"
         gh release delete-asset presentations "$name" --repo spatialthoughts/courses --yes 2>/dev/null
         gh release upload presentations "${FILES[$i]}" --repo spatialthoughts/courses
