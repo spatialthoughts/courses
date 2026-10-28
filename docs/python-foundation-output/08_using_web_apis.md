@@ -47,7 +47,7 @@ The response contains the data received from the server. It contains the HTTP *s
 ```python
 import requests
 
-response = requests.get('https://www.spatialthoughts.com')
+response = requests.get('https://spatialthoughts.com')
 
 print(response.status_code)
 ```

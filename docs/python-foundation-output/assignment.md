@@ -70,6 +70,8 @@ Show a marker for each location with the name as a tooltip.
 Format the code as a single cell I can paste into a Jupyter notebook.
 ```
 
+Tip: If you get errors when accessing the default OpenStreetMap basemap tiles, add the following to your prompt. "Use the OpenStreetMap.Mapnik basemap from xyzservices"
+
 ## Bonus Points [Optional]
 
 Use AI-assisted Coding to do route optimization. Use the OpenRouteService Optimization API to find the optimal path to visit all the location, starting from the first address. Display the results on the map.
