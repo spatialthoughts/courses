@@ -40,11 +40,13 @@ if [ "$UPDATE_RELEASE" = true ]; then
         "125LV0qR47S_OGaZZr5Zv-7lbWfdZ5pNo3iFm6IOX7uI"
         "1fFCOHSEPnGamcymzTZGE3Sc9lMJGo4tQ063leEyZMU8"
         "1fyNe15yhbMq_435yaHRZefKzos4Vpyf54mqNfhC_flQ"
+        "1nBvuv9-Qa90RmNCOyLxl0kj9sBIs4QQ3O7ytZccu-Y4"
     )
     SLIDE_NAMES=(
         "Python_Foundation_for_Spatial_Analysis_Introduction_and_Course_Overview.pdf"
         "Python_Foundation_for_Spatial_Analysis_Coordinate_Systems.pdf"
         "Python_Foundation_for_Spatial_Analysis_Pandas_GeoPandas.pdf"
+        "Python_Foundation_for_Spatial_Analysis_NumPy_XArray.pdf"
     )
 
     FILES=()
