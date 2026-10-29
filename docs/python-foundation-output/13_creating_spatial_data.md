@@ -28,16 +28,29 @@ We specify the separator as **\\t** (tab) as an argument to the `read_csv()` met
 
 
 ```python
-column_names = [
-    'geonameid', 'name', 'asciiname', 'alternatenames',
-    'latitude', 'longitude', 'feature class', 'feature code',
-    'country code', 'cc2', 'admin1 code', 'admin2 code',
-    'admin3 code', 'admin4 code', 'population', 'elevation',
-    'dem', 'timezone', 'modification date'
-]
-
-df = pd.read_csv(path, sep='\t', names=column_names)
-df.info()
+# Column names and data types for the GeoNames dataset
+columns = {
+    'geonameid':         'int64',
+    'name':              'string',
+    'asciiname':         'string',
+    'alternatenames':    'string',
+    'latitude':          'float64',
+    'longitude':         'float64',
+    'feature class':     'string',
+    'feature code':      'string',
+    'country code':      'string',
+    'cc2':               'string',
+    'admin1 code':       'string',
+    'admin2 code':       'string',
+    'admin3 code':       'string',
+    'admin4 code':       'string',
+    'population':        'int64',
+    'elevation':         'Int32',
+    'dem':               'Int32',
+    'timezone':          'string',
+    'modification date': 'string',
+}
+df = pd.read_csv(path, sep='\t', names=columns.keys(), dtype=columns)
 ```
 
 ## Filtering Data
@@ -92,18 +105,33 @@ import geopandas as gpd
 data_pkg_path = 'data/geonames/'
 files = os.listdir(data_pkg_path)
 
-column_names = [
-    'geonameid', 'name', 'asciiname', 'alternatenames',
-    'latitude', 'longitude', 'feature class', 'feature code',
-    'country code', 'cc2', 'admin1 code', 'admin2 code',
-    'admin3 code', 'admin4 code', 'population', 'elevation',
-    'dem', 'timezone', 'modification date'
-]
+# Column names and data types for the GeoNames dataset
+columns = {
+    'geonameid':         'int64',
+    'name':              'string',
+    'asciiname':         'string',
+    'alternatenames':    'string',
+    'latitude':          'float64',
+    'longitude':         'float64',
+    'feature class':     'string',
+    'feature code':      'string',
+    'country code':      'string',
+    'cc2':               'string',
+    'admin1 code':       'string',
+    'admin2 code':       'string',
+    'admin3 code':       'string',
+    'admin4 code':       'string',
+    'population':        'int64',
+    'elevation':         'Int32',
+    'dem':               'Int32',
+    'timezone':          'string',
+    'modification date': 'string',
+}
 
 dataframes = []
 for file in files:
     path = os.path.join(data_pkg_path, file)
-    df = pd.read_csv(path, sep='\t', names=column_names)
+    df = pd.read_csv(path, sep='\t', names=columns.keys(), dtype=columns)
     mountains = df[df['feature class']=='T']
     dataframes.append(mountains)
 
@@ -119,13 +147,13 @@ merged
 
 One of the best sources of spatial data for your project is [OpenStreetMap (OSM)](https://www.openstreetmap.org/). It is a free and open database of global mapping data created and maintained by the community. It has rich information on features such as street network, buildings, rivers, points-of-interest and more. You can easily extract a subset for your region of interest using the [`osmnx`](https://osmnx.readthedocs.io/en/stable/) package. This package queries the OSM database for your requested data and returns a GeoPandas GeoDataFrame - making it ideal for downstream spatial analysis tasks.
 
-Download the data for a particular theme (streets, parks, hospitals, surface water etc.) for your region of interest and save it as a shapefile.
+Download the data for all parks for your region of interest and save it as a shapefile.
 
 Tips when designing your prompt:
 
 * Your region of interest maybe spelt differently or may be called with a different name. Query the web interface at https://openstreetmap.org/ to pick your region. Pick a small neighborhood or town for this challenge. Downloading data for a large region may take a long time.
-* Claude is pretty good at inferring the correct OSM tags for the required features. If you are trying to get specific features, browse the [Map features wiki](https://wiki.openstreetmap.org/wiki/Map_Features) to find the appropriate tag(s) to include in your prompt.
 * There are several methods for accessing OpenStreetMap data. Mention that you want to use the `osmnx` package.
 * Before running the code, you will have to install the `osmnx` package in your environment.
+* The default server that `osmnx` queries can sometimes be slow or overloaded. Add instructions in your prompt to include alternate Overpass API servers in your code.
 
 ----
