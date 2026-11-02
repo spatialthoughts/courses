@@ -105,16 +105,6 @@ for city in cities:
         break
 ```
 
-A `continue` statement will skip the remaining part of the loop and go to the next iteration
-
-
-```python
-for city in cities:
-    if city == 'Los Angeles':
-        continue
-    print(city)
-```
-
 A `pass` statement doesn't do anything. It is useful when some code is required to complete the syntax, but you do not want any code to execute. It is typically used as a placeholder when a function is not complete.
 
 

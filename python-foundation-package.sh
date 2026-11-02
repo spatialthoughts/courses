@@ -1,5 +1,5 @@
 #!/bin/bash
-# Use --update-release to also upload the downloaded presentations to the GitHub release
+# Use --update-release to also upload the data package and presentations to the GitHub releases
 UPDATE_RELEASE=false
 for arg in "$@"; do
     if [ "$arg" = "--update-release" ]; then
@@ -9,14 +9,14 @@ done
 
 OUTPUT_DIR=~/Downloads/
 PACKAGE_DIR=~/Downloads/python_foundation
-SOLUTIONS_DIR=~/Downloads/python_foundation_solutions
 WEB_DIR=~/projects/python-foundation-web
 
 
+# Start from a clean package folder so stale files don't end up in the zip
+rm -rf $PACKAGE_DIR
 mkdir -p $PACKAGE_DIR/images/python_foundation
 mkdir -p $PACKAGE_DIR/data
 mkdir -p $PACKAGE_DIR/output
-mkdir -p $SOLUTIONS_DIR
 cp -R images/python_foundation/* $PACKAGE_DIR/images/python_foundation/
 cp -R code/python_foundation/data/* $PACKAGE_DIR/data
 rm -R $PACKAGE_DIR/data/.ipynb_checkpoints $PACKAGE_DIR/data/*/.ipynb_checkpoints
@@ -26,7 +26,11 @@ jupyter-nbconvert --to markdown  code/python_foundation/[0-9]*.ipynb --output-di
 jupyter-nbconvert --to markdown  code/python_foundation/assignment.ipynb --output-dir python-foundation-output/
 jupyter-nbconvert --to markdown  code/python_foundation/common_errors.ipynb --output-dir python-foundation-output/
 cp code/python_foundation/*.ipynb $PACKAGE_DIR/
-cp code/python_foundation/solutions/*.ipynb $SOLUTIONS_DIR/
+
+# Create the data package zip, replacing any existing one
+ZIP_FILE=${OUTPUT_DIR}python_foundation.zip
+rm -f $ZIP_FILE
+(cd $OUTPUT_DIR && zip -rq python_foundation.zip python_foundation -x '*.DS_Store' '*.ipynb_checkpoints*')
 
 
 # Update python-foundation-web repository
@@ -35,6 +39,10 @@ cp code/python_foundation/*.py $WEB_DIR/
 
 
 if [ "$UPDATE_RELEASE" = true ]; then
+    # Upload the data package to the 'data' release
+    gh release delete-asset data python_foundation.zip --repo spatialthoughts/courses --yes 2>/dev/null
+    gh release upload data $ZIP_FILE --repo spatialthoughts/courses
+
     # Update the presentations and upload to releases
     SLIDE_IDS=(
         "125LV0qR47S_OGaZZr5Zv-7lbWfdZ5pNo3iFm6IOX7uI"
