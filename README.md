@@ -59,8 +59,9 @@ We prefer the following style while writing the tutorials.
 | Heading 1                                   | ```##``` |
 | Heading 2                                   | ```###``` |
 | Window titles, Tabs, Dialogs and buttons    | ```*label*``` |
-| Menu items                                  | ``` ** menu &arr; submenu1 &rarr; submenu2 ** ``` |
-| Processing algorithms                       | ``` ** Processing Toolbox &arr; Vector Overlay &rarr; Clip** ``` |
+| Menu items                                  | ``` ** menu &rarr; submenu1 &rarr; submenu2 ** ``` |
+| Processing algorithms                       | ``` ** Processing Toolbox &rarr; Vector Overlay &rarr; Clip** ``` |
 | Layer and file names                        | ``` ``layer_name`` ``` |
-| Text input by the user / keyboard shortcuts | ``` *value* ```| 
+| Text input or values selected by the user   | ``` **value** ```|
+| Keyboard shortcuts                          | ``` *Enter* ```| 
 | Hyper Link's                                | ``` [Spatial Thoughts](https:spatialthoughts.com) ```|
