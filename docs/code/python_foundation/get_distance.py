@@ -6,5 +6,5 @@ new_york = (40.661, -73.944)
 ellipsoid_distance = distance.geodesic(san_francisco, new_york, ellipsoid='WGS-84').km
 
 print('Source Coordinates: {},{}'.format(san_francisco[0], san_francisco[1]))
-print('Destination Coordinates: {},{}'.format(san_francisco[0], san_francisco[1]))
+print('Destination Coordinates: {},{}'.format(new_york[0], new_york[1]))
 print('Ellipsoid Distance: {} km'.format(ellipsoid_distance))
