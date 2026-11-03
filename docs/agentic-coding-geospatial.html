@@ -130,9 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 </style>
 <style type="text/css" data-origin="pandoc">
-html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -143,7 +142,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -2206,7 +2205,8 @@ the first section. Save and close the file.</li>
 
 - Never modify my input data sources and layers. Always create a new layer with your edits. 
 - Create temporary memory layers for all intermediate outputs. 
-- Always use GeoPackage as the format for saving the outputs, unless specified otherwise.
+- Always use GeoPackage as the format for saving the outputs, unless specified otherwise. 
+  QGIS Projects can also be saved inside of a GeoPackage.
 
 ### Processing Algorithms
 
@@ -2226,80 +2226,62 @@ the first section. Save and close the file.</li>
 <h2>6.3 Spatial Analysis with QGIS MCP Server</h2>
 <p>We will now use the QGIS MCP server to carry out a multicriteria
 overlay analysis. Our goal is to find suitable locations for new bicycle
-parking facilities in Westminster, London. We have a QGIS project with
-layers of bicycle theft hotspots, cycling routes, existing cycle parking
-and the borough boundary. We will ask Claude Code to design the
-workflow, run it in QGIS and package it as a reusable processing
-model.</p>
+parking facilities based on several spatial criteria. We have a QGIS
+project with layers of bicycle theft hotspots, cycling routes, existing
+cycle parking and the borough boundary. We will ask Claude Code to
+design the workflow and run it in QGIS via the MCP Server.</p>
 <ol style="list-style-type: decimal">
 <li>Make sure QGIS is open and the MCP server is running. Enter the
 following prompt to load the project. Claude Code will open the
 <code>Bicycle_Theft_Multicriteria</code> project stored in the
 <code>multicriteria.gpkg</code> GeoPackage and summarize the layers it
-contains. Note that the GeoPackage also has a
-<code>bicycle_thefts</code> layer that isn’t part of the project.</li>
+contains.</li>
 </ol>
 <pre><code>Load the Bicycle_Theft_Multicriteria project from data/multicriteria_overlay/
 in QGIS</code></pre>
 <p><img src="images/agentic_coding_geospatial/multicriteria1.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="2" style="list-style-type: decimal">
 <li>Switch to <em>Plan mode</em> (<em>Shift+Tab</em>) and enter the
-following prompt. We are not telling Claude Code which algorithms to
-use. Instead, we ask it to suggest a workflow based on the layers we
-have, so we can review the approach before anything is run.</li>
+following prompt. We will ask Claude Code to suggest a workflow based on
+the layers we have, and will refine it to ensure it matches our
+expectation.</li>
 </ol>
 <pre><code>I want to do a multicriteria overlay analysis to find locations for new
 bicycle parking facilities. Suggest the workflow to do this in QGIS with my
 existing data layers.</code></pre>
 <p><img src="images/agentic_coding_geospatial/multicriteria2.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="3" style="list-style-type: decimal">
-<li>Claude Code will propose a workflow. Before approving it, we want to
-be able to verify each step of the analysis and re-run it later with
-different settings. Select <strong>Tell Claude what to change</strong>
-and enter the following prompt.</li>
+<li>Claude Code will propose a workflow. Once the plan is updated, press
+<em>Ctrl+G</em> to open it in Visual Studio Code and review it.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="4" style="list-style-type: decimal">
+<li>If you want to update the plan, close the file, and select
+<strong>Tell Claude what to change</strong> and enter what you want to
+change. For example, our initial plan excluded loading any intermediate
+layers and had questions about building a model. We can address these by
+entering the following prompt. Claude Code will update the plan. Press
+<em>Ctrl+G</em> to open it in Visual Studio Code and review it. When you
+are happy with the plan, save the file and close it.</li>
 </ol>
 <pre><code>Load all intermediate layers (turned off by default) so I can verify
 the results. Also build a processing model with configurable distances.</code></pre>
-<ol start="4" style="list-style-type: decimal">
-<li>Once the plan is updated, press <em>Ctrl+G</em> to open it in Visual
-Studio Code. The <em>Context</em> section lists each layer and the role
-it plays in the analysis. Claude Code recommends a <em>boolean (sieve)
-vector overlay</em>, where each criterion becomes a polygon of suitable
-area and the overlays combine them. Notice that the plan follows our
-<code>CLAUDE.md</code> rules: native QGIS algorithms only, intermediate
-outputs as memory layers and no edits to the input layers. Scroll down
-to review the criteria and the default distance thresholds.</li>
-</ol>
-<p><img src="images/agentic_coding_geospatial/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="5" style="list-style-type: decimal">
-<li>Switch to the text editor view and scroll to the <em>Execution</em>
-section. The plan now includes building a processing model called
-<code>Bicycle Parking Site Selection</code> with configurable distance
-inputs, running each step individually so all intermediate layers are
-loaded in an <code>Intermediate</code> group with visibility off, and
-checking that the model output matches the step-by-step results. Make
-any edits you need, save the file and close the tab.</li>
-</ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria4.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="6" style="list-style-type: decimal">
+<ol start="5" style="list-style-type: decimal">
 <li>Back in Claude Code, select <strong>Yes, and use auto mode</strong>
 to proceed.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria5.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="7" style="list-style-type: decimal">
+<ol start="6" style="list-style-type: decimal">
 <li>Claude Code will run the analysis step by step using the MCP server,
 then run the new model with the same default distances and confirm both
 produce identical results. It will report the candidate zones ranked by
 the number of bicycle thefts inside each zone. In QGIS, you will see a
 <code>Results</code> group with the <code>candidate_zones</code> and
-<code>candidate_sites</code> layers. The zones are styled by theft
-count. The new <code>Bicycle Parking Site Selection</code> model is
-saved in the <code>multicriteria_overlay</code> folder and the final
-outputs are saved in the <code>parking_site_selection.gpkg</code>
-GeoPackage.</li>
+<code>candidate_sites</code> layers.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria6.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="8" style="list-style-type: decimal">
+<ol start="7" style="list-style-type: decimal">
 <li>Expand the <code>Intermediate</code> group and turn on the layers
 one at a time to verify the analysis. For example, turning on
 <code>01_routes_buffer</code>, <code>02_hotspots_buffer</code> and
@@ -2309,43 +2291,41 @@ outputs visually is an important step in verifying the work done by an
 agent.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria7.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="9" style="list-style-type: decimal">
+<ol start="8" style="list-style-type: decimal">
 <li>Turn off the <code>Intermediate</code> group and turn on the
 <code>candidate_sites</code> layer. Each point is a suggested site for
 new bicycle parking, located inside one of the candidate zones.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria8.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="10" style="list-style-type: decimal">
+<ol start="9" style="list-style-type: decimal">
 <li>Once we have verified the results, we no longer need the
 intermediate layers. Read the <em>Things to know</em> section of the
 summary, which notes small differences between the plan and the model,
 such as the output names. Enter the following prompt to clean up the
 project.</li>
 </ol>
-<pre><code>remove the intermediate layers from the QGIS project</code></pre>
+<pre><code>Remove the intermediate layers from the QGIS project.</code></pre>
 <p><img src="images/agentic_coding_geospatial/multicriteria9.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="11" style="list-style-type: decimal">
+<ol start="10" style="list-style-type: decimal">
 <li>The model created by Claude Code is a regular QGIS processing model
 that anyone can run without an agent. In the <em>Browser</em> panel,
 expand the <code>multicriteria_overlay</code> folder and double-click
 the <code>Bicycle Parking Site Selection</code> model to open it. The
 <em>Parameters</em> tab shows all the inputs we can configure. Let’s see
 what happens if we change one of them. Set <em>Buffer around theft
-hotspots (m)</em> to <strong>0</strong> and keep the other values as
-they are. Click <em>Run</em>. You can learn more about processing models
-in the <a
-href="https://docs.qgis.org/latest/en/docs/user_manual/processing/modeler.html"
-target="_blank">QGIS Documentation</a>.</li>
+hotspots (m)</em> to <strong>0</strong>, <em>Min distance from existing
+parking</em> to <strong>50</strong> and <em>Max distance from cycling
+route</em> to <strong>50</strong>. Click <em>Run</em>.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria10.png" width="75%" style="display: block; margin: auto;" /></p>
-<ol start="12" style="list-style-type: decimal">
+<ol start="11" style="list-style-type: decimal">
 <li>A new set of <code>candidate_sites</code> and
 <code>candidate_zones</code> layers will be added to the project.
-Compare the new sites with the original ones. Changing a single buffer
-value removed one of the original sites and added a new one. The results
-of a multicriteria overlay depend on the distance thresholds we pick,
-and these thresholds are often a judgement call. In the next section, we
-will test how sensitive our results are to these choices.</li>
+Compare the new sites with the original ones. Changing the parameters
+resulted in a very different output. The results of a multicriteria
+overlay depend on the distance thresholds we pick, and these thresholds
+are often a judgement call. In the next section, we will test how
+sensitive our results are to these choices.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/multicriteria11.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
@@ -2365,13 +2345,14 @@ values. Use the QGIS model to run different variables of the analysis to
 reliably detect candidate sites.</code></pre>
 <p><img src="images/agentic_coding_geospatial/sensitivity1.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="2" style="list-style-type: decimal">
-<li>Claude Code will describe its design before running the model. It
-will run the model 27 times, covering every combination of 3 values each
-for <code>route_distance</code>, <code>hotspot_buffer</code> and
-<code>parking_distance</code>, while keeping <code>min_area</code> fixed
-at 500 m2. It will then count how often each location falls in a
-candidate zone, using a 25 m point grid over Westminster. This gives the
-share of runs in which each location is selected.</li>
+<li>Claude Code will describe its design before running the model. In
+this instance it decided to run the model 27 times, covering every
+combination of 3 values each for <code>route_distance</code>,
+<code>hotspot_buffer</code> and <code>parking_distance</code>, while
+keeping <code>min_area</code> fixed at 500 m2. It then counted how often
+each location falls in a candidate zone, using a 25 m point grid over
+Westminster. This gives the share of runs in which each location is
+selected.</li>
 </ol>
 <p><img src="images/agentic_coding_geospatial/sensitivity2.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="3" style="list-style-type: decimal">

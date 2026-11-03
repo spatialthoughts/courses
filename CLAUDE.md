@@ -41,5 +41,10 @@ Source for the Spatial Thoughts OpenCourseWare site (courses.spatialthoughts.com
 - Voice: simple, action-oriented, learner-centric ("We will now learn...", "Next, open this notebook.").
 - Hands-on steps are a numbered list. Each step = the action, what the learner will see, and a short explanation of why. Document warnings and confirmation dialogs and what to click.
 - GUI walkthroughs (QGIS, install guides, web consoles): one screenshot after every step. The text must precisely reproduce what the screenshot shows (every field, option and button set).
-- When introducing a new tool or concept, link the official docs: "You can learn more about X in the [QGIS Documentation](url){target="_blank"}."
-
+- Never add a step without a screenshot. Merge it into the neighbouring step that has one. If it truly needs its own step, flag it for manual review in your reply instead of adding it.
+- Link official docs when introducing a a specific concept, option or function. Point to the exact section or function reference. Examples:
+  - "The default mode of classification is Quantile... There are other modes of classification as well. You can learn more about Data Classification Modes in the [QGIS Documentation](https://docs.qgis.org/testing/en/docs/user_manual/working_with_vector/vector_properties.html?#graduated-renderer){target="_blank"}."
+  - "Let's filter noise and small patches from the result using the [xrspatial.sieve.sieve()](https://xarray-spatial.readthedocs.io/en/stable/reference/_autosummary/xrspatial.sieve.sieve.html){target="_blank"} function."
+- Agentic coding steps: agent output varies between runs. Describe what Claude Code does in general terms ("Claude Code will propose a workflow"). When describing a specific result from the screenshots, use past tense ("In this instance it decided to..."). Don't walk through the contents of plans or summaries.
+- Frame refinement prompts as a reusable technique: "If you want to change X, do Y. For example, ..." followed by the prompt.
+- Include only what the learner needs to act or understand. Leave out incidental details and commentary. (unused layers, output file locations, styling).

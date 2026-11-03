@@ -1412,7 +1412,8 @@ knitr::include_graphics('images/agentic_coding_geospatial/qgisinstructions2.png'
 
 - Never modify my input data sources and layers. Always create a new layer with your edits. 
 - Create temporary memory layers for all intermediate outputs. 
-- Always use GeoPackage as the format for saving the outputs, unless specified otherwise.
+- Always use GeoPackage as the format for saving the outputs, unless specified otherwise. 
+  QGIS Projects can also be saved inside of a GeoPackage.
 
 ### Processing Algorithms
 
@@ -1435,9 +1436,9 @@ knitr::include_graphics('images/agentic_coding_geospatial/qgisinstructions3.png'
 
 ## 6.3 Spatial Analysis with QGIS MCP Server 
 
-We will now use the QGIS MCP server to carry out a multicriteria overlay analysis. Our goal is to find suitable locations for new bicycle parking facilities in Westminster, London. We have a QGIS project with layers of bicycle theft hotspots, cycling routes, existing cycle parking and the borough boundary. We will ask Claude Code to design the workflow, run it in QGIS and package it as a reusable processing model.
+We will now use the QGIS MCP server to carry out a multicriteria overlay analysis. Our goal is to find suitable locations for new bicycle parking facilities based on several spatial criteria. We have a QGIS project with layers of bicycle theft hotspots, cycling routes, existing cycle parking and the borough boundary. We will ask Claude Code to design the workflow and run it in QGIS via the MCP Server.
 
-1. Make sure QGIS is open and the MCP server is running. Enter the following prompt to load the project. Claude Code will open the `Bicycle_Theft_Multicriteria` project stored in the `multicriteria.gpkg` GeoPackage and summarize the layers it contains. Note that the GeoPackage also has a `bicycle_thefts` layer that isn't part of the project.
+1. Make sure QGIS is open and the MCP server is running. Enter the following prompt to load the project. Claude Code will open the `Bicycle_Theft_Multicriteria` project stored in the `multicriteria.gpkg` GeoPackage and summarize the layers it contains. 
 
 ```
 Load the Bicycle_Theft_Multicriteria project from data/multicriteria_overlay/
@@ -1448,7 +1449,7 @@ in QGIS
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria1.png')
 ```
 
-2. Switch to *Plan mode* (*Shift+Tab*) and enter the following prompt. We are not telling Claude Code which algorithms to use. Instead, we ask it to suggest a workflow based on the layers we have, so we can review the approach before anything is run.
+2. Switch to *Plan mode* (*Shift+Tab*) and enter the following prompt. We will ask Claude Code to suggest a workflow based on the layers we have, and will refine it to ensure it matches our expectation.
 
 ```
 I want to do a multicriteria overlay analysis to find locations for new
@@ -1460,66 +1461,64 @@ existing data layers.
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria2.png')
 ```
 
-3. Claude Code will propose a workflow. Before approving it, we want to be able to verify each step of the analysis and re-run it later with different settings. Select **Tell Claude what to change** and enter the following prompt.
+3. Claude Code will propose a workflow. Once the plan is updated, press *Ctrl+G* to open it in Visual Studio Code and review it. 
+
+```{r echo=FALSE, fig.align='center', out.width='75%'}
+knitr::include_graphics('images/agentic_coding_geospatial/multicriteria3.png')
+```
+
+4. If you want to update the plan, close the file, and select **Tell Claude what to change** and enter what you want to change. For example, our initial plan excluded loading any intermediate layers and had questions about building a model. We can address these by entering the following prompt. Claude Code will update the plan. Press *Ctrl+G* to open it in Visual Studio Code and review it. When you are happy with the plan, save the file and close it.
 
 ```
 Load all intermediate layers (turned off by default) so I can verify
 the results. Also build a processing model with configurable distances.
 ```
 
-4. Once the plan is updated, press *Ctrl+G* to open it in Visual Studio Code. The *Context* section lists each layer and the role it plays in the analysis. Claude Code recommends a *boolean (sieve) vector overlay*, where each criterion becomes a polygon of suitable area and the overlays combine them. Notice that the plan follows our `CLAUDE.md` rules: native QGIS algorithms only, intermediate outputs as memory layers and no edits to the input layers. Scroll down to review the criteria and the default distance thresholds.
-
-```{r echo=FALSE, fig.align='center', out.width='75%'}
-knitr::include_graphics('images/agentic_coding_geospatial/multicriteria3.png')
-```
-
-5. Switch to the text editor view and scroll to the *Execution* section. The plan now includes building a processing model called `Bicycle Parking Site Selection` with configurable distance inputs, running each step individually so all intermediate layers are loaded in an `Intermediate` group with visibility off, and checking that the model output matches the step-by-step results. Make any edits you need, save the file and close the tab.
-
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria4.png')
 ```
 
-6. Back in Claude Code, select **Yes, and use auto mode** to proceed.
+5. Back in Claude Code, select **Yes, and use auto mode** to proceed.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria5.png')
 ```
 
-7. Claude Code will run the analysis step by step using the MCP server, then run the new model with the same default distances and confirm both produce identical results. It will report the candidate zones ranked by the number of bicycle thefts inside each zone. In QGIS, you will see a `Results` group with the `candidate_zones` and `candidate_sites` layers. The zones are styled by theft count. The new `Bicycle Parking Site Selection` model is saved in the `multicriteria_overlay` folder and the final outputs are saved in the `parking_site_selection.gpkg` GeoPackage.
+6. Claude Code will run the analysis step by step using the MCP server, then run the new model with the same default distances and confirm both produce identical results. It will report the candidate zones ranked by the number of bicycle thefts inside each zone. In QGIS, you will see a `Results` group with the `candidate_zones` and `candidate_sites` layers. 
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria6.png')
 ```
 
-8. Expand the `Intermediate` group and turn on the layers one at a time to verify the analysis. For example, turning on `01_routes_buffer`, `02_hotspots_buffer` and `03_parking_buffer` shows the areas near cycling routes, near theft hotspots and around existing parking. Checking the intermediate outputs visually is an important step in verifying the work done by an agent.
+7. Expand the `Intermediate` group and turn on the layers one at a time to verify the analysis. For example, turning on `01_routes_buffer`, `02_hotspots_buffer` and `03_parking_buffer` shows the areas near cycling routes, near theft hotspots and around existing parking. Checking the intermediate outputs visually is an important step in verifying the work done by an agent.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria7.png')
 ```
 
-9. Turn off the `Intermediate` group and turn on the `candidate_sites` layer. Each point is a suggested site for new bicycle parking, located inside one of the candidate zones.
+8. Turn off the `Intermediate` group and turn on the `candidate_sites` layer. Each point is a suggested site for new bicycle parking, located inside one of the candidate zones.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria8.png')
 ```
 
-10. Once we have verified the results, we no longer need the intermediate layers. Read the *Things to know* section of the summary, which notes small differences between the plan and the model, such as the output names. Enter the following prompt to clean up the project.
+9. Once we have verified the results, we no longer need the intermediate layers. Read the *Things to know* section of the summary, which notes small differences between the plan and the model, such as the output names. Enter the following prompt to clean up the project.
 
 ```
-remove the intermediate layers from the QGIS project
+Remove the intermediate layers from the QGIS project.
 ```
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria9.png')
 ```
 
-11. The model created by Claude Code is a regular QGIS processing model that anyone can run without an agent. In the *Browser* panel, expand the `multicriteria_overlay` folder and double-click the `Bicycle Parking Site Selection` model to open it. The *Parameters* tab shows all the inputs we can configure. Let's see what happens if we change one of them. Set *Buffer around theft hotspots (m)* to **0** and keep the other values as they are. Click *Run*. You can learn more about processing models in the [QGIS Documentation](https://docs.qgis.org/latest/en/docs/user_manual/processing/modeler.html){target="_blank"}.
+10. The model created by Claude Code is a regular QGIS processing model that anyone can run without an agent. In the *Browser* panel, expand the `multicriteria_overlay` folder and double-click the `Bicycle Parking Site Selection` model to open it. The *Parameters* tab shows all the inputs we can configure. Let's see what happens if we change one of them. Set *Buffer around theft hotspots (m)* to **0**, *Min distance from existing parking* to **50** and *Max distance from cycling route* to **50**. Click *Run*.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria10.png')
 ```
 
-12. A new set of `candidate_sites` and `candidate_zones` layers will be added to the project. Compare the new sites with the original ones. Changing a single buffer value removed one of the original sites and added a new one. The results of a multicriteria overlay depend on the distance thresholds we pick, and these thresholds are often a judgement call. In the next section, we will test how sensitive our results are to these choices.
+11. A new set of `candidate_sites` and `candidate_zones` layers will be added to the project. Compare the new sites with the original ones. Changing the parameters resulted in a very different output. The results of a multicriteria overlay depend on the distance thresholds we pick, and these thresholds are often a judgement call. In the next section, we will test how sensitive our results are to these choices.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/multicriteria11.png')
@@ -1541,7 +1540,7 @@ reliably detect candidate sites.
 knitr::include_graphics('images/agentic_coding_geospatial/sensitivity1.png')
 ```
 
-2. Claude Code will describe its design before running the model. It will run the model 27 times, covering every combination of 3 values each for `route_distance`, `hotspot_buffer` and `parking_distance`, while keeping `min_area` fixed at 500 m2. It will then count how often each location falls in a candidate zone, using a 25 m point grid over Westminster. This gives the share of runs in which each location is selected.
+2. Claude Code will describe its design before running the model. In this instance it decided to run the model 27 times, covering every combination of 3 values each for `route_distance`, `hotspot_buffer` and `parking_distance`, while keeping `min_area` fixed at 500 m2. It then counted how often each location falls in a candidate zone, using a 25 m point grid over Westminster. This gives the share of runs in which each location is selected.
 
 ```{r echo=FALSE, fig.align='center', out.width='75%'}
 knitr::include_graphics('images/agentic_coding_geospatial/sensitivity2.png')
