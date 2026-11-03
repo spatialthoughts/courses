@@ -524,8 +524,9 @@ Website</a></li>
 <li><a href="#useful-resources" id="toc-useful-resources">5.4 Useful
 Resources</a></li>
 </ul></li>
-<li><a href="#using-mcp-servers" id="toc-using-mcp-servers">6. Using MCP
-Servers</a>
+<li><a href="#using-mcp-servers-qgis-multicriteria-overlay"
+id="toc-using-mcp-servers-qgis-multicriteria-overlay">6. Using MCP
+Servers (QGIS Multicriteria Overlay)</a>
 <ul>
 <li><a href="#installing-and-using-the-qgis-mcp-server"
 id="toc-installing-and-using-the-qgis-mcp-server">6.1 Installing and
@@ -533,10 +534,12 @@ Using the QGIS MCP Server</a></li>
 <li><a href="#set-up-project-instructions"
 id="toc-set-up-project-instructions">6.2 Set up Project
 Instructions</a></li>
-<li><a
-href="#spatial-analysis-with-qgis-mcp-server-multicriteria-overlay"
-id="toc-spatial-analysis-with-qgis-mcp-server-multicriteria-overlay">6.3
-Spatial Analysis with QGIS MCP Server (Multicriteria Overlay)</a></li>
+<li><a href="#spatial-analysis-with-qgis-mcp-server"
+id="toc-spatial-analysis-with-qgis-mcp-server">6.3 Spatial Analysis with
+QGIS MCP Server</a></li>
+<li><a href="#sensitivity-analysis-with-qgis-models"
+id="toc-sensitivity-analysis-with-qgis-models">6.4 Sensitivity Analysis
+with QGIS Models</a></li>
 </ul></li>
 <li><a href="#using-geoai-object-detection"
 id="toc-using-geoai-object-detection">7. Using GeoAI (Object
@@ -2077,8 +2080,9 @@ base.</li>
 </ul>
 </div>
 </div>
-<div id="using-mcp-servers" class="section level1">
-<h1>6. Using MCP Servers</h1>
+<div id="using-mcp-servers-qgis-multicriteria-overlay"
+class="section level1">
+<h1>6. Using MCP Servers (QGIS Multicriteria Overlay)</h1>
 <p>The <a
 href="https://modelcontextprotocol.io/docs/2026-07-28/getting-started/intro"
 target="_blank">Model Context Protocol (MCP)</a> is an open standard for
@@ -2218,11 +2222,179 @@ the first section. Save and close the file.</li>
 - When creating models, add the spatial index step to create a spatial index on intermediate layers where it is required.</code></pre>
 <p><img src="images/agentic_coding_geospatial/qgisinstructions3.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
-<div id="spatial-analysis-with-qgis-mcp-server-multicriteria-overlay"
-class="section level2">
-<h2>6.3 Spatial Analysis with QGIS MCP Server (Multicriteria
-Overlay)</h2>
-<p><em>Coming soon</em></p>
+<div id="spatial-analysis-with-qgis-mcp-server" class="section level2">
+<h2>6.3 Spatial Analysis with QGIS MCP Server</h2>
+<p>We will now use the QGIS MCP server to carry out a multicriteria
+overlay analysis. Our goal is to find suitable locations for new bicycle
+parking facilities in Westminster, London. We have a QGIS project with
+layers of bicycle theft hotspots, cycling routes, existing cycle parking
+and the borough boundary. We will ask Claude Code to design the
+workflow, run it in QGIS and package it as a reusable processing
+model.</p>
+<ol style="list-style-type: decimal">
+<li>Make sure QGIS is open and the MCP server is running. Enter the
+following prompt to load the project. Claude Code will open the
+<code>Bicycle_Theft_Multicriteria</code> project stored in the
+<code>multicriteria.gpkg</code> GeoPackage and summarize the layers it
+contains. Note that the GeoPackage also has a
+<code>bicycle_thefts</code> layer that isn’t part of the project.</li>
+</ol>
+<pre><code>Load the Bicycle_Theft_Multicriteria project from data/multicriteria_overlay/
+in QGIS</code></pre>
+<p><img src="images/agentic_coding_geospatial/multicriteria1.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>Switch to <em>Plan mode</em> (<em>Shift+Tab</em>) and enter the
+following prompt. We are not telling Claude Code which algorithms to
+use. Instead, we ask it to suggest a workflow based on the layers we
+have, so we can review the approach before anything is run.</li>
+</ol>
+<pre><code>I want to do a multicriteria overlay analysis to find locations for new
+bicycle parking facilities. Suggest the workflow to do this in QGIS with my
+existing data layers.</code></pre>
+<p><img src="images/agentic_coding_geospatial/multicriteria2.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>Claude Code will propose a workflow. Before approving it, we want to
+be able to verify each step of the analysis and re-run it later with
+different settings. Select <strong>Tell Claude what to change</strong>
+and enter the following prompt.</li>
+</ol>
+<pre><code>Load all intermediate layers (turned off by default) so I can verify
+the results. Also build a processing model with configurable distances.</code></pre>
+<ol start="4" style="list-style-type: decimal">
+<li>Once the plan is updated, press <em>Ctrl+G</em> to open it in Visual
+Studio Code. The <em>Context</em> section lists each layer and the role
+it plays in the analysis. Claude Code recommends a <em>boolean (sieve)
+vector overlay</em>, where each criterion becomes a polygon of suitable
+area and the overlays combine them. Notice that the plan follows our
+<code>CLAUDE.md</code> rules: native QGIS algorithms only, intermediate
+outputs as memory layers and no edits to the input layers. Scroll down
+to review the criteria and the default distance thresholds.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="5" style="list-style-type: decimal">
+<li>Switch to the text editor view and scroll to the <em>Execution</em>
+section. The plan now includes building a processing model called
+<code>Bicycle Parking Site Selection</code> with configurable distance
+inputs, running each step individually so all intermediate layers are
+loaded in an <code>Intermediate</code> group with visibility off, and
+checking that the model output matches the step-by-step results. Make
+any edits you need, save the file and close the tab.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria4.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="6" style="list-style-type: decimal">
+<li>Back in Claude Code, select <strong>Yes, and use auto mode</strong>
+to proceed.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria5.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="7" style="list-style-type: decimal">
+<li>Claude Code will run the analysis step by step using the MCP server,
+then run the new model with the same default distances and confirm both
+produce identical results. It will report the candidate zones ranked by
+the number of bicycle thefts inside each zone. In QGIS, you will see a
+<code>Results</code> group with the <code>candidate_zones</code> and
+<code>candidate_sites</code> layers. The zones are styled by theft
+count. The new <code>Bicycle Parking Site Selection</code> model is
+saved in the <code>multicriteria_overlay</code> folder and the final
+outputs are saved in the <code>parking_site_selection.gpkg</code>
+GeoPackage.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria6.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="8" style="list-style-type: decimal">
+<li>Expand the <code>Intermediate</code> group and turn on the layers
+one at a time to verify the analysis. For example, turning on
+<code>01_routes_buffer</code>, <code>02_hotspots_buffer</code> and
+<code>03_parking_buffer</code> shows the areas near cycling routes, near
+theft hotspots and around existing parking. Checking the intermediate
+outputs visually is an important step in verifying the work done by an
+agent.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria7.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="9" style="list-style-type: decimal">
+<li>Turn off the <code>Intermediate</code> group and turn on the
+<code>candidate_sites</code> layer. Each point is a suggested site for
+new bicycle parking, located inside one of the candidate zones.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria8.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="10" style="list-style-type: decimal">
+<li>Once we have verified the results, we no longer need the
+intermediate layers. Read the <em>Things to know</em> section of the
+summary, which notes small differences between the plan and the model,
+such as the output names. Enter the following prompt to clean up the
+project.</li>
+</ol>
+<pre><code>remove the intermediate layers from the QGIS project</code></pre>
+<p><img src="images/agentic_coding_geospatial/multicriteria9.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="11" style="list-style-type: decimal">
+<li>The model created by Claude Code is a regular QGIS processing model
+that anyone can run without an agent. In the <em>Browser</em> panel,
+expand the <code>multicriteria_overlay</code> folder and double-click
+the <code>Bicycle Parking Site Selection</code> model to open it. The
+<em>Parameters</em> tab shows all the inputs we can configure. Let’s see
+what happens if we change one of them. Set <em>Buffer around theft
+hotspots (m)</em> to <strong>0</strong> and keep the other values as
+they are. Click <em>Run</em>. You can learn more about processing models
+in the <a
+href="https://docs.qgis.org/latest/en/docs/user_manual/processing/modeler.html"
+target="_blank">QGIS Documentation</a>.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria10.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="12" style="list-style-type: decimal">
+<li>A new set of <code>candidate_sites</code> and
+<code>candidate_zones</code> layers will be added to the project.
+Compare the new sites with the original ones. Changing a single buffer
+value removed one of the original sites and added a new one. The results
+of a multicriteria overlay depend on the distance thresholds we pick,
+and these thresholds are often a judgement call. In the next section, we
+will test how sensitive our results are to these choices.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/multicriteria11.png" width="75%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="sensitivity-analysis-with-qgis-models" class="section level2">
+<h2>6.4 Sensitivity Analysis with QGIS Models</h2>
+<p>A sensitivity analysis tests how the results change when the input
+parameters change. Sites that are selected across a wide range of buffer
+values are reliable choices, while sites that appear only for certain
+values depend on our assumptions. Since we have a processing model with
+configurable distances, we can ask Claude Code to run it many times with
+different values and summarize the results.</p>
+<ol style="list-style-type: decimal">
+<li>Enter the following prompt.</li>
+</ol>
+<pre><code>I want to do sensitivity analysis to test for the effects of different buffer
+values. Use the QGIS model to run different variables of the analysis to
+reliably detect candidate sites.</code></pre>
+<p><img src="images/agentic_coding_geospatial/sensitivity1.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>Claude Code will describe its design before running the model. It
+will run the model 27 times, covering every combination of 3 values each
+for <code>route_distance</code>, <code>hotspot_buffer</code> and
+<code>parking_distance</code>, while keeping <code>min_area</code> fixed
+at 500 m2. It will then count how often each location falls in a
+candidate zone, using a 25 m point grid over Westminster. This gives the
+share of runs in which each location is selected.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/sensitivity2.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>Once the runs are complete, Claude Code will report how often each
+of the original candidate sites was selected. Sites 4 and 2 were
+selected in all 27 runs and are marked as <em>Robust</em>. The other
+sites appear only for certain combinations of buffer values. Scroll down
+to read how each buffer affects the results.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/sensitivity3.png" width="75%" style="display: block; margin: auto;" /></p>
+<ol start="4" style="list-style-type: decimal">
+<li>In QGIS, you will see a <code>Sensitivity results</code> group. The
+<code>site_stability</code> layer shows each candidate site styled by
+the percentage of runs in which it was selected. Turn on only the
+<strong>82.4 - 100</strong> category to see the 2 sites that are
+selected regardless of the buffer values. These are the most reliable
+locations for new bicycle parking. The group also contains a
+<code>robustness_grid</code> layer with the selection frequency for each
+grid point, a <code>robust_zones_75pct</code> layer with areas selected
+in at least 75% of the runs, and a <code>run_summary</code> table with
+the results of each run.</li>
+</ol>
+<p><img src="images/agentic_coding_geospatial/sensitivity4.png" width="75%" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="using-geoai-object-detection" class="section level1">
@@ -2253,8 +2425,8 @@ for Anaconda Powershell Prompt and launch it. <em>(Mac/Linux
 users)</em>: Launch a Terminal window. Use the <code>cd</code> command
 to change the current working directory to the project directory.</li>
 </ol>
-<div class="sourceCode" id="cb56"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a><span class="ex">claude</span></span></code></pre></div>
+<div class="sourceCode" id="cb61"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb61-1"><a href="#cb61-1" tabindex="-1"></a><span class="ex">claude</span></span></code></pre></div>
 <p><img src="images/agentic_coding_geospatial/mcp1.png" width="75%" style="display: block; margin: auto;" /></p>
 <ol start="2" style="list-style-type: decimal">
 <li>Enter the prompt below to set up the MCP server. In the world of
